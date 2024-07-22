@@ -1,8 +1,0 @@
-[{
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target" : { 
-        "namespace": "android_app", 
-        "package_name": "com.mushiVerse.mamboadmin",
-        "sha256_cert_fingerprints": ["e5:f1:6a:90:14:09:fc:d6:01:15:1f:93:76:03:15:d3:4c:fe:ae:cc:51:cd:ef:1c:3e:1b:63:40:02:5f:40:60"] 
-    }
-  }]

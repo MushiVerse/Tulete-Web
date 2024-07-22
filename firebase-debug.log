@@ -1,0 +1,64 @@
+[debug] [2024-07-22T17:25:49.341Z] ----------------------------------------------------------------------
+[debug] [2024-07-22T17:25:49.347Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Muxhi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2024-07-22T17:25:49.347Z] CLI Version:   13.13.3
+[debug] [2024-07-22T17:25:49.348Z] Platform:      win32
+[debug] [2024-07-22T17:25:49.348Z] Node Version:  v20.15.1
+[debug] [2024-07-22T17:25:49.348Z] Time:          Mon Jul 22 2024 20:25:49 GMT+0300 (East Africa Time)
+[debug] [2024-07-22T17:25:49.348Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2024-07-22T17:25:49.462Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2024-07-22T17:25:49.463Z] > authorizing via signed-in user (norlemushi737@gmail.com)
+[debug] [2024-07-22T17:25:49.464Z] [iam] checking project fast-tz for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2024-07-22T17:25:49.467Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/fast-tz:testIamPermissions [none]
+[debug] [2024-07-22T17:25:49.467Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/fast-tz:testIamPermissions x-goog-quota-user=projects/fast-tz
+[debug] [2024-07-22T17:25:49.468Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/fast-tz:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-07-22T17:25:53.366Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/fast-tz:testIamPermissions 200
+[debug] [2024-07-22T17:25:53.367Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/fast-tz:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-07-22T17:25:53.369Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/fast-tz [none]
+[debug] [2024-07-22T17:25:54.230Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/fast-tz 200
+[debug] [2024-07-22T17:25:54.231Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/fast-tz {"projectId":"fast-tz","projectNumber":"843483654221","displayName":"Tulete","name":"projects/fast-tz","resources":{"hostingSite":"fast-tz","storageBucket":"fast-tz.appspot.com","locationId":"us-central"},"state":"ACTIVE","etag":"1_31b396c8-8d70-4d23-b35c-4a8af9375225"}
+[info] 
+[info] === Deploying to 'fast-tz'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2024-07-22T17:25:54.250Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/fast-tz/versions [none]
+[debug] [2024-07-22T17:25:54.250Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/fast-tz/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2024-07-22T17:25:58.377Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/fast-tz/versions 200
+[debug] [2024-07-22T17:25:58.377Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/fast-tz/versions {"name":"projects/843483654221/sites/fast-tz/versions/fb769ccde67363fd","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[info] i  hosting[fast-tz]: beginning deploy... 
+[info] i  hosting[fast-tz]: found 8 files in public 
+[debug] [2024-07-22T17:25:58.424Z] [hosting] uploading with 200 concurrency
+[debug] [2024-07-22T17:25:58.431Z] [hosting] hash cache [cHVibGlj] stored for 8 files
+[debug] [2024-07-22T17:25:58.431Z] [hosting][hash queue][FINAL] {"max":1,"min":0,"avg":0,"active":0,"complete":8,"success":8,"errored":0,"retried":0,"total":8,"elapsed":4}
+[debug] [2024-07-22T17:25:58.431Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/843483654221/sites/fast-tz/versions/fb769ccde67363fd:populateFiles [none]
+[debug] [2024-07-22T17:25:58.432Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/843483654221/sites/fast-tz/versions/fb769ccde67363fd:populateFiles {"files":{"/robots.txt":"bfe106a3fb878dc83461c86818bf74fc1bdc7f28538ba613cd3e775516ce8b49","/manifest.json":"ee04fb47e525c67d8424ffe9b4d8a8a24e434504478afca4e0ca602146836d4c","/logo512.png":"212b102aa09e51b3b3e06647e81f7801a61333e171f6582e8124379aabccb41d","/logo192.png":"79e2b749561016bc8af300ea19f48347ceed3cb1a54f48ae456172eca45e08f0","/index.html":"e015a0fbf9d774425e79092a7b85529e9be2d1525effdb4bcf8fd31d8eaa7e72","/favicon.ico":"27edce7be5922cf0bef7d4136f69b5bfbdd5bf8c13c7b026f71187d41a00aa7d","/404.html":"762bf484ba67404bd1a3b181546ea28d60dfddf18e9dd4795d8d25bcf3c1a890","/.well-known/assetlinks.json":"463d469c543558f63be01c096e1da80a6ab9e2b91b2f1f341baa25e149117809"}}
+[debug] [2024-07-22T17:25:58.878Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/843483654221/sites/fast-tz/versions/fb769ccde67363fd:populateFiles 200
+[debug] [2024-07-22T17:25:58.878Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/843483654221/sites/fast-tz/versions/fb769ccde67363fd:populateFiles {"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/fast-tz/versions/fb769ccde67363fd/files"}
+[debug] [2024-07-22T17:25:58.879Z] [hosting][populate queue][FINAL] {"max":450,"min":450,"avg":450,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":450}
+[debug] [2024-07-22T17:25:58.879Z] [hosting] uploads queued: 0
+[debug] [2024-07-22T17:25:58.879Z] [hosting][upload queue][FINAL] {"max":0,"min":9999999999,"avg":0,"active":0,"complete":0,"success":0,"errored":0,"retried":0,"total":0,"elapsed":1721669158879}
+[info] +  hosting[fast-tz]: file upload complete 
+[debug] [2024-07-22T17:25:58.881Z] [hosting] deploy completed after 492ms
+[debug] [2024-07-22T17:25:58.882Z] [
+  {
+    "config": {
+      "public": "public",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "site": "fast-tz"
+    },
+    "version": "projects/843483654221/sites/fast-tz/versions/fb769ccde67363fd"
+  }
+]
+[info] i  hosting[fast-tz]: finalizing version... 
+[debug] [2024-07-22T17:25:58.886Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/fast-tz/versions/fb769ccde67363fd updateMask=status%2Cconfig
+[debug] [2024-07-22T17:25:58.887Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/fast-tz/versions/fb769ccde67363fd {"status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]}}
