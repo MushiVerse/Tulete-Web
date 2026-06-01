@@ -1,0 +1,567 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useFavoritesStore } from '../hooks/useFavoritesStore';
+import { useCartStore } from '../../cart/store/useCartStore';
+import { productService } from '../../products/services/productService';
+import { Button } from '../../../shared/components/ui/Button';
+import { Card } from '../../../shared/components/ui/Card';
+import { Input } from '../../../shared/components/ui/Input';
+import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { 
+  Heart, HeartCrack, Search, FolderHeart, Plus, 
+  Trash2, ShoppingCart, Star, Eye, ExternalLink, Sparkles 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export const FavoritesPage = () => {
+  const navigate = useNavigate();
+  
+  // Tab states
+  const [activeTab, setActiveTab] = useState<'favorites' | 'wishlists'>('favorites');
+  const [favoriteTypeFilter, setFavoriteTypeFilter] = useState<'all' | 'store' | 'item'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'recent' | 'rating' | 'price_low' | 'price_high'>('recent');
+
+  // Modal / Input states for Wishlist creation
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newWishlistName, setNewWishlistName] = useState('');
+  const [newWishlistDesc, setNewWishlistDesc] = useState('');
+
+  const { 
+    favorites, 
+    wishlists, 
+    initialize, 
+    toggleFavorite, 
+    createWishlist, 
+    deleteWishlist,
+    removeFromWishlist 
+  } = useFavoritesStore();
+
+  const { addToCart } = useCartStore();
+
+  // Initialize
+  useEffect(() => {
+    initialize('user_current');
+  }, [initialize]);
+
+  // Handle toggle remove
+  const handleRemove = (itemId: string, type: 'store' | 'product' | 'service', name: string) => {
+    toggleFavorite('user_current', {
+      itemId,
+      type,
+      name,
+      description: '',
+      imageUrl: '',
+    });
+  };
+
+  // Filter & Sort favorites
+  const filteredFavorites = favorites
+    .filter((fav) => {
+      // Category type filter
+      if (favoriteTypeFilter === 'store' && fav.type !== 'store') return false;
+      if (favoriteTypeFilter === 'item' && fav.type === 'store') return false;
+
+      // Search query
+      const nameMatch = fav.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const descMatch = fav.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return nameMatch || descMatch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'rating') {
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      if (sortBy === 'price_low') {
+        return (a.price || 0) - (b.price || 0);
+      }
+      if (sortBy === 'price_high') {
+        return (b.price || 0) - (a.price || 0);
+      }
+      // 'recent' fallback
+      return 1; // standard list order
+    });
+
+  // Handle wishlist folder creation
+  const handleCreateWishlist = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWishlistName.trim()) return;
+    createWishlist('user_current', newWishlistName.trim(), newWishlistDesc.trim());
+    setNewWishlistName('');
+    setNewWishlistDesc('');
+    setShowCreateModal(false);
+  };
+
+  // Calculate recommendation items based on active favorite categories
+  const getPersonalizedRecommendations = () => {
+    // Collect categories already favorited
+    const savedCategories = favorites.map((f) => f.type);
+    const hasFood = favorites.some((f) => f.name.toLowerCase().includes('chapati') || f.name.toLowerCase().includes('combo'));
+    const hasLaundry = favorites.some((f) => f.type === 'service' || f.name.toLowerCase().includes('laundry') || f.name.toLowerCase().includes('iron'));
+
+    // Pull catalog base
+    const allProducts = productService.getMockProducts('all');
+    
+    // Filter recommendations (items NOT already saved in favorites)
+    return allProducts
+      .filter((prod) => {
+        const alreadySaved = favorites.some((f) => f.itemId === prod.id);
+        if (alreadySaved) return false;
+
+        // Custom weight matching
+        if (hasLaundry && prod.category.toLowerCase().includes('laundry')) return true;
+        if (hasFood && prod.category.toLowerCase().includes('food')) return true;
+        return prod.rating >= 4.8; // default fallback: high quality items
+      })
+      .slice(0, 3); // limit to 3 elements
+  };
+
+  const recommendations = getPersonalizedRecommendations();
+
+  return (
+    <PageWrapper className="py-6 px-4 max-w-4xl mx-auto flex flex-col min-h-[85vh]">
+      {/* Title Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
+            Personal Space
+          </span>
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-3">
+            Favorites & Saved Wishlists
+          </h1>
+        </div>
+
+        {activeTab === 'wishlists' && (
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            size="sm"
+            className="font-bold text-xs shadow-md self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Create Collection
+          </Button>
+        )}
+      </div>
+
+      {/* Main Tab Navigation */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 mb-6 overflow-x-auto scrollbar-none">
+        <button
+          onClick={() => setActiveTab('favorites')}
+          className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
+            activeTab === 'favorites' ? 'text-primary' : 'text-slate-400 hover:text-slate-650'
+          }`}
+        >
+          Saved Favorites ({favorites.length})
+          {activeTab === 'favorites' && (
+            <motion.div 
+              layoutId="favoritesTabIndicator" 
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+            />
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('wishlists')}
+          className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
+            activeTab === 'wishlists' ? 'text-primary' : 'text-slate-400 hover:text-slate-650'
+          }`}
+        >
+          Custom Wishlists ({wishlists.length})
+          {activeTab === 'wishlists' && (
+            <motion.div 
+              layoutId="favoritesTabIndicator" 
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+            />
+          )}
+        </button>
+      </div>
+
+      {/* Filter / Search HUD Bar (only for Favorites tab) */}
+      {activeTab === 'favorites' && (
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search saved items or stores..."
+              className="pl-10 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Type selector */}
+            <div className="flex border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 bg-slate-50 dark:bg-slate-900 text-[10px] font-bold">
+              <button
+                onClick={() => setFavoriteTypeFilter('all')}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  favoriteTypeFilter === 'all' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-500'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFavoriteTypeFilter('store')}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  favoriteTypeFilter === 'store' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-500'
+                }`}
+              >
+                Stores
+              </button>
+              <button
+                onClick={() => setFavoriteTypeFilter('item')}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  favoriteTypeFilter === 'item' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-500'
+                }`}
+              >
+                Items
+              </button>
+            </div>
+
+            {/* Sorting Select */}
+            <select
+              value={sortBy}
+              onChange={(e: any) => setSortBy(e.target.value)}
+              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-650 dark:text-slate-350 cursor-pointer"
+            >
+              <option value="recent">Recently Added</option>
+              <option value="rating">Top Rated First</option>
+              <option value="price_low">Price: Low to High</option>
+              <option value="price_high">Price: High to Low</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Panels */}
+      <div className="flex-1">
+        {/* FAVORITES VIEW */}
+        {activeTab === 'favorites' && (
+          <div className="space-y-4">
+            {filteredFavorites.length === 0 ? (
+              <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl">
+                <Heart className="w-12 h-12 text-slate-350 mx-auto mb-4" />
+                <h3 className="text-base font-bold mb-1 text-slate-900 dark:text-white">No Saved Favorites</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto mb-6">
+                  Items or service providers you bookmark will appear here for fast shortcuts.
+                </p>
+                <Button onClick={() => navigate('/discover')} size="sm">Explore Services</Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <AnimatePresence>
+                  {filteredFavorites.map((fav) => (
+                    <motion.div
+                      key={fav.id}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      layout
+                    >
+                      <Card className="p-4 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex gap-4 items-center relative overflow-hidden group">
+                        <img 
+                          src={fav.imageUrl} 
+                          alt={fav.name} 
+                          className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0"
+                        />
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Badge className="bg-primary/10 text-primary border-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0">
+                              {fav.type}
+                            </Badge>
+                            {fav.rating && (
+                              <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-0.5">
+                                <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
+                                {fav.rating}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mb-0.5">
+                            {fav.name}
+                          </h3>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">
+                            {fav.description || 'Saved service shortcut'}
+                          </p>
+
+                          <div className="flex justify-between items-center">
+                            {fav.price ? (
+                              <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                                {fav.price.toLocaleString()} KES
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-emerald-500">
+                                Nairobi Hub Verified
+                              </span>
+                            )}
+
+                            <div className="flex gap-1.5">
+                              {/* Quick navigation shortcut */}
+                              <button
+                                onClick={() => navigate(fav.type === 'store' ? `/store/${fav.itemId}` : `/product/${fav.itemId}`)}
+                                className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-primary rounded-full transition-colors"
+                                title="View details"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Quick Cart button */}
+                              {fav.type !== 'store' && (
+                                <button
+                                  onClick={() => {
+                                    addToCart({
+                                      productId: fav.itemId,
+                                      name: fav.name,
+                                      price: fav.price || 0,
+                                      imageUrl: fav.imageUrl,
+                                      storeId: 's1', // fallback reference
+                                      storeName: 'Verified Partner',
+                                    });
+                                    alert(`${fav.name} added to cart!`);
+                                  }}
+                                  className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-all"
+                                  title="Add to cart"
+                                >
+                                  <ShoppingCart className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Remove Bookmark */}
+                              <button
+                                onClick={() => handleRemove(fav.itemId, fav.type, fav.name)}
+                                className="p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full transition-all"
+                                title="Remove favorite"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* WISHLISTS VIEW */}
+        {activeTab === 'wishlists' && (
+          <div className="space-y-4">
+            {wishlists.length === 0 ? (
+              <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl">
+                <FolderHeart className="w-12 h-12 text-slate-350 mx-auto mb-4" />
+                <h3 className="text-base font-bold mb-1 text-slate-900 dark:text-white">No Wishlists Collections</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto mb-6">
+                  Create customized categories (e.g. Laundry Bundles) to group services and products together.
+                </p>
+                <Button onClick={() => setShowCreateModal(true)} size="sm">Create First Folder</Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {wishlists.map((wish) => (
+                  <Card key={wish.id} className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+                    <div className="flex justify-between items-start gap-4 mb-3 pb-3 border-b border-slate-50 dark:border-slate-800">
+                      <div>
+                        <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">{wish.name}</h3>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{wish.description || 'Collection checklist'}</p>
+                      </div>
+
+                      <button
+                        onClick={() => deleteWishlist(wish.id)}
+                        className="text-rose-500 hover:text-rose-700 text-xs flex items-center gap-1 font-bold"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Delete Folder
+                      </button>
+                    </div>
+
+                    {wish.itemIds.length === 0 ? (
+                      <p className="text-[10px] text-slate-400 italic py-2">No items saved in this wishlist folder yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {wish.itemIds.map((itemId) => {
+                          const catalog = productService.getMockProducts('all');
+                          const item = catalog.find((c) => c.id === itemId);
+                          if (!item) return null;
+
+                          return (
+                            <div key={itemId} className="flex items-center justify-between gap-4 p-2 bg-slate-50 dark:bg-slate-950 rounded-lg text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                                <span className="font-bold text-slate-900 dark:text-white truncate">{item.name}</span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-slate-950 dark:text-white shrink-0">{item.price.toLocaleString()} KES</span>
+                                
+                                <button
+                                  onClick={() => {
+                                    addToCart({
+                                      productId: item.id,
+                                      name: item.name,
+                                      price: item.price,
+                                      imageUrl: item.imageUrl,
+                                      storeId: 's1',
+                                      storeName: 'Verified Partner',
+                                    });
+                                    alert(`${item.name} added to cart!`);
+                                  }}
+                                  className="p-1.5 text-primary hover:bg-primary/10 rounded-full"
+                                >
+                                  <ShoppingCart className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  onClick={() => removeFromWishlist(wish.id, itemId)}
+                                  className="text-slate-450 hover:text-rose-500 p-1.5"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Smart Personalized Recommendations Widget */}
+      {recommendations.length > 0 && (
+        <div className="mt-12 bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
+          <h3 className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white mb-4">
+            <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+            Inspired by your Saves & Favorites
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {recommendations.map((rec) => (
+              <Card key={rec.id} className="p-3 bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-850 flex flex-col justify-between h-full group">
+                <div>
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-100 mb-3">
+                    <img src={rec.imageUrl} alt={rec.name} className="w-full h-full object-cover" />
+                  </div>
+
+                  <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
+                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white mt-1 group-hover:text-primary transition-colors line-clamp-1">
+                    {rec.name}
+                  </h4>
+                  <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{rec.description}</p>
+                </div>
+
+                <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-50 dark:border-slate-850">
+                  <span className="font-extrabold text-xs text-slate-950 dark:text-white">{rec.price.toLocaleString()} KES</span>
+                  
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => {
+                        toggleFavorite('user_current', {
+                          itemId: rec.id,
+                          type: 'product',
+                          name: rec.name,
+                          description: rec.description,
+                          imageUrl: rec.imageUrl,
+                          price: rec.price,
+                          rating: rec.rating,
+                        });
+                        alert(`Bookmarked ${rec.name}!`);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 rounded-full"
+                    >
+                      <Heart className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        addToCart({
+                          productId: rec.id,
+                          name: rec.name,
+                          price: rec.price,
+                          imageUrl: rec.imageUrl,
+                          storeId: 's1',
+                          storeName: 'Verified Partner',
+                        });
+                        alert(`${rec.name} added to cart!`);
+                      }}
+                      className="p-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-colors"
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CREATE WISHLIST COLLECTION MODAL POPUP */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-card w-full max-w-md rounded-2xl p-6 border border-border shadow-2xl relative"
+            >
+              <h3 className="font-extrabold text-base text-slate-900 dark:text-white mb-1">Create Wishlist Folder</h3>
+              <p className="text-[11px] text-slate-500 mb-4">Organize your saved items by category folder structure.</p>
+
+              <form onSubmit={handleCreateWishlist} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Folder Name</label>
+                  <Input 
+                    value={newWishlistName}
+                    onChange={(e) => setNewWishlistName(e.target.value)}
+                    placeholder="e.g. Weekend Chapati Treats"
+                    className="text-xs py-3"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Description (Optional)</label>
+                  <textarea 
+                    value={newWishlistDesc}
+                    onChange={(e) => setNewWishlistDesc(e.target.value)}
+                    placeholder="Brief description of these grouped items..."
+                    className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowCreateModal(false)}
+                    className="font-bold text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    size="sm"
+                    className="font-bold text-xs"
+                  >
+                    Create Folder
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </PageWrapper>
+  );
+};
