@@ -55,6 +55,14 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SERVER_KEY }}
 
+      - name: Check Secrets
+        run: |
+          if [ -z "${{ secrets.SERVER_USER }}" ] || [ -z "${{ secrets.SERVER_HOST }}" ]; then
+            echo "ERROR: SERVER_USER or SERVER_HOST secret is missing or empty!"
+            echo "Please go to your GitHub Repository -> Settings -> Secrets and variables -> Actions and add them."
+            exit 1
+          fi
+
       - name: Pull and Deploy
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ~/multi-frontend && docker-compose pull tulete_web_app && docker-compose up -d --force-recreate tulete_web_app"
