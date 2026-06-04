@@ -4,7 +4,7 @@ import { useOrderSingleRealtime, useOrderTrackingRealtime } from '../../orders/h
 import { OrderStatus } from '../../orders/services/orderService';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   ChevronLeft, Phone, ShieldCheck, MapPin, Truck, 
@@ -213,29 +213,34 @@ export const OrderTrackingPage = () => {
 
   if (isOrderLoading || isTrackingLoading) {
     return (
-      <PageWrapper className="flex flex-col items-center justify-center min-h-[70vh] px-4 animate-pulse">
-        <div className="w-full max-w-lg space-y-4">
-          <div className="h-64 bg-slate-100 rounded-2xl"></div>
-          <div className="h-10 bg-slate-100 rounded w-1/3"></div>
-          <div className="h-6 bg-slate-100 rounded w-2/3"></div>
-        </div>
-      </PageWrapper>
+      <PageContainer>
+        <ContentContainer size="md" className="flex flex-col items-center justify-center min-h-[70vh] animate-pulse">
+          <div className="w-full max-w-lg space-y-4">
+            <div className="h-64 bg-slate-100 rounded-2xl"></div>
+            <div className="h-10 bg-slate-100 rounded w-1/3"></div>
+            <div className="h-6 bg-slate-100 rounded w-2/3"></div>
+          </div>
+        </ContentContainer>
+      </PageContainer>
     );
   }
 
   if (!order) {
     return (
-      <PageWrapper className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
-        <AlertTriangle className="w-16 h-16 text-rose-500 mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Order Not Found</h2>
-        <p className="text-slate-500 mb-6">This order requested does not exist or has expired.</p>
-        <Button onClick={() => navigate('/orders')}>View All Orders</Button>
-      </PageWrapper>
+      <PageContainer>
+        <ContentContainer size="md" className="flex flex-col items-center justify-center min-h-[70vh] text-center">
+          <AlertTriangle className="w-16 h-16 text-rose-500 mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Order Not Found</h2>
+          <p className="text-slate-500 mb-6">This order requested does not exist or has expired.</p>
+          <Button onClick={() => navigate('/orders')}>View All Orders</Button>
+        </ContentContainer>
+      </PageContainer>
     );
   }
 
   return (
-    <PageWrapper className="py-6 px-4 max-w-4xl mx-auto">
+    <PageContainer>
+      <ContentContainer size="md">
       <button 
         onClick={() => navigate('/orders')}
         className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white transition-colors mb-6"
@@ -392,6 +397,7 @@ export const OrderTrackingPage = () => {
           </Card>
         </div>
       </div>
-    </PageWrapper>
+      </ContentContainer>
+    </PageContainer>
   );
 };

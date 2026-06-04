@@ -21,8 +21,8 @@ export const StoreCard = ({ store, distanceKm }: StoreCardProps) => {
         {/* Banner */}
         <div className="relative h-24 bg-muted overflow-hidden">
           <img 
-            src={store.bannerUrl} 
-            alt={`${store.name} banner`}
+            src={store.imgURL} 
+            alt={`${store.store} banner`}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
           />
@@ -30,8 +30,8 @@ export const StoreCard = ({ store, distanceKm }: StoreCardProps) => {
           
           {/* Status Badge */}
           <div className="absolute top-2 right-2">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${store.isOpen ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'}`}>
-              {store.isOpen ? 'OPEN' : 'CLOSED'}
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${store.availability ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'}`}>
+              {store.availability ? 'OPEN' : 'CLOSED'}
             </span>
           </div>
         </div>
@@ -41,17 +41,17 @@ export const StoreCard = ({ store, distanceKm }: StoreCardProps) => {
           {/* Floating Avatar */}
           <div className="absolute -top-6 left-3 p-1 bg-card rounded-full shadow-sm">
             <Avatar className="h-10 w-10 border border-border">
-              <AvatarImage src={store.logoUrl} alt={store.name} />
-              <AvatarFallback>{store.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarImage src={store.imgURL} alt={store.store} />
+              <AvatarFallback>{store.store.substring(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
 
           <div className="mt-5 flex flex-col flex-grow">
             <div className="flex justify-between items-start gap-2 mb-1">
-              <h3 className="font-semibold text-sm line-clamp-1">{store.name}</h3>
+              <h3 className="font-semibold text-sm line-clamp-1">{store.store}</h3>
               <div className="flex items-center gap-0.5 text-yellow-500 shrink-0 bg-yellow-500/10 px-1.5 py-0.5 rounded text-[10px] font-medium">
                 <Star className="w-3 h-3 fill-current" />
-                <span>{store.rating.toFixed(1)}</span>
+                <span>{(store.rating ?? 0).toFixed(1)}</span>
               </div>
             </div>
 

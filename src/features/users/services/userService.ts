@@ -1,5 +1,8 @@
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
+import { storage, db } from '../../../core/firebase/config';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 export interface UserProfile extends BaseDocument {
   uid: string;
@@ -28,46 +31,101 @@ export interface UserPreferences extends BaseDocument {
   distanceUnit: 'km' | 'miles';
 }
 
+const DEFAULT_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt' | 'userId'> = {
+  notifyOrders: true,
+  notifyMessages: true,
+  notifyPromotions: false,
+  notifyDelivery: true,
+  darkMode: false,
+  currencyDisplay: 'KES',
+  distanceUnit: 'km',
+};
+
 class UserService extends BaseFirestoreService<UserProfile> {
   constructor() {
     super('users');
   }
 
-  getMockProfile(): UserProfile {
+  async getUserProfile(email: string): Promise<UserProfile | null> {
+    if (!email) return null;
+    const emailKey = email.toLowerCase();
+    const userRef = doc(db, 'users', emailKey, 'details', emailKey);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    
     return {
-      id: 'user_current',
-      uid: 'user_current',
-      displayName: 'Alex Zalongwa',
-      email: 'alex.zalongwa@tulete.co.ke',
-      phone: '+254 712 345 678',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
-      bio: 'Freelance UX engineer based in Nairobi. Food, tech, and clean laundry enthusiast.',
-      city: 'Nairobi',
-      country: 'Kenya',
-      joinedAt: new Date('2024-09-01'),
-      preferredLanguage: 'en',
+      id: data.uid || '',
+      uid: data.uid || '',
+      displayName: data.name || '',
+      email: data.email || emailKey,
+      phone: data.phone || '',
+      avatarUrl: data.imgURL || '',
+      joinedAt: data.signedUpOn ? new Date(data.signedUpOn) : new Date(),
       isVerified: true,
-      totalOrders: 14,
-      totalSpent: 18450,
-      createdAt: new Date('2024-09-01'),
-      updatedAt: new Date(),
-    };
+      preferredLanguage: 'en',
+      totalOrders: 0,
+      totalSpent: 0
+    } as any;
   }
 
-  getMockPreferences(): UserPreferences {
-    return {
-      id: 'prefs_user_current',
-      userId: 'user_current',
-      notifyOrders: true,
-      notifyMessages: true,
-      notifyPromotions: false,
-      notifyDelivery: true,
-      darkMode: false,
-      currencyDisplay: 'KES',
-      distanceUnit: 'km',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  async updateUserProfile(email: string, data: Partial<Omit<UserProfile, 'id' | 'createdAt' | 'uid'>>): Promise<void> {
+    if (!email) return;
+    const emailKey = email.toLowerCase();
+    const userRef = doc(db, 'users', emailKey, 'details', emailKey);
+    
+    const updates: any = {};
+    if (data.displayName !== undefined) updates.name = data.displayName;
+    if (data.phone !== undefined) updates.phone = data.phone;
+    if (data.avatarUrl !== undefined) updates.imgURL = data.avatarUrl;
+    
+    await updateDoc(userRef, updates);
+  }
+
+  async getUserPreferences(email: string): Promise<UserPreferences> {
+    const emailKey = email.toLowerCase();
+    const prefsRef = doc(db, 'users', emailKey, 'preferences', 'default');
+    const prefsSnap = await getDoc(prefsRef);
+    
+    if (!prefsSnap.exists()) {
+      // Create defaults
+      const defaults = { ...DEFAULT_PREFERENCES, userId: emailKey };
+      await setDoc(prefsRef, defaults);
+      return { id: 'default', ...defaults, createdAt: new Date(), updatedAt: new Date() } as UserPreferences;
+    }
+    
+    return { id: prefsSnap.id, ...prefsSnap.data() } as UserPreferences;
+  }
+
+  async updateUserPreferences(email: string, data: Partial<Omit<UserPreferences, 'id' | 'createdAt' | 'userId'>>): Promise<void> {
+    const emailKey = email.toLowerCase();
+    const prefsRef = doc(db, 'users', emailKey, 'preferences', 'default');
+    await updateDoc(prefsRef, data);
+  }
+
+  async uploadProfileImage(email: string, file: File, onProgress?: (progress: number) => void): Promise<string> {
+    const emailKey = email.toLowerCase();
+    const fileExtension = file.name.split('.').pop();
+    const storageRef = ref(storage, `users/${emailKey}/profile.${fileExtension}`);
+    
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    return new Promise((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          if (onProgress) onProgress(progress);
+        },
+        (error) => reject(error),
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          // Auto-update the profile with the new URL
+          await this.updateUserProfile(emailKey, { avatarUrl: downloadURL });
+          resolve(downloadURL);
+        }
+      );
+    });
   }
 }
 

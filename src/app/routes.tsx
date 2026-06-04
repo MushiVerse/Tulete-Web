@@ -1,11 +1,15 @@
 import React, { Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoadingScreen } from '../shared/components/LoadingScreen';
+import { HomeSkeleton } from '../shared/components/skeletons/HomeSkeleton';
+import { GridSkeleton } from '../shared/components/skeletons/GridSkeleton';
+import { ProfileSkeleton } from '../shared/components/skeletons/ProfileSkeleton';
 
 // Layouts
+import { RootLayout } from '../layouts/RootLayout';
 import { MainLayout } from '../layouts/MainLayout';
-import { AuthLayout } from '../layouts/AuthLayout';
 import { PublicLayout } from '../layouts/PublicLayout';
+import { DynamicShellLayout } from '../layouts/DynamicShellLayout';
 import { AuthGuard } from '../shared/components/AuthGuard';
 
 // Pages (using lazy loading for code splitting)
@@ -20,10 +24,8 @@ const Pages = React.lazy(() => import('../pages').then(module => ({
 })));
 
 // Standard Lazy Imports (Best Practice)
+const Home = React.lazy(() => import('../pages').then(m => ({ default: m.HomePage })));
 const Landing = React.lazy(() => import('../pages').then(m => ({ default: m.LandingPage })));
-const Login = React.lazy(() => import('../pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
-const Register = React.lazy(() => import('../pages/auth/RegisterPage').then(m => ({ default: m.RegisterPage })));
-const ForgotPassword = React.lazy(() => import('../pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const Dashboard = React.lazy(() => import('../features/dashboard/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const Discovery = React.lazy(() => import('../features/discovery/pages/DiscoveryPage').then(m => ({ default: m.DiscoveryPage })));
 const ProductDetail = React.lazy(() => import('../features/products/pages/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
@@ -41,6 +43,10 @@ const ChatScreen = React.lazy(() => import('../pages').then(m => ({ default: m.C
 const Reviews = React.lazy(() => import('../pages').then(m => ({ default: m.ReviewsPage })));
 const Location = React.lazy(() => import('../pages').then(m => ({ default: m.LocationPage })));
 const Notifications = React.lazy(() => import('../pages').then(m => ({ default: m.NotificationsPage })));
+const Laundry = React.lazy(() => import('../features/laundry/pages/LaundryPage').then(m => ({ default: m.LaundryPage })));
+const Food = React.lazy(() => import('../features/food/pages/FoodPage').then(m => ({ default: m.FoodPage })));
+const Products = React.lazy(() => import('../features/products/pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
+const NotFound = React.lazy(() => import('../pages').then(m => ({ default: m.NotFoundPage })));
 
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense fallback={<LoadingScreen />}>
@@ -50,49 +56,56 @@ const withSuspense = (Component: React.ComponentType) => (
 
 export const router = createBrowserRouter([
   {
-    path: '/',
-    element: <PublicLayout />,
+    element: <RootLayout />,
     children: [
-      { index: true, element: withSuspense(Landing) },
-      { path: 'store/:id', element: withSuspense(StoreDetails) },
-      { path: 'product/:id', element: withSuspense(ProductDetail) },
-    ],
-  },
-  {
-    element: <AuthLayout />,
-    children: [
-      { path: 'login', element: withSuspense(Login) },
-      { path: 'register', element: withSuspense(Register) },
-      { path: 'forgot-password', element: withSuspense(ForgotPassword) },
-    ],
-  },
-  {
-    element: (
-      <AuthGuard>
-        <MainLayout />
-      </AuthGuard>
-    ),
-    children: [
-      { path: 'dashboard', element: withSuspense(Dashboard) },
-      { path: 'discover', element: withSuspense(Discovery) },
-      { path: 'explore', element: withSuspense(StoreListing) },
-      { path: 'stores', element: withSuspense(StoreListing) },
-      { path: 'orders', element: withSuspense(Orders) },
-      { path: 'cart', element: withSuspense(Cart) },
-      { path: 'favorites', element: withSuspense(Favorites) },
-      { path: 'messages', element: withSuspense(Messages) },
-      { path: 'messages/chat/:id', element: withSuspense(ChatScreen) },
-      { path: 'reviews', element: withSuspense(Reviews) },
-      { path: 'location', element: withSuspense(Location) },
-      { path: 'notifications', element: withSuspense(Notifications) },
-      { path: 'profile', element: withSuspense(Profile) },
-      { path: 'settings', element: withSuspense(Settings) },
-      { path: 'checkout', element: withSuspense(Checkout) },
-      { path: 'tracking/:id', element: withSuspense(OrderTracking) },
-    ],
-  },
-  {
-    path: '*',
-    element: <Navigate to="/" replace />,
-  },
+      {
+        path: '/',
+        element: <DynamicShellLayout />,
+        children: [
+          { index: true, element: <Suspense fallback={<HomeSkeleton />}><Home /></Suspense> },
+          { path: 'explore', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
+          { path: 'laundry', element: <Suspense fallback={<GridSkeleton />}><Laundry /></Suspense> },
+          { path: 'food', element: <Suspense fallback={<GridSkeleton />}><Food /></Suspense> },
+          { path: 'products', element: <Suspense fallback={<GridSkeleton />}><Products /></Suspense> },
+          { path: 'store/:id', element: withSuspense(StoreDetails) },
+          { path: 'product/:id', element: withSuspense(ProductDetail) },
+        ],
+      },
+      {
+        element: <PublicLayout />,
+        children: [
+          { path: 'login', element: withSuspense(Landing) },
+          { path: 'register', element: withSuspense(Landing) },
+        ],
+      },
+      {
+        element: (
+          <AuthGuard allowedRoles={['user']}>
+            <MainLayout />
+          </AuthGuard>
+        ),
+        children: [
+          { path: 'dashboard', element: withSuspense(Dashboard) },
+          { path: 'discover', element: <Suspense fallback={<GridSkeleton />}><Discovery /></Suspense> },
+          { path: 'stores', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
+          { path: 'orders', element: withSuspense(Orders) },
+          { path: 'cart', element: withSuspense(Cart) },
+          { path: 'favorites', element: <Suspense fallback={<GridSkeleton />}><Favorites /></Suspense> },
+          { path: 'messages', element: withSuspense(Messages) },
+          { path: 'messages/chat/:id', element: withSuspense(ChatScreen) },
+          { path: 'reviews', element: withSuspense(Reviews) },
+          { path: 'location', element: withSuspense(Location) },
+          { path: 'notifications', element: withSuspense(Notifications) },
+          { path: 'profile', element: <Suspense fallback={<ProfileSkeleton />}><Profile /></Suspense> },
+          { path: 'settings', element: <Suspense fallback={<ProfileSkeleton />}><Settings /></Suspense> },
+          { path: 'checkout', element: withSuspense(Checkout) },
+          { path: 'tracking/:id', element: withSuspense(OrderTracking) },
+        ],
+      },
+      {
+        path: '*',
+        element: withSuspense(NotFound),
+      },
+    ]
+  }
 ]);

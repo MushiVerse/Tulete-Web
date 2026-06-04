@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authService } from '../../features/auth/services/authService';
 
 interface User {
   id: string;
@@ -13,7 +14,7 @@ interface AuthState {
   isLoading: boolean;
   setUser: (user: User | null) => void;
   setLoading: (isLoading: boolean) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -22,5 +23,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true, // Initially true while validating session
   setUser: (user) => set({ user, isAuthenticated: !!user, isLoading: false }),
   setLoading: (isLoading) => set({ isLoading }),
-  logout: () => set({ user: null, isAuthenticated: false, isLoading: false }),
+  logout: async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    set({ user: null, isAuthenticated: false, isLoading: false });
+  },
 }));

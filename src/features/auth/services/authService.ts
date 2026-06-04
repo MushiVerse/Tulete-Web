@@ -27,23 +27,57 @@ export const authService = {
    * Helper to fetch or create a user profile in Firestore
    */
   async syncUserProfile(user: FirebaseUser, role: UserRole = 'user', name?: string): Promise<UserProfile> {
-    const userRef = doc(db, 'users', user.uid);
+    if (!user.email) throw new Error("User email is required");
+    const emailKey = user.email.toLowerCase();
+    const userRef = doc(db, 'users', emailKey, 'details', emailKey);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-      // Create new profile document
-      const newProfile: UserProfile = {
-        id: user.uid,
-        email: user.email || '',
-        displayName: name || user.displayName || '',
-        role,
-        createdAt: serverTimestamp(),
+      // Create new profile document matching Flutter fields
+      const newProfile = {
+        name: name || user.displayName || 'Fill your name here!',
+        phone: 'null',
+        tokenId: 'null',
+        uid: user.uid,
+        email: emailKey,
+        password: "can't display password",
+        location: 'null',
+        imgURL: user.photoURL || 'null',
+        signedUpOn: new Date().toISOString()
       };
       await setDoc(userRef, newProfile);
-      return newProfile;
+      
+      // Also write version control and token details like Flutter
+      await setDoc(doc(db, 'tokenidswithemails', emailKey), {
+        tokenId: 'null',
+        email: emailKey,
+        password: "can't display password",
+        time: new Date().toISOString()
+      });
+
+      await setDoc(doc(db, 'versioncontrol', emailKey), {
+        uid: user.uid,
+        email: emailKey,
+        updated: 'true'
+      });
+
+      return {
+        id: user.uid,
+        email: emailKey,
+        displayName: newProfile.name,
+        role,
+        createdAt: newProfile.signedUpOn,
+      };
     }
 
-    return userSnap.data() as UserProfile;
+    const data = userSnap.data();
+    return {
+      id: user.uid,
+      email: emailKey,
+      displayName: data?.name || user.displayName || '',
+      role,
+      createdAt: data?.signedUpOn || '',
+    };
   },
 
   /**

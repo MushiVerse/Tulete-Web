@@ -41,7 +41,7 @@ export const ProductCard = ({
             {product.tags?.includes('Most TamTam') && (
               <Badge className="bg-[#F59E0B] text-white border-none shadow-sm">Hot</Badge>
             )}
-            {product.originalPrice && product.originalPrice > product.price && (
+            {product.oldprice && product.oldprice > product.price && (
               <Badge className="bg-destructive text-destructive-foreground border-none shadow-sm">Sale</Badge>
             )}
           </div>
@@ -61,12 +61,12 @@ export const ProductCard = ({
           {/* Image Container */}
           <div className="relative aspect-square overflow-hidden bg-muted">
             <img 
-              src={product.imageUrl} 
+              src={product.imgUrl} 
               alt={product.name}
               className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
-            {!product.isAvailable && (
+            {!product.availability && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <span className="text-white font-semibold text-sm bg-black/50 px-3 py-1 rounded-full backdrop-blur-md">
                   Out of Stock
@@ -78,10 +78,10 @@ export const ProductCard = ({
           {/* Content */}
           <CardContent className="p-3 flex flex-col flex-grow">
             <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-xs text-muted-foreground truncate">{product.storeName}</span>
+              <span className="text-xs text-muted-foreground truncate">{product.store}</span>
               <div className="flex items-center gap-0.5 text-yellow-500">
                 <Star className="w-3 h-3 fill-current" />
-                <span className="text-[10px] font-medium text-foreground">{product.rating.toFixed(1)}</span>
+                <span className="text-[10px] font-medium text-foreground">{(product.rating ?? 0).toFixed(1)}</span>
               </div>
             </div>
             
@@ -91,9 +91,9 @@ export const ProductCard = ({
 
             <div className="flex items-end justify-between mt-auto">
               <div className="flex flex-col">
-                {product.originalPrice && product.originalPrice > product.price && (
+                {product.oldprice && product.oldprice > product.price && (
                   <span className="text-xs text-muted-foreground line-through">
-                    TZS {product.originalPrice.toLocaleString()}
+                    TZS {product.oldprice.toLocaleString()}
                   </span>
                 )}
                 <span className="font-bold text-primary">
@@ -105,7 +105,7 @@ export const ProductCard = ({
                 size="sm" 
                 variant="secondary"
                 className="h-8 w-8 rounded-full p-0 shrink-0 shadow-sm"
-                disabled={!product.isAvailable}
+                disabled={!product.availability}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

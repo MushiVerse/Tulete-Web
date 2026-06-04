@@ -6,7 +6,7 @@ import { useCartStore } from '../../cart/store/useCartStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   Search, Calendar, Clock, ShoppingBag, Eye, 
@@ -82,7 +82,8 @@ export const OrdersPage = () => {
   });
 
   return (
-    <PageWrapper className="py-8 px-4 max-w-4xl mx-auto">
+    <PageContainer>
+      <ContentContainer size="md">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-950 dark:text-white">Your Orders</h1>
@@ -302,6 +303,7 @@ export const OrdersPage = () => {
           </motion.div>
         </div>
       )}
-    </PageWrapper>
+      </ContentContainer>
+    </PageContainer>
   );
 };

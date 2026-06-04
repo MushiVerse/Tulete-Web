@@ -22,15 +22,14 @@ export interface StoreHours {
 }
 
 export interface Store extends BaseDocument {
-  name: string;
+  store: string;
   description: string;
-  logoUrl: string;
-  bannerUrl: string;
+  imgURL: string;
   ownerId: string;
   rating: number;
   reviewCount: number;
   category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides';
-  isOpen: boolean;
+  availability: boolean;
   address: string;
   phone?: string;
   whatsapp?: string;
@@ -47,7 +46,63 @@ export interface Store extends BaseDocument {
 
 class StoreService extends BaseFirestoreService<Store> {
   constructor() {
-    super('stores');
+    super('foodStores');
+  }
+
+  protected override parse(data: any): Store {
+    let lat = -1.2894;
+    let lng = 36.7909;
+    
+    if (data.location && typeof data.location === 'string') {
+      const parts = data.location.split(',');
+      if (parts.length === 2) {
+        const parsedLat = parseFloat(parts[0].trim());
+        const parsedLng = parseFloat(parts[1].trim());
+        if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+          lat = parsedLat;
+          lng = parsedLng;
+        }
+      }
+    } else if (data.location && typeof data.location.lat === 'number' && typeof data.location.lng === 'number') {
+      lat = data.location.lat;
+      lng = data.location.lng;
+    }
+
+    // Determine category safely
+    let category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides' = 'Food';
+    const rawCat = String(data.cat || data.category || '').toLowerCase();
+    if (rawCat.includes('laund') || rawCat.includes('clean')) {
+      category = 'Laundry';
+    } else if (rawCat.includes('elect')) {
+      category = 'Electrical';
+    } else if (rawCat.includes('beaut') || rawCat.includes('salon')) {
+      category = 'Beauty';
+    } else if (rawCat.includes('ride') || rawCat.includes('deliver')) {
+      category = 'Rides';
+    }
+
+    return {
+      id: data.id,
+      store: data.store || data.name || '',
+      description: data.description || '',
+      imgURL: data.imgURL || '',
+      ownerId: data.ownerId || '',
+      rating: data.rating !== undefined ? Number(data.rating) : 0,
+      reviewCount: data.reviewCount !== undefined ? Number(data.reviewCount) : 0,
+      category,
+      availability: data.availability !== undefined ? !!data.availability : true,
+      address: data.address || '',
+      phone: data.phone,
+      whatsapp: data.whatsapp,
+      isVerified: data.isVerified !== undefined ? !!data.isVerified : true,
+      gallery: data.gallery || [],
+      promotions: data.promotions || [],
+      hours: data.hours || [],
+      location: { lat, lng },
+      reviews: data.reviews || [],
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    };
   }
 
   /**
@@ -75,15 +130,14 @@ class StoreService extends BaseFirestoreService<Store> {
     return [
       {
         id: 'store_mama_safi',
-        name: 'Mama Safi Laundry & Dryclean',
+        store: 'Mama Safi Laundry & Dryclean',
         description: 'Premium eco-friendly dry cleaning and express folding services in the heart of Kilimani.',
-        logoUrl: 'https://images.unsplash.com/photo-1545173168-9f1947eebd01?w=120',
-        bannerUrl: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=800',
+        imgURL: 'https://images.unsplash.com/photo-1545173168-9f1947eebd01?w=120',
         ownerId: 'owner_1',
         rating: 4.8,
         reviewCount: 142,
         category: 'Laundry',
-        isOpen: true,
+        availability: true,
         address: 'Wood Avenue, Kilimani, Nairobi',
         phone: '+254711222333',
         whatsapp: '+254711222333',
@@ -110,15 +164,14 @@ class StoreService extends BaseFirestoreService<Store> {
       },
       {
         id: 'store_kibanda_delight',
-        name: 'Kibanda Delight Fast Food',
+        store: 'Kibanda Delight Fast Food',
         description: 'Authentic local Kenyan delicacies, fresh Ugali, Nyama Choma, and express Chapati meals.',
-        logoUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=120',
-        bannerUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+        imgURL: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=120',
         ownerId: 'owner_2',
         rating: 4.6,
         reviewCount: 98,
         category: 'Food',
-        isOpen: true,
+        availability: true,
         address: 'Ring Road, Westlands, Nairobi',
         phone: '+254722333444',
         whatsapp: '+254722333444',
@@ -140,15 +193,14 @@ class StoreService extends BaseFirestoreService<Store> {
       },
       {
         id: 'store_fundi_power',
-        name: 'Fundi Power Electricals',
+        store: 'Fundi Power Electricals',
         description: 'Certified residential electrical repairs, wiring maintenance, solar panels, and safety checks.',
-        logoUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=120',
-        bannerUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800',
+        imgURL: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=120',
         ownerId: 'owner_3',
         rating: 4.9,
         reviewCount: 65,
         category: 'Electrical',
-        isOpen: true,
+        availability: true,
         address: 'Kenyatta Avenue, Nairobi CBD',
         phone: '+254733444555',
         whatsapp: '+254733444555',
@@ -170,15 +222,14 @@ class StoreService extends BaseFirestoreService<Store> {
       },
       {
         id: 'store_glam_salon',
-        name: 'Glam Beauty Bar & Salon',
+        store: 'Glam Beauty Bar & Salon',
         description: 'High-end hair braiding, gel manicures, natural facials, and premium salon pampering.',
-        logoUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=120',
-        bannerUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800',
+        imgURL: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=120',
         ownerId: 'owner_4',
         rating: 4.7,
         reviewCount: 114,
         category: 'Beauty',
-        isOpen: false, // Closed for demo styling
+        availability: false, // Closed for demo styling
         address: 'Argwings Kodhek Rd, Hurlingham, Nairobi',
         phone: '+254744555666',
         whatsapp: '+254744555666',

@@ -11,6 +11,7 @@ const createPage = (title: string, description: string) => {
   );
 };
 
+export { HomePage } from '../features/home/pages/HomePage';
 export const LandingPage = createPage('Welcome to Tulete', 'The ultimate service hub.');
 export const LoginPage = createPage('Sign In', 'Welcome back.');
 export const RegisterPage = createPage('Create Account', 'Join Tulete today.');
@@ -31,3 +32,4 @@ export { LocationPage } from '../features/location/pages/LocationPage';
 export { ProfilePage } from '../features/users/pages/ProfilePage';
 export { SettingsPage } from '../features/users/pages/SettingsPage';
 export { NotificationsPage } from '../features/notifications/pages/NotificationsPage';
+export { NotFoundPage } from './NotFoundPage';

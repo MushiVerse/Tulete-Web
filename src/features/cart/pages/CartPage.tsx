@@ -1,48 +1,52 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCartStore } from '../store/useCartStore';
+import { useCartStore, calculateItemTotal } from '../store/useCartStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { Switch } from '../../../shared/components/ui/Switch';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store } from 'lucide-react';
+import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const CartPage = () => {
   const navigate = useNavigate();
-  const { items, updateQuantity, removeFromCart, getTotals } = useCartStore();
+  const { items, updateQuantity, removeFromCart, getTotals, toggleDelivery } = useCartStore();
   const { subtotal, deliveryFee, serviceFee, total, itemCount } = getTotals();
 
   if (items.length === 0) {
     return (
-      <PageWrapper className="flex flex-col items-center justify-center min-h-[70vh] px-4">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center max-w-md mx-auto"
-        >
-          <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShoppingBag className="w-12 h-12 text-primary" />
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight mb-3 text-slate-900 dark:text-white">Your Cart is Empty</h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-8 text-base">
-            Looks like you haven't added anything to your cart yet. Let's find some amazing items for you!
-          </p>
-          <Button 
-            onClick={() => navigate('/discover')} 
-            size="lg"
-            className="w-full sm:w-auto font-semibold px-8 shadow-lg hover:shadow-xl transition-all"
+      <PageContainer>
+        <ContentContainer size="full" className="flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center max-w-md mx-auto"
           >
-            Start Discovering
-          </Button>
-        </motion.div>
-      </PageWrapper>
+            <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShoppingBag className="w-12 h-12 text-primary" />
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight mb-3 text-slate-900 dark:text-white">Your Cart is Empty</h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-8 text-base">
+              Looks like you haven't added anything to your cart yet. Let's find some amazing items for you!
+            </p>
+            <Button 
+              onClick={() => navigate('/discover')} 
+              size="lg"
+              className="w-full sm:w-auto font-semibold px-8 shadow-lg hover:shadow-xl transition-all"
+            >
+              Start Discovering
+            </Button>
+          </motion.div>
+        </ContentContainer>
+      </PageContainer>
     );
   }
 
   return (
-    <PageWrapper className="py-8 px-4 max-w-5xl mx-auto">
-      <div className="flex flex-col lg:flex-row gap-8">
+    <PageContainer>
+      <ContentContainer size="lg">
+        <div className="flex flex-col lg:flex-row gap-8">
         {/* Cart Items List */}
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between mb-2">
@@ -79,7 +83,7 @@ export const CartPage = () => {
                       <div className="flex items-center justify-between">
                         {/* Price */}
                         <span className="font-bold text-slate-900 dark:text-white text-base">
-                          {item.price.toLocaleString()} KES
+                          {calculateItemTotal(item).toLocaleString()} KES
                         </span>
 
                         {/* Quantity controls */}
@@ -101,6 +105,23 @@ export const CartPage = () => {
                           </button>
                         </div>
                       </div>
+
+                      {/* Delivery vs Pickup Toggle for Food/Products */}
+                      {!item.isLaundry && (
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold transition-colors ${item.isDeliverySelected === false ? 'bg-primary/10 text-primary' : 'text-slate-500'}`}>
+                            <Store className="w-3.5 h-3.5" /> Pickup
+                          </div>
+                          <Switch 
+                            checked={item.isDeliverySelected !== false} 
+                            onCheckedChange={(checked) => toggleDelivery(item.productId, checked)}
+                            className="scale-75"
+                          />
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold transition-colors ${item.isDeliverySelected !== false ? 'bg-primary/10 text-primary' : 'text-slate-500'}`}>
+                            <Truck className="w-3.5 h-3.5" /> Delivery (+250)
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Delete button */}
@@ -162,6 +183,7 @@ export const CartPage = () => {
           </Card>
         </div>
       </div>
-    </PageWrapper>
+      </ContentContainer>
+    </PageContainer>
   );
 };

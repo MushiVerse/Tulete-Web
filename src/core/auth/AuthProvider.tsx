@@ -12,22 +12,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Fetch user role from Firestore
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (!firebaseUser.email) throw new Error("User email is required");
+          const emailKey = firebaseUser.email.toLowerCase();
+          const userDoc = await getDoc(doc(db, 'users', emailKey, 'details', emailKey));
           
           if (userDoc.exists()) {
-            const profile = userDoc.data() as UserProfile;
+            const profile = userDoc.data();
             setUser({
               id: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              displayName: profile.displayName || firebaseUser.displayName || undefined,
-              role: profile.role,
+              email: emailKey,
+              displayName: profile.name || firebaseUser.displayName || undefined,
+              role: profile.role || 'user',
             });
           } else {
             // Fallback if doc doesn't exist yet (e.g. during initial registration)
             setUser({
               id: firebaseUser.uid,
-              email: firebaseUser.email || '',
+              email: emailKey,
               displayName: firebaseUser.displayName || undefined,
               role: 'user', // Default role
             });

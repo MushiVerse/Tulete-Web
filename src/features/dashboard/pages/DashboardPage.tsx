@@ -80,15 +80,15 @@ export const DashboardPage = () => {
                     name: `Amazing Product ${i}`,
                     description: 'This is a test product',
                     price: 25000 + (i * 5000),
-                    originalPrice: i % 2 === 0 ? 35000 + (i * 5000) : undefined,
-                    imageUrl: `https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80`,
+                    oldprice: i % 2 === 0 ? 35000 + (i * 5000) : undefined,
+                    imgUrl: `https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80`,
                     storeId: 's1',
-                    storeName: 'Super Store',
+                    store: 'Super Store',
                     rating: 4.8,
                     reviewCount: 120,
                     category: 'Retail',
                     tags: ['Most TamTam'],
-                    isAvailable: true
+                    availability: true
                   }} 
                 />
               </div>
@@ -118,15 +118,14 @@ export const DashboardPage = () => {
                   distanceKm={1.2 * i}
                   store={{
                     id: `store-${i}`,
-                    name: `Premium Salon ${i}`,
+                    store: `Premium Salon ${i}`,
                     description: 'Best haircuts and beauty services in town.',
-                    logoUrl: `https://api.dicebear.com/7.x/initials/svg?seed=PS${i}`,
-                    bannerUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&q=80',
+                    imgURL: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&q=80',
                     ownerId: 'u1',
                     rating: 4.9,
                     reviewCount: 340,
                     category: 'Beauty',
-                    isOpen: i % 3 !== 0,
+                    availability: i % 3 !== 0,
                     address: '123 Main St'
                   }} 
                 />
@@ -149,15 +148,15 @@ export const DashboardPage = () => {
                     name: `Discounted Item ${i}`,
                     description: 'This is a test product',
                     price: 15000,
-                    originalPrice: 45000,
-                    imageUrl: `https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80`,
+                    oldprice: 45000,
+                    imgUrl: `https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80`,
                     storeId: 's1',
-                    storeName: 'Tech Hub',
+                    store: 'Tech Hub',
                     rating: 4.5,
                     reviewCount: 89,
                     category: 'Tech',
                     tags: ['Super Saving'],
-                    isAvailable: true
+                    availability: true
                   }} 
                 />
               </div>

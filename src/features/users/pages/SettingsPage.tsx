@@ -1,52 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { userService, UserPreferences } from '../../users/services/userService';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import React, { useState } from 'react';
+import { useSettings, useUpdateSettings } from '../hooks/useSettings';
+import { UserPreferences } from '../services/userService';
+import { useThemeStore } from '../../../core/theme/useThemeStore';
+import { PageContainer, ContentContainer, PageHeader, Section } from '../../../shared/components/layout';
 import { Card } from '../../../shared/components/ui/Card';
-import { Badge } from '../../../shared/components/ui/Badge';
+import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { ChangePasswordModal, DeleteAccountModal } from '../components/SecurityModals';
 import {
   Bell, Moon, Globe, Ruler, ShieldCheck, Trash2,
-  ChevronRight, Package, Truck, MessageSquare, Tag, Info
+  ChevronRight, Package, Truck, MessageSquare, Tag
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-// ---- Inline Settings Store ----
-interface SettingsStore {
-  prefs: UserPreferences | null;
-  initialized: boolean;
-  initialize: () => void;
-  toggle: (key: keyof UserPreferences) => void;
-  set: (key: keyof UserPreferences, value: any) => void;
-}
-
-const useSettingsStore = create<SettingsStore>()(
-  persist(
-    (setState, getState) => ({
-      prefs: null,
-      initialized: false,
-
-      initialize: () => {
-        if (getState().initialized) return;
-        const mockPrefs = userService.getMockPreferences();
-        setState({ prefs: mockPrefs, initialized: true });
-      },
-
-      toggle: (key) => {
-        const { prefs } = getState();
-        if (!prefs) return;
-        setState({ prefs: { ...prefs, [key]: !prefs[key as keyof UserPreferences] } });
-      },
-
-      set: (key, value) => {
-        const { prefs } = getState();
-        if (!prefs) return;
-        setState({ prefs: { ...prefs, [key]: value } });
-      },
-    }),
-    { name: 'tulete_settings_storage' }
-  )
-);
 
 // ---- Toggle Row ----
 const ToggleRow = ({
@@ -127,25 +91,57 @@ const SelectRow = ({
 
 // ---- Main Settings Page ----
 export const SettingsPage = () => {
-  const { prefs, initialized, initialize, toggle, set } = useSettingsStore();
+  const { data: prefs, isLoading, isError } = useSettings();
+  const updateSettings = useUpdateSettings();
+  const { setTheme } = useThemeStore();
 
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  if (!prefs) return null;
+  const toggle = (key: keyof UserPreferences) => {
+    if (!prefs) return;
+    const newValue = !prefs[key];
+    updateSettings.mutate({ [key]: newValue });
+    
+    // Specifically handle dark mode real-time update
+    if (key === 'darkMode') {
+      setTheme(newValue as boolean);
+    }
+  };
+
+  const setVal = (key: keyof UserPreferences, value: any) => {
+    if (!prefs) return;
+    updateSettings.mutate({ [key]: value });
+  };
+
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <ContentContainer size="sm" className="space-y-5">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </ContentContainer>
+      </PageContainer>
+    );
+  }
+
+  if (isError || !prefs) {
+    return <div className="p-8 text-center text-rose-500">Failed to load settings.</div>;
+  }
 
   return (
-    <PageWrapper className="py-6 px-4 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
-          Preferences
-        </span>
-        <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-3">
-          Account Settings
-        </h1>
-      </div>
+    <PageContainer>
+      <ContentContainer size="sm">
+        {/* Header */}
+        <PageHeader 
+          title="Account Settings"
+          action={
+            <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
+              Preferences
+            </span>
+          }
+        />
 
       <div className="space-y-5">
         {/* NOTIFICATIONS SECTION */}
@@ -206,14 +202,14 @@ export const SettingsPage = () => {
             label="Currency Display"
             value={prefs.currencyDisplay}
             options={[{ label: 'KES (Kenyan Shilling)', value: 'KES' }, { label: 'USD (US Dollar)', value: 'USD' }]}
-            onChange={(v) => set('currencyDisplay', v)}
+            onChange={(v) => setVal('currencyDisplay', v)}
           />
           <SelectRow
             icon={<Ruler className="w-3.5 h-3.5 text-slate-500" />}
             label="Distance Unit"
             value={prefs.distanceUnit}
             options={[{ label: 'Kilometers (km)', value: 'km' }, { label: 'Miles (mi)', value: 'miles' }]}
-            onChange={(v) => set('distanceUnit', v)}
+            onChange={(v) => setVal('distanceUnit', v)}
           />
         </Card>
 
@@ -225,20 +221,24 @@ export const SettingsPage = () => {
             </h3>
           </div>
 
-          {[
-            { label: 'Change Password', description: 'Update your account password' },
-            { label: 'Linked Devices', description: 'Manage sessions and trusted devices' },
-            { label: 'Privacy Controls', description: 'Control your data and profile visibility' },
-            { label: 'Download My Data', description: 'Export all your Tulete account data' },
-          ].map(({ label, description }) => (
-            <div key={label} className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800 last:border-0 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors">
-              <div>
-                <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">{label}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">{description}</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary transition-colors" />
+          <div 
+            className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800 last:border-0 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors"
+            onClick={() => setIsPasswordModalOpen(true)}
+          >
+            <div>
+              <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">Change Password</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Update your account password</p>
             </div>
-          ))}
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary transition-colors" />
+          </div>
+          
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800 last:border-0 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors">
+            <div>
+              <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">Linked Devices</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Manage sessions and trusted devices</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary transition-colors" />
+          </div>
         </Card>
 
         {/* DANGER ZONE */}
@@ -254,7 +254,10 @@ export const SettingsPage = () => {
               <p className="text-xs font-bold text-slate-900 dark:text-white">Delete Account</p>
               <p className="text-[10px] text-slate-500 mt-0.5">Permanently remove your account and all associated data</p>
             </div>
-            <button className="text-[10px] font-extrabold text-rose-500 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-1.5 hover:bg-rose-500 hover:text-white transition-all">
+            <button 
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="text-[10px] font-extrabold text-rose-500 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-1.5 hover:bg-rose-500 hover:text-white transition-all"
+            >
               Delete
             </button>
           </div>
@@ -265,6 +268,10 @@ export const SettingsPage = () => {
           Tulete App v2.0.0 — Nairobi, Kenya 🇰🇪
         </div>
       </div>
-    </PageWrapper>
+
+      <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
+      <DeleteAccountModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} />
+      </ContentContainer>
+    </PageContainer>
   );
 };

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationsStore } from '../hooks/useNotificationsStore';
 import { AppNotification, NotificationType } from '../services/notificationService';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
@@ -57,7 +57,8 @@ export const NotificationsPage = () => {
   };
 
   return (
-    <PageWrapper className="py-6 px-4 max-w-2xl mx-auto flex flex-col min-h-[85vh]">
+    <PageContainer>
+      <ContentContainer size="sm" className="flex flex-col min-h-[85vh]">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -166,6 +167,7 @@ export const NotificationsPage = () => {
           </AnimatePresence>
         </div>
       )}
-    </PageWrapper>
+      </ContentContainer>
+    </PageContainer>
   );
 };

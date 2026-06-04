@@ -1,9 +1,15 @@
 import React from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './app/routes';
+import { OfflineNotifier } from './shared/components/OfflineNotifier';
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <OfflineNotifier />
+      <RouterProvider router={router} />
+    </>
+  );
 }
 
 export default App;

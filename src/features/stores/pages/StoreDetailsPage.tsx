@@ -6,14 +6,18 @@ import { useCartStore } from '../../cart/store/useCartStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { PageContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   ArrowLeft, Star, Clock, MapPin, Phone, 
   MessageSquare, Share2, Heart, Search, Plus, 
-  CheckCircle2, Compass, Percent, Image, AlertTriangle 
+  CheckCircle2, Compass, Percent, Image, AlertTriangle,
+  ShoppingBag, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
+import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 
 export const StoreDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,45 +36,52 @@ export const StoreDetailsPage = () => {
     return list.includes(id || '');
   });
 
-  const { addToCart } = useCartStore();
+  const { items: cartItems, addToCart, getTotals } = useCartStore();
+  const { total: cartTotal } = getTotals();
+  const hasItems = cartItems.length > 0;
+  const { isAuthenticated } = useAuthStore();
+  const { openModal } = useAuthModalStore();
 
-  const store = storeService.getMockStores().find((s) => s.id === id);
-  const products = productService.getMockProducts(id);
-
-  // Toggle favorite
-  const handleToggleFavorite = () => {
-    const saved = localStorage.getItem('tulete_favorite_stores');
-    let list = saved ? JSON.parse(saved) : [];
-    if (isFavorite) {
-      list = list.filter((storeId: string) => storeId !== id);
-    } else {
-      list.push(id || '');
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      openModal('login');
+      return;
     }
-    localStorage.setItem('tulete_favorite_stores', JSON.stringify(list));
-    setIsFavorite(!isFavorite);
+    navigate('/cart');
   };
 
-  // WhatsApp helper
-  const triggerWhatsApp = () => {
-    if (!store || !store.whatsapp) return;
-    const text = encodeURIComponent(`Hello ${store.name}, I found your store on Tulete and would like to inquire about your services.`);
-    window.open(`https://wa.me/${store.whatsapp.replace('+', '')}?text=${text}`, '_blank');
-  };
-
-  // Share helper
-  const handleShare = () => {
-    if (!store) return;
-    if (navigator.share) {
-      navigator.share({
-        title: store.name,
-        text: store.description,
-        url: window.location.href,
-      }).catch(console.error);
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Store link copied to clipboard!');
+  const { data: dbStore, isLoading: isStoreLoading } = useFirestoreDocument(
+    ['store', id || ''],
+    storeService,
+    id || ''
+  );
+  
+  const { data: productsData, isLoading: isProductsLoading } = useFirestoreQuery(
+    ['products', 'store', id || ''],
+    productService,
+    {
+      filters: [
+        { field: 'storeId', operator: '==', value: id || '' }
+      ]
     }
-  };
+  );
+
+  const store = dbStore || storeService.getMockStores().find((s) => s.id === id);
+  const dbProducts = productsData?.data || [];
+  let products = dbProducts.length > 0 ? dbProducts : productService.getMockProducts(id);
+
+  if (products.length === 0 && store) {
+    const categoryLower = store.category.toLowerCase();
+    products = productService.getMockProducts().filter(p => {
+      const storeNameLower = (p.store || '').toLowerCase();
+      const pCat = (p.category || '').toLowerCase();
+      if (categoryLower.includes('food') && (storeNameLower.includes('kibanda') || pCat.includes('plat') || pCat.includes('meal'))) return true;
+      if (categoryLower.includes('laund') && (storeNameLower.includes('safi') || pCat.includes('suit') || pCat.includes('wash'))) return true;
+      if (categoryLower.includes('elect') && (storeNameLower.includes('fundi') || pCat.includes('repair') || pCat.includes('install'))) return true;
+      if (categoryLower.includes('beaut') && (storeNameLower.includes('glam') || pCat.includes('hair') || pCat.includes('nail'))) return true;
+      return false;
+    });
+  }
 
   // Interactive operational Map
   useEffect(() => {
@@ -140,24 +151,82 @@ export const StoreDetailsPage = () => {
 
       ctx.font = 'bold 11px sans-serif';
       ctx.fillStyle = '#1e293b';
-      ctx.fillText(store.name, center.x - 45, center.y - 18);
+      ctx.fillText(store.store, center.x - 45, center.y - 18);
 
       animationId = requestAnimationFrame(drawSingleMap);
     };
 
     drawSingleMap();
 
-    return () => cancelAnimationFrame(animationId);
+    window.addEventListener('resize', resizeCanvas);
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', resizeCanvas);
+    };
   }, [activeTab, store]);
+
+  // Loading state skeleton
+  if (isStoreLoading || isProductsLoading) {
+    return (
+      <PageContainer>
+        <div className="max-w-4xl mx-auto space-y-6 p-6">
+          <div className="h-60 rounded-3xl bg-muted animate-pulse" />
+          <div className="h-12 bg-muted rounded-2xl animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-28 rounded-xl bg-muted animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // Toggle favorite
+  const handleToggleFavorite = () => {
+    const saved = localStorage.getItem('tulete_favorite_stores');
+    let list = saved ? JSON.parse(saved) : [];
+    if (isFavorite) {
+      list = list.filter((storeId: string) => storeId !== id);
+    } else {
+      list.push(id || '');
+    }
+    localStorage.setItem('tulete_favorite_stores', JSON.stringify(list));
+    setIsFavorite(!isFavorite);
+  };
+
+  // WhatsApp helper
+  const triggerWhatsApp = () => {
+    if (!store || !store.whatsapp) return;
+    const text = encodeURIComponent(`Hello ${store.store}, I found your store on Tulete and would like to inquire about your services.`);
+    window.open(`https://wa.me/${store.whatsapp.replace('+', '')}?text=${text}`, '_blank');
+  };
+
+  // Share helper
+  const handleShare = () => {
+    if (!store) return;
+    if (navigator.share) {
+      navigator.share({
+        title: store.store,
+        text: store.description,
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Store link copied to clipboard!');
+    }
+  };
 
   if (!store) {
     return (
-      <PageWrapper className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
-        <AlertTriangle className="w-14 h-14 text-rose-500 mb-4 animate-bounce" />
-        <h2 className="text-2xl font-bold mb-1">Store Not Found</h2>
-        <p className="text-slate-500 mb-6 max-w-sm">We couldn't locate this service provider. It may have been disabled or deleted.</p>
-        <Button onClick={() => navigate('/discover')}>Discover Providers</Button>
-      </PageWrapper>
+      <PageContainer>
+        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6">
+          <AlertTriangle className="w-14 h-14 text-destructive mb-4 animate-bounce" />
+          <h2 className="text-2xl font-bold mb-1">Store Not Found</h2>
+          <p className="text-muted-foreground mb-6 max-w-sm">We couldn't locate this service provider. It may have been disabled or deleted.</p>
+          <Button onClick={() => navigate('/discover')}>Discover Providers</Button>
+        </div>
+      </PageContainer>
     );
   }
 
@@ -173,21 +242,73 @@ export const StoreDetailsPage = () => {
   });
 
   return (
-    <PageWrapper className="py-6 px-4 max-w-4xl mx-auto">
-      {/* Back button */}
-      <button 
-        onClick={() => navigate('/discover')}
-        className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white transition-colors mb-6"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Discovery
-      </button>
+    <PageContainer>
+      <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
+        
+        {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
+        <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
+          <button 
+            onClick={() => navigate('/discover')} 
+            className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground mb-8"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Discovery
+          </button>
+
+          {activeTab === 'menu' && productCategories.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-xs font-extrabold text-foreground mb-4 uppercase tracking-widest opacity-80">Store Menu</h2>
+              <button
+                onClick={() => setSelectedProductCategory(null)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
+                  selectedProductCategory === null 
+                    ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                All Items
+              </button>
+              {productCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedProductCategory(cat)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
+                    selectedProductCategory === cat 
+                      ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── CENTER COLUMN ── */}
+        <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
+          {/* Mobile Back & Actions */}
+          <div className="lg:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between py-3 mb-6">
+            <button onClick={() => navigate('/discover')} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <button className="p-2 rounded-full hover:bg-muted transition-colors">
+                <Share2 className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={handleToggleFavorite}
+                className="p-2 rounded-full hover:bg-muted transition-colors"
+              >
+                <Heart className={`w-5 h-5 ${isFavorite ? 'fill-destructive text-destructive' : ''}`} />
+              </button>
+            </div>
+          </div>
 
       {/* Hero Banner details */}
       <div className="relative h-60 md:h-72 rounded-3xl overflow-hidden mb-6 shadow-md border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
         <img 
-          src={store.bannerUrl} 
-          alt={store.name} 
+          src={store.imgURL} 
+          alt={store.store} 
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"></div>
@@ -196,8 +317,8 @@ export const StoreDetailsPage = () => {
         <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex items-center gap-4">
             <img 
-              src={store.logoUrl} 
-              alt={store.name} 
+              src={store.imgURL} 
+              alt={store.store} 
               className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 border-white object-cover bg-white shadow-lg"
             />
             <div>
@@ -206,11 +327,11 @@ export const StoreDetailsPage = () => {
                   {store.category}
                 </Badge>
                 {store.isVerified && <CheckCircle2 className="w-4 h-4 text-blue-400 fill-blue-400/20" />}
-                <Badge className={`${store.isOpen ? 'bg-emerald-500' : 'bg-rose-500'} text-white border-0 text-[9px] font-bold px-2 rounded-full`}>
-                  {store.isOpen ? 'Open' : 'Closed'}
+                <Badge className={`${store.availability ? 'bg-emerald-500' : 'bg-rose-500'} text-white border-0 text-[9px] font-bold px-2 rounded-full`}>
+                  {store.availability ? 'Open' : 'Closed'}
                 </Badge>
               </div>
-              <h1 className="text-xl md:text-2xl font-extrabold text-white">{store.name}</h1>
+              <h1 className="text-xl md:text-2xl font-extrabold text-white">{store.store}</h1>
               <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-emerald-400" />
                 {store.address}
@@ -244,14 +365,14 @@ export const StoreDetailsPage = () => {
         </a>
         <button 
           onClick={handleShare}
-          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300 transition-all cursor-pointer font-bold text-xs"
+          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-655 dark:text-slate-300 transition-all cursor-pointer font-bold text-xs"
         >
           <Share2 className="w-5 h-5 mb-1" />
           Share Shop
         </button>
         <button 
           onClick={handleToggleFavorite}
-          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-red-650 dark:text-red-500 transition-all cursor-pointer font-bold text-xs"
+          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-red-655 dark:text-red-500 transition-all cursor-pointer font-bold text-xs"
         >
           <Heart className={`w-5 h-5 mb-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
           Favorite
@@ -298,13 +419,13 @@ export const StoreDetailsPage = () => {
               </div>
 
               {productCategories.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-2 sm:pb-0">
+                <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-2 sm:pb-0">
                   <button
                     onClick={() => setSelectedProductCategory(null)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                       selectedProductCategory === null
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-white border-slate-250 dark:bg-slate-800 dark:border-slate-750 text-slate-650 dark:text-slate-350'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card border-border text-muted-foreground'
                     }`}
                   >
                     All Items
@@ -315,8 +436,8 @@ export const StoreDetailsPage = () => {
                       onClick={() => setSelectedProductCategory(cat)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                         selectedProductCategory === cat
-                          ? 'bg-primary text-white border-primary shadow-sm'
-                          : 'bg-white border-slate-250 dark:bg-slate-800 dark:border-slate-750 text-slate-650 dark:text-slate-350'
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                          : 'bg-card border-border text-muted-foreground'
                       }`}
                     >
                       {cat}
@@ -336,7 +457,7 @@ export const StoreDetailsPage = () => {
                 {filteredProducts.map((prod) => (
                   <Card key={prod.id} className="p-4 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all flex gap-4 items-center">
                     <img 
-                      src={prod.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
+                      src={prod.imgUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
                       alt={prod.name} 
                       className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0"
                     />
@@ -359,9 +480,9 @@ export const StoreDetailsPage = () => {
                           <span className="font-extrabold text-sm text-slate-900 dark:text-white">
                             {prod.price.toLocaleString()} KES
                           </span>
-                          {prod.originalPrice && (
+                          {prod.oldprice && (
                             <span className="text-[10px] text-slate-400 line-through">
-                              {prod.originalPrice.toLocaleString()} KES
+                              {prod.oldprice.toLocaleString()} KES
                             </span>
                           )}
                         </div>
@@ -372,11 +493,10 @@ export const StoreDetailsPage = () => {
                               productId: prod.id,
                               name: prod.name,
                               price: prod.price,
-                              imageUrl: prod.imageUrl,
+                              imageUrl: prod.imgUrl,
                               storeId: store.id,
-                              storeName: store.name,
+                              storeName: store.store,
                             });
-                            alert(`${prod.name} added to cart!`);
                           }}
                           size="sm"
                           className="h-8 px-2 font-extrabold text-xs shadow-md"
@@ -396,7 +516,7 @@ export const StoreDetailsPage = () => {
         {/* Hours & Operational Map tab */}
         {activeTab === 'hours' && (
           <div className="space-y-6">
-            <Card className="h-60 relative overflow-hidden border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-md rounded-2xl flex">
+            <Card className="h-60 relative overflow-hidden border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-955 shadow-md rounded-2xl flex">
               <canvas ref={canvasRef} className="flex-1 w-full" />
             </Card>
 
@@ -416,7 +536,7 @@ export const StoreDetailsPage = () => {
                 </div>
               </Card>
 
-              <Card className="p-5 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
+              <Card className="p-5 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-905">
                 <h3 className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
                   <Compass className="w-4 h-4 text-primary animate-pulse" />
                   Store Description
@@ -436,7 +556,7 @@ export const StoreDetailsPage = () => {
         {/* Reviews tab */}
         {activeTab === 'reviews' && (
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl">
+            <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-805 p-6 rounded-2xl">
               <div className="text-center md:border-r border-slate-200 dark:border-slate-800 pr-6">
                 <h2 className="text-5xl font-extrabold text-slate-950 dark:text-white">{store.rating}</h2>
                 <div className="flex items-center justify-center gap-0.5 mt-2 mb-1">
@@ -545,6 +665,84 @@ export const StoreDetailsPage = () => {
           </div>
         )}
       </div>
-    </PageWrapper>
+      </div>
+
+      {/* ── RIGHT SIDEBAR (LIVE CART) ── */}
+      <div className="hidden xl:block flex-none w-[320px] shrink-0 border-l border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
+          <div className="space-y-6">
+            
+            {/* CART WIDGET */}
+            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Order</h2>
+                <ShoppingBag className="w-4 h-4 text-primary" />
+              </div>
+
+              {hasItems ? (
+                <>
+                  <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
+                    {cartItems.map((cartItem) => (
+                      <div key={cartItem.productId} className="flex justify-between items-center text-sm">
+                        <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
+                          {cartItem.quantity}x {cartItem.name}
+                        </span>
+                        <span className="font-extrabold text-foreground shrink-0 ml-3">
+                          KES {cartItem.price * cartItem.quantity}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-4 border-t border-border/50">
+                    <div className="flex justify-between items-center mb-5">
+                      <span className="text-sm font-bold text-muted-foreground">Total</span>
+                      <span className="text-xl font-extrabold text-foreground">KES {cartTotal}</span>
+                    </div>
+                    <Button
+                      onClick={handleCheckout}
+                      className="w-full rounded-xl py-6 font-extrabold shadow-md flex items-center justify-center gap-2"
+                    >
+                      Checkout Now <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <ShoppingBag className="w-10 h-10 text-muted mx-auto mb-3" />
+                  <p className="text-sm font-bold text-muted-foreground">Your cart is empty</p>
+                  <p className="text-xs text-muted-foreground mt-1">Add items to get started</p>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+        {/* Mobile Sticky Cart */}
+        <AnimatePresence>
+          {hasItems && (
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              className="xl:hidden fixed bottom-20 left-4 right-4 z-50"
+            >
+              <Button
+                onClick={handleCheckout}
+                className="w-full py-6 text-base font-extrabold shadow-2xl flex items-center justify-between px-6 rounded-3xl bg-primary text-primary-foreground"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-background/20 px-3 py-1 rounded-full text-xs">
+                    {cartItems.length}
+                  </div>
+                  <span>Checkout</span>
+                </div>
+                <span>KES {cartTotal} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+      </div>
+    </PageContainer>
   );
 };

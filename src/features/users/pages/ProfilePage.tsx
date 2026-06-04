@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { userService, UserProfile } from '../../users/services/userService';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { useProfile, useUpdateProfile, useUploadProfileImage } from '../hooks/useProfile';
+import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
 import { Button } from '../../../shared/components/ui/Button';
-import { Badge } from '../../../shared/components/ui/Badge';
+import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import {
   User, Mail, Phone, MapPin, Edit2, Save, X,
   Shield, Star, Package, TrendingUp, CheckCircle,
-  Heart, MessageSquare, LogOut, Camera
+  Heart, MessageSquare, LogOut, Camera, Loader2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -42,8 +43,15 @@ const StatCard = ({ icon, label, value, color }: {
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { logout } = useAuthStore();
+  const { data: profile, isLoading, isError } = useProfile();
+  const updateProfile = useUpdateProfile();
+  const uploadImage = useUploadProfileImage();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -51,29 +59,62 @@ export const ProfilePage = () => {
 
   const bioValue = watch('bio') || '';
 
+  // Initialize form when profile loads or editing starts
   useEffect(() => {
-    const mockProfile = userService.getMockProfile();
-    setProfile(mockProfile);
-    reset({
-      displayName: mockProfile.displayName,
-      phone: mockProfile.phone || '',
-      bio: mockProfile.bio || '',
-      city: mockProfile.city || '',
-    });
-  }, [reset]);
+    if (profile && isEditing) {
+      reset({
+        displayName: profile.displayName || '',
+        phone: profile.phone || '',
+        bio: profile.bio || '',
+        city: profile.city || '',
+      });
+    }
+  }, [profile, isEditing, reset]);
 
   const onSubmit = (data: ProfileFormValues) => {
-    if (!profile) return;
-    const updated = { ...profile, ...data };
-    setProfile(updated);
-    setIsEditing(false);
+    updateProfile.mutate(data, {
+      onSuccess: () => setIsEditing(false)
+    });
   };
 
-  if (!profile) return null;
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    uploadImage.mutate({
+      file,
+      onProgress: (p) => setUploadProgress(p)
+    }, {
+      onSettled: () => {
+        setUploadProgress(0);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <ContentContainer size="md" className="space-y-6">
+          <Skeleton className="h-48 w-full rounded-2xl" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3"><Skeleton className="h-24 w-full rounded-xl" /><Skeleton className="h-24 w-full rounded-xl" /><Skeleton className="h-24 w-full rounded-xl" /><Skeleton className="h-24 w-full rounded-xl" /></div>
+        </ContentContainer>
+      </PageContainer>
+    );
+  }
+
+  if (isError || !profile) {
+    return <div className="p-8 text-center text-rose-500">Failed to load profile.</div>;
+  }
 
   return (
-    <PageWrapper className="py-6 px-4 max-w-3xl mx-auto">
-      {/* Profile Hero */}
+    <PageContainer>
+      <ContentContainer size="md">
+        {/* Profile Hero */}
       <Card className="relative overflow-hidden mb-6 border-0 shadow-lg">
         {/* Gradient banner */}
         <div className="h-28 bg-gradient-to-br from-primary/80 via-indigo-600 to-purple-700" />
@@ -81,25 +122,42 @@ export const ProfilePage = () => {
         <div className="px-6 pb-6">
           {/* Avatar + Edit trigger */}
           <div className="flex items-end justify-between -mt-12 mb-4">
-            <div className="relative">
+            <div className="relative group cursor-pointer" onClick={handleImageClick}>
               <img
-                src={profile.avatarUrl}
+                src={profile.avatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.displayName)}
                 alt={profile.displayName}
-                className="w-20 h-20 rounded-2xl object-cover border-4 border-white dark:border-slate-900 shadow-xl"
+                className="w-20 h-20 rounded-2xl object-cover border-4 border-white dark:border-slate-900 shadow-xl bg-white"
               />
-              <button className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center border-2 border-white">
+              <button className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center border-2 border-white shadow">
                 <Camera className="w-3 h-3 text-white" />
               </button>
+              
+              {uploadImage.isPending && (
+                <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center backdrop-blur-sm border-4 border-white dark:border-slate-900">
+                  <div className="text-white text-[10px] font-bold">{Math.round(uploadProgress)}%</div>
+                </div>
+              )}
+              
+              {/* Hidden file input */}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleFileChange} 
+                disabled={uploadImage.isPending}
+              />
             </div>
 
             <div className="flex gap-2 mt-12">
               {isEditing ? (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setIsEditing(false)} className="text-xs font-bold">
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(false)} className="text-xs font-bold" disabled={updateProfile.isPending}>
                     <X className="w-3.5 h-3.5 mr-1" /> Cancel
                   </Button>
-                  <Button size="sm" onClick={handleSubmit(onSubmit)} className="text-xs font-bold shadow-md">
-                    <Save className="w-3.5 h-3.5 mr-1" /> Save Profile
+                  <Button size="sm" onClick={handleSubmit(onSubmit)} className="text-xs font-bold shadow-md" disabled={updateProfile.isPending}>
+                    {updateProfile.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                    Save
                   </Button>
                 </>
               ) : (
@@ -159,7 +217,7 @@ export const ProfilePage = () => {
               )}
               {profile.city && (
                 <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5">
-                  <MapPin className="w-3 h-3" /> {profile.city}, {profile.country}
+                  <MapPin className="w-3 h-3" /> {profile.city}{profile.country ? `, ${profile.country}` : ''}
                 </p>
               )}
               {profile.bio && (
@@ -177,25 +235,25 @@ export const ProfilePage = () => {
         <StatCard
           icon={<Package className="w-4 h-4 text-indigo-500" />}
           label="Total Orders"
-          value={String(profile.totalOrders)}
+          value={String(profile.totalOrders || 0)}
           color="bg-indigo-50 dark:bg-indigo-950/30"
         />
         <StatCard
           icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
           label="KES Spent"
-          value={profile.totalSpent.toLocaleString()}
+          value={(profile.totalSpent || 0).toLocaleString()}
           color="bg-emerald-50 dark:bg-emerald-950/30"
         />
         <StatCard
           icon={<Heart className="w-4 h-4 text-rose-500" />}
           label="Favorites"
-          value="3"
+          value="0"
           color="bg-rose-50 dark:bg-rose-950/30"
         />
         <StatCard
           icon={<Star className="w-4 h-4 text-amber-500" />}
           label="Reviews"
-          value="5"
+          value="0"
           color="bg-amber-50 dark:bg-amber-950/30"
         />
       </div>
@@ -227,14 +285,29 @@ export const ProfilePage = () => {
 
       {/* Member since / logout */}
       <div className="mt-6 flex flex-col items-center gap-3">
-        <p className="text-[10px] text-slate-400 font-medium">
-          Member since {new Date(profile.joinedAt).toLocaleDateString([], { month: 'long', year: 'numeric' })}
-        </p>
-        <Button variant="outline" size="sm" className="text-rose-500 border-rose-200 hover:bg-rose-500 hover:text-white text-xs font-bold">
+        {profile.joinedAt && (
+          <p className="text-[10px] text-slate-400 font-medium">
+            Member since {(() => {
+              const dateObj = profile.joinedAt as any;
+              const date = dateObj.seconds ? new Date(dateObj.seconds * 1000) : new Date(profile.joinedAt);
+              return date.toLocaleDateString([], { month: 'long', year: 'numeric' });
+            })()}
+          </p>
+        )}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="text-rose-500 border-rose-200 hover:bg-rose-500 hover:text-white text-xs font-bold"
+          onClick={() => {
+            logout();
+            navigate('/login');
+          }}
+        >
           <LogOut className="w-3.5 h-3.5 mr-1.5" />
           Sign Out
         </Button>
       </div>
-    </PageWrapper>
+      </ContentContainer>
+    </PageContainer>
   );
 };

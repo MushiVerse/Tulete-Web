@@ -110,15 +110,15 @@ export const DiscoveryPage = () => {
                         name: `Tulete Product ${i} - Premium Quality`,
                         description: 'Detailed description of the product',
                         price: 15000 + (i * 2500),
-                        originalPrice: i % 3 === 0 ? 30000 : undefined,
-                        imageUrl: `https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80`,
+                        oldprice: i % 3 === 0 ? 30000 : undefined,
+                        imgUrl: `https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80`,
                         storeId: 's1',
-                        storeName: 'Verified Store',
+                        store: 'Verified Store',
                         rating: 4.8,
                         reviewCount: 120,
                         category: category || 'Retail',
                         tags: i % 2 === 0 ? ['Most TamTam'] : [],
-                        isAvailable: true
+                        availability: true
                       }}
                     />
                   </div>

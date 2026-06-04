@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Allow: /explore
+Allow: /laundry
+Allow: /food
+Allow: /products
+Allow: /store/*
+Allow: /product/*
+
+# Disallow private and checkout routes
+Disallow: /dashboard
+Disallow: /checkout
+Disallow: /orders
+Disallow: /profile
+Disallow: /settings
+Disallow: /cart
+Disallow: /messages
+Disallow: /notifications
+Disallow: /tracking/*
+
+Sitemap: https://tulete.net/sitemap.xml

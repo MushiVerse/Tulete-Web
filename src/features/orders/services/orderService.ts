@@ -37,7 +37,16 @@ export interface Order extends BaseDocument {
   deliveryLocation: OrderLocation;
   paymentMethod: 'M-Pesa' | 'Cash';
   paymentStatus: 'Pending' | 'Paid' | 'Failed';
+  contactPhone?: string;
+  no?: string; // Legacy field for Flutter backward compatibility
   notes?: string;
+  // Laundry-specific fields (mirrors Flutter reorder.dart / cartsHome.dart)
+  isLaundryOrder?: boolean;
+  irondelivery?: boolean;    // Iron after washing
+  packagepickup?: boolean;   // Package & pickup service
+  express?: boolean;         // Express 24h turnaround
+  deliverytime?: string;     // Preferred pickup date/time
+  instructions?: string;     // Special garment instructions
   createdAt: any;
   updatedAt: any;
 }

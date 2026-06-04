@@ -5,7 +5,7 @@ import { ratingService, Review, ReviewTargetType } from '../services/reviewServi
 import { ReviewSubmissionForm } from '../components/ReviewSubmissionForm';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   Star, CheckCircle2, User, MessageSquare, ThumbsUp, 
@@ -63,7 +63,8 @@ export const ReviewsPage = () => {
   };
 
   return (
-    <PageWrapper className="py-6 px-4 max-w-4xl mx-auto flex flex-col min-h-[85vh]">
+    <PageContainer>
+      <ContentContainer size="md" className="flex flex-col min-h-[85vh]">
       {/* Back button */}
       <button 
         onClick={() => navigate('/orders')}
@@ -298,6 +299,7 @@ export const ReviewsPage = () => {
           )}
         </div>
       </div>
-    </PageWrapper>
+      </ContentContainer>
+    </PageContainer>
   );
 };

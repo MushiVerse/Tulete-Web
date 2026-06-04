@@ -6,7 +6,7 @@ import { productService } from '../../products/services/productService';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
-import { PageWrapper } from '../../../shared/components/PageWrapper';
+import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   Heart, HeartCrack, Search, FolderHeart, Plus, 
@@ -119,7 +119,8 @@ export const FavoritesPage = () => {
   const recommendations = getPersonalizedRecommendations();
 
   return (
-    <PageWrapper className="py-6 px-4 max-w-4xl mx-auto flex flex-col min-h-[85vh]">
+    <PageContainer>
+      <ContentContainer size="md" className="flex flex-col min-h-[85vh]">
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -388,9 +389,9 @@ export const FavoritesPage = () => {
                           if (!item) return null;
 
                           return (
-                            <div key={itemId} className="flex items-center justify-between gap-4 p-2 bg-slate-50 dark:bg-slate-950 rounded-lg text-xs">
+                            <div key={itemId} className="flex items-center justify-between gap-4 p-2 bg-slate-50 dark:bg-slate-955 rounded-lg text-xs">
                               <div className="flex items-center gap-2 min-w-0">
-                                <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                                <img src={item.imgUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
                                 <span className="font-bold text-slate-900 dark:text-white truncate">{item.name}</span>
                               </div>
 
@@ -403,7 +404,7 @@ export const FavoritesPage = () => {
                                       productId: item.id,
                                       name: item.name,
                                       price: item.price,
-                                      imageUrl: item.imageUrl,
+                                      imageUrl: item.imgUrl,
                                       storeId: 's1',
                                       storeName: 'Verified Partner',
                                     });
@@ -436,7 +437,7 @@ export const FavoritesPage = () => {
 
       {/* Smart Personalized Recommendations Widget */}
       {recommendations.length > 0 && (
-        <div className="mt-12 bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
+        <div className="mt-12 bg-slate-550 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
           <h3 className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white mb-4">
             <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
             Inspired by your Saves & Favorites
@@ -447,7 +448,7 @@ export const FavoritesPage = () => {
               <Card key={rec.id} className="p-3 bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-850 flex flex-col justify-between h-full group">
                 <div>
                   <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-100 mb-3">
-                    <img src={rec.imageUrl} alt={rec.name} className="w-full h-full object-cover" />
+                    <img src={rec.imgUrl} alt={rec.name} className="w-full h-full object-cover" />
                   </div>
 
                   <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
@@ -468,7 +469,7 @@ export const FavoritesPage = () => {
                           type: 'product',
                           name: rec.name,
                           description: rec.description,
-                          imageUrl: rec.imageUrl,
+                          imageUrl: rec.imgUrl,
                           price: rec.price,
                           rating: rec.rating,
                         });
@@ -485,7 +486,7 @@ export const FavoritesPage = () => {
                           productId: rec.id,
                           name: rec.name,
                           price: rec.price,
-                          imageUrl: rec.imageUrl,
+                          imageUrl: rec.imgUrl,
                           storeId: 's1',
                           storeName: 'Verified Partner',
                         });
@@ -562,6 +563,7 @@ export const FavoritesPage = () => {
           </div>
         )}
       </AnimatePresence>
-    </PageWrapper>
+      </ContentContainer>
+    </PageContainer>
   );
 };
