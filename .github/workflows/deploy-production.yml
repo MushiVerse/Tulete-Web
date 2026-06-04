@@ -44,7 +44,7 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t multi-frontend-tulete_web_app .
-
+#demo
       - name: Push Docker image
         run: |
           docker tag multi-frontend-tulete_web_app ${{ secrets.DOCKER_USERNAME }}/multi-frontend-tulete_web_app:latest
