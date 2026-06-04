@@ -4,6 +4,4 @@ dev-dist
 .git
 .github
 .eslintrc.cjs
-tsconfig.json
-tsconfig.node.json
 README.md
