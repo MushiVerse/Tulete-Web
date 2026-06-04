@@ -13,6 +13,7 @@ import {
   Trash2, ShoppingCart, Star, Eye, ExternalLink, Sparkles 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 export const FavoritesPage = () => {
   const navigate = useNavigate();
@@ -289,7 +290,7 @@ export const FavoritesPage = () => {
                           <div className="flex justify-between items-center">
                             {fav.price ? (
                               <span className="font-extrabold text-xs text-slate-900 dark:text-white">
-                                {fav.price.toLocaleString()} KES
+                                {fav.price.toLocaleString()} ${APP_SETTINGS.currency}
                               </span>
                             ) : (
                               <span className="text-[10px] font-semibold text-emerald-500">
@@ -396,7 +397,7 @@ export const FavoritesPage = () => {
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-slate-950 dark:text-white shrink-0">{item.price.toLocaleString()} KES</span>
+                                <span className="font-extrabold text-slate-950 dark:text-white shrink-0">{item.price.toLocaleString()} {APP_SETTINGS.currency}</span>
                                 
                                 <button
                                   onClick={() => {
@@ -459,7 +460,7 @@ export const FavoritesPage = () => {
                 </div>
 
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-50 dark:border-slate-850">
-                  <span className="font-extrabold text-xs text-slate-950 dark:text-white">{rec.price.toLocaleString()} KES</span>
+                  <span className="font-extrabold text-xs text-slate-950 dark:text-white">{rec.price.toLocaleString()} {APP_SETTINGS.currency}</span>
                   
                   <div className="flex gap-1">
                     <button

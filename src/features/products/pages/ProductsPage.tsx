@@ -11,6 +11,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 // --- Static Data ---
 const PRODUCT_CATEGORIES = [
@@ -241,7 +242,7 @@ export const ProductsPage = () => {
                           </div>
                           
                           <div className="flex items-center justify-between mt-auto">
-                            <span className="font-extrabold text-primary">KES {product.price}</span>
+                            <span className="font-extrabold text-primary">{APP_SETTINGS.currency} {product.price.toLocaleString()}</span>
                             
                             {cartItem ? (
                               <div className="flex items-center gap-3 bg-muted px-2 py-1 rounded-xl" onClick={(e) => e.stopPropagation()}>
@@ -302,7 +303,7 @@ export const ProductsPage = () => {
                           {cartItem.quantity}x {cartItem.name}
                         </span>
                         <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          KES {cartItem.price * cartItem.quantity}
+                          {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -310,7 +311,7 @@ export const ProductsPage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">KES {cartTotal}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
                     </div>
                     <Button
                       onClick={handleCheckout}
@@ -374,7 +375,7 @@ export const ProductsPage = () => {
                   </div>
                   <span>Checkout</span>
                 </div>
-                <span>KES {cartTotal} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
             </motion.div>
           )}

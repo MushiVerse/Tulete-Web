@@ -1,5 +1,6 @@
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 export type NotificationType =
   | 'order_update'
@@ -76,7 +77,7 @@ class NotificationService extends BaseFirestoreService<AppNotification> {
         userId,
         type: 'payment_confirmed',
         title: '💳 M-Pesa Payment Received',
-        body: 'Your payment of KES 1,200 via M-Pesa (ref: NB3478X9) has been confirmed. Order dispatched.',
+        body: 'Your payment of ${APP_SETTINGS.currency} 1,200 via M-Pesa (ref: NB3478X9) has been confirmed. Order dispatched.',
         isRead: true,
         deepLink: '/orders',
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),

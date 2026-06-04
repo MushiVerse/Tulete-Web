@@ -11,6 +11,7 @@ import {
   Map, MessageSquare, AlertTriangle, CheckCircle2 
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 const STEPS: { status: OrderStatus; label: string; desc: string }[] = [
   { status: 'Pending', label: 'Order Placed', desc: 'Awaiting store confirmation' },
@@ -391,7 +392,7 @@ export const OrderTrackingPage = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 dark:text-slate-400">Total Price:</span>
-                <span className="font-extrabold text-slate-950 dark:text-white">{order.totalAmount.toLocaleString()} KES</span>
+                <span className="font-extrabold text-slate-950 dark:text-white">{order.totalAmount.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>
           </Card>

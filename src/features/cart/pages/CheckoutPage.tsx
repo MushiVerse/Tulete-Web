@@ -11,6 +11,7 @@ import { PageContainer, ContentContainer } from '../../../shared/components/layo
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 // Mock Nairobi coordinate hubs for high-fidelity order routing simulation
 const LOCATIONS = [
@@ -96,15 +97,15 @@ export const CheckoutPage = () => {
         paymentStatus: 'Pending',
         contactPhone: phoneNumber,
         no: phoneNumber, // Legacy backward compatibility for Flutter/Admin apps
-        notes: notes || undefined,
+        ...(notes && { notes }),
         // Laundry-specific fields
         ...(isLaundryOrder && {
           isLaundryOrder: true,
           irondelivery,
           packagepickup,
           express,
-          deliverytime: deliverytime || undefined,
-          instructions: laundryInstructions || undefined,
+          ...(deliverytime && { deliverytime }),
+          ...(laundryInstructions && { instructions: laundryInstructions }),
         }),
       };
 
@@ -349,7 +350,7 @@ export const CheckoutPage = () => {
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">Qty: {item.quantity}</p>
                   </div>
                   <span className="font-bold text-xs text-slate-900 dark:text-white">
-                    {(item.price * item.quantity).toLocaleString()} KES
+                    {(item.price * item.quantity).toLocaleString()} ${APP_SETTINGS.currency}
                   </span>
                 </div>
               ))}
@@ -358,19 +359,19 @@ export const CheckoutPage = () => {
             <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3 text-xs mb-6">
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Subtotal</span>
-                <span className="font-semibold text-slate-900 dark:text-white">{subtotal.toLocaleString()} KES</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Delivery</span>
-                <span>{deliveryFee === 0 ? 'FREE' : `${deliveryFee.toLocaleString()} KES`}</span>
+                <span>{deliveryFee === 0 ? 'FREE' : `${deliveryFee.toLocaleString()} ${APP_SETTINGS.currency}`}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Service Fee</span>
-                <span className="font-semibold text-slate-900 dark:text-white">{serviceFee.toLocaleString()} KES</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{serviceFee.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
               <div className="border-t border-slate-200 dark:border-slate-800 pt-4 flex justify-between text-sm font-extrabold text-slate-900 dark:text-white">
                 <span>Total Amount</span>
-                <span>{total.toLocaleString()} KES</span>
+                <span>{total.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>
 

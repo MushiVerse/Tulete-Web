@@ -18,6 +18,7 @@ import { storeService, Store } from '../../stores/services/storeService';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useCartStore } from '../../cart/store/useCartStore';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
 const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string }> = {
@@ -525,7 +526,7 @@ export const HomePage = () => {
                           {cartItem.quantity}x {cartItem.name}
                         </span>
                         <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          KES {cartItem.price * cartItem.quantity}
+                          {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -534,7 +535,7 @@ export const HomePage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">KES {cartTotal}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
                     </div>
                     <Button
                       onClick={handleCheckout}
@@ -666,7 +667,7 @@ export const HomePage = () => {
                   </div>
                   <span>Checkout</span>
                 </div>
-                <span>KES {cartTotal} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
             </motion.div>
           )}

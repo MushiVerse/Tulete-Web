@@ -11,6 +11,7 @@ import {
   ChevronRight, Package, Truck, MessageSquare, Tag
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 // ---- Toggle Row ----
 const ToggleRow = ({
@@ -201,7 +202,7 @@ export const SettingsPage = () => {
             icon={<Globe className="w-3.5 h-3.5 text-slate-500" />}
             label="Currency Display"
             value={prefs.currencyDisplay}
-            options={[{ label: 'KES (Kenyan Shilling)', value: 'KES' }, { label: 'USD (US Dollar)', value: 'USD' }]}
+            options={[{ label: `${APP_SETTINGS.currency} (Kenyan Shilling)`, value: '${APP_SETTINGS.currency}' }, { label: 'USD (US Dollar)', value: 'USD' }]}
             onChange={(v) => setVal('currencyDisplay', v)}
           />
           <SelectRow

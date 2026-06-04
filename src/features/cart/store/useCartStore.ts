@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 export interface CartItem {
   productId: string; // Composite ID for the cart (e.g., id-iron-pack)
@@ -35,7 +36,7 @@ export const calculateItemTotal = (item: CartItem): number => {
     itemTotal = itemBaseSubtotal;
     // We default to true (Delivery) if undefined, just like Flutter
     if (item.isDeliverySelected !== false) {
-      itemTotal += (250 * item.quantity); // 250 KES flat delivery fee per item count
+      itemTotal += (250 * item.quantity); // 250 ${APP_SETTINGS.currency} flat delivery fee per item count
     }
   }
   
@@ -108,7 +109,7 @@ export const useCartStore = create<CartState>()(
         });
 
         // Dynamic mock rules for delivery and service fees
-        const deliveryFee = subtotal > 0 ? (subtotal > 1500 ? 0 : 150) : 0; // Free delivery over 1500 KES
+        const deliveryFee = subtotal > 0 ? (subtotal > 1500 ? 0 : 150) : 0; // Free delivery over 1500 ${APP_SETTINGS.currency}
         const serviceFee = subtotal > 0 ? 45 : 0;
         const total = subtotal + deliveryFee + serviceFee;
 

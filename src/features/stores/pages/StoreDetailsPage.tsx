@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 export const StoreDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -478,11 +479,11 @@ export const StoreDetailsPage = () => {
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-1.5">
                           <span className="font-extrabold text-sm text-slate-900 dark:text-white">
-                            {prod.price.toLocaleString()} KES
+                            {prod.price.toLocaleString()} ${APP_SETTINGS.currency}
                           </span>
                           {prod.oldprice && (
                             <span className="text-[10px] text-slate-400 line-through">
-                              {prod.oldprice.toLocaleString()} KES
+                              {prod.oldprice.toLocaleString()} ${APP_SETTINGS.currency}
                             </span>
                           )}
                         </div>
@@ -687,7 +688,7 @@ export const StoreDetailsPage = () => {
                           {cartItem.quantity}x {cartItem.name}
                         </span>
                         <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          KES {cartItem.price * cartItem.quantity}
+                          {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -695,7 +696,7 @@ export const StoreDetailsPage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">KES {cartTotal}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
                     </div>
                     <Button
                       onClick={handleCheckout}
@@ -736,7 +737,7 @@ export const StoreDetailsPage = () => {
                   </div>
                   <span>Checkout</span>
                 </div>
-                <span>KES {cartTotal} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
             </motion.div>
           )}

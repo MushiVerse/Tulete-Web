@@ -10,6 +10,7 @@ import { Switch } from '../../../shared/components/ui/Switch';
 import { laundryService, LaundryItem } from '../services/laundryService';
 import { useCartStore, calculateItemTotal } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { APP_SETTINGS } from '@/core/config/settings';
 import {
   Search, ShoppingCart, Plus, Minus, CheckCircle2,
   Shirt, Star, Sparkles, Clock, Zap, X, ChevronRight, Phone, ArrowRight, Settings2, Package
@@ -63,7 +64,7 @@ const LaundryItemCard = ({
       exit={{ opacity: 0, y: -8 }}
       className="group bg-card border border-border p-3 sm:p-4 rounded-3xl shadow-sm hover:shadow-md transition-all flex flex-col"
     >
-      <div className="flex gap-3 sm:gap-4 items-center">
+      <div className="flex gap-3 sm:gap-4 items-start">
         {/* Image */}
         <div className="relative w-24 h-24 shrink-0 rounded-2xl overflow-hidden bg-muted">
           {item.imgURL ? (
@@ -85,25 +86,25 @@ const LaundryItemCard = ({
         </div>
 
         {/* Details */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-extrabold text-foreground text-lg line-clamp-1 group-hover:text-primary transition-colors">
+        <div className="flex-1 min-w-0 py-1">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h3 className="font-extrabold text-foreground text-sm sm:text-base leading-tight group-hover:text-primary transition-colors pr-1">
               {item.name}
             </h3>
             {item.brand && (
-              <span className="bg-primary/10 text-primary text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+              <span className="bg-primary/10 text-primary text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 mt-0.5">
                 {item.brand}
               </span>
             )}
           </div>
           
-          <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
+          <p className="text-xs text-muted-foreground leading-snug mb-2 line-clamp-2">
             {item.description || 'Professional cleaning service'}
           </p>
           
           <div className="flex items-center justify-between">
             <p className="text-lg font-extrabold text-primary">
-              KES {Math.round(livePrice).toLocaleString()}
+              {APP_SETTINGS.currency} {Math.round(livePrice).toLocaleString()}
             </p>
             {item.store && (
               <p className="text-[11px] font-bold text-muted-foreground">
@@ -342,24 +343,7 @@ export const LaundryPage = () => {
     if (qty > 0) updateQuantity(compositeId, qty - 1);
   };
 
-  const totalCartLaundryItems = cartItems.filter(i =>
-    items.some(li => li.id === i.baseProductId || li.id === i.productId)
-  ).reduce((acc, i) => acc + i.quantity, 0);
-
-  const cartTotal = cartItems.filter(i =>
-    items.some(li => li.id === i.baseProductId || li.id === i.productId)
-  ).reduce((acc, i) => {
-    let base = 0;
-    if (i.isLaundry) {
-      if (i.washingSelected !== false) base += (i.price * i.quantity);
-      if (i.ironingSelected) base += (i.price * i.quantity) * 0.95;
-      if (i.packagingSelected) base += (i.price * i.quantity) * 0.60;
-      if (i.expressSelected) base += (1900 * i.quantity);
-    } else {
-      base = i.price * i.quantity;
-    }
-    return acc + base;
-  }, 0);
+  const { total: cartTotal, itemCount: totalCartItems } = useCartStore.getState().getTotals();
 
   return (
     <PageContainer>
@@ -520,7 +504,7 @@ export const LaundryPage = () => {
                 <ShoppingCart className="w-4 h-4 text-primary" />
               </div>
 
-              {totalCartLaundryItems > 0 ? (
+              {totalCartItems > 0 ? (
                 <>
                   <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
@@ -529,7 +513,7 @@ export const LaundryPage = () => {
                           {cartItem.quantity}x {cartItem.name}
                         </span>
                         <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          KES {calculateItemTotal(cartItem).toLocaleString()}
+                          {APP_SETTINGS.currency} {calculateItemTotal(cartItem).toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -537,7 +521,7 @@ export const LaundryPage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">KES {cartTotal}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
                     </div>
                     <Button
                       onClick={() => navigate('/cart')}
@@ -579,7 +563,7 @@ export const LaundryPage = () => {
 
         {/* Mobile Sticky Cart (Visible only on small screens when cart has items) */}
         <AnimatePresence>
-          {totalCartLaundryItems > 0 && (
+          {totalCartItems > 0 && (
             <motion.div
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -592,11 +576,11 @@ export const LaundryPage = () => {
               >
                 <div className="flex items-center gap-3">
                   <div className="bg-background/20 px-3 py-1 rounded-full text-xs">
-                    {totalCartLaundryItems}
+                    {totalCartItems}
                   </div>
                   <span>Checkout</span>
                 </div>
-                <span>KES {cartTotal} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
             </motion.div>
           )}

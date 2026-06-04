@@ -7,6 +7,7 @@ import { Switch } from '../../../shared/components/ui/Switch';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store } from 'lucide-react';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { motion, AnimatePresence } from 'framer-motion';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 export const CartPage = () => {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ export const CartPage = () => {
                       <div className="flex items-center justify-between">
                         {/* Price */}
                         <span className="font-bold text-slate-900 dark:text-white text-base">
-                          {calculateItemTotal(item).toLocaleString()} KES
+                          {calculateItemTotal(item).toLocaleString()} ${APP_SETTINGS.currency}
                         </span>
 
                         {/* Quantity controls */}
@@ -146,30 +147,30 @@ export const CartPage = () => {
             <div className="space-y-3 text-sm mb-6">
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Subtotal</span>
-                <span className="font-medium text-slate-900 dark:text-white">{subtotal.toLocaleString()} KES</span>
+                <span className="font-medium text-slate-900 dark:text-white">{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Delivery Fee</span>
                 {deliveryFee === 0 ? (
                   <span className="font-semibold text-emerald-600">FREE</span>
                 ) : (
-                  <span className="font-medium text-slate-900 dark:text-white">{deliveryFee.toLocaleString()} KES</span>
+                  <span className="font-medium text-slate-900 dark:text-white">{deliveryFee.toLocaleString()} {APP_SETTINGS.currency}</span>
                 )}
               </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Service Fee</span>
-                <span className="font-medium text-slate-900 dark:text-white">{serviceFee.toLocaleString()} KES</span>
+                <span className="font-medium text-slate-900 dark:text-white">{serviceFee.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
               <div className="border-t border-slate-200 dark:border-slate-800 my-4"></div>
               <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white">
                 <span>Grand Total</span>
-                <span>{total.toLocaleString()} KES</span>
+                <span>{total.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>
 
             {deliveryFee > 0 && (
               <div className="bg-primary/5 rounded-lg p-3 text-xs text-primary mb-6 text-center font-medium">
-                Add {(1500 - subtotal > 0 ? 1500 - subtotal : 0).toLocaleString()} KES more for FREE Delivery!
+                Add {(1500 - subtotal > 0 ? 1500 - subtotal : 0).toLocaleString()} {APP_SETTINGS.currency} more for FREE Delivery!
               </div>
             )}
 

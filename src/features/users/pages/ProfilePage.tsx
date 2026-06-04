@@ -16,6 +16,7 @@ import {
   Heart, MessageSquare, LogOut, Camera, Loader2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -240,7 +241,7 @@ export const ProfilePage = () => {
         />
         <StatCard
           icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
-          label="KES Spent"
+          label={`${APP_SETTINGS.currency} Spent`}
           value={(profile.totalSpent || 0).toLocaleString()}
           color="bg-emerald-50 dark:bg-emerald-950/30"
         />

@@ -3,6 +3,7 @@ import { BaseDocument } from '../../../core/services/types';
 import { storage, db } from '../../../core/firebase/config';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 export interface UserProfile extends BaseDocument {
   uid: string;
@@ -17,7 +18,7 @@ export interface UserProfile extends BaseDocument {
   preferredLanguage: 'en' | 'sw';
   isVerified: boolean;
   totalOrders: number;
-  totalSpent: number; // KES
+  totalSpent: number; // ${APP_SETTINGS.currency}
 }
 
 export interface UserPreferences extends BaseDocument {
@@ -27,7 +28,7 @@ export interface UserPreferences extends BaseDocument {
   notifyPromotions: boolean;
   notifyDelivery: boolean;
   darkMode: boolean;
-  currencyDisplay: 'KES' | 'USD';
+  currencyDisplay: '${APP_SETTINGS.currency}' | 'USD';
   distanceUnit: 'km' | 'miles';
 }
 
@@ -37,7 +38,7 @@ const DEFAULT_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt
   notifyPromotions: false,
   notifyDelivery: true,
   darkMode: false,
-  currencyDisplay: 'KES',
+  currencyDisplay: '${APP_SETTINGS.currency}',
   distanceUnit: 'km',
 };
 

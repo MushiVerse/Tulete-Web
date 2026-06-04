@@ -13,6 +13,7 @@ import {
   RotateCcw, AlertCircle, Phone, XCircle, ArrowRight 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { APP_SETTINGS } from '@/core/config/settings';
 
 const STATUS_CONFIGS: Record<OrderStatus, { color: string; label: string; progress: number }> = {
   Pending: { color: 'bg-amber-500 text-white', label: 'Pending', progress: 15 },
@@ -212,7 +213,7 @@ export const OrdersPage = () => {
                       </div>
 
                       <div className="font-bold text-slate-900 dark:text-white text-base">
-                        {order.totalAmount.toLocaleString()} KES
+                        {order.totalAmount.toLocaleString()} ${APP_SETTINGS.currency}
                       </div>
                     </div>
 
