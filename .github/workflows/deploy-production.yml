@@ -32,7 +32,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-#demo
       - name: Build frontend
         run: npm run build
 
