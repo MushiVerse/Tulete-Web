@@ -149,7 +149,7 @@ class StoreService extends BaseFirestoreService<Store> {
           'https://images.unsplash.com/photo-1489274495757-95c7c837b101?w=400'
         ],
         promotions: [
-          { code: `MAMACLEAN10', description: '10% off laundry services over 1000 ${APP_SETTINGS.currency}`, discountValue: '10%' },
+          { code: 'MAMACLEAN10', description: `10% off laundry services over 1000 ${APP_SETTINGS.currency}`, discountValue: '10%' },
           { code: 'FREESHIP', description: 'Free pickup/delivery on your first order', discountValue: 'Free Delivery' }
         ],
         hours: [
