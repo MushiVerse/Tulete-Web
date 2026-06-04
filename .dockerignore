@@ -1,0 +1,10 @@
+node_modules
+dist
+dev-dist
+.git
+.github
+.env
+.eslintrc.cjs
+tsconfig.json
+tsconfig.node.json
+README.md
