@@ -3,7 +3,6 @@ dist
 dev-dist
 .git
 .github
-.env
 .eslintrc.cjs
 tsconfig.json
 tsconfig.node.json
