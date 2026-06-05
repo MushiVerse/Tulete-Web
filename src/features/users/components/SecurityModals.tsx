@@ -12,7 +12,7 @@ import {
 } from '../../../shared/components/ui/Dialog';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
-import { ShieldAlert, KeyRound, Trash2 } from 'lucide-react';
+import { KeyRound, Trash2 } from 'lucide-react';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from 'firebase/auth';
 import { auth } from '../../../core/firebase/config';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
@@ -52,8 +52,9 @@ export const ChangePasswordModal = ({ isOpen, onClose }: { isOpen: boolean; onCl
       setSuccess(true);
       reset();
       setTimeout(onClose, 2000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to update password');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to update password';
+      setError(errorMsg);
     }
   };
 
@@ -72,7 +73,7 @@ export const ChangePasswordModal = ({ isOpen, onClose }: { isOpen: boolean; onCl
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
           {error && <div className="text-[11px] text-rose-500 bg-rose-50 p-2 rounded-lg">{error}</div>}
-          {success && <div className="text-[11px] text-emerald-500 bg-emerald-50 p-2 rounded-lg">Password updated successfully!</div>}
+          {success && <div className="text-[11px] text-success bg-success/10 border border-success/20 p-2 rounded-lg">Password updated successfully!</div>}
           
           <div>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Current Password</label>
@@ -125,8 +126,9 @@ export const DeleteAccountModal = ({ isOpen, onClose }: { isOpen: boolean; onClo
       // Sign out from local store
       logout();
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete account');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to delete account';
+      setError(errorMsg);
       setIsDeleting(false);
     }
   };
