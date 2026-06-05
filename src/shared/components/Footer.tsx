@@ -43,7 +43,7 @@ export const Footer = () => {
                 href={APP_SETTINGS.playStoreUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white transition-all duration-300 hover:-translate-y-0.5 shadow-md"
+                className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-black border border-white/25 hover:border-white/45 text-white transition-all duration-300 hover:-translate-y-0.5 shadow-md"
               >
                 <svg className="size-6 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
@@ -51,9 +51,9 @@ export const Footer = () => {
                   <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
                   <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
                 </svg>
-                <div className="text-left leading-none">
-                  <span className="block text-[10px] font-bold text-white/50 uppercase tracking-widest">Get it on</span>
-                  <span className="block text-sm font-black text-white mt-1.5">Google Play</span>
+                <div className="text-left leading-none flex flex-col justify-center">
+                  <span className="block text-[8px] font-bold text-white/70 uppercase tracking-widest">GET IT ON</span>
+                  <span className="block text-sm font-black text-white mt-1">Google Play</span>
                 </div>
               </a>
             </div>

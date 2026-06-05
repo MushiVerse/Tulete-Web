@@ -74,20 +74,39 @@ export const TopNav = () => {
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-3 md:gap-5">
-          {/* Google Play Store Link (Desktop) */}
+          {/* Google Play Store Link (Mobile/Tablet Icon) */}
           <a
             href={APP_SETTINGS.playStoreUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition-all shadow-sm select-none cursor-pointer hover:shadow-md active:scale-95 animate-pulse"
+            className="lg:hidden flex items-center justify-center p-2 rounded-full bg-black text-white border border-white/20 hover:border-white/40 transition-all active:scale-95 size-9 shrink-0 shadow-sm"
+            title="Download Tulete App"
           >
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
               <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
               <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
               <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
             </svg>
-            <span>Play Store</span>
+          </a>
+
+          {/* Google Play Store Link (Desktop) */}
+          <a
+            href={APP_SETTINGS.playStoreUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden lg:flex items-center gap-2.5 px-4 h-10 rounded-xl bg-black border border-white/20 hover:border-white/45 text-white transition-all shadow-sm select-none cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95 duration-200"
+          >
+            <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
+              <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
+              <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
+              <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
+            </svg>
+            <div className="text-left leading-none flex flex-col justify-center">
+              <span className="block text-[7px] font-bold text-white/70 uppercase tracking-widest">GET IT ON</span>
+              <span className="block text-[10px] font-black text-white mt-0.5 tracking-tight">Google Play</span>
+            </div>
           </a>
           <button 
             onClick={toggleTheme}
@@ -237,15 +256,18 @@ export const TopNav = () => {
                   href={APP_SETTINGS.playStoreUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-extrabold text-sm transition-colors cursor-pointer select-none"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-black border border-white/20 hover:border-white/40 text-white transition-all shadow-md select-none cursor-pointer duration-200 active:scale-98"
                 >
-                  <svg className="size-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
                     <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
                     <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
                     <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
                   </svg>
-                  <span>Download on Google Play</span>
+                  <div className="text-left leading-none flex flex-col justify-center">
+                    <span className="block text-[8px] font-bold text-white/70 uppercase tracking-widest">GET IT ON</span>
+                    <span className="block text-xs font-black text-white mt-1">Google Play</span>
+                  </div>
                 </a>
               </div>
 
