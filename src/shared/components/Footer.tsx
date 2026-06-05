@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Send, MapPin, Phone, Mail, ShieldCheck } from 'lucide-react';
+import { Send, ShieldCheck } from 'lucide-react';
+import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
+import { APP_SETTINGS } from '../../core/config/settings';
 
 export const Footer = () => {
   return (
@@ -16,9 +18,13 @@ export const Footer = () => {
           {/* Brand & Description (Takes up 4 columns on large screens) */}
           <div className="lg:col-span-4 space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(249,148,32,0.3)]">
-                <span className="text-primary-foreground font-extrabold text-xl">T</span>
-              </div>
+              <img 
+                src={logoImg} 
+                alt="Tulete Logo" 
+                width={48}
+                height={48}
+                className="h-12 w-12 object-contain rounded-md bg-white p-1"
+              />
               <span className="text-2xl font-extrabold tracking-tight text-white">Tulete</span>
             </div>
             <p className="text-sm text-secondary-foreground/70 leading-relaxed font-medium pr-4">
@@ -30,6 +36,26 @@ export const Footer = () => {
                   {social}
                 </a>
               ))}
+            </div>
+            {/* Google Play Store Badge */}
+            <div className="pt-4">
+              <a
+                href={APP_SETTINGS.playStoreUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white transition-all duration-300 hover:-translate-y-0.5 shadow-md"
+              >
+                <svg className="size-6 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
+                  <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
+                  <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
+                  <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
+                </svg>
+                <div className="text-left leading-none">
+                  <span className="block text-[10px] font-bold text-white/50 uppercase tracking-widest">Get it on</span>
+                  <span className="block text-sm font-black text-white mt-1.5">Google Play</span>
+                </div>
+              </a>
             </div>
           </div>
 

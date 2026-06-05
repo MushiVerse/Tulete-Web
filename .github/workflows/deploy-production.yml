@@ -29,6 +29,7 @@ jobs:
           echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env
           echo "VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}" >> .env
           echo "VITE_APP_CURRENCY=${{ secrets.VITE_APP_CURRENCY }}" >> .env
+          echo "VITE_PLAY_STORE_URL=${{ secrets.VITE_PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=com.tuleteenterpisesltd.tulete' }}" >> .env
 
       - name: Install dependencies
         run: npm ci

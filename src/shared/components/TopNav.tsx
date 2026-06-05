@@ -7,6 +7,7 @@ import { useAuthModalStore } from '../../features/auth/store/useAuthModalStore';
 import { authService } from '../../features/auth/services/authService';
 import { useThemeStore } from '../../core/theme/useThemeStore';
 import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
+import { APP_SETTINGS } from '../../core/config/settings';
 
 export const TopNav = () => {
   const { pathname } = useLocation();
@@ -73,6 +74,21 @@ export const TopNav = () => {
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-3 md:gap-5">
+          {/* Google Play Store Link (Desktop) */}
+          <a
+            href={APP_SETTINGS.playStoreUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition-all shadow-sm select-none cursor-pointer hover:shadow-md active:scale-95 animate-pulse"
+          >
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
+              <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
+              <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
+              <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
+            </svg>
+            <span>Play Store</span>
+          </a>
           <button 
             onClick={toggleTheme}
             className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors hidden sm:block"
@@ -215,6 +231,24 @@ export const TopNav = () => {
                 </div>
               )}
               
+              {/* Google Play Store Link (Mobile) */}
+              <div className="mt-2 pt-4 border-t border-border flex flex-col gap-2">
+                <a
+                  href={APP_SETTINGS.playStoreUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-extrabold text-sm transition-colors cursor-pointer select-none"
+                >
+                  <svg className="size-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
+                    <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
+                    <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
+                    <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
+                  </svg>
+                  <span>Download on Google Play</span>
+                </a>
+              </div>
+
               <div className="flex items-center justify-between px-4 py-3 mt-2 border-t border-border">
                 <span className="text-sm font-bold text-muted-foreground">Theme</span>
                 <button 
