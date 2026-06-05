@@ -40,7 +40,7 @@ export const PromoCarousel = () => {
             </div>
             
             {/* Gradient Overlay */}
-            <div className={`absolute inset-0 ${promo.bgClass} opacity-90`} />
+            <div className={`absolute inset-0 ${promo.bgClass} opacity-45`} />
 
             {/* Content */}
             <div className="absolute inset-0 p-6 flex flex-col justify-center text-white">

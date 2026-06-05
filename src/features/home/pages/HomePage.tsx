@@ -124,7 +124,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
             alt={store.store}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10 opacity-80 group-hover:opacity-90 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-40 group-hover:opacity-50 transition-opacity" />
 
           {/* Status & Fav Row */}
           <div className="absolute top-3 inset-x-3 flex justify-between items-start">
@@ -367,7 +367,7 @@ export const HomePage = () => {
                         alt={promo.title}
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
-                      <div className={`absolute inset-0 bg-gradient-to-br ${promo.gradient} opacity-85`} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${promo.gradient} opacity-45`} />
                       <div className="absolute inset-0 p-6 flex flex-col justify-between">
                         <span className="self-start bg-background/20 backdrop-blur text-primary-foreground text-xs font-extrabold px-3.5 py-1.5 rounded-full">
                           {promo.badge}

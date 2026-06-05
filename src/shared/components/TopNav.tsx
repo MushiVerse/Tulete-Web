@@ -6,6 +6,7 @@ import { useAuthStore } from '../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../features/auth/store/useAuthModalStore';
 import { authService } from '../../features/auth/services/authService';
 import { useThemeStore } from '../../core/theme/useThemeStore';
+import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 
 export const TopNav = () => {
   const { pathname } = useLocation();
@@ -51,9 +52,13 @@ export const TopNav = () => {
         {/* Left: Logo & Main Links */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shadow-sm">
-              <span className="text-primary-foreground font-extrabold text-lg">T</span>
-            </div>
+            <img 
+              src={logoImg} 
+              alt="Tulete Logo" 
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain rounded-md"
+            />
             <span className="text-xl font-extrabold tracking-tight text-foreground hidden sm:block">Tulete</span>
           </Link>
 

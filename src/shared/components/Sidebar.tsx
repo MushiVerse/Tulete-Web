@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, ShoppingBag, LayoutDashboard, Heart, MessageSquare, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '../../core/auth/useAuthStore';
+import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
@@ -18,9 +19,13 @@ export const Sidebar = () => {
   return (
     <aside className="hidden md:flex w-64 flex-col bg-card border-r border-border min-h-screen shadow-sm">
       <div className="p-6 flex items-center gap-3 border-b border-border">
-        <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-lg">T</span>
-        </div>
+        <img 
+          src={logoImg} 
+          alt="Tulete Logo" 
+          width={48}
+          height={48}
+          className="h-12 w-12 object-contain rounded-md"
+        />
         <span className="text-xl font-bold text-primary tracking-tight">Tulete</span>
       </div>
 
