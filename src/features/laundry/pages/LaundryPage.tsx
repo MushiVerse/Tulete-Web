@@ -13,7 +13,7 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { APP_SETTINGS } from '@/core/config/settings';
 import {
   Search, ShoppingCart, Plus, Minus, CheckCircle2,
-  Shirt, Star, Sparkles, Clock, Zap, X, ChevronRight, Phone, ArrowRight, Settings2, Package
+  Shirt, Star, Sparkles, Clock, Zap, X, ChevronRight, Phone, ArrowRight, Settings2, Package, Trash2
 } from 'lucide-react';
 
 const STATS = [
@@ -30,31 +30,46 @@ const LaundryItemCard = ({
   getCartQuantity,
   addingId,
   onAddToCart,
-  onDecrement
+  onDecrement,
+  onRemoveAll,
+  hasAnyInCart,
 }: {
   item: LaundryItem;
   getCartQuantity: (id: string) => number;
   addingId: string | null;
   onAddToCart: (item: LaundryItem, config: { washingSelected: boolean; ironingSelected: boolean; packagingSelected: boolean; expressSelected: boolean }) => void;
   onDecrement: (compositeId: string) => void;
+  onRemoveAll: (compositeId: string) => void;
+  hasAnyInCart: boolean;
 }) => {
   const [showConfig, setShowConfig] = useState(false);
-  const [washing, setWashing] = useState(true); // Default is true for washing
+  const [washing, setWashing] = useState(true);
   const [ironing, setIroning] = useState(false);
   const [packaging, setPackaging] = useState(false);
   const [express, setExpress] = useState(false);
 
   const isAvailable = item.quantity > 0;
-  
+
   let livePrice = 0;
   if (washing) livePrice += item.price;
   if (ironing) livePrice += item.price * 0.95;
   if (packaging) livePrice += item.price * 0.60;
   if (express) livePrice += 1900;
-  
+
   const compositeId = `${item.id}-${washing ? 'wash' : 'no'}-${ironing ? 'iron' : 'no'}-${packaging ? 'pack' : 'no'}-${express ? 'exp' : 'no'}`;
   const isAddingThis = addingId === compositeId;
   const cartQty = getCartQuantity(compositeId);
+
+  /** Open config panel and scroll into view for discovery */
+  const handleOpenConfig = () => setShowConfig(true);
+
+  /** Confirm: add to cart then collapse panel */
+  const handleConfirmAdd = () => {
+    onAddToCart(item, { washingSelected: washing, ironingSelected: ironing, packagingSelected: packaging, expressSelected: express });
+    setShowConfig(false);
+  };
+
+  const hasService = washing || ironing || packaging || express;
 
   return (
     <motion.div
@@ -62,7 +77,9 @@ const LaundryItemCard = ({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="group bg-card border border-border p-3 sm:p-4 rounded-3xl shadow-sm hover:shadow-md transition-all flex flex-col"
+      className={`group rounded-3xl border p-3 sm:p-4 shadow-sm hover:shadow-md transition-all flex flex-col ${
+        hasAnyInCart ? 'border-primary bg-primary/5' : 'bg-card border-border'
+      }`}
     >
       <div className="flex gap-3 sm:gap-4 items-start">
         {/* Image */}
@@ -97,11 +114,11 @@ const LaundryItemCard = ({
               </span>
             )}
           </div>
-          
+
           <p className="text-xs text-muted-foreground leading-snug mb-2 line-clamp-2">
             {item.description || 'Professional cleaning service'}
           </p>
-          
+
           <div className="flex items-center justify-between">
             <p className="text-lg font-extrabold text-primary">
               {APP_SETTINGS.currency} {Math.round(livePrice).toLocaleString()}
@@ -115,10 +132,12 @@ const LaundryItemCard = ({
         </div>
       </div>
 
-      {/* Services Configurator */}
+      {/* ── Services Configurator Row ── */}
       <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <button 
+
+          {/* Toggle label */}
+          <button
             onClick={() => setShowConfig(!showConfig)}
             className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -126,39 +145,54 @@ const LaundryItemCard = ({
             Customize Service
           </button>
 
-          {/* Controls */}
-          <div className="shrink-0 flex items-center justify-end w-28">
+          {/* Right-side controls */}
+          <div className="shrink-0 flex items-center gap-2">
             {cartQty === 0 ? (
+              /* ── Not in cart: single CTA to open config ── */
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                disabled={!isAvailable || isAddingThis || (!washing && !ironing && !packaging && !express)}
-                onClick={() => onAddToCart(item, { washingSelected: washing, ironingSelected: ironing, packagingSelected: packaging, expressSelected: express })}
-                className={`w-12 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm text-sm font-extrabold
-                  ${(isAvailable && (washing || ironing || packaging || express))
+                disabled={!isAvailable}
+                onClick={handleOpenConfig}
+                className={`h-10 px-4 rounded-xl flex items-center gap-1.5 transition-all shadow-sm text-sm font-extrabold ${
+                  isAvailable
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md'
                     : 'bg-muted text-muted-foreground cursor-not-allowed'
-                  }`}
+                }`}
               >
-                {isAddingThis ? <Plus className="w-5 h-5 animate-spin" /> : 'Add'}
+                <Plus className="w-4 h-4" />
+                Add
               </motion.button>
             ) : (
-              <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-10">
-                <button
-                  onClick={() => onDecrement(compositeId)}
-                  className="w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
+              /* ── In cart: qty counter + trash to remove all ── */
+              <>
+                <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-10">
+                  <button
+                    onClick={() => onDecrement(compositeId)}
+                    className="w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-8 text-center font-extrabold text-sm text-foreground">
+                    {cartQty}
+                  </span>
+                  <button
+                    onClick={() => onAddToCart(item, { washingSelected: washing, ironingSelected: ironing, packagingSelected: packaging, expressSelected: express })}
+                    className="w-10 h-full flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Trash: remove item from cart entirely */}
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => onRemoveAll(compositeId)}
+                  title="Remove from cart"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
                 >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="w-8 text-center font-extrabold text-sm text-foreground">
-                  {cartQty}
-                </span>
-                <button
-                  onClick={() => onAddToCart(item, { washingSelected: washing, ironingSelected: ironing, packagingSelected: packaging, expressSelected: express })}
-                  className="w-10 h-full flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+                  <Trash2 className="w-4 h-4" />
+                </motion.button>
+              </>
             )}
           </div>
         </div>
@@ -170,62 +204,90 @@ const LaundryItemCard = ({
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden flex flex-col gap-3 bg-muted/30 p-3 rounded-2xl"
+              className="overflow-hidden"
             >
-              {/* Washing Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <Sparkles className="w-4 h-4" />
+              <div className="flex flex-col gap-3 bg-muted/30 p-3 rounded-2xl">
+                {/* Washing Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Washing &amp; Folding</p>
+                      <p className="text-xs text-muted-foreground">Standard cleaning</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Washing & Folding</p>
-                    <p className="text-xs text-muted-foreground">Standard cleaning</p>
-                  </div>
+                  <Switch checked={washing} onCheckedChange={setWashing} />
                 </div>
-                <Switch checked={washing} onCheckedChange={setWashing} />
-              </div>
 
-              {/* Ironing Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                    <Shirt className="w-4 h-4" />
+                {/* Ironing Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                      <Shirt className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Ironing</p>
+                      <p className="text-xs text-muted-foreground">+95% of base price</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Ironing</p>
-                    <p className="text-xs text-muted-foreground">+95% of base price</p>
-                  </div>
+                  <Switch checked={ironing} onCheckedChange={setIroning} />
                 </div>
-                <Switch checked={ironing} onCheckedChange={setIroning} />
-              </div>
 
-              {/* Packaging Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                    <Package className="w-4 h-4" />
+                {/* Packaging Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                      <Package className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Special Packaging</p>
+                      <p className="text-xs text-muted-foreground">+60% of base price</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Special Packaging</p>
-                    <p className="text-xs text-muted-foreground">+60% of base price</p>
-                  </div>
+                  <Switch checked={packaging} onCheckedChange={setPackaging} />
                 </div>
-                <Switch checked={packaging} onCheckedChange={setPackaging} />
-              </div>
 
-              {/* Express Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center text-warning">
-                    <Zap className="w-4 h-4" />
+                {/* Express Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center text-warning">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Express Delivery</p>
+                      <p className="text-xs text-muted-foreground">Premium flat fee</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Express Delivery</p>
-                    <p className="text-xs text-muted-foreground">Premium flat fee</p>
-                  </div>
+                  <Switch checked={express} onCheckedChange={setExpress} />
                 </div>
-                <Switch checked={express} onCheckedChange={setExpress} />
+
+                {/* ── Confirm / Cancel row ── */}
+                {cartQty === 0 && (
+                  <div className="flex gap-2 pt-1 mt-1 border-t border-border/50">
+                    <button
+                      onClick={() => setShowConfig(false)}
+                      className="flex-1 h-10 rounded-xl text-sm font-bold text-muted-foreground border border-border hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      disabled={!hasService || isAddingThis}
+                      onClick={handleConfirmAdd}
+                      className={`flex-1 h-10 rounded-xl text-sm font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+                        hasService
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                          : 'bg-muted text-muted-foreground cursor-not-allowed'
+                      }`}
+                    >
+                      {isAddingThis
+                        ? <><Plus className="w-4 h-4 animate-spin" /> Adding...</>
+                        : <><CheckCircle2 className="w-4 h-4" /> Add to Cart</>}
+                    </motion.button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -306,6 +368,12 @@ export const LaundryPage = () => {
       // We will skip strict category filtering here unless backend has it, but this adds the UI element.
     }
     return true;
+  }).sort((a, b) => {
+    const aInCart = cartItems.some(i => i.baseProductId === a.id);
+    const bInCart = cartItems.some(i => i.baseProductId === b.id);
+    if (aInCart && !bInCart) return -1;
+    if (!aInCart && bInCart) return 1;
+    return 0;
   });
 
   const getCartQuantity = (productId: string) => {
@@ -486,6 +554,8 @@ export const LaundryPage = () => {
                     onAddToCart={handleAddToCart}
                     getCartQuantity={getCartQuantity}
                     onDecrement={handleDecrement}
+                    onRemoveAll={(compositeId) => updateQuantity(compositeId, 0)}
+                    hasAnyInCart={cartItems.some(i => i.baseProductId === item.id)}
                   />
                 ))}
               </AnimatePresence>
@@ -541,7 +611,7 @@ export const LaundryPage = () => {
             </div>
 
             {/* TRUST STATS BAND */}
-            <div className="bg-primary rounded-3xl p-5 shadow-sm text-primary-foreground">
+            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {STATS.map(({ value, label, icon: Icon }) => (

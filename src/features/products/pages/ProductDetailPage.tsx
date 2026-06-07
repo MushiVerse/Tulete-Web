@@ -306,7 +306,7 @@ export const ProductDetailPage = () => {
             </div>
             
             {/* TRUST STATS BAND */}
-            <div className="bg-primary rounded-3xl p-5 shadow-sm text-primary-foreground">
+            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[

@@ -8,6 +8,17 @@ import { authService } from '../../features/auth/services/authService';
 import { useThemeStore } from '../../core/theme/useThemeStore';
 import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 import { APP_SETTINGS } from '../../core/config/settings';
+import { useDeviceOS } from '../../core/hooks/useDeviceOS';
+
+/** Official Google Play badge from Google's CDN */
+const PlayStoreBadge = ({ className = '' }: { className?: string }) => (
+  <img
+    src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+    alt="Get it on Google Play"
+    className={className}
+    draggable={false}
+  />
+);
 
 export const TopNav = () => {
   const { pathname } = useLocation();
@@ -21,6 +32,7 @@ export const TopNav = () => {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   const { isDark, toggleTheme } = useThemeStore();
+  const { showPlayBadge } = useDeviceOS();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -28,9 +40,6 @@ export const TopNav = () => {
         setIsDropdownOpen(false);
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
-        // We need to ensure we don't close it immediately if they click the menu button itself.
-        // But for simplicity, we'll just handle it on the button's onClick and a generic overlay if needed.
-        // Actually, let's just close it if clicking outside.
         const target = event.target as HTMLElement;
         if (!target.closest('#mobile-menu-button')) {
           setIsMobileMenuOpen(false);
@@ -49,13 +58,13 @@ export const TopNav = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-sm">
       <div className="flex h-16 w-full items-center justify-between px-4 md:px-8 max-w-[1600px] mx-auto">
-        
+
         {/* Left: Logo & Main Links */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-3">
-            <img 
-              src={logoImg} 
-              alt="Tulete Logo" 
+            <img
+              src={logoImg}
+              alt="Tulete Logo"
               width={48}
               height={48}
               className="h-12 w-12 object-contain rounded-md"
@@ -74,47 +83,41 @@ export const TopNav = () => {
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-3 md:gap-5">
-          {/* Google Play Store Link (Mobile/Tablet Icon) */}
-          <a
-            href={APP_SETTINGS.playStoreUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="lg:hidden flex items-center justify-center p-2 rounded-full bg-black text-white border border-white/20 hover:border-white/40 transition-all active:scale-95 size-9 shrink-0 shadow-sm"
-            title="Download Tulete App"
-          >
-            <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
-              <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
-              <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
-              <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
-            </svg>
-          </a>
 
-          {/* Google Play Store Link (Desktop) */}
-          <a
-            href={APP_SETTINGS.playStoreUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden lg:flex items-center gap-2.5 px-4 h-10 rounded-xl bg-black border border-white/20 hover:border-white/45 text-white transition-all shadow-sm select-none cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95 duration-200"
-          >
-            <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
-              <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
-              <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
-              <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
-            </svg>
-            <div className="text-left leading-none flex flex-col justify-center">
-              <span className="block text-[7px] font-bold text-white/70 uppercase tracking-widest">GET IT ON</span>
-              <span className="block text-[10px] font-black text-white mt-0.5 tracking-tight">Google Play</span>
-            </div>
-          </a>
-          <button 
+          {/* Google Play Badge — compact on mobile (Android only) */}
+          {showPlayBadge && (
+            <a
+              href={APP_SETTINGS.playStoreUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="lg:hidden flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+              title="Download on Google Play"
+            >
+              <PlayStoreBadge className="h-9 w-auto object-contain" />
+            </a>
+          )}
+
+          {/* Google Play Badge — full size on desktop */}
+          {showPlayBadge && (
+            <a
+              href={APP_SETTINGS.playStoreUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden lg:flex items-center active:scale-95 transition-transform hover:-translate-y-0.5 duration-200"
+              title="Download on Google Play"
+            >
+              <PlayStoreBadge className="h-10 w-auto object-contain" />
+            </a>
+          )}
+
+          {/* Theme toggle */}
+          <button
             onClick={toggleTheme}
             className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors hidden sm:block"
           >
             {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
-          
+
           {isAuthenticated ? (
             <>
               <div className="relative hidden lg:block">
@@ -131,11 +134,9 @@ export const TopNav = () => {
                 <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-destructive border-2 border-card" />
               </button>
 
-              {/* Removed inner dark toggle */}
-
               {/* User Avatar Dropdown */}
               <div className="relative" ref={dropdownRef}>
-                <button 
+                <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center justify-center size-9 rounded-full bg-primary/10 border border-primary/20 hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
                 >
@@ -157,7 +158,6 @@ export const TopNav = () => {
                         <p className="text-sm font-extrabold text-foreground truncate">{user?.displayName || 'User'}</p>
                         <p className="text-xs font-semibold text-muted-foreground truncate">{user?.email}</p>
                       </div>
-
                       <div className="flex flex-col">
                         <Link onClick={() => setIsDropdownOpen(false)} to="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                           <User className="w-4 h-4" /> Profile
@@ -183,13 +183,13 @@ export const TopNav = () => {
             </>
           ) : (
             <div className="hidden md:flex items-center gap-2 sm:gap-4">
-              <button 
+              <button
                 onClick={() => openModal('login')}
                 className="text-xs sm:text-sm font-extrabold hover:underline underline-offset-4 bg-transparent border-none p-0 cursor-pointer text-foreground"
               >
                 Sign In
               </button>
-              <button 
+              <button
                 onClick={() => openModal('register')}
                 className="text-xs sm:text-sm font-extrabold bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl transition-all shadow-sm cursor-pointer border-none"
               >
@@ -198,15 +198,14 @@ export const TopNav = () => {
             </div>
           )}
 
-          {/* Mobile Menu Icon */}
-          <button 
+          {/* Mobile Menu toggle */}
+          <button
             id="mobile-menu-button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors cursor-pointer"
           >
             <Menu className="size-5" />
           </button>
-
         </div>
       </div>
 
@@ -226,54 +225,41 @@ export const TopNav = () => {
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/food" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/food') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Food</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/laundry" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/laundry') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Laundry</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/products" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/products') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Products</Link>
-              
+
               {!isAuthenticated && (
                 <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-border">
-                  <button 
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      openModal('login');
-                    }}
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); openModal('login'); }}
                     className="w-full text-center px-4 py-3 rounded-xl text-sm font-extrabold text-foreground hover:bg-muted transition-colors cursor-pointer"
                   >
                     Sign In
                   </button>
-                  <button 
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      openModal('register');
-                    }}
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); openModal('register'); }}
                     className="w-full text-center px-4 py-3 rounded-xl text-sm font-extrabold bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
                   >
                     Get Started
                   </button>
                 </div>
               )}
-              
-              {/* Google Play Store Link (Mobile) */}
-              <div className="mt-2 pt-4 border-t border-border flex flex-col gap-2">
-                <a
-                  href={APP_SETTINGS.playStoreUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-black border border-white/20 hover:border-white/40 text-white transition-all shadow-md select-none cursor-pointer duration-200 active:scale-98"
-                >
-                  <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
-                    <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
-                    <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
-                    <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
-                  </svg>
-                  <div className="text-left leading-none flex flex-col justify-center">
-                    <span className="block text-[8px] font-bold text-white/70 uppercase tracking-widest">GET IT ON</span>
-                    <span className="block text-xs font-black text-white mt-1">Google Play</span>
-                  </div>
-                </a>
-              </div>
+
+              {/* Google Play badge in mobile menu — Android only */}
+              {showPlayBadge && (
+                <div className="mt-2 pt-4 border-t border-border flex justify-center">
+                  <a
+                    href={APP_SETTINGS.playStoreUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="active:scale-95 transition-transform"
+                  >
+                    <PlayStoreBadge className="h-14 w-auto object-contain" />
+                  </a>
+                </div>
+              )}
 
               <div className="flex items-center justify-between px-4 py-3 mt-2 border-t border-border">
                 <span className="text-sm font-bold text-muted-foreground">Theme</span>
-                <button 
+                <button
                   onClick={toggleTheme}
                   className="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
                 >
@@ -284,7 +270,6 @@ export const TopNav = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
     </header>
   );
 };

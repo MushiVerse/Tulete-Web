@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom';
 import { Send, ShieldCheck } from 'lucide-react';
 import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 import { APP_SETTINGS } from '../../core/config/settings';
+import { useDeviceOS } from '../../core/hooks/useDeviceOS';
 
 export const Footer = () => {
+  const { showPlayBadge } = useDeviceOS();
+
   return (
     <footer className="bg-secondary text-secondary-foreground border-t border-secondary-foreground/10 mt-auto w-full relative overflow-hidden">
       {/* Subtle brand glow */}
@@ -37,26 +40,24 @@ export const Footer = () => {
                 </a>
               ))}
             </div>
-            {/* Google Play Store Badge */}
-            <div className="pt-4">
-              <a
-                href={APP_SETTINGS.playStoreUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-black border border-white/25 hover:border-white/45 text-white transition-all duration-300 hover:-translate-y-0.5 shadow-md"
-              >
-                <svg className="size-6 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3.60938 2.01562C3.42188 2.20312 3.32812 2.5 3.32812 2.92188V21.0781C3.32812 21.5 3.42188 21.7969 3.60938 21.9844L3.6875 22.0625L13.7188 12.0312V11.9688L3.6875 1.9375L3.60938 2.01562Z" fill="#00C6FF"/>
-                  <path d="M17.0625 8.6875L13.7188 12.0312V11.9688L17.0625 8.625L17.1406 8.6875C17.5156 8.90625 17.7812 9.3125 17.7812 9.8125C17.7812 10.3125 17.5156 10.7188 17.1406 10.9375L17.0625 10.9688L13.7188 12.0312L17.0625 8.6875Z" fill="#FF3A44"/>
-                  <path d="M13.7188 12.0312L3.6875 22.0625C4.01562 22.1094 4.39062 22.0156 4.71875 21.8281L17.0625 14.7188L13.7188 12.0312Z" fill="#00F076"/>
-                  <path d="M13.7188 11.9688L4.71875 2.17188C4.39062 1.98438 4.01562 1.89062 3.6875 1.9375L13.7188 11.9688Z" fill="#FFC107"/>
-                </svg>
-                <div className="text-left leading-none flex flex-col justify-center">
-                  <span className="block text-[8px] font-bold text-white/70 uppercase tracking-widest">GET IT ON</span>
-                  <span className="block text-sm font-black text-white mt-1">Google Play</span>
-                </div>
-              </a>
-            </div>
+            {/* Google Play Store Badge — hidden on iPhone/iPad */}
+            {showPlayBadge && (
+              <div className="pt-4">
+                <a
+                  href={APP_SETTINGS.playStoreUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center active:scale-95 transition-transform hover:-translate-y-0.5 duration-300"
+                >
+                  <img
+                    src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+                    alt="Get it on Google Play"
+                    className="h-14 w-auto object-contain"
+                    draggable={false}
+                  />
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Quick Links (Takes up 2 columns) */}

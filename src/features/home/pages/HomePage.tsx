@@ -49,7 +49,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?q=80&w=800&auto=format&fit=crop',
     cta: 'Order Now',
     href: '/laundry',
-    gradient: 'from-primary via-primary/80 to-primary/60',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
   },
   {
     id: 2,
@@ -63,13 +63,23 @@ const PROMOS = [
   },
   {
     id: 3,
+    badge: '🛍️ New Arrivals',
+    title: 'Shop Top Products',
+    subtitle: 'Electronics, fashion & more — delivered fast',
+    image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=800&auto=format&fit=crop',
+    cta: 'Shop Now',
+    href: '/products',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+  },
+  {
+    id: 4,
     badge: '⚡ Fast Response',
     title: 'Electricians In 30 min',
     subtitle: 'Certified pros ready near you',
     image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop',
     cta: 'Book Fundi',
     href: '/explore?category=Electrical',
-    gradient: 'from-warning via-warning/80 to-warning/60 text-primary-foreground',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
   },
 ];
 
@@ -372,7 +382,7 @@ export const HomePage = () => {
                         <span className="self-start bg-background/20 backdrop-blur text-primary-foreground text-xs font-extrabold px-3.5 py-1.5 rounded-full">
                           {promo.badge}
                         </span>
-                        <div className={promo.id === 2 ? "text-secondary-foreground" : "text-primary-foreground"}>
+                        <div className="text-secondary-foreground">
                           <h3 className="font-extrabold text-2xl leading-tight mb-1.5 drop-shadow-md">{promo.title}</h3>
                           <p className="opacity-90 text-sm font-medium mb-4">{promo.subtitle}</p>
                           <span className="inline-flex items-center gap-2 bg-background text-foreground text-xs font-extrabold px-5 py-2.5 rounded-full hover:scale-105 transition-transform shadow-sm">
@@ -558,7 +568,7 @@ export const HomePage = () => {
                       title: 'Book Laundry',
                       sub: 'Express pickup',
                       href: '/laundry',
-                      gradient: 'from-primary/90 to-primary/70 text-primary-foreground',
+                      gradient: 'from-secondary to-secondary/80 text-secondary-foreground',
                     },
                     {
                       emoji: '📦',
@@ -603,7 +613,7 @@ export const HomePage = () => {
               )}
 
               {/* TRUST STATS BAND */}
-              <div className="bg-primary rounded-3xl p-5 shadow-sm text-primary-foreground">
+              <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
                 <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Platform Stats</h2>
                 <div className="grid grid-cols-1 gap-4">
                   {STATS.map(({ value, label, icon: Icon }) => (

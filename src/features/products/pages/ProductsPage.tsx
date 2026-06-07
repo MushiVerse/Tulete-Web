@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ArrowRight, ChevronRight, CheckCircle2, 
   MapPin, Star, Plus, Minus, Phone, ShieldCheck, 
-  ShoppingBag, Clock, Sparkles, Tag
+  ShoppingBag, Clock, Sparkles, Tag, Trash2
 } from 'lucide-react';
 import { PageContainer } from '../../../shared/components/layout';
 import { Button } from '../../../shared/components/ui/Button';
@@ -93,6 +93,12 @@ export const ProductsPage = () => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.storeName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
+  }).sort((a, b) => {
+    const aInCart = cartItems.some(i => i.productId === a.id);
+    const bInCart = cartItems.some(i => i.productId === b.id);
+    if (aInCart && !bInCart) return -1;
+    if (!aInCart && bInCart) return 1;
+    return 0;
   });
 
   const { total: cartTotal } = getTotals();
@@ -223,7 +229,9 @@ export const ProductsPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         key={product.id}
-                        className="bg-card rounded-3xl border border-border p-3 flex gap-4 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+                        className={`rounded-3xl border p-3 flex gap-4 shadow-sm hover:shadow-md transition-all group cursor-pointer ${
+                          cartItem ? 'border-primary bg-primary/5' : 'bg-card border-border'
+                        }`}
                         onClick={() => navigate(`/product/${product.id}`)}
                       >
                         <div className="w-28 h-28 shrink-0 rounded-2xl overflow-hidden relative bg-muted">
@@ -245,14 +253,24 @@ export const ProductsPage = () => {
                             <span className="font-extrabold text-primary">{APP_SETTINGS.currency} {product.price.toLocaleString()}</span>
                             
                             {cartItem ? (
-                              <div className="flex items-center gap-3 bg-muted px-2 py-1 rounded-xl" onClick={(e) => e.stopPropagation()}>
-                                <button onClick={() => updateQuantity(product.id, cartItem.quantity - 1)} className="w-6 h-6 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm">
-                                  <Minus className="w-3 h-3" />
-                                </button>
-                                <span className="font-extrabold text-sm">{cartItem.quantity}</span>
-                                <button onClick={() => updateQuantity(product.id, cartItem.quantity + 1)} className="w-6 h-6 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
-                                  <Plus className="w-3 h-3" />
-                                </button>
+                              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-xl">
+                                  <button onClick={() => updateQuantity(product.id, cartItem.quantity - 1)} className="w-6 h-6 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm">
+                                    <Minus className="w-3 h-3" />
+                                  </button>
+                                  <span className="font-extrabold text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
+                                  <button onClick={() => updateQuantity(product.id, cartItem.quantity + 1)} className="w-6 h-6 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                                    <Plus className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={() => updateQuantity(product.id, 0)}
+                                  title="Remove from cart"
+                                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </motion.button>
                               </div>
                             ) : (
                               <button
@@ -331,7 +349,7 @@ export const ProductsPage = () => {
             </div>
 
             {/* TRUST STATS BAND */}
-            <div className="bg-primary rounded-3xl p-5 shadow-sm text-primary-foreground">
+            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[

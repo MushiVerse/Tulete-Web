@@ -640,7 +640,7 @@ export const StoreListingPage = () => {
               <h2 className="text-sm font-extrabold text-foreground mb-4 uppercase tracking-wider">Quick Actions</h2>
               <div className="grid grid-cols-1 gap-3">
                 {[
-                  { emoji: '🧺', title: 'Book Laundry', sub: 'Express pickup', href: '/laundry', gradient: 'from-primary/90 to-primary/70 text-primary-foreground' },
+                  { emoji: '🧺', title: 'Book Laundry', sub: 'Express pickup', href: '/laundry', gradient: 'from-secondary to-secondary/80 text-secondary-foreground' },
                   { emoji: '📦', title: 'My Orders', sub: 'Track deliveries', href: '/orders', gradient: 'from-secondary to-secondary/80 text-secondary-foreground' },
                   { emoji: '❤️', title: 'Favourites', sub: 'Saved items', href: '/favorites', gradient: 'from-warning/90 to-warning/70 text-warning-foreground' },
                 ].map(({ emoji, title, sub, href, gradient }) => (
@@ -664,7 +664,7 @@ export const StoreListingPage = () => {
             </div>
 
             {/* TRUST STATS BAND */}
-            <div className="bg-primary rounded-3xl p-5 shadow-sm text-primary-foreground">
+            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Platform Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {STATS.map(({ value, label, icon: Icon }) => (
