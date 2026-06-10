@@ -232,7 +232,7 @@ export const OrderTrackingPage = () => {
         <ContentContainer size="md" className="flex flex-col items-center justify-center min-h-[70vh] text-center">
           <AlertTriangle className="w-16 h-16 text-rose-500 mb-4" />
           <h2 className="text-2xl font-bold mb-2">Order Not Found</h2>
-          <p className="text-slate-500 mb-6">This order requested does not exist or has expired.</p>
+          <p className="text-muted-foreground mb-6">This order requested does not exist or has expired.</p>
           <Button onClick={() => navigate('/orders')}>View All Orders</Button>
         </ContentContainer>
       </PageContainer>
@@ -244,7 +244,7 @@ export const OrderTrackingPage = () => {
       <ContentContainer size="md">
       <button 
         onClick={() => navigate('/orders')}
-        className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white transition-colors mb-6"
+        className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-primary dark:text-slate-400 dark:hover:text-white transition-colors mb-6"
       >
         <ChevronLeft className="w-4 h-4" />
         Back to Orders
@@ -255,7 +255,7 @@ export const OrderTrackingPage = () => {
           <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
             Live Delivery Track
           </span>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-3">
+          <h1 className="text-2xl font-extrabold text-foreground mt-3">
             Order #{order.id.slice(-8).toUpperCase()}
           </h1>
         </div>
@@ -268,13 +268,13 @@ export const OrderTrackingPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map HUD View */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="h-[360px] relative overflow-hidden border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md rounded-2xl flex flex-col">
-            <div className="absolute top-4 left-4 z-10 bg-white/95 dark:bg-slate-950/95 shadow-lg border border-slate-100 dark:border-slate-800 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-850 dark:text-white">
+          <Card className="h-[360px] relative overflow-hidden border border-border bg-card shadow-md rounded-2xl flex flex-col">
+            <div className="absolute top-4 left-4 z-10 bg-white/95 dark:bg-slate-950/95 shadow-lg border border-border px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-850 dark:text-white">
               <Map className="w-4 h-4 text-primary animate-pulse" />
               Nairobi Delivery Coordinates Grid
             </div>
 
-            <canvas ref={canvasRef} className="flex-1 w-full bg-slate-50 dark:bg-slate-950 cursor-crosshair" />
+            <canvas ref={canvasRef} className="flex-1 w-full bg-muted cursor-crosshair" />
 
             {/* Custom bottom HUD detail */}
             <div className="bg-slate-900 dark:bg-slate-950 text-white p-4 flex justify-between items-center text-xs">
@@ -292,10 +292,10 @@ export const OrderTrackingPage = () => {
           </Card>
 
           {/* Stepper Progression */}
-          <Card className="p-6 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base mb-6">Delivery Progress</h3>
+          <Card className="p-6 border border-border shadow-sm bg-card">
+            <h3 className="font-bold text-foreground text-base mb-6">Delivery Progress</h3>
             
-            <div className="relative pl-6 border-l border-slate-200 dark:border-slate-800 space-y-6">
+            <div className="relative pl-6 border-l border-border space-y-6">
               {STEPS.map((step, idx) => {
                 const isCompleted = idx <= activeStepIndex && !isFinished;
                 const isCurrent = idx === activeStepIndex && !isFinished;
@@ -309,7 +309,7 @@ export const OrderTrackingPage = () => {
                         ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
                         : isCurrent 
                         ? 'bg-amber-400 border-amber-400 animate-ping'
-                        : 'bg-white dark:bg-slate-900 border-slate-350 dark:border-slate-700'
+                        : 'bg-card border-slate-350 dark:border-slate-700'
                     }`}>
                       {(isCompleted || isStepFinished) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </div>
@@ -317,8 +317,8 @@ export const OrderTrackingPage = () => {
                     <div className="flex flex-col">
                       <span className={`font-bold text-sm ${
                         isCompleted || isCurrent || isStepFinished
-                          ? 'text-slate-900 dark:text-white' 
-                          : 'text-slate-400 dark:text-slate-500'
+                          ? 'text-foreground' 
+                          : 'text-slate-400 dark:text-muted-foreground'
                       }`}>
                         {step.label}
                       </span>
@@ -335,7 +335,7 @@ export const OrderTrackingPage = () => {
         <div className="space-y-6">
           {/* Driver Contact details */}
           {tracking?.driverName && (
-            <Card className="p-5 border border-slate-100 dark:border-slate-800 shadow-md bg-indigo-50/40 dark:bg-indigo-950/10">
+            <Card className="p-5 border border-border shadow-md bg-indigo-50/40 dark:bg-indigo-950/10">
               <h3 className="font-extrabold text-sm text-indigo-900 dark:text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                 <Truck className="w-4 h-4 text-primary" />
                 Delivery Attendant
@@ -346,8 +346,8 @@ export const OrderTrackingPage = () => {
                   {tracking.driverName.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-slate-900 dark:text-white truncate">{tracking.driverName}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Attendant on Route</p>
+                  <p className="font-bold text-sm text-foreground truncate">{tracking.driverName}</p>
+                  <p className="text-xs text-muted-foreground">Attendant on Route</p>
                 </div>
               </div>
 
@@ -371,27 +371,27 @@ export const OrderTrackingPage = () => {
           )}
 
           {/* Delivery Details */}
-          <Card className="p-6 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base mb-4">Request Summary</h3>
+          <Card className="p-6 border border-border shadow-sm bg-card">
+            <h3 className="font-bold text-foreground text-base mb-4">Request Summary</h3>
             
             <div className="space-y-4 text-xs">
-              <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                <span className="text-slate-500 dark:text-slate-400">Store Name:</span>
+              <div className="flex justify-between border-b border-border pb-2">
+                <span className="text-muted-foreground">Store Name:</span>
                 <span className="font-bold text-slate-950 dark:text-white">{order.storeName}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                <span className="text-slate-500 dark:text-slate-400">Recipient Phone:</span>
+              <div className="flex justify-between border-b border-border pb-2">
+                <span className="text-muted-foreground">Recipient Phone:</span>
                 <span className="font-bold text-slate-950 dark:text-white">+254 712 345678</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                <span className="text-slate-500 dark:text-slate-400">Payment Status:</span>
+              <div className="flex justify-between border-b border-border pb-2">
+                <span className="text-muted-foreground">Payment Status:</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   {order.paymentStatus}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Total Price:</span>
+                <span className="text-muted-foreground">Total Price:</span>
                 <span className="font-extrabold text-slate-950 dark:text-white">{order.totalAmount.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>

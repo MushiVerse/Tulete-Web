@@ -15,6 +15,12 @@ import {
   Search, ShoppingCart, Plus, Minus, CheckCircle2,
   Shirt, Star, Sparkles, Clock, Zap, X, ChevronRight, Phone, ArrowRight, Settings2, Package, Trash2
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../../shared/components/ui/Dialog';
 
 const STATS = [
   { value: '50+', label: 'Local Cleaners', icon: Shirt },
@@ -77,13 +83,11 @@ const LaundryItemCard = ({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className={`group rounded-3xl border p-3 sm:p-4 shadow-sm hover:shadow-md transition-all flex flex-col ${
-        hasAnyInCart ? 'border-primary bg-primary/5' : 'bg-card border-border'
-      }`}
+      className={`group rounded-3xl border p-3 sm:p-4 shadow-sm hover:shadow-md transition-all flex flex-col bg-card border-border h-full`}
     >
-      <div className="flex gap-3 sm:gap-4 items-start">
+      <div className="flex flex-col gap-4 flex-1">
         {/* Image */}
-        <div className="relative w-24 h-24 shrink-0 rounded-2xl overflow-hidden bg-muted">
+        <div className="relative w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden bg-muted">
           {item.imgURL ? (
             <img
               src={item.imgURL}
@@ -92,7 +96,7 @@ const LaundryItemCard = ({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Shirt className="w-8 h-8 text-muted-foreground/50" />
+              <Shirt className="w-10 h-10 text-muted-foreground/50" />
             </div>
           )}
           {!isAvailable && (
@@ -103,83 +107,87 @@ const LaundryItemCard = ({
         </div>
 
         {/* Details */}
-        <div className="flex-1 min-w-0 py-1">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className="font-extrabold text-foreground text-sm sm:text-base leading-tight group-hover:text-primary transition-colors pr-1">
-              {item.name}
-            </h3>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-center gap-1.5 mb-2">
             {item.brand && (
-              <span className="bg-primary/10 text-primary text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 mt-0.5">
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
                 {item.brand}
               </span>
             )}
+            {item.store && (
+              <span className="text-[10px] font-bold text-muted-foreground truncate">
+                by {item.store}
+              </span>
+            )}
           </div>
+          
+          <h3 className="font-extrabold text-foreground text-base leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-1.5">
+            {item.name}
+          </h3>
 
-          <p className="text-xs text-muted-foreground leading-snug mb-2 line-clamp-2">
+          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">
             {item.description || 'Professional cleaning service'}
           </p>
 
-          <div className="flex items-center justify-between">
-            <p className="text-lg font-extrabold text-primary">
-              {APP_SETTINGS.currency} {Math.round(livePrice).toLocaleString()}
-            </p>
-            {item.store && (
-              <p className="text-[11px] font-bold text-muted-foreground">
-                By {item.store}
+          <div className="mt-auto flex items-end justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
+              <p className="text-xl font-extrabold text-foreground">
+                {APP_SETTINGS.currency} {Math.round(livePrice).toLocaleString()}
               </p>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Services Configurator Row ── */}
-      <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3">
-        <div className="flex items-center justify-between">
+      <div className="mt-auto pt-4 border-t border-border flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
 
-          {/* Toggle label */}
+          {/* Toggle label — icon-only on very small screens */}
           <button
             onClick={() => setShowConfig(!showConfig)}
-            className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors min-w-0"
           >
-            <Settings2 className="w-4 h-4" />
-            Customize Service
+            <Settings2 className="w-4 h-4 shrink-0" />
+            <span className="hidden xs:inline sm:inline">Customize Service</span>
           </button>
 
           {/* Right-side controls */}
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
             {cartQty === 0 ? (
               /* ── Not in cart: single CTA to open config ── */
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 disabled={!isAvailable}
                 onClick={handleOpenConfig}
-                className={`h-10 px-4 rounded-xl flex items-center gap-1.5 transition-all shadow-sm text-sm font-extrabold ${
+                className={`h-9 sm:h-10 px-3 sm:px-4 rounded-xl flex items-center gap-1 sm:gap-1.5 transition-all shadow-sm text-xs sm:text-sm font-extrabold ${
                   isAvailable
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md'
                     : 'bg-muted text-muted-foreground cursor-not-allowed'
                 }`}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 Add
               </motion.button>
             ) : (
               /* ── In cart: qty counter + trash to remove all ── */
               <>
-                <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-10">
+                <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-9 sm:h-10">
                   <button
                     onClick={() => onDecrement(compositeId)}
-                    className="w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
+                    className="w-8 sm:w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
-                  <span className="w-8 text-center font-extrabold text-sm text-foreground">
+                  <span className="w-6 sm:w-8 text-center font-extrabold text-xs sm:text-sm text-foreground">
                     {cartQty}
                   </span>
                   <button
                     onClick={() => onAddToCart(item, { washingSelected: washing, ironingSelected: ironing, packagingSelected: packaging, expressSelected: express })}
-                    className="w-10 h-full flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    className="w-8 sm:w-10 h-full flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                 </div>
 
@@ -188,110 +196,115 @@ const LaundryItemCard = ({
                   whileTap={{ scale: 0.9 }}
                   onClick={() => onRemoveAll(compositeId)}
                   title="Remove from cart"
-                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm shrink-0"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                 </motion.button>
               </>
             )}
           </div>
         </div>
 
-        {/* Toggles Panel */}
-        <AnimatePresence>
-          {showConfig && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-col gap-3 bg-muted/30 p-3 rounded-2xl">
-                {/* Washing Toggle */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Washing &amp; Folding</p>
-                      <p className="text-xs text-muted-foreground">Standard cleaning</p>
-                    </div>
+        {/* Toggles Panel as Modal Dialog */}
+        <Dialog open={showConfig} onOpenChange={setShowConfig}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Customize Service</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-3 p-1">
+              {/* Washing Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <Sparkles className="w-5 h-5" />
                   </div>
-                  <Switch checked={washing} onCheckedChange={setWashing} />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Washing &amp; Folding</p>
+                    <p className="text-xs text-muted-foreground">Standard cleaning</p>
+                  </div>
                 </div>
-
-                {/* Ironing Toggle */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                      <Shirt className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Ironing</p>
-                      <p className="text-xs text-muted-foreground">+95% of base price</p>
-                    </div>
-                  </div>
-                  <Switch checked={ironing} onCheckedChange={setIroning} />
-                </div>
-
-                {/* Packaging Toggle */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                      <Package className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Special Packaging</p>
-                      <p className="text-xs text-muted-foreground">+60% of base price</p>
-                    </div>
-                  </div>
-                  <Switch checked={packaging} onCheckedChange={setPackaging} />
-                </div>
-
-                {/* Express Toggle */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center text-warning">
-                      <Zap className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Express Delivery</p>
-                      <p className="text-xs text-muted-foreground">Premium flat fee</p>
-                    </div>
-                  </div>
-                  <Switch checked={express} onCheckedChange={setExpress} />
-                </div>
-
-                {/* ── Confirm / Cancel row ── */}
-                {cartQty === 0 && (
-                  <div className="flex gap-2 pt-1 mt-1 border-t border-border/50">
-                    <button
-                      onClick={() => setShowConfig(false)}
-                      className="flex-1 h-10 rounded-xl text-sm font-bold text-muted-foreground border border-border hover:bg-muted transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      disabled={!hasService || isAddingThis}
-                      onClick={handleConfirmAdd}
-                      className={`flex-1 h-10 rounded-xl text-sm font-extrabold flex items-center justify-center gap-1.5 transition-all ${
-                        hasService
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-                          : 'bg-muted text-muted-foreground cursor-not-allowed'
-                      }`}
-                    >
-                      {isAddingThis
-                        ? <><Plus className="w-4 h-4 animate-spin" /> Adding...</>
-                        : <><CheckCircle2 className="w-4 h-4" /> Add to Cart</>}
-                    </motion.button>
-                  </div>
-                )}
+                <Switch checked={washing} onCheckedChange={setWashing} />
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Ironing Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                    <Shirt className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Ironing</p>
+                    <p className="text-xs text-muted-foreground">+95% of base price</p>
+                  </div>
+                </div>
+                <Switch checked={ironing} onCheckedChange={setIroning} />
+              </div>
+
+              {/* Packaging Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Special Packaging</p>
+                    <p className="text-xs text-muted-foreground">+60% of base price</p>
+                  </div>
+                </div>
+                <Switch checked={packaging} onCheckedChange={setPackaging} />
+              </div>
+
+              {/* Express Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center text-warning">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Express Delivery</p>
+                    <p className="text-xs text-muted-foreground">Premium flat fee</p>
+                  </div>
+                </div>
+                <Switch checked={express} onCheckedChange={setExpress} />
+              </div>
+
+              {/* ── Confirm / Cancel row ── */}
+              {cartQty === 0 ? (
+                <div className="flex gap-2 pt-4 mt-2 border-t border-border">
+                  <button
+                    onClick={() => setShowConfig(false)}
+                    className="flex-1 h-12 rounded-xl text-sm font-bold text-muted-foreground border border-border hover:bg-muted transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    disabled={!hasService || isAddingThis}
+                    onClick={handleConfirmAdd}
+                    className={`flex-1 h-12 rounded-xl text-sm font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-md ${
+                      hasService
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'bg-muted text-muted-foreground cursor-not-allowed'
+                    }`}
+                  >
+                    {isAddingThis
+                      ? <><Plus className="w-4 h-4 animate-spin" /> Adding...</>
+                      : <><CheckCircle2 className="w-4 h-4" /> Add to Cart</>}
+                  </motion.button>
+                </div>
+              ) : (
+                <div className="flex gap-2 pt-4 mt-2 border-t border-border">
+                   <button
+                    onClick={() => setShowConfig(false)}
+                    className="w-full h-12 rounded-xl text-sm font-bold text-foreground border border-border hover:bg-muted transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </motion.div>
   );
@@ -301,7 +314,7 @@ export const LaundryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
-  const { addToCart, items: cartItems, updateQuantity } = useCartStore();
+  const { addToCart, items: cartItems, updateQuantity, clearCart } = useCartStore();
 
   const [items, setItems] = useState<LaundryItem[]>([]);
   const [ads, setAds] = useState<{ imgURL: string; store: string }[]>([]);
@@ -544,19 +557,20 @@ export const LaundryPage = () => {
               )}
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
               <AnimatePresence>
                 {filteredItems.map((item, idx) => (
-                  <LaundryItemCard
-                    key={item.id}
-                    item={item}
-                    addingId={addingId}
-                    onAddToCart={handleAddToCart}
-                    getCartQuantity={getCartQuantity}
-                    onDecrement={handleDecrement}
-                    onRemoveAll={(compositeId) => updateQuantity(compositeId, 0)}
-                    hasAnyInCart={cartItems.some(i => i.baseProductId === item.id)}
-                  />
+                  <div key={item.id} className="flex flex-col h-full">
+                    <LaundryItemCard
+                      item={item}
+                      addingId={addingId}
+                      onAddToCart={handleAddToCart}
+                      getCartQuantity={getCartQuantity}
+                      onDecrement={handleDecrement}
+                      onRemoveAll={(compositeId) => updateQuantity(compositeId, 0)}
+                      hasAnyInCart={cartItems.some(i => i.baseProductId === item.id)}
+                    />
+                  </div>
                 ))}
               </AnimatePresence>
             </div>
@@ -576,15 +590,25 @@ export const LaundryPage = () => {
 
               {totalCartItems > 0 ? (
                 <>
-                  <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
+                  <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="flex justify-between items-center text-sm">
+                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
                         <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
                           {cartItem.quantity}x {cartItem.name}
                         </span>
-                        <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          {APP_SETTINGS.currency} {calculateItemTotal(cartItem).toLocaleString()}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <span className="font-extrabold text-foreground">
+                            {APP_SETTINGS.currency} {calculateItemTotal(cartItem).toLocaleString()}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(cartItem.productId, 0)}
+                            title="Remove item"
+                            aria-label={`Remove ${cartItem.name}`}
+                            className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all ml-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -599,6 +623,12 @@ export const LaundryPage = () => {
                     >
                       Checkout Now <ArrowRight className="w-4 h-4" />
                     </Button>
+                    <button
+                      onClick={() => clearCart()}
+                      className="w-full mt-3 text-xs font-semibold text-muted-foreground hover:text-red-500 transition-colors py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20"
+                    >
+                      Clear Cart
+                    </button>
                   </div>
                 </>
               ) : (
@@ -611,17 +641,17 @@ export const LaundryPage = () => {
             </div>
 
             {/* TRUST STATS BAND */}
-            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
-              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Service Stats</h2>
+            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
+              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {STATS.map(({ value, label, icon: Icon }) => (
                   <div key={label} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-background/20 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="block text-lg font-extrabold leading-tight">{value}</span>
-                      <span className="block text-[10px] opacity-70 font-semibold uppercase">{label}</span>
+                      <span className="block text-lg font-extrabold leading-tight text-foreground">{value}</span>
+                      <span className="block text-[10px] text-muted-foreground font-semibold uppercase">{label}</span>
                     </div>
                   </div>
                 ))}

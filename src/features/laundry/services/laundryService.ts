@@ -17,6 +17,8 @@ export interface LaundryItem extends BaseDocument {
   category: string;          // "Nguo" for laundry items
   store: string;
   description?: string;
+  rating?: number;           // computed average from `rate` array
+  reviewCount?: number;      // length of `rate` array
   createdAt?: any;
   updatedAt?: any;
 }
@@ -35,6 +37,25 @@ class LaundryService extends BaseFirestoreService<LaundryItem> {
     super('cloths'); // Mirrors Flutter's exact Firestore collection name
   }
 
+  protected override parse(data: any): LaundryItem {
+    // Flutter stores ratings as a `rate` array (e.g. [4.5, 3.0, 5.0])
+    let rating = 0;
+    let reviewCount = 0;
+    if (Array.isArray(data.rate) && data.rate.length > 0) {
+      const rates = data.rate.map(Number).filter((n: number) => !isNaN(n));
+      reviewCount = rates.length;
+      rating = rates.reduce((sum: number, r: number) => sum + r, 0) / reviewCount;
+    } else if (data.rating !== undefined) {
+      rating = Number(data.rating);
+    }
+    return {
+      ...data,
+      id: data.id,
+      rating: Math.round(rating * 10) / 10,
+      reviewCount,
+    } as LaundryItem;
+  }
+
   /** Get all available laundry items, ordered by time descending */
   async getAvailableItems(): Promise<LaundryItem[]> {
     const q = query(
@@ -42,10 +63,7 @@ class LaundryService extends BaseFirestoreService<LaundryItem> {
       orderBy('time', 'desc')
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as LaundryItem));
+    return snapshot.docs.map(doc => this.parse({ id: doc.id, ...doc.data() }));
   }
 
   /** Search items by name (client-side fuzzy for simplicity) */
@@ -64,10 +82,7 @@ class LaundryService extends BaseFirestoreService<LaundryItem> {
   subscribeToItems(callback: (items: LaundryItem[]) => void): () => void {
     const q = query(this.collectionRef, orderBy('time', 'desc'));
     return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as LaundryItem));
+      const items = snapshot.docs.map(doc => this.parse({ id: doc.id, ...doc.data() }));
       callback(items);
     }, (err) => {
       console.error('LaundryService stream error:', err);

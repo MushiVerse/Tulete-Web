@@ -35,14 +35,18 @@ export const ProductCard = ({
       className="h-full"
     >
       <Link to={`/product/${product.id}`} className="block h-full">
-        <Card className="h-full overflow-hidden flex flex-col group relative">
-          {/* Badges Overlay */}
-          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+        <Card className="h-full overflow-hidden flex flex-col group relative bg-card border-border/40 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 rounded-3xl">
+          {/* Badges Overlay (Styled exactly like Open Now) */}
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
             {product.tags?.includes('Most TamTam') && (
-              <Badge className="bg-[#F59E0B] text-white border-none shadow-sm">Hot</Badge>
+              <span className="text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md bg-success/90 text-primary-foreground tracking-wide">
+                HOT 🔥
+              </span>
             )}
             {product.oldprice && product.oldprice > product.price && (
-              <Badge className="bg-destructive text-destructive-foreground border-none shadow-sm">Sale</Badge>
+              <span className="text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md bg-success/90 text-primary-foreground tracking-wide">
+                SALE
+              </span>
             )}
           </div>
 
@@ -53,22 +57,24 @@ export const ProductCard = ({
               e.stopPropagation();
               onToggleFavorite?.(product);
             }}
-            className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 backdrop-blur-sm text-muted-foreground hover:text-destructive hover:bg-white shadow-sm transition-colors"
+            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-sm hover:bg-white/40 active:scale-95 transition-all"
           >
-            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-destructive text-destructive' : ''}`} />
+            <Heart className={`w-4 h-4 transition-colors ${isFavorite ? 'fill-primary text-primary' : 'text-white'}`} />
           </button>
 
           {/* Image Container */}
-          <div className="relative aspect-square overflow-hidden bg-muted">
+          <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/50 shrink-0">
             <img 
               src={product.imgUrl} 
               alt={product.name}
-              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+              className="object-cover w-full h-full transition-transform duration-500 ease-out group-hover:scale-105"
               loading="lazy"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
             {!product.availability && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <span className="text-white font-semibold text-sm bg-black/50 px-3 py-1 rounded-full backdrop-blur-md">
+              <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
+                <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
                   Out of Stock
                 </span>
               </div>
@@ -76,44 +82,49 @@ export const ProductCard = ({
           </div>
 
           {/* Content */}
-          <CardContent className="p-3 flex flex-col flex-grow">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-xs text-muted-foreground truncate">{product.store}</span>
-              <div className="flex items-center gap-0.5 text-yellow-500">
-                <Star className="w-3 h-3 fill-current" />
-                <span className="text-[10px] font-medium text-foreground">{(product.rating ?? 0).toFixed(1)}</span>
+          <CardContent className="p-3.5 flex flex-col flex-grow bg-card">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="text-[11px] font-bold text-muted-foreground truncate flex-1">
+                {product.store}
+              </span>
+              <div className="flex items-center gap-1 bg-black/50 backdrop-blur-md px-1.5 py-0.5 rounded-full shrink-0 shadow-sm">
+                <Star className="w-3 h-3 fill-warning stroke-warning" />
+                <span className="text-[10px] font-extrabold text-white">{(product.rating ?? 0).toFixed(1)}</span>
               </div>
             </div>
             
-            <h3 className="font-medium text-sm line-clamp-2 leading-tight mb-2 flex-grow">
+            <h3 className="font-extrabold text-sm text-foreground line-clamp-2 leading-snug mb-3 flex-grow group-hover:text-primary transition-colors">
               {product.name}
             </h3>
 
-            <div className="flex items-end justify-between mt-auto">
+            <div className="flex items-end justify-between mt-auto pt-3 border-t border-border/50">
               <div className="flex flex-col">
                 {product.oldprice && product.oldprice > product.price && (
-                  <span className="text-xs text-muted-foreground line-through">
-                    TZS {product.oldprice.toLocaleString()}
+                  <span className="text-[10px] font-bold text-muted-foreground line-through mb-0.5">
+                    {new Intl.NumberFormat('en-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(product.oldprice)}
                   </span>
                 )}
-                <span className="font-bold text-primary">
+                <span className="font-extrabold text-sm sm:text-[15px] text-foreground">
                   {formattedPrice}
                 </span>
               </div>
               
-              <Button 
-                size="sm" 
-                variant="secondary"
-                className="h-8 w-8 rounded-full p-0 shrink-0 shadow-sm"
+              <button 
                 disabled={!product.availability}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   onAddToCart?.(product);
                 }}
+                className={`flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0 ${
+                  product.availability 
+                    ? 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
               >
-                <Plus className="w-4 h-4" />
-              </Button>
+                <Plus className="w-3.5 h-3.5 mr-0.5" strokeWidth={3} />
+                Add
+              </button>
             </div>
           </CardContent>
         </Card>

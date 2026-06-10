@@ -57,8 +57,8 @@ export const ForgotPasswordForm = () => {
           <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Send className="w-8 h-8 text-secondary" />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Check your email</h1>
-          <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Check your email</h1>
+          <p className="text-sm text-muted-foreground font-medium max-w-xs mx-auto">
             We have sent a password reset link to your email address. Please follow the instructions to reset your password.
           </p>
         </motion.div>
@@ -67,7 +67,7 @@ export const ForgotPasswordForm = () => {
           <Button 
             variant="outline" 
             onClick={() => setView('login')}
-            className="w-full h-12 text-sm font-bold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300"
+            className="w-full h-12 text-sm font-bold bg-card border-border text-foreground"
           >
             <ArrowLeft className="mr-2 w-4 h-4" /> Back to login
           </Button>
@@ -84,8 +84,8 @@ export const ForgotPasswordForm = () => {
       animate="show"
     >
       <motion.div variants={itemVariants} className="space-y-2 mb-8 text-center sm:text-left">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Forgot password?</h1>
-        <p className="text-sm text-slate-500 font-medium">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Forgot password?</h1>
+        <p className="text-sm text-muted-foreground font-medium">
           Enter your email and we'll send you a reset link
         </p>
       </motion.div>
@@ -98,7 +98,7 @@ export const ForgotPasswordForm = () => {
             placeholder="name@example.com"
             {...register('email')}
             error={errors.email?.message}
-            className="h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+            className="h-11 bg-muted border-border"
           />
         </motion.div>
 
@@ -118,7 +118,7 @@ export const ForgotPasswordForm = () => {
         <button 
           type="button"
           onClick={() => setView('login')}
-          className="inline-flex items-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold transition-colors bg-transparent border-none p-0 cursor-pointer"
+          className="inline-flex items-center text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300 font-bold transition-colors bg-transparent border-none p-0 cursor-pointer"
         >
           <ArrowLeft className="mr-2 w-4 h-4" /> Back to login
         </button>

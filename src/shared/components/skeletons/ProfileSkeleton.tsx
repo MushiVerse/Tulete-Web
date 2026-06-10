@@ -7,7 +7,7 @@ export const ProfileSkeleton = () => {
     <PageContainer>
       <ContentContainer size="md">
         {/* Profile Hero Skeleton */}
-        <div className="relative mb-6 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+        <div className="relative mb-6 rounded-2xl overflow-hidden bg-card border border-border">
           <Skeleton className="h-28 w-full rounded-none" />
           <div className="px-6 pb-6">
             <div className="flex items-end justify-between -mt-12 mb-4">
@@ -28,7 +28,7 @@ export const ProfileSkeleton = () => {
         {/* Stats Row Skeleton */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center">
+            <div key={i} className="p-4 rounded-xl border border-border bg-card flex flex-col items-center">
               <Skeleton className="w-9 h-9 rounded-xl mb-2" />
               <Skeleton className="h-3 w-16 mb-1" />
               <Skeleton className="h-5 w-12" />
@@ -37,7 +37,7 @@ export const ProfileSkeleton = () => {
         </div>
 
         {/* Menu Skeleton */}
-        <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden divide-y divide-slate-50 dark:divide-slate-800">
+        <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-slate-50 dark:divide-slate-800">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-3">

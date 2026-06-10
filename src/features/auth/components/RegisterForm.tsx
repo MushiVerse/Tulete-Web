@@ -66,8 +66,8 @@ export const RegisterForm = () => {
       animate="show"
     >
       <motion.div variants={itemVariants} className="space-y-2 mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Create an account</h1>
-        <p className="text-sm text-slate-500 font-medium">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Create an account</h1>
+        <p className="text-sm text-muted-foreground font-medium">
           Enter your information to get started
         </p>
       </motion.div>
@@ -80,7 +80,7 @@ export const RegisterForm = () => {
             icon={<User className="w-5 h-5" />}
             {...register('name')}
             error={errors.name?.message}
-            className="bg-slate-50/50 dark:bg-slate-900/50"
+            className="bg-muted/50"
           />
         </motion.div>
 
@@ -92,7 +92,7 @@ export const RegisterForm = () => {
             icon={<Mail className="w-5 h-5" />}
             {...register('email')}
             error={errors.email?.message}
-            className="bg-slate-50/50 dark:bg-slate-900/50"
+            className="bg-muted/50"
           />
         </motion.div>
         
@@ -106,14 +106,14 @@ export const RegisterForm = () => {
               <button 
                 type="button" 
                 onClick={() => setShowPassword(!showPassword)}
-                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
+                className="p-1 hover:bg-muted rounded-md transition-colors"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             }
             {...register('password')}
             error={errors.password?.message}
-            className="bg-slate-50/50 dark:bg-slate-900/50"
+            className="bg-muted/50"
           />
           <Input
             label="Confirm"
@@ -124,14 +124,14 @@ export const RegisterForm = () => {
               <button 
                 type="button" 
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
+                className="p-1 hover:bg-muted rounded-md transition-colors"
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             }
             {...register('confirmPassword')}
             error={errors.confirmPassword?.message}
-            className="bg-slate-50/50 dark:bg-slate-900/50"
+            className="bg-muted/50"
           />
         </motion.div>
 
@@ -149,10 +149,10 @@ export const RegisterForm = () => {
 
       <motion.div variants={itemVariants} className="relative my-8">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-slate-200 dark:border-slate-800" />
+          <span className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white dark:bg-slate-900 px-3 text-slate-400 font-bold tracking-widest">Or continue with</span>
+          <span className="bg-card px-3 text-slate-400 font-bold tracking-widest">Or continue with</span>
         </div>
       </motion.div>
 
@@ -160,7 +160,7 @@ export const RegisterForm = () => {
         <Button 
           variant="outline" 
           type="button" 
-          className="w-full h-12 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 shadow-sm" 
+          className="w-full h-12 bg-card border-border hover:bg-muted font-bold text-foreground shadow-sm" 
           onClick={() => googleMutation.mutate()}
           isLoading={googleMutation.isPending}
         >
@@ -174,7 +174,7 @@ export const RegisterForm = () => {
         </Button>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="mt-8 text-center text-sm font-medium text-slate-500">
+      <motion.div variants={itemVariants} className="mt-8 text-center text-sm font-medium text-muted-foreground">
         Already have an account?{' '}
         <button 
           type="button"

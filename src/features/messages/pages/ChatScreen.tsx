@@ -58,7 +58,7 @@ export const ChatScreen = () => {
       <PageWrapper className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
         <AlertCircle className="w-12 h-12 text-rose-500 mb-3" />
         <h2 className="text-xl font-bold">Chat Not Found</h2>
-        <p className="text-slate-500 text-xs mt-1 mb-6">This message thread does not exist or has expired.</p>
+        <p className="text-muted-foreground text-xs mt-1 mb-6">This message thread does not exist or has expired.</p>
         <Button onClick={() => navigate('/messages')}>Go to Messages</Button>
       </PageWrapper>
     );
@@ -112,13 +112,13 @@ export const ChatScreen = () => {
   };
 
   return (
-    <PageWrapper className="p-0 bg-slate-50 dark:bg-slate-950 flex flex-col h-[85vh] relative overflow-hidden">
+    <PageWrapper className="p-0 bg-muted flex flex-col h-[85vh] relative overflow-hidden">
       {/* Dynamic Header */}
       <div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate('/messages')}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-550 dark:text-slate-400"
+            className="p-1 hover:bg-accent rounded-full transition-colors text-slate-550 dark:text-slate-400"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -136,7 +136,7 @@ export const ChatScreen = () => {
 
           <div>
             <div className="flex items-center gap-1">
-              <h3 className="font-extrabold text-sm text-slate-900 dark:text-white line-clamp-1">{partner.name}</h3>
+              <h3 className="font-extrabold text-sm text-foreground line-clamp-1">{partner.name}</h3>
               {otherId === 'tulete_support' && (
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-500 fill-blue-500/10" />
               )}
@@ -151,12 +151,12 @@ export const ChatScreen = () => {
           {otherId !== 'tulete_support' && (
             <a 
               href="tel:+254711222333" 
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-550 dark:text-slate-400"
+              className="p-2 hover:bg-accent rounded-full transition-colors text-slate-550 dark:text-slate-400"
             >
               <Phone className="w-4 h-4" />
             </a>
           )}
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-550 dark:text-slate-400">
+          <button className="p-2 hover:bg-accent rounded-full transition-colors text-slate-550 dark:text-slate-400">
             <MoreVertical className="w-4 h-4" />
           </button>
         </div>
@@ -220,7 +220,7 @@ export const ChatScreen = () => {
                       <ShoppingBag className="w-4 h-4 text-primary" />
                       <div>
                         <span className="font-bold text-slate-950 dark:text-white">{msg.referenceTitle}</span>
-                        <p className="text-[9px] text-slate-500 mt-0.5">Click to view order details</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Click to view order details</p>
                       </div>
                     </div>
                   </Card>
@@ -267,7 +267,7 @@ export const ChatScreen = () => {
               exit={{ opacity: 0, y: 10 }}
               className="flex justify-start"
             >
-              <div className="bg-card border border-slate-100 dark:border-slate-850 text-slate-500 rounded-2xl rounded-tl-none p-3 shadow-sm flex items-center gap-1.5 text-xs">
+              <div className="bg-card border border-slate-100 dark:border-slate-850 text-muted-foreground rounded-2xl rounded-tl-none p-3 shadow-sm flex items-center gap-1.5 text-xs">
                 <span>{partner.name} is typing</span>
                 <span className="flex gap-0.5">
                   <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-75" />
@@ -294,28 +294,28 @@ export const ChatScreen = () => {
             <div className="grid grid-cols-4 gap-4 p-4 text-center text-xs">
               <button 
                 onClick={() => injectAttachment('image')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 transition-colors font-semibold"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-muted hover:bg-slate-100 transition-colors font-semibold"
               >
                 <ImageIcon className="w-5 h-5 text-indigo-500 mb-1" />
                 Photo
               </button>
               <button 
                 onClick={() => injectAttachment('location')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 transition-colors font-semibold"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-muted hover:bg-slate-100 transition-colors font-semibold"
               >
                 <MapPin className="w-5 h-5 text-emerald-500 mb-1" />
                 Location
               </button>
               <button 
                 onClick={() => injectAttachment('order_reference')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 transition-colors font-semibold"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-muted hover:bg-slate-100 transition-colors font-semibold"
               >
                 <ShoppingBag className="w-5 h-5 text-amber-500 mb-1" />
                 Order Ref
               </button>
               <button 
                 onClick={() => injectAttachment('store_reference')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 transition-colors font-semibold"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-muted hover:bg-slate-100 transition-colors font-semibold"
               >
                 <Store className="w-5 h-5 text-blue-500 mb-1" />
                 Store Ref
@@ -332,7 +332,7 @@ export const ChatScreen = () => {
           className={`p-2 rounded-full transition-colors ${
             showAttachments 
               ? 'bg-primary/10 text-primary' 
-              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400'
+              : 'hover:bg-accent text-slate-400'
           }`}
         >
           <Paperclip className="w-4 h-4" />
@@ -343,10 +343,10 @@ export const ChatScreen = () => {
           onChange={(e) => setTextInput(e.target.value)}
           onKeyDown={handleKeyPress}
           placeholder="Type message..."
-          className="flex-1 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-10 text-xs rounded-full px-4"
+          className="flex-1 bg-muted border-border h-10 text-xs rounded-full px-4"
         />
 
-        <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400">
+        <button className="p-2 hover:bg-accent rounded-full text-slate-400">
           <Smile className="w-4 h-4" />
         </button>
 

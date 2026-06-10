@@ -58,7 +58,7 @@ export const ConversationsPage = () => {
           <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
             In-App Messaging
           </span>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-3">
+          <h1 className="text-2xl font-extrabold text-foreground mt-3">
             Messages & Provider Chat
           </h1>
         </div>
@@ -71,12 +71,12 @@ export const ConversationsPage = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search conversation thread or attendant..."
-          className="pl-10 py-5 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+          className="pl-10 py-5 bg-card border-border"
         />
       </div>
 
       {/* Tabs Row */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 mb-6 overflow-x-auto scrollbar-none">
+      <div className="flex border-b border-border gap-6 mb-6 overflow-x-auto scrollbar-none">
         {(['all', 'providers', 'support'] as const).map((tab) => (
           <button
             key={tab}
@@ -100,10 +100,10 @@ export const ConversationsPage = () => {
 
       {/* Chats Threads List */}
       {filteredConversations.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl">
+        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center bg-muted/40 border border-border/80 rounded-2xl">
           <MessageSquare className="w-12 h-12 text-slate-350 mx-auto mb-4" />
-          <h3 className="text-base font-bold mb-1 text-slate-900 dark:text-white">No Chats Found</h3>
-          <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto">
+          <h3 className="text-base font-bold mb-1 text-foreground">No Chats Found</h3>
+          <p className="text-muted-foreground text-xs max-w-sm mx-auto">
             You don't have any message threads matching this tab or search query.
           </p>
         </div>
@@ -123,10 +123,10 @@ export const ConversationsPage = () => {
                 whileHover={{ y: -1 }}
                 className="cursor-pointer group"
               >
-                <Card className={`p-4 border shadow-sm transition-all hover:shadow-md flex items-center gap-4 bg-white dark:bg-slate-900 ${
+                <Card className={`p-4 border shadow-sm transition-all hover:shadow-md flex items-center gap-4 bg-card ${
                   userUnread > 0 
                     ? 'border-primary bg-primary/5 dark:bg-primary/5' 
-                    : 'border-slate-100 dark:border-slate-800'
+                    : 'border-border'
                 }`}>
                   {/* User Profile Avatar with Presence status indicator */}
                   <div className="relative flex-shrink-0">
@@ -144,7 +144,7 @@ export const ConversationsPage = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-1">
                       <div className="flex items-center gap-1.5">
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
+                        <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">
                           {partner.name}
                         </h4>
                         {partnerId === 'tulete_support' && (
@@ -160,7 +160,7 @@ export const ConversationsPage = () => {
                       </span>
                     </div>
 
-                    <p className={`text-xs truncate ${userUnread > 0 ? 'font-bold text-slate-950 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+                    <p className={`text-xs truncate ${userUnread > 0 ? 'font-bold text-slate-950 dark:text-white' : 'text-muted-foreground'}`}>
                       {conv.lastMessage?.content || 'No messages yet.'}
                     </p>
                   </div>
@@ -172,7 +172,7 @@ export const ConversationsPage = () => {
                         {userUnread}
                       </Badge>
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-355 dark:text-slate-500 group-hover:text-primary transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-slate-355 dark:text-muted-foreground group-hover:text-primary transition-colors" />
                     )}
                   </div>
                 </Card>

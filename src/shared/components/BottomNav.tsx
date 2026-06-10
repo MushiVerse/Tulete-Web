@@ -3,14 +3,17 @@ import { NavLink } from 'react-router-dom';
 import { Home, Search, ShoppingCart, User, LayoutDashboard } from 'lucide-react';
 import { useAuthStore } from '../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../features/auth/store/useAuthModalStore';
+import { useCartStore } from '../../features/cart/store/useCartStore';
 
 export const BottomNav = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openModal = useAuthModalStore((state) => state.openModal);
+  
+  const { items } = useCartStore();
+  const cartItemCount = items.reduce((total, item) => total + item.quantity, 0);
 
   const mobileNavigation = [
-    { name: 'Home', to: '/', icon: Home, show: !isAuthenticated },
-    { name: 'Dash', to: '/dashboard', icon: LayoutDashboard, show: isAuthenticated },
+    { name: 'Home', to: '/', icon: Home, show: true },
     { name: 'Search', to: '/explore', icon: Search, show: true },
     { name: 'Cart', to: '/cart', icon: ShoppingCart, show: true },
     { 
@@ -34,20 +37,30 @@ export const BottomNav = () => {
             key={item.name}
             to={item.to}
             onClick={item.onClick}
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center w-14 h-14 rounded-2xl gap-1 transition-all duration-300 ${
-                isActive ? 'text-primary bg-white/5 scale-105' : 'text-secondary-foreground/60 hover:text-white hover:bg-white/5'
-              }`
-            }
+            className={({ isActive }) => {
+              const isItemActive = isActive && item.to !== '#';
+              return `flex flex-col items-center justify-center w-14 h-14 rounded-2xl gap-1 transition-all duration-300 ${
+                isItemActive ? 'text-primary bg-white/5 scale-105' : 'text-secondary-foreground/60 hover:text-white hover:bg-white/5'
+              }`;
+            }}
           >
-            {({ isActive }) => (
+            {({ isActive }) => {
+              const isItemActive = isActive && item.to !== '#';
+              return (
               <>
-                <item.icon className={`size-5 transition-all duration-300 ${isActive ? 'drop-shadow-[0_0_8px_rgba(249,148,32,0.5)]' : ''}`} strokeWidth={isActive ? 2.5 : 2} />
-                <span className={`text-[10px] transition-all duration-300 ${isActive ? 'font-extrabold tracking-wide' : 'font-medium'}`}>
+                <div className="relative">
+                  <item.icon className={`size-5 transition-all duration-300 ${isItemActive ? 'drop-shadow-[0_0_8px_rgba(249,148,32,0.5)]' : ''}`} strokeWidth={isItemActive ? 2.5 : 2} />
+                  {item.name === 'Cart' && cartItemCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 bg-primary text-primary-foreground text-[9px] font-extrabold w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-md animate-in zoom-in duration-300">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-[10px] transition-all duration-300 ${isItemActive ? 'font-extrabold tracking-wide' : 'font-medium'}`}>
                   {item.name}
                 </span>
               </>
-            )}
+            )}}
           </NavLink>
         ))}
     </div>

@@ -19,6 +19,10 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { HorizontalCarousel } from '../../../shared/components/ui/HorizontalCarousel';
+import { ProductCard } from '../../../shared/components/cards/ProductCard';
+import { productService, Product } from '../../products/services/productService';
+import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
 const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string }> = {
@@ -124,11 +128,11 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
     <motion.div
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
-      className="shrink-0 w-[80%] sm:w-[45%] xl:w-[30%] 2xl:w-[23%] cursor-pointer group"
+      className="w-full h-full cursor-pointer group"
     >
       <div className="bg-card rounded-3xl overflow-hidden border border-border shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full group-hover:-translate-y-1">
         {/* Cover image */}
-        <div className="relative aspect-square w-full overflow-hidden bg-muted shrink-0">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted shrink-0">
           <img
             src={store.imgURL}
             alt={store.store}
@@ -147,7 +151,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
               onClick={onFav}
               className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-sm hover:bg-white/40 active:scale-95 transition-all"
             >
-              <Heart className={`w-4 h-4 transition-colors ${isFav ? 'fill-destructive text-destructive' : 'text-white'}`} />
+              <Heart className={`w-4 h-4 transition-colors ${isFav ? 'fill-primary text-primary' : 'text-white'}`} />
             </button>
           </div>
 
@@ -165,20 +169,31 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
         </div>
 
         {/* Info */}
-        <div className="p-5 flex flex-col flex-1 bg-card">
-          <div className="flex items-start justify-between gap-3 mb-1.5">
-            <h3 className="font-extrabold text-foreground text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors flex-1">
+        <div className="p-4 flex flex-col flex-1 bg-card">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="font-extrabold text-foreground text-base leading-tight line-clamp-1 group-hover:text-primary transition-colors flex-1">
               {store.store}
             </h3>
             {store.isVerified && (
-              <CheckCircle2 className="w-5 h-5 text-secondary shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
             )}
           </div>
 
-          <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50 text-base">
+          <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-border/50">
             <div className="flex items-center gap-1.5 text-muted-foreground">
-              <MapPin className="w-5 h-5 text-success shrink-0" />
-              <span className="font-bold text-foreground">{store.address || 'Nairobi'}</span>
+              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-xs font-semibold text-foreground truncate">{store.address || 'Nairobi'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <span className="text-xs font-semibold">20-35 min</span>
+              </div>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Star className="w-3.5 h-3.5 fill-warning stroke-warning shrink-0" />
+                <span className="text-xs font-semibold text-foreground">{store.rating || '—'}</span>
+                <span className="text-xs text-muted-foreground">({store.reviewCount || 0})</span>
+              </div>
             </div>
           </div>
         </div>
@@ -204,6 +219,25 @@ export const HomePage = () => {
   const openNowRef = useRef<HTMLDivElement>(null);
   const topRatedRef = useRef<HTMLDivElement>(null);
 
+  const { favorites: productFavs, isFavorited, toggleFavorite: toggleProductFavorite, initialize: initFavs } = useFavoritesStore();
+
+  useEffect(() => {
+    initFavs(user?.id || 'guest_user');
+  }, [user?.id, initFavs]);
+
+  const handleProductFav = (p: Product) => {
+    toggleProductFavorite(user?.id || 'guest_user', {
+      type: 'product',
+      itemId: p.id,
+      name: p.name,
+      description: p.description || '',
+      imageUrl: p.imgUrl || '',
+      price: p.price,
+      rating: p.rating,
+      reviewCount: p.reviewCount,
+    });
+  };
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning ☀️' : hour < 17 ? 'Good afternoon 👋' : 'Good evening 🌙';
   const firstName = user?.displayName?.split(' ')[0] || 'there';
@@ -217,6 +251,23 @@ export const HomePage = () => {
   const stores = storesData?.data || [];
   const topStores = [...stores].sort((a, b) => (b.rating || 0) - (a.rating || 0));
   const openStores = topStores.filter(s => s.availability);
+
+  const { data: foodsData } = useFirestoreQuery(['foods', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'foods' }], limit: 8 });
+  const { data: productsData } = useFirestoreQuery(['products', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'products' }], limit: 8 });
+  const { data: clothsData } = useFirestoreQuery(['cloths', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'cloths' }], limit: 8 });
+
+  const foods = foodsData?.data || [];
+  const products = productsData?.data || [];
+  const cloths = clothsData?.data || [];
+  const allItems = [...foods, ...products, ...cloths];
+
+  const recommendedProducts = allItems.slice(0, 8);
+  const mostRatedProducts = [...allItems].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
+  const interestedLately = allItems.slice(0, 6);
+  const wishListProducts = allItems.slice(2, 7);
+  const dailyMeals = foods;
+  const dailyDeals = products.filter(p => p.oldprice && p.oldprice > p.price);
+  const laundryClean = cloths;
 
   // Interval-based snapping for Promo Carousel (Holds for 5 seconds so users can read)
   useEffect(() => {
@@ -405,7 +456,7 @@ export const HomePage = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {CATEGORIES.map((cat, i) => (
                   <motion.button
                     key={cat.name}
@@ -443,77 +494,126 @@ export const HomePage = () => {
               ))}
             </div>
 
-            {/* OPEN NOW */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" />
-                  <h2 className="text-lg font-extrabold text-foreground">Open Right Now</h2>
-                </div>
-                <button
-                  onClick={() => navigate('/explore?available=true')}
-                  className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
-                >
-                  View all <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+            {/* 1. Recommended for you (Products) */}
+            {recommendedProducts.length > 0 && (
+              <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products" autoScrollSpeed={0.3}>
+                {recommendedProducts.slice(0, 8).map(product => (
+                  <div key={`rec-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
 
-              <div ref={openNowRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-4">
-                {isLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="shrink-0 w-[80%] sm:w-[48%] lg:w-[45%] xl:w-[40%]">
-                      <Skeleton className="h-52 w-full rounded-2xl" />
-                    </div>
-                  ))
-                ) : openStores.length > 0 ? (
-                  openStores.slice(0, 6).map((store) => (
+            {/* 3. Stores near me (Stores) */}
+            {openStores.length > 0 && (
+              <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
+                {openStores.slice(0, 6).map((store) => (
+                  <div key={`store-${store.id}`} className="w-[280px] sm:w-[320px] shrink-0">
                     <FeaturedStoreCard
-                      key={store.id}
                       store={store}
                       onClick={() => navigate(`/store/${store.id}`)}
                       isFav={favorites.includes(store.id)}
                       onFav={(e) => toggleFav(store.id, e)}
                     />
-                  ))
-                ) : (
-                  <div className="py-10 text-center text-muted-foreground text-sm border border-dashed border-border rounded-2xl w-full">No open stores found.</div>
-                )}
-              </div>
-            </div>
-
-            {/* TOP RATED */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 fill-warning stroke-warning" />
-                  <h2 className="text-lg font-extrabold text-foreground">Top Rated</h2>
-                </div>
-                <button
-                  onClick={() => navigate('/explore')}
-                  className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
-                >
-                  Explore <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div ref={topRatedRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-4">
-                {isLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="snap-center shrink-0 w-[80%] sm:w-[48%] lg:w-[45%] xl:w-[40%]">
-                      <Skeleton className="h-52 w-full rounded-2xl" />
-                    </div>
-                  ))
-                ) : topStores.slice(0, 6).map((store) => (
-                  <FeaturedStoreCard
-                    key={store.id}
-                    store={store}
-                    onClick={() => navigate(`/store/${store.id}`)}
-                    isFav={favorites.includes(store.id)}
-                    onFav={(e) => toggleFav(store.id, e)}
-                  />
+                  </div>
                 ))}
-              </div>
-            </div>
+              </HorizontalCarousel>
+            )}
+
+            {/* 4. Most rated (Products) */}
+            {mostRatedProducts.length > 0 && (
+              <HorizontalCarousel title="Most rated" icon={<Flame className="w-5 h-5 text-orange-500 fill-orange-500" />} actionLink="/explore?sort=popular" autoScrollSpeed={0.4}>
+                {mostRatedProducts.slice(0, 8).map(product => (
+                  <div key={`rated-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
+
+            {/* 5. What interested you lately (Products) */}
+            {interestedLately.length > 0 && (
+              <HorizontalCarousel title="What interested you lately" icon={<Clock className="w-5 h-5 text-muted-foreground" />} actionLink="/explore" autoScrollSpeed={0.2}>
+                {interestedLately.map(product => (
+                  <div key={`int-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
+
+            {/* 6. What you wish for (Products) */}
+            {wishListProducts.length > 0 && (
+              <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
+                {wishListProducts.map(product => (
+                  <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
+
+            {/* 7. Daily meals & drinks (Food) */}
+            {dailyMeals.length > 0 && (
+              <HorizontalCarousel title="Daily meals & drinks" icon={<Utensils className="w-5 h-5 text-primary" />} actionLink="/food">
+                {dailyMeals.map(product => (
+                  <div key={`food-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
+
+            {/* 8. Daily deals in shopping (Products) */}
+            {dailyDeals.length > 0 && (
+              <HorizontalCarousel title="Daily deals in shopping" icon={<Tag className="w-5 h-5 text-warning" />} actionLink="/products?deals=true" autoScrollSpeed={0.3}>
+                {dailyDeals.map(product => (
+                  <div key={`deal-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
+
+            {/* 9. What we clean (Laundry) */}
+            {laundryClean.length > 0 && (
+              <HorizontalCarousel title="What we clean" icon={<Shirt className="w-5 h-5 text-secondary" />} actionLink="/laundry" autoScrollSpeed={0.4}>
+                {laundryClean.map(product => (
+                  <div key={`laundry-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
 
         </div>
 
@@ -613,17 +713,17 @@ export const HomePage = () => {
               )}
 
               {/* TRUST STATS BAND */}
-              <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
-                <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Platform Stats</h2>
+              <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
+                <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Platform Stats</h2>
                 <div className="grid grid-cols-1 gap-4">
                   {STATS.map(({ value, label, icon: Icon }) => (
                     <div key={label} className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-background/20 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                         <Icon className="w-5 h-5" />
                       </div>
                       <div>
-                        <span className="block text-lg font-extrabold leading-tight">{value}</span>
-                        <span className="block text-[10px] opacity-70 font-semibold uppercase">{label}</span>
+                        <span className="block text-lg font-extrabold leading-tight text-foreground">{value}</span>
+                        <span className="block text-[10px] text-muted-foreground font-semibold uppercase">{label}</span>
                       </div>
                     </div>
                   ))}

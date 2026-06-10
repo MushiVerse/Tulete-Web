@@ -68,14 +68,14 @@ export const ReviewsPage = () => {
       {/* Back button */}
       <button 
         onClick={() => navigate('/orders')}
-        className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary transition-colors mb-6 self-start"
+        className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mb-6 self-start"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Orders
       </button>
 
       {/* Header */}
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 shadow-sm">
+      <div className="bg-muted border border-border p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
             <Sparkles className="w-5 h-5 animate-pulse" />
@@ -84,7 +84,7 @@ export const ReviewsPage = () => {
             <span className="text-[9px] uppercase font-extrabold tracking-widest text-slate-400">Order Verification</span>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <h2 className="font-bold text-slate-900 dark:text-white text-base">
+              <h2 className="font-bold text-foreground text-base">
                 Feedback for: {targetName}
               </h2>
             </div>
@@ -101,8 +101,8 @@ export const ReviewsPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN: Ratings distribution aggregates & Write form */}
         <div className="lg:col-span-1 space-y-6">
-          <Card className="p-5 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-50 dark:border-slate-800">
+          <Card className="p-5 border border-border shadow-sm bg-card">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-foreground mb-4 pb-2 border-b border-slate-50 dark:border-slate-800">
               Ratings Summary
             </h3>
             
@@ -129,7 +129,7 @@ export const ReviewsPage = () => {
               </span>
             </div>
 
-            <div className="space-y-2 mt-4 text-[10px] text-slate-500 font-semibold">
+            <div className="space-y-2 mt-4 text-[10px] text-muted-foreground font-semibold">
               {[5, 4, 3, 2, 1].map((stars) => {
                 const pct = (stats.distribution as Record<number, string>)[stars] || '0%';
                 return (
@@ -187,14 +187,14 @@ export const ReviewsPage = () => {
 
         {/* RIGHT COLUMN: Reviews List */}
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
+          <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
             Reviews History ({filteredReviews.length})
           </h3>
 
           {filteredReviews.length === 0 ? (
-            <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl">
+            <div className="text-center py-16 bg-muted/40 border border-border/80 rounded-2xl">
               <MessageSquare className="w-12 h-12 text-slate-350 mx-auto mb-4" />
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No Reviews Available</h4>
+              <h4 className="text-sm font-bold text-foreground mb-1">No Reviews Available</h4>
               <p className="text-xs text-slate-550 dark:text-slate-400 max-w-sm mx-auto">
                 {filterRating 
                   ? `There are no reviews with a ${filterRating}-star rating for this partner.`
@@ -212,7 +212,7 @@ export const ReviewsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                   >
-                    <Card className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative group">
+                    <Card className="p-5 border border-border bg-card shadow-sm relative group">
                       <div className="flex justify-between items-start gap-4 mb-3">
                         <div className="flex items-center gap-2.5">
                           {rev.userAvatarUrl ? (
@@ -228,7 +228,7 @@ export const ReviewsPage = () => {
                           )}
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              <h4 className="font-bold text-xs text-foreground truncate">
                                 {rev.userName}
                               </h4>
                               {rev.isVerifiedPurchase && (
@@ -264,7 +264,7 @@ export const ReviewsPage = () => {
                       <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-3 text-[10px]">
                         <button
                           onClick={() => voteHelpful(rev.id)}
-                          className="flex items-center gap-1.5 font-bold text-slate-500 hover:text-primary transition-colors"
+                          className="flex items-center gap-1.5 font-bold text-muted-foreground hover:text-primary transition-colors"
                         >
                           <ThumbsUp className="w-3.5 h-3.5" />
                           <span>Helpful ({rev.helpfulVotes})</span>

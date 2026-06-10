@@ -33,11 +33,11 @@ const StatCard = ({ icon, label, value, color }: {
   value: string;
   color: string;
 }) => (
-  <Card className={`p-4 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-center`}>
+  <Card className={`p-4 border border-border bg-card shadow-sm text-center`}>
     <div className={`w-9 h-9 rounded-xl ${color} flex items-center justify-center mx-auto mb-2`}>
       {icon}
     </div>
-    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
+    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
     <p className="text-lg font-extrabold text-slate-950 dark:text-white mt-0.5">{value}</p>
   </Card>
 );
@@ -195,7 +195,7 @@ export const ProfilePage = () => {
                   {...register('bio')}
                   rows={3}
                   placeholder="Tell the community a bit about yourself..."
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full text-xs bg-muted border border-border rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary"
                 />
                 {errors.bio && <p className="text-rose-500 text-[10px] mt-1">{errors.bio.message}</p>}
               </div>
@@ -203,26 +203,26 @@ export const ProfilePage = () => {
           ) : (
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{profile.displayName}</h2>
+                <h2 className="text-xl font-extrabold text-foreground">{profile.displayName}</h2>
                 {profile.isVerified && (
                   <CheckCircle className="w-4 h-4 text-blue-500 fill-blue-500/20" />
                 )}
               </div>
-              <p className="text-xs text-slate-500 mb-1 flex items-center gap-1.5">
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
                 <Mail className="w-3 h-3" /> {profile.email}
               </p>
               {profile.phone && (
-                <p className="text-xs text-slate-500 mb-1 flex items-center gap-1.5">
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
                   <Phone className="w-3 h-3" /> {profile.phone}
                 </p>
               )}
               {profile.city && (
-                <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5">
+                <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
                   <MapPin className="w-3 h-3" /> {profile.city}{profile.country ? `, ${profile.country}` : ''}
                 </p>
               )}
               {profile.bio && (
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-950 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                <p className="text-xs text-muted-foreground leading-relaxed bg-muted rounded-xl p-3 border border-border">
                   {profile.bio}
                 </p>
               )}
@@ -260,14 +260,14 @@ export const ProfilePage = () => {
       </div>
 
       {/* Quick navigation actions */}
-      <Card className="border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden divide-y divide-slate-50 dark:divide-slate-800">
+      <Card className="border border-border bg-card shadow-sm overflow-hidden divide-y divide-border">
         {[
           { label: 'My Orders', icon: <Package className="w-4 h-4 text-indigo-500" />, path: '/orders' },
           { label: 'Favorites & Wishlists', icon: <Heart className="w-4 h-4 text-rose-500" />, path: '/favorites' },
           { label: 'Messages', icon: <MessageSquare className="w-4 h-4 text-sky-500" />, path: '/messages' },
           { label: 'Reviews & Ratings', icon: <Star className="w-4 h-4 text-amber-500" />, path: '/reviews' },
           { label: 'Address Book', icon: <MapPin className="w-4 h-4 text-primary" />, path: '/location' },
-          { label: 'Account Settings', icon: <Shield className="w-4 h-4 text-slate-500" />, path: '/settings' },
+          { label: 'Account Settings', icon: <Shield className="w-4 h-4 text-muted-foreground" />, path: '/settings' },
         ].map(({ label, icon, path }) => (
           <motion.button
             key={path}
@@ -277,9 +277,9 @@ export const ProfilePage = () => {
           >
             <div className="flex items-center gap-3">
               {icon}
-              <span className="text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">{label}</span>
+              <span className="text-foreground group-hover:text-primary transition-colors">{label}</span>
             </div>
-            <span className="text-slate-400 group-hover:text-primary transition-colors">›</span>
+            <span className="text-muted-foreground group-hover:text-primary transition-colors">›</span>
           </motion.button>
         ))}
       </Card>
@@ -287,7 +287,7 @@ export const ProfilePage = () => {
       {/* Member since / logout */}
       <div className="mt-6 flex flex-col items-center gap-3">
         {profile.joinedAt && (
-          <p className="text-[10px] text-slate-400 font-medium">
+          <p className="text-[10px] text-muted-foreground font-medium">
             Member since {(() => {
               const dateObj = profile.joinedAt as any;
               const date = dateObj.seconds ? new Date(dateObj.seconds * 1000) : new Date(profile.joinedAt);

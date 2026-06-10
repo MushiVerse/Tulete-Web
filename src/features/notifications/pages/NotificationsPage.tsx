@@ -29,7 +29,7 @@ const notifBg: Record<NotificationType, string> = {
   promotion: 'bg-amber-50 dark:bg-amber-950/30',
   payment_confirmed: 'bg-green-50 dark:bg-green-950/30',
   review_reply: 'bg-yellow-50 dark:bg-yellow-950/30',
-  system: 'bg-slate-50 dark:bg-slate-900',
+  system: 'bg-muted',
 };
 
 function timeAgo(date: Date): string {
@@ -65,7 +65,7 @@ export const NotificationsPage = () => {
           <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
             Activity Center
           </span>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-3 flex items-center gap-2">
+          <h1 className="text-2xl font-extrabold text-foreground mt-3 flex items-center gap-2">
             Notifications
             {unreadCount > 0 && (
               <Badge className="bg-primary text-white text-xs font-extrabold w-6 h-6 flex items-center justify-center rounded-full animate-bounce">
@@ -90,10 +90,10 @@ export const NotificationsPage = () => {
 
       {/* Notifications list */}
       {notifications.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-20 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl">
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-20 bg-muted/40 border border-border/80 rounded-2xl">
           <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">All Caught Up!</h3>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
+          <h3 className="text-base font-bold text-foreground mb-1">All Caught Up!</h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
             No notifications right now. We'll alert you when something needs your attention.
           </p>
         </div>
@@ -112,13 +112,13 @@ export const NotificationsPage = () => {
                 <Card
                   className={`relative flex items-start gap-3.5 p-4 border cursor-pointer transition-all group shadow-sm hover:shadow-md ${
                     notif.isRead
-                      ? 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900'
+                      ? 'border-border bg-card'
                       : `${notifBg[notif.type]} border-l-4 border-l-primary`
                   }`}
                   onClick={() => handleClick(notif)}
                 >
                   {/* Icon */}
-                  <div className="mt-0.5 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <div className="mt-0.5 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-border flex items-center justify-center flex-shrink-0 shadow-sm">
                     {notifIcon[notif.type]}
                   </div>
 
@@ -129,7 +129,7 @@ export const NotificationsPage = () => {
                         <p className={`text-xs font-extrabold leading-snug ${notif.isRead ? 'text-slate-700 dark:text-slate-300' : 'text-slate-950 dark:text-white'}`}>
                           {notif.title}
                         </p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed line-clamp-2">
+                        <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed line-clamp-2">
                           {notif.body}
                         </p>
                       </div>

@@ -12,6 +12,9 @@ import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
+import { productService, Product } from '../../products/services/productService';
+import { Skeleton } from '../../../shared/components/ui/Skeleton';
 
 // --- Static Data ---
 const FOOD_CATEGORIES = [
@@ -29,7 +32,6 @@ const PROMOS = [
     title: 'Free Delivery',
     subtitle: 'On your first 3 food orders',
     badge: 'NEW USER',
-    color: 'from-orange-500 to-orange-400',
     image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800&auto=format&fit=crop',
   },
   {
@@ -37,19 +39,25 @@ const PROMOS = [
     title: 'Pizza Night',
     subtitle: 'Buy 1 Get 1 Free on Large Pizzas',
     badge: 'TRENDING',
-    color: 'from-rose-500 to-rose-400',
     image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop',
+  },
+  {
+    id: 3,
+    title: 'Nyama Choma Special',
+    subtitle: 'Fresh grilled, delivered hot to your door',
+    badge: 'LOCAL FAVE',
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop',
+  },
+  {
+    id: 4,
+    title: 'Smoothie Bowl',
+    subtitle: 'Healthy meals from TZS 800',
+    badge: 'HEALTHY',
+    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=800&auto=format&fit=crop',
   }
 ];
 
-const MEAL_ITEMS = [
-  { id: 'm1', name: 'Classic Beef Burger', price: 850, category: 'fast_food', storeName: 'Burger Palace', storeId: 'sp1', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400', rating: 4.8, time: '20-30 min' },
-  { id: 'm2', name: 'Grilled Chicken Salad', price: 1200, category: 'healthy', storeName: 'Green Bowl', storeId: 'sp2', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400', rating: 4.9, time: '15-25 min' },
-  { id: 'm3', name: 'Nyama Choma Special', price: 1500, category: 'local', storeName: 'Swahili Plate', storeId: 'sp3', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400', rating: 4.7, time: '30-45 min' },
-  { id: 'm4', name: 'Fresh Mango Smoothie', price: 450, category: 'drinks', storeName: 'Juice Bar', storeId: 'sp4', image: 'https://images.unsplash.com/photo-1623065422900-0591585efa75?w=400', rating: 4.6, time: '10-15 min' },
-  { id: 'm5', name: 'Chocolate Lava Cake', price: 600, category: 'desserts', storeName: 'Sweet Tooth', storeId: 'sp5', image: 'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=400', rating: 4.9, time: '15-20 min' },
-  { id: 'm6', name: 'Spicy Chicken Wings', price: 950, category: 'fast_food', storeName: 'WingStop', storeId: 'sp6', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400', rating: 4.5, time: '20-30 min' },
-];
+
 
 export const FoodPage = () => {
   const navigate = useNavigate();
@@ -57,7 +65,7 @@ export const FoodPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Cart & Auth
-  const { items: cartItems, addToCart, removeFromCart, updateQuantity, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, clearCart, updateQuantity, getTotals } = useCartStore();
   const { openModal } = useAuthModalStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   
@@ -88,11 +96,27 @@ export const FoodPage = () => {
   }, []);
 
   // Filter logic
-  const filteredMeals = MEAL_ITEMS.filter(meal => {
-    const matchesCat = activeCategory === 'all' || meal.category === activeCategory;
+  const queryFilters = activeCategory !== 'all' 
+    ? [
+        { field: '_collection', operator: '==', value: 'foods' },
+        { field: 'category', operator: '==', value: activeCategory }
+      ] 
+    : [
+        { field: '_collection', operator: '==', value: 'foods' }
+      ];
+  
+  const { data: foodsData, isLoading } = useFirestoreQuery(
+    ['foods', 'page', activeCategory],
+    productService,
+    { filters: queryFilters as any, limit: 20 }
+  );
+
+  const rawMeals = foodsData?.data || [];
+
+  const filteredMeals = rawMeals.filter(meal => {
     const matchesSearch = meal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          meal.storeName.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesSearch;
+                          meal.store.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   }).sort((a, b) => {
     const aInCart = cartItems.some(i => i.productId === a.id);
     const bInCart = cartItems.some(i => i.productId === b.id);
@@ -170,15 +194,15 @@ export const FoodPage = () => {
                 transition={{ delay: i * 0.1 }}
                 className="snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[45%]"
               >
-                <div className="relative h-72 rounded-3xl overflow-hidden group shadow-sm border border-border">
+                <div className="relative h-64 rounded-3xl overflow-hidden group shadow-sm border border-border">
                   <img src={promo.image} alt={promo.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className={`absolute inset-0 bg-gradient-to-r ${promo.color} opacity-80 mix-blend-multiply`} />
-                  <div className="absolute inset-0 p-6 flex flex-col justify-center text-white">
-                    <span className="self-start bg-white/20 backdrop-blur-md text-[10px] font-extrabold px-3 py-1 rounded-full mb-2 uppercase tracking-widest">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                    <span className="self-start bg-white/15 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-full mb-2 uppercase tracking-widest border border-white/20">
                       {promo.badge}
                     </span>
-                    <h3 className="font-extrabold text-2xl leading-tight mb-1">{promo.title}</h3>
-                    <p className="text-sm font-medium opacity-90">{promo.subtitle}</p>
+                    <h3 className="font-extrabold text-2xl leading-tight mb-1 text-white">{promo.title}</h3>
+                    <p className="text-sm font-medium text-white/80">{promo.subtitle}</p>
                   </div>
                 </div>
               </motion.div>
@@ -210,81 +234,90 @@ export const FoodPage = () => {
               </h2>
             </div>
             
-            {filteredMeals.length === 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                  <Skeleton key={i} className="h-[300px] w-full rounded-3xl" />
+                ))}
+              </div>
+            ) : filteredMeals.length === 0 ? (
               <div className="text-center py-16 bg-card border border-border border-dashed rounded-3xl">
                 <p className="text-muted-foreground font-medium">No meals found matching your search.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">
                 <AnimatePresence>
                   {filteredMeals.map((meal) => {
                     const cartItem = cartItems.find(i => i.productId === meal.id);
                     return (
-                      <motion.div
-                        layout
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className={`rounded-3xl border p-3 flex gap-4 shadow-sm hover:shadow-md transition-all group ${
-                          cartItem ? 'border-primary bg-primary/5' : 'bg-card border-border'
-                        }`}
-                      >
-                        <div className="w-28 h-28 shrink-0 rounded-2xl overflow-hidden relative bg-muted">
-                          <img src={meal.image} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                          <div className="absolute top-1 left-1 bg-background/90 backdrop-blur px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
-                            <Star className="w-3 h-3 fill-warning stroke-warning" />
-                            <span className="text-[10px] font-extrabold">{meal.rating}</span>
+                      <div key={meal.id} className="flex flex-col h-full">
+                        <motion.div
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group bg-card border-border"
+                        >
+                          <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
+                            <img src={meal.imgUrl} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                              <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
+                              <span className="text-xs font-extrabold">{meal.rating}</span>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex flex-col flex-1 justify-center">
-                          <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1">{meal.storeName}</p>
-                          <h3 className="font-extrabold text-sm text-foreground line-clamp-2 leading-tight mb-1">{meal.name}</h3>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3 font-medium">
-                            <Clock className="w-3.5 h-3.5" /> {meal.time}
-                          </div>
-                          
-                          <div className="flex items-center justify-between mt-auto">
-                            <span className="font-extrabold text-primary">{APP_SETTINGS.currency} {meal.price.toLocaleString()}</span>
+                          <div className="flex flex-col flex-1">
+                            <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5">{meal.store}</p>
+                            <h3 className="font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors">{meal.name}</h3>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
+                              <Clock className="w-3.5 h-3.5" /> 20-30 min
+                            </div>
                             
-                            {cartItem ? (
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-xl">
-                                  <button onClick={() => updateQuantity(meal.id, cartItem.quantity - 1)} className="w-6 h-6 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm">
-                                    <Minus className="w-3 h-3" />
-                                  </button>
-                                  <span className="font-extrabold text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
-                                  <button onClick={() => updateQuantity(meal.id, cartItem.quantity + 1)} className="w-6 h-6 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
-                                    <Plus className="w-3 h-3" />
-                                  </button>
-                                </div>
-                                <motion.button
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => updateQuantity(meal.id, 0)}
-                                  title="Remove from cart"
-                                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </motion.button>
+                            <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border">
+                              <div>
+                                <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
+                                <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {meal.price.toLocaleString()}</span>
                               </div>
-                            ) : (
-                              <button
-                                onClick={() => addToCart({
-                                  productId: meal.id,
-                                  name: meal.name,
-                                  price: meal.price,
-                                  imageUrl: meal.image,
-                                  storeId: meal.storeId,
-                                  storeName: meal.storeName
-                                })}
-                                className="bg-primary text-primary-foreground p-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                            )}
+                              
+                              {cartItem ? (
+                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                  <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
+                                    <button onClick={() => updateQuantity(meal.id, cartItem.quantity - 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm">
+                                      <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                    </button>
+                                    <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
+                                    <button onClick={() => updateQuantity(meal.id, cartItem.quantity + 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                                      <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                    </button>
+                                  </div>
+                                  <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => updateQuantity(meal.id, 0)}
+                                    title="Remove from cart"
+                                    className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
+                                  >
+                                    <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  </motion.button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => addToCart({
+                                    productId: meal.id,
+                                    name: meal.name,
+                                    price: meal.price,
+                                    imageUrl: meal.imgUrl,
+                                    storeId: meal.storeId,
+                                    storeName: meal.store
+                                  })}
+                                  className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
+                                >
+                                  <Plus className="w-4 h-4" /> Add
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
+                        </motion.div>
+                      </div>
                     );
                   })}
                 </AnimatePresence>
@@ -306,15 +339,25 @@ export const FoodPage = () => {
 
               {hasItems ? (
                 <>
-                  <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
+                  <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="flex justify-between items-center text-sm">
+                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
                         <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
                           {cartItem.quantity}x {cartItem.name}
                         </span>
-                        <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <span className="font-extrabold text-foreground">
+                            {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
+                          </span>
+                          <button
+                            onClick={() => removeFromCart(cartItem.productId)}
+                            title="Remove item"
+                            aria-label={`Remove ${cartItem.name}`}
+                            className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all ml-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -329,6 +372,12 @@ export const FoodPage = () => {
                     >
                       Checkout Now <ArrowRight className="w-4 h-4" />
                     </Button>
+                    <button
+                      onClick={() => clearCart()}
+                      className="w-full mt-3 text-xs font-semibold text-muted-foreground hover:text-red-500 transition-colors py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20"
+                    >
+                      Clear Cart
+                    </button>
                   </div>
                 </>
               ) : (
@@ -341,8 +390,8 @@ export const FoodPage = () => {
             </div>
 
             {/* TRUST STATS BAND */}
-            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
-              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Service Stats</h2>
+            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
+              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[
                   { value: '100+', label: 'Local Kitchens', icon: ShoppingBag },
@@ -351,12 +400,12 @@ export const FoodPage = () => {
                   { value: '24/7', label: 'Support', icon: Phone },
                 ].map(({ value, label, icon: Icon }) => (
                   <div key={label} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-background/20 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="block text-lg font-extrabold leading-tight">{value}</span>
-                      <span className="block text-[10px] opacity-70 font-semibold uppercase">{label}</span>
+                      <span className="block text-lg font-extrabold leading-tight text-foreground">{value}</span>
+                      <span className="block text-[10px] text-muted-foreground font-semibold uppercase">{label}</span>
                     </div>
                   </div>
                 ))}

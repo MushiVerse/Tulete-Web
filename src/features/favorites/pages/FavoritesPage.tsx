@@ -128,7 +128,7 @@ export const FavoritesPage = () => {
           <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
             Personal Space
           </span>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-3">
+          <h1 className="text-2xl font-extrabold text-foreground mt-3">
             Favorites & Saved Wishlists
           </h1>
         </div>
@@ -146,11 +146,11 @@ export const FavoritesPage = () => {
       </div>
 
       {/* Main Tab Navigation */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 mb-6 overflow-x-auto scrollbar-none">
+      <div className="flex border-b border-border gap-6 mb-6 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveTab('favorites')}
           className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
-            activeTab === 'favorites' ? 'text-primary' : 'text-slate-400 hover:text-slate-650'
+            activeTab === 'favorites' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           Saved Favorites ({favorites.length})
@@ -165,7 +165,7 @@ export const FavoritesPage = () => {
         <button
           onClick={() => setActiveTab('wishlists')}
           className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
-            activeTab === 'wishlists' ? 'text-primary' : 'text-slate-400 hover:text-slate-650'
+            activeTab === 'wishlists' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           Custom Wishlists ({wishlists.length})
@@ -182,22 +182,22 @@ export const FavoritesPage = () => {
       {activeTab === 'favorites' && (
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search saved items or stores..."
-              className="pl-10 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs"
+              className="pl-10 bg-card border-border text-xs"
             />
           </div>
 
           <div className="flex flex-wrap gap-2 items-center">
             {/* Type selector */}
-            <div className="flex border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 bg-slate-50 dark:bg-slate-900 text-[10px] font-bold">
+            <div className="flex border border-border rounded-lg p-0.5 bg-muted text-[10px] font-bold">
               <button
                 onClick={() => setFavoriteTypeFilter('all')}
                 className={`px-3 py-1.5 rounded-md transition-all ${
-                  favoriteTypeFilter === 'all' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-500'
+                  favoriteTypeFilter === 'all' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
                 }`}
               >
                 All
@@ -205,7 +205,7 @@ export const FavoritesPage = () => {
               <button
                 onClick={() => setFavoriteTypeFilter('store')}
                 className={`px-3 py-1.5 rounded-md transition-all ${
-                  favoriteTypeFilter === 'store' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-500'
+                  favoriteTypeFilter === 'store' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
                 }`}
               >
                 Stores
@@ -213,7 +213,7 @@ export const FavoritesPage = () => {
               <button
                 onClick={() => setFavoriteTypeFilter('item')}
                 className={`px-3 py-1.5 rounded-md transition-all ${
-                  favoriteTypeFilter === 'item' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-500'
+                  favoriteTypeFilter === 'item' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
                 }`}
               >
                 Items
@@ -224,7 +224,7 @@ export const FavoritesPage = () => {
             <select
               value={sortBy}
               onChange={(e: any) => setSortBy(e.target.value)}
-              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-650 dark:text-slate-350 cursor-pointer"
+              className="bg-card border border-border rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-foreground cursor-pointer"
             >
               <option value="recent">Recently Added</option>
               <option value="rating">Top Rated First</option>
@@ -241,10 +241,10 @@ export const FavoritesPage = () => {
         {activeTab === 'favorites' && (
           <div className="space-y-4">
             {filteredFavorites.length === 0 ? (
-              <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl">
-                <Heart className="w-12 h-12 text-slate-350 mx-auto mb-4" />
-                <h3 className="text-base font-bold mb-1 text-slate-900 dark:text-white">No Saved Favorites</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto mb-6">
+              <div className="text-center py-16 bg-muted/40 border border-border/80 rounded-2xl">
+                <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-base font-bold mb-1 text-foreground">No Saved Favorites</h3>
+                <p className="text-muted-foreground text-xs max-w-sm mx-auto mb-6">
                   Items or service providers you bookmark will appear here for fast shortcuts.
                 </p>
                 <Button onClick={() => navigate('/discover')} size="sm">Explore Services</Button>
@@ -260,11 +260,11 @@ export const FavoritesPage = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       layout
                     >
-                      <Card className="p-4 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex gap-4 items-center relative overflow-hidden group">
+                      <Card className="p-4 border border-border bg-card shadow-sm flex gap-4 items-center relative overflow-hidden group">
                         <img 
                           src={fav.imageUrl} 
                           alt={fav.name} 
-                          className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0"
+                          className="w-20 h-20 rounded-xl object-cover bg-muted flex-shrink-0"
                         />
 
                         <div className="flex-1 min-w-0">
@@ -273,23 +273,23 @@ export const FavoritesPage = () => {
                               {fav.type}
                             </Badge>
                             {fav.rating && (
-                              <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-0.5">
+                              <span className="text-[10px] font-bold text-foreground flex items-center gap-0.5">
                                 <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
                                 {fav.rating}
                               </span>
                             )}
                           </div>
 
-                          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mb-0.5">
+                          <h3 className="font-extrabold text-sm text-foreground truncate mb-0.5">
                             {fav.name}
                           </h3>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">
+                          <p className="text-[11px] text-muted-foreground line-clamp-1 mb-2">
                             {fav.description || 'Saved service shortcut'}
                           </p>
 
                           <div className="flex justify-between items-center">
                             {fav.price ? (
-                              <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                              <span className="font-extrabold text-xs text-foreground">
                                 {fav.price.toLocaleString()} ${APP_SETTINGS.currency}
                               </span>
                             ) : (
@@ -302,7 +302,7 @@ export const FavoritesPage = () => {
                               {/* Quick navigation shortcut */}
                               <button
                                 onClick={() => navigate(fav.type === 'store' ? `/store/${fav.itemId}` : `/product/${fav.itemId}`)}
-                                className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-primary rounded-full transition-colors"
+                                className="p-2 bg-muted dark:bg-slate-800 text-muted-foreground hover:text-primary rounded-full transition-colors"
                                 title="View details"
                               >
                                 <Eye className="w-3.5 h-3.5" />
@@ -332,10 +332,10 @@ export const FavoritesPage = () => {
                               {/* Remove Bookmark */}
                               <button
                                 onClick={() => handleRemove(fav.itemId, fav.type, fav.name)}
-                                className="p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full transition-all"
+                                className="p-1.5 sm:p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full transition-all shrink-0"
                                 title="Remove favorite"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                               </button>
                             </div>
                           </div>
@@ -353,10 +353,10 @@ export const FavoritesPage = () => {
         {activeTab === 'wishlists' && (
           <div className="space-y-4">
             {wishlists.length === 0 ? (
-              <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl">
-                <FolderHeart className="w-12 h-12 text-slate-350 mx-auto mb-4" />
-                <h3 className="text-base font-bold mb-1 text-slate-900 dark:text-white">No Wishlists Collections</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto mb-6">
+              <div className="text-center py-16 bg-muted/40 border border-border/80 rounded-2xl">
+                <FolderHeart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-base font-bold mb-1 text-foreground">No Wishlists Collections</h3>
+                <p className="text-muted-foreground text-xs max-w-sm mx-auto mb-6">
                   Create customized categories (e.g. Laundry Bundles) to group services and products together.
                 </p>
                 <Button onClick={() => setShowCreateModal(true)} size="sm">Create First Folder</Button>
@@ -364,24 +364,24 @@ export const FavoritesPage = () => {
             ) : (
               <div className="space-y-4">
                 {wishlists.map((wish) => (
-                  <Card key={wish.id} className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
-                    <div className="flex justify-between items-start gap-4 mb-3 pb-3 border-b border-slate-50 dark:border-slate-800">
+                  <Card key={wish.id} className="p-5 border border-border bg-card shadow-sm relative overflow-hidden">
+                    <div className="flex justify-between items-start gap-4 mb-3 pb-3 border-b border-border">
                       <div>
-                        <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">{wish.name}</h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{wish.description || 'Collection checklist'}</p>
+                        <h3 className="font-extrabold text-sm text-foreground">{wish.name}</h3>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{wish.description || 'Collection checklist'}</p>
                       </div>
 
                       <button
                         onClick={() => deleteWishlist(wish.id)}
-                        className="text-rose-500 hover:text-rose-700 text-xs flex items-center gap-1 font-bold"
+                        className="text-rose-500 hover:text-rose-700 text-xs flex items-center gap-1 font-bold shrink-0 p-1.5 sm:p-0 rounded-lg sm:rounded-none hover:bg-rose-50 sm:hover:bg-transparent dark:hover:bg-rose-950/20 sm:dark:hover:bg-transparent transition-colors"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete Folder
+                        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Delete Folder</span>
                       </button>
                     </div>
 
                     {wish.itemIds.length === 0 ? (
-                      <p className="text-[10px] text-slate-400 italic py-2">No items saved in this wishlist folder yet.</p>
+                      <p className="text-[10px] text-muted-foreground italic py-2">No items saved in this wishlist folder yet.</p>
                     ) : (
                       <div className="space-y-2">
                         {wish.itemIds.map((itemId) => {
@@ -390,14 +390,14 @@ export const FavoritesPage = () => {
                           if (!item) return null;
 
                           return (
-                            <div key={itemId} className="flex items-center justify-between gap-4 p-2 bg-slate-50 dark:bg-slate-955 rounded-lg text-xs">
+                            <div key={itemId} className="flex items-center justify-between gap-4 p-2 bg-muted rounded-lg text-xs">
                               <div className="flex items-center gap-2 min-w-0">
                                 <img src={item.imgUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                                <span className="font-bold text-slate-900 dark:text-white truncate">{item.name}</span>
+                                <span className="font-bold text-foreground truncate">{item.name}</span>
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-slate-950 dark:text-white shrink-0">{item.price.toLocaleString()} {APP_SETTINGS.currency}</span>
+                                <span className="font-extrabold text-foreground shrink-0">{item.price.toLocaleString()} {APP_SETTINGS.currency}</span>
                                 
                                 <button
                                   onClick={() => {
@@ -418,9 +418,10 @@ export const FavoritesPage = () => {
 
                                 <button
                                   onClick={() => removeFromWishlist(wish.id, itemId)}
-                                  className="text-slate-450 hover:text-rose-500 p-1.5"
+                                  className="text-muted-foreground hover:text-rose-500 p-1.5 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors shrink-0"
+                                  title="Remove from wishlist"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -438,29 +439,29 @@ export const FavoritesPage = () => {
 
       {/* Smart Personalized Recommendations Widget */}
       {recommendations.length > 0 && (
-        <div className="mt-12 bg-slate-550 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
-          <h3 className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white mb-4">
+        <div className="mt-12 bg-muted/60 border border-border/80 p-5 rounded-2xl shadow-sm">
+          <h3 className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-foreground mb-4">
             <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
             Inspired by your Saves & Favorites
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {recommendations.map((rec) => (
-              <Card key={rec.id} className="p-3 bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-850 flex flex-col justify-between h-full group">
+              <Card key={rec.id} className="p-3 bg-card border border-border flex flex-col justify-between h-full group">
                 <div>
-                  <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-100 mb-3">
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-3">
                     <img src={rec.imgUrl} alt={rec.name} className="w-full h-full object-cover" />
                   </div>
 
                   <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
-                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white mt-1 group-hover:text-primary transition-colors line-clamp-1">
+                  <h4 className="font-extrabold text-xs text-foreground mt-1 group-hover:text-primary transition-colors line-clamp-1">
                     {rec.name}
                   </h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{rec.description}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{rec.description}</p>
                 </div>
 
-                <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-50 dark:border-slate-850">
-                  <span className="font-extrabold text-xs text-slate-950 dark:text-white">{rec.price.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <div className="flex justify-between items-center mt-3 pt-2 border-t border-border">
+                  <span className="font-extrabold text-xs text-foreground">{rec.price.toLocaleString()} {APP_SETTINGS.currency}</span>
                   
                   <div className="flex gap-1">
                     <button
@@ -476,7 +477,7 @@ export const FavoritesPage = () => {
                         });
                         alert(`Bookmarked ${rec.name}!`);
                       }}
-                      className="p-1.5 text-slate-400 hover:text-red-500 rounded-full"
+                      className="p-1.5 text-muted-foreground hover:text-red-500 rounded-full"
                     >
                       <Heart className="w-3.5 h-3.5" />
                     </button>
@@ -515,12 +516,12 @@ export const FavoritesPage = () => {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-card w-full max-w-md rounded-2xl p-6 border border-border shadow-2xl relative"
             >
-              <h3 className="font-extrabold text-base text-slate-900 dark:text-white mb-1">Create Wishlist Folder</h3>
-              <p className="text-[11px] text-slate-500 mb-4">Organize your saved items by category folder structure.</p>
+              <h3 className="font-extrabold text-base text-foreground mb-1">Create Wishlist Folder</h3>
+              <p className="text-[11px] text-muted-foreground mb-4">Organize your saved items by category folder structure.</p>
 
               <form onSubmit={handleCreateWishlist} className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Folder Name</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Folder Name</label>
                   <Input 
                     value={newWishlistName}
                     onChange={(e) => setNewWishlistName(e.target.value)}
@@ -531,12 +532,12 @@ export const FavoritesPage = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Description (Optional)</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Description (Optional)</label>
                   <textarea 
                     value={newWishlistDesc}
                     onChange={(e) => setNewWishlistDesc(e.target.value)}
                     placeholder="Brief description of these grouped items..."
-                    className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full text-xs bg-muted border border-border rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary"
                     rows={3}
                   />
                 </div>

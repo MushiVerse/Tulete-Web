@@ -33,12 +33,12 @@ export const AuthModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
-      <DialogContent className="max-w-[400px] p-0 overflow-hidden bg-white dark:bg-slate-950 border-white/20 dark:border-white/10 shadow-2xl rounded-3xl">
+      <DialogContent className="max-w-[400px] p-0 overflow-hidden bg-card border-border shadow-2xl rounded-3xl">
         
         {/* Top Banner / Branding */}
-        <div className="relative bg-gradient-to-br from-primary to-amber-600 p-8 text-white overflow-hidden">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-secondary/25 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 left-0 w-28 h-28 bg-secondary/15 blur-2xl rounded-full -translate-x-1/2 translate-y-1/2" />
+        <div className="relative bg-gradient-to-br from-primary to-primary/60 p-8 text-primary-foreground overflow-hidden">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-white/20 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-28 h-28 bg-black/10 blur-2xl rounded-full -translate-x-1/2 translate-y-1/2" />
           
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -51,7 +51,7 @@ export const AuthModal = () => {
             </div>
             
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-secondary animate-pulse" />
+              <Sparkles className="w-3.5 h-3.5 text-white animate-pulse" />
               <span className="text-[10px] font-black tracking-wider uppercase text-white">Premium</span>
             </div>
           </div>
@@ -65,7 +65,7 @@ export const AuthModal = () => {
         </DialogHeader>
 
         {/* Body Content */}
-        <div className="p-8 flex flex-col items-center text-center">
+        <div className="p-8 flex flex-col items-center text-center bg-card">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -73,10 +73,10 @@ export const AuthModal = () => {
             className="space-y-6 w-full"
           >
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+              <h2 className="text-2xl font-black text-foreground tracking-tight">
                 {isLogin ? 'Welcome Back' : 'Get Started'}
               </h2>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 max-w-[280px] mx-auto leading-relaxed">
+              <p className="text-sm font-semibold text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
                 Please sign in with Google to proceed.
               </p>
             </div>
@@ -86,7 +86,7 @@ export const AuthModal = () => {
               type="button"
               disabled={googleMutation.isPending}
               onClick={() => googleMutation.mutate()}
-              className="w-full h-12 flex items-center justify-center gap-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5 dark:hover:shadow-none hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none select-none relative overflow-hidden group cursor-pointer"
+              className="w-full h-12 flex items-center justify-center gap-3 px-4 rounded-2xl border border-border bg-background hover:bg-muted text-foreground font-bold transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none select-none relative overflow-hidden group cursor-pointer"
             >
               {googleMutation.isPending ? (
                 <Loader2 className="w-5 h-5 animate-spin text-primary" />
@@ -103,7 +103,7 @@ export const AuthModal = () => {
               </span>
             </button>
 
-            <div className="pt-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-relaxed">
+            <div className="pt-2 text-[11px] font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">
               Secure &middot; Instant &middot; Organic
             </div>
           </motion.div>

@@ -56,19 +56,19 @@ export const ReviewSubmissionForm: React.FC<ReviewSubmissionFormProps> = ({
   };
 
   return (
-    <Card className="p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg">
+    <Card className="p-5 border border-border bg-card shadow-lg">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
-          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider mb-1">
+          <h3 className="font-extrabold text-sm text-foreground uppercase tracking-wider mb-1">
             Submit Your Ratings
           </h3>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-muted-foreground">
             Share your authentic experience with the Tulete community.
           </p>
         </div>
 
         {/* Large pulsing Star Clicker Selector */}
-        <div className="flex flex-col items-center py-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-900">
+        <div className="flex flex-col items-center py-4 bg-muted rounded-xl border border-border">
           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">
             Click to rate
           </span>
@@ -118,7 +118,7 @@ export const ReviewSubmissionForm: React.FC<ReviewSubmissionFormProps> = ({
           <textarea
             {...register('comment')}
             placeholder="Help others make informed decisions. How was the speed, cleanliness, and communication?"
-            className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary placeholder-slate-400 dark:placeholder-slate-700"
+            className="w-full text-xs bg-muted border border-border rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary placeholder-slate-400 dark:placeholder-slate-700"
             rows={4}
           />
 
@@ -149,7 +149,7 @@ export const ReviewSubmissionForm: React.FC<ReviewSubmissionFormProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex justify-end gap-2.5 pt-2 border-t border-border">
           {onCancel && (
             <Button
               type="button"

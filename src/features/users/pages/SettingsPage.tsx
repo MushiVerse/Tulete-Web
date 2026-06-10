@@ -27,14 +27,14 @@ const ToggleRow = ({
   value: boolean;
   onChange: () => void;
 }) => (
-  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800 last:border-0">
+  <div className="flex items-center justify-between px-5 py-4 border-b border-border last:border-0">
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
+      <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
         {icon}
       </div>
       <div>
-        <p className="text-xs font-bold text-slate-900 dark:text-white">{label}</p>
-        {description && <p className="text-[10px] text-slate-500 mt-0.5">{description}</p>}
+        <p className="text-xs font-bold text-foreground">{label}</p>
+        {description && <p className="text-[10px] text-muted-foreground mt-0.5">{description}</p>}
       </div>
     </div>
 
@@ -42,7 +42,7 @@ const ToggleRow = ({
     <button
       onClick={onChange}
       className={`relative w-10 h-5.5 rounded-full transition-all duration-300 flex items-center px-0.5 focus:outline-none ${
-        value ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'
+        value ? 'bg-primary' : 'bg-muted'
       }`}
       style={{ height: '22px', minWidth: '40px' }}
     >
@@ -70,18 +70,18 @@ const SelectRow = ({
   options: { label: string; value: string }[];
   onChange: (v: string) => void;
 }) => (
-  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800 last:border-0">
+  <div className="flex items-center justify-between px-5 py-4 border-b border-border last:border-0">
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
+      <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
         {icon}
       </div>
-      <p className="text-xs font-bold text-slate-900 dark:text-white">{label}</p>
+      <p className="text-xs font-bold text-foreground">{label}</p>
     </div>
 
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="text-[10px] font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+      className="text-[10px] font-bold bg-muted border border-border rounded-lg px-2.5 py-1.5 text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -146,9 +146,9 @@ export const SettingsPage = () => {
 
       <div className="space-y-5">
         {/* NOTIFICATIONS SECTION */}
-        <Card className="border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 flex items-center gap-2">
+        <Card className="border border-border bg-card shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 bg-muted border-b border-border">
+            <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-muted-foreground flex items-center gap-2">
               <Bell className="w-3.5 h-3.5" /> Notification Preferences
             </h3>
           </div>
@@ -184,29 +184,29 @@ export const SettingsPage = () => {
         </Card>
 
         {/* DISPLAY SECTION */}
-        <Card className="border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 flex items-center gap-2">
+        <Card className="border border-border bg-card shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 bg-muted border-b border-border">
+            <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-muted-foreground flex items-center gap-2">
               <Globe className="w-3.5 h-3.5" /> Display & Localization
             </h3>
           </div>
 
           <ToggleRow
-            icon={<Moon className="w-3.5 h-3.5 text-slate-400" />}
+            icon={<Moon className="w-3.5 h-3.5 text-muted-foreground" />}
             label="Dark Mode"
             description="Switch between light and dark interface theme"
             value={prefs.darkMode}
             onChange={() => toggle('darkMode')}
           />
           <SelectRow
-            icon={<Globe className="w-3.5 h-3.5 text-slate-500" />}
+            icon={<Globe className="w-3.5 h-3.5 text-muted-foreground" />}
             label="Currency Display"
             value={prefs.currencyDisplay}
             options={[{ label: `${APP_SETTINGS.currency} (Kenyan Shilling)`, value: '${APP_SETTINGS.currency}' }, { label: 'USD (US Dollar)', value: 'USD' }]}
             onChange={(v) => setVal('currencyDisplay', v)}
           />
           <SelectRow
-            icon={<Ruler className="w-3.5 h-3.5 text-slate-500" />}
+            icon={<Ruler className="w-3.5 h-3.5 text-muted-foreground" />}
             label="Distance Unit"
             value={prefs.distanceUnit}
             options={[{ label: 'Kilometers (km)', value: 'km' }, { label: 'Miles (mi)', value: 'miles' }]}
@@ -215,35 +215,35 @@ export const SettingsPage = () => {
         </Card>
 
         {/* SECURITY SECTION */}
-        <Card className="border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 flex items-center gap-2">
+        <Card className="border border-border bg-card shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 bg-muted border-b border-border">
+            <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-muted-foreground flex items-center gap-2">
               <ShieldCheck className="w-3.5 h-3.5" /> Security & Privacy
             </h3>
           </div>
 
           <div 
-            className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800 last:border-0 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors"
+            className="flex items-center justify-between px-5 py-4 border-b border-border last:border-0 cursor-pointer group hover:bg-accent transition-colors"
             onClick={() => setIsPasswordModalOpen(true)}
           >
             <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">Change Password</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Update your account password</p>
+              <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">Change Password</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Update your account password</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary transition-colors" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
           
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800 last:border-0 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border last:border-0 cursor-pointer group hover:bg-accent transition-colors">
             <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">Linked Devices</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Manage sessions and trusted devices</p>
+              <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">Linked Devices</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Manage sessions and trusted devices</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary transition-colors" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </Card>
 
         {/* DANGER ZONE */}
-        <Card className="border border-rose-100 dark:border-rose-900/40 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <Card className="border border-rose-100 dark:border-rose-900/40 bg-card shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 bg-rose-50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/30">
             <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-rose-500 flex items-center gap-2">
               <Trash2 className="w-3.5 h-3.5" /> Danger Zone
@@ -252,8 +252,8 @@ export const SettingsPage = () => {
 
           <div className="px-5 py-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white">Delete Account</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Permanently remove your account and all associated data</p>
+              <p className="text-xs font-bold text-foreground">Delete Account</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Permanently remove your account and all associated data</p>
             </div>
             <button 
               onClick={() => setIsDeleteModalOpen(true)}
@@ -265,7 +265,7 @@ export const SettingsPage = () => {
         </Card>
 
         {/* App version footer */}
-        <div className="text-center text-[9px] text-slate-400 font-bold py-2 uppercase tracking-widest">
+        <div className="text-center text-[9px] text-muted-foreground font-bold py-2 uppercase tracking-widest">
           Tulete App v2.0.0 — Nairobi, Kenya 🇰🇪
         </div>
       </div>

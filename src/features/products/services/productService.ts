@@ -34,6 +34,19 @@ class ProductService extends BaseFirestoreService<Product> {
   }
 
   protected override parse(data: any): Product {
+    // Flutter stores ratings as a `rate` array (e.g. [4.5, 3.0, 5.0])
+    // We compute the average here to get the display rating.
+    let rating = 0;
+    let reviewCount = 0;
+    if (Array.isArray(data.rate) && data.rate.length > 0) {
+      const rates = data.rate.map(Number).filter((n: number) => !isNaN(n));
+      reviewCount = rates.length;
+      rating = rates.reduce((sum: number, r: number) => sum + r, 0) / reviewCount;
+    } else if (data.rating !== undefined) {
+      rating = Number(data.rating);
+      reviewCount = data.reviewCount !== undefined ? Number(data.reviewCount) : 0;
+    }
+
     return {
       id: data.id,
       name: data.name || '',
@@ -43,8 +56,8 @@ class ProductService extends BaseFirestoreService<Product> {
       imgUrl: data.imgUrl || data.imgURL || '',
       storeId: data.storeId || '',
       store: data.store || '',
-      rating: data.rating !== undefined ? Number(data.rating) : 0,
-      reviewCount: data.reviewCount !== undefined ? Number(data.reviewCount) : 0,
+      rating: Math.round(rating * 10) / 10, // round to 1 decimal
+      reviewCount,
       category: data.category || data.cat || '',
       tags: data.tags || [],
       availability: data.availability !== undefined ? !!data.availability : true,
@@ -82,13 +95,20 @@ class ProductService extends BaseFirestoreService<Product> {
     let targetCollection = 'foods';
 
     if (params?.filters) {
-      const catFilter = params.filters.find(f => f.field === 'category');
-      if (catFilter && catFilter.operator === '==') {
-        const val = String(catFilter.value).toLowerCase();
-        if (val.includes('nguo') || val.includes('cloth')) {
-          targetCollection = 'cloths';
-        } else if (val.includes('product') || val.includes('retail')) {
-          targetCollection = 'products';
+      // 1. Check for explicit collection routing
+      const collFilter = params.filters.find(f => f.field === '_collection');
+      if (collFilter && collFilter.operator === '==') {
+        targetCollection = String(collFilter.value);
+      } else {
+        // Fallback to legacy category-based routing
+        const catFilter = params.filters.find(f => f.field === 'category');
+        if (catFilter && catFilter.operator === '==') {
+          const val = String(catFilter.value).toLowerCase();
+          if (val.includes('nguo') || val.includes('cloth')) {
+            targetCollection = 'cloths';
+          } else if (val.includes('product') || val.includes('retail')) {
+            targetCollection = 'products';
+          }
         }
       }
     }
@@ -96,7 +116,9 @@ class ProductService extends BaseFirestoreService<Product> {
     const constraints: any[] = [];
     if (params?.filters) {
       params.filters.forEach(f => {
-        constraints.push(where(f.field, f.operator, f.value));
+        if (f.field !== '_collection') {
+          constraints.push(where(f.field, f.operator, f.value));
+        }
       });
     }
 

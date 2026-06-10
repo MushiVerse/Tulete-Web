@@ -68,7 +68,7 @@ export const Footer = () => {
               <li><Link to="/laundry" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Premium Laundry</Link></li>
               <li><Link to="/food" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Order Food</Link></li>
               <li><Link to="/products" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Shop Products</Link></li>
-              <li><Link to="/dashboard" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Provider Portal</Link></li>
+
             </ul>
           </div>
 

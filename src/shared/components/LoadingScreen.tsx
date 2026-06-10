@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 
 export const LoadingScreen = () => {
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-slate-500">
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-muted-foreground">
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
       <p className="text-sm font-medium animate-pulse">Loading...</p>
     </div>

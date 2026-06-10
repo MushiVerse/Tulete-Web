@@ -244,7 +244,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   };
 
   return (
-    <Card className="relative w-full h-[280px] bg-slate-50 border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm flex items-center justify-center">
+    <Card className="relative w-full h-[280px] bg-slate-50 border border-border overflow-hidden shadow-sm flex items-center justify-center">
       {isLoading && (
         <div className="absolute inset-0 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xs flex items-center justify-center z-10">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -262,14 +262,14 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       {/* Floating control gauges */}
       <div className="absolute bottom-3 right-3 flex flex-col gap-2">
         <button 
-          className="p-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full shadow-md text-slate-500 hover:text-primary transition-all focus:outline-none"
+          className="p-2 bg-card border border-border rounded-full shadow-md text-muted-foreground hover:text-primary transition-all focus:outline-none"
           title="Compass center"
         >
           <Compass className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 border border-slate-100 dark:border-slate-850 px-3 py-1.5 rounded-lg shadow-sm text-[8px] font-extrabold uppercase tracking-widest text-slate-500 flex items-center gap-1.5 pointer-events-none">
+      <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 border border-slate-100 dark:border-slate-850 px-3 py-1.5 rounded-lg shadow-sm text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 pointer-events-none">
         <MapPin className="w-3.5 h-3.5 text-primary" />
         Nairobi Kilimani Hub Grid HUD
       </div>

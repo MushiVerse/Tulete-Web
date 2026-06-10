@@ -12,7 +12,7 @@ import {
   ArrowLeft, Star, Clock, MapPin, Phone, 
   MessageSquare, Share2, Heart, Search, Plus, 
   CheckCircle2, Compass, Percent, Image, AlertTriangle,
-  ShoppingBag, ArrowRight
+  ShoppingBag, ArrowRight, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
@@ -37,7 +37,7 @@ export const StoreDetailsPage = () => {
     return list.includes(id || '');
   });
 
-  const { items: cartItems, addToCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, clearCart, getTotals } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   const { isAuthenticated } = useAuthStore();
@@ -306,7 +306,7 @@ export const StoreDetailsPage = () => {
           </div>
 
       {/* Hero Banner details */}
-      <div className="relative h-60 md:h-72 rounded-3xl overflow-hidden mb-6 shadow-md border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+      <div className="relative h-60 md:h-72 rounded-3xl overflow-hidden mb-6 shadow-md border border-border bg-slate-100 dark:bg-slate-900">
         <img 
           src={store.imgURL} 
           alt={store.store} 
@@ -349,7 +349,7 @@ export const StoreDetailsPage = () => {
       </div>
 
       {/* Trust contact HUD bar */}
-      <div className="grid grid-cols-4 gap-2 mb-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-2xl">
+      <div className="grid grid-cols-4 gap-2 mb-8 bg-muted border border-border p-2 rounded-2xl">
         <button 
           onClick={triggerWhatsApp}
           className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-emerald-600 dark:text-emerald-550 transition-all cursor-pointer font-bold text-xs"
@@ -366,7 +366,7 @@ export const StoreDetailsPage = () => {
         </a>
         <button 
           onClick={handleShare}
-          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-655 dark:text-slate-300 transition-all cursor-pointer font-bold text-xs"
+          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-accent text-slate-655 dark:text-slate-300 transition-all cursor-pointer font-bold text-xs"
         >
           <Share2 className="w-5 h-5 mb-1" />
           Share Shop
@@ -381,7 +381,7 @@ export const StoreDetailsPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 mb-6 overflow-x-auto scrollbar-none">
+      <div className="flex border-b border-border gap-6 mb-6 overflow-x-auto scrollbar-none">
         {(['menu', 'hours', 'reviews', 'gallery'] as const).map((tab) => (
           <button
             key={tab}
@@ -389,7 +389,7 @@ export const StoreDetailsPage = () => {
             className={`pb-3 font-semibold text-sm capitalize whitespace-nowrap relative transition-all ${
               activeTab === tab 
                 ? 'text-primary' 
-                : 'text-slate-500 hover:text-slate-850 dark:text-slate-400'
+                : 'text-muted-foreground hover:text-slate-850 dark:text-slate-400'
             }`}
           >
             {tab === 'menu' ? 'Services & items' : tab === 'hours' ? 'About & Map' : tab}
@@ -415,7 +415,7 @@ export const StoreDetailsPage = () => {
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
                   placeholder="Search item, clean package..."
-                  className="pl-10 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                  className="pl-10 bg-card border-border"
                 />
               </div>
 
@@ -450,13 +450,13 @@ export const StoreDetailsPage = () => {
 
             {/* Menu Items Grid */}
             {filteredProducts.length === 0 ? (
-              <div className="text-center py-10 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl">
-                <p className="text-xs text-slate-500 dark:text-slate-400">No matching services or items found.</p>
+              <div className="text-center py-10 bg-muted border border-slate-150 dark:border-slate-800 rounded-2xl">
+                <p className="text-xs text-muted-foreground">No matching services or items found.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredProducts.map((prod) => (
-                  <Card key={prod.id} className="p-4 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all flex gap-4 items-center">
+                  <Card key={prod.id} className="p-4 border border-border bg-card hover:shadow-md transition-all flex gap-4 items-center">
                     <img 
                       src={prod.imgUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
                       alt={prod.name} 
@@ -473,12 +473,12 @@ export const StoreDetailsPage = () => {
                         ))}
                       </div>
                       
-                      <h4 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mb-1">{prod.name}</h4>
+                      <h4 className="font-extrabold text-sm text-foreground truncate mb-1">{prod.name}</h4>
                       <p className="text-xs text-slate-550 dark:text-slate-400 line-clamp-1 mb-2 leading-relaxed">{prod.description}</p>
                       
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+                          <span className="font-extrabold text-sm text-foreground">
                             {prod.price.toLocaleString()} ${APP_SETTINGS.currency}
                           </span>
                           {prod.oldprice && (
@@ -517,35 +517,35 @@ export const StoreDetailsPage = () => {
         {/* Hours & Operational Map tab */}
         {activeTab === 'hours' && (
           <div className="space-y-6">
-            <Card className="h-60 relative overflow-hidden border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-955 shadow-md rounded-2xl flex">
+            <Card className="h-60 relative overflow-hidden border border-border bg-card shadow-md rounded-2xl flex">
               <canvas ref={canvasRef} className="flex-1 w-full" />
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-5 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-                <h3 className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
+              <Card className="p-5 border border-border shadow-sm bg-card">
+                <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
                   <Clock className="w-4 h-4 text-primary" />
                   Opening Hours
                 </h3>
                 <div className="space-y-2 text-xs">
                   {(store.hours || []).map((h, i) => (
                     <div key={i} className="flex justify-between">
-                      <span className="text-slate-500">{h.days}</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">{h.hours}</span>
+                      <span className="text-muted-foreground">{h.days}</span>
+                      <span className="font-semibold text-foreground">{h.hours}</span>
                     </div>
                   ))}
                 </div>
               </Card>
 
-              <Card className="p-5 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-905">
-                <h3 className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
+              <Card className="p-5 border border-border shadow-sm bg-card">
+                <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
                   <Compass className="w-4 h-4 text-primary animate-pulse" />
                   Store Description
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   {store.description}
                 </p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500">
+                <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <MapPin className="w-4 h-4 text-emerald-500" />
                   <span>{store.address}</span>
                 </div>
@@ -557,19 +557,19 @@ export const StoreDetailsPage = () => {
         {/* Reviews tab */}
         {activeTab === 'reviews' && (
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-805 p-6 rounded-2xl">
-              <div className="text-center md:border-r border-slate-200 dark:border-slate-800 pr-6">
+            <div className="flex flex-col md:flex-row gap-6 items-center bg-muted border border-slate-200 dark:border-slate-805 p-6 rounded-2xl">
+              <div className="text-center md:border-r border-border pr-6">
                 <h2 className="text-5xl font-extrabold text-slate-950 dark:text-white">{store.rating}</h2>
                 <div className="flex items-center justify-center gap-0.5 mt-2 mb-1">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <Star key={s} className="w-4 h-4 fill-amber-400 stroke-amber-400" />
                   ))}
                 </div>
-                <span className="text-xs text-slate-500">Based on {store.reviewCount} reviews</span>
+                <span className="text-xs text-muted-foreground">Based on {store.reviewCount} reviews</span>
               </div>
 
               {/* Rating score segments */}
-              <div className="flex-1 space-y-2 w-full text-xs text-slate-500">
+              <div className="flex-1 space-y-2 w-full text-xs text-muted-foreground">
                 {[
                   { stars: 5, pct: '85%' },
                   { stars: 4, pct: '10%' },
@@ -592,13 +592,13 @@ export const StoreDetailsPage = () => {
             {/* Reviews List */}
             <div className="space-y-4">
               {(store.reviews || []).map((rev) => (
-                <Card key={rev.id} className="p-4 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                <Card key={rev.id} className="p-4 border border-border bg-card shadow-sm">
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                         {rev.userName.charAt(0)}
                       </div>
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{rev.userName}</h4>
+                      <h4 className="font-bold text-sm text-foreground">{rev.userName}</h4>
                     </div>
                     <span className="text-[10px] text-slate-400">{rev.date}</span>
                   </div>
@@ -634,9 +634,9 @@ export const StoreDetailsPage = () => {
                         <Badge className="bg-primary text-white border-0 text-[10px] font-bold">
                           {promo.code}
                         </Badge>
-                        <span className="text-xs font-extrabold text-slate-900 dark:text-white">Save {promo.discountValue}</span>
+                        <span className="text-xs font-extrabold text-foreground">Save {promo.discountValue}</span>
                       </div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{promo.description}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{promo.description}</p>
                     </div>
                   </Card>
                 ))}
@@ -645,7 +645,7 @@ export const StoreDetailsPage = () => {
 
             {/* Gallery Image cards */}
             <div>
-              <h3 className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
+              <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <Image className="w-4 h-4 text-primary" />
                 Store Photo Gallery
               </h3>
@@ -681,15 +681,25 @@ export const StoreDetailsPage = () => {
 
               {hasItems ? (
                 <>
-                  <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
+                  <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="flex justify-between items-center text-sm">
+                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
                         <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
                           {cartItem.quantity}x {cartItem.name}
                         </span>
-                        <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <span className="font-extrabold text-foreground">
+                            {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
+                          </span>
+                          <button
+                            onClick={() => removeFromCart(cartItem.productId)}
+                            title="Remove item"
+                            aria-label={`Remove ${cartItem.name}`}
+                            className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all ml-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -704,6 +714,12 @@ export const StoreDetailsPage = () => {
                     >
                       Checkout Now <ArrowRight className="w-4 h-4" />
                     </Button>
+                    <button
+                      onClick={() => clearCart()}
+                      className="w-full mt-3 text-xs font-semibold text-muted-foreground hover:text-red-500 transition-colors py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20"
+                    >
+                      Clear Cart
+                    </button>
                   </div>
                 </>
               ) : (

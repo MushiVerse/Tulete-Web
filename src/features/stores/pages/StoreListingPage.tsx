@@ -664,17 +664,17 @@ export const StoreListingPage = () => {
             </div>
 
             {/* TRUST STATS BAND */}
-            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
-              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Platform Stats</h2>
+            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
+              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Platform Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {STATS.map(({ value, label, icon: Icon }) => (
                   <div key={label} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-background/20 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="block text-lg font-extrabold leading-tight">{value}</span>
-                      <span className="block text-[10px] opacity-70 font-semibold uppercase">{label}</span>
+                      <span className="block text-lg font-extrabold leading-tight text-foreground">{value}</span>
+                      <span className="block text-[10px] text-muted-foreground font-semibold uppercase">{label}</span>
                     </div>
                   </div>
                 ))}

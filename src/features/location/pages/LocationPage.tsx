@@ -144,7 +144,7 @@ export const LocationPage = () => {
           <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
             Geolocation Hub
           </span>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-3">
+          <h1 className="text-2xl font-extrabold text-foreground mt-3">
             Address Book & Geotargeting
           </h1>
         </div>
@@ -175,9 +175,9 @@ export const LocationPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN: Map View & Tracker console */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="p-4 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <Card className="p-4 border border-border bg-card shadow-sm">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">
+              <h3 className="font-bold text-xs uppercase tracking-wider text-foreground">
                 Interactive Coordinates HUD Map
               </h3>
               
@@ -194,7 +194,7 @@ export const LocationPage = () => {
               isLoading={isDetecting}
             />
 
-            <div className="flex gap-2.5 items-center bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-900 mt-4 text-[10px] text-slate-500 font-semibold leading-relaxed">
+            <div className="flex gap-2.5 items-center bg-muted p-3 rounded-xl border border-border mt-4 text-[10px] text-muted-foreground font-semibold leading-relaxed">
               <Info className="w-4 h-4 text-primary flex-shrink-0" />
               <span>
                 **Tulete Geotargeting Engine**: Double-click on any sector of the street coordinates above to instantly drop selection markers and update saved routing coordinates.
@@ -204,8 +204,8 @@ export const LocationPage = () => {
 
           {/* Realtime driver tracker simulator panel */}
           {activeAddress && (
-            <Card className="p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
-              <h3 className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white mb-4">
+            <Card className="p-5 border border-border bg-card shadow-sm relative overflow-hidden">
+              <h3 className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-foreground mb-4">
                 <Route className="w-4 h-4 text-primary animate-pulse" />
                 Realtime Dispatch & Routing Simulator
               </h3>
@@ -214,17 +214,17 @@ export const LocationPage = () => {
                 <div className="space-y-2">
                   <span className="text-[9px] uppercase font-extrabold tracking-widest text-slate-400">Transit Statistics</span>
                   <div className="flex justify-between text-xs font-bold border-b border-slate-100 pb-1.5">
-                    <span className="text-slate-500">Selected Hub:</span>
-                    <span className="text-slate-900 dark:text-white">{activeAddress.title}</span>
+                    <span className="text-muted-foreground">Selected Hub:</span>
+                    <span className="text-foreground">{activeAddress.title}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold border-b border-slate-100 pb-1.5">
-                    <span className="text-slate-500">Transit Distance:</span>
-                    <span className="text-slate-900 dark:text-white">
+                    <span className="text-muted-foreground">Transit Distance:</span>
+                    <span className="text-foreground">
                       {locationService.calculateDistance({ lat: -1.3033, lng: 36.7900 }, activeAddress.location)} km
                     </span>
                   </div>
                   <div className="flex justify-between text-xs font-bold">
-                    <span className="text-slate-500">Transit ETA:</span>
+                    <span className="text-muted-foreground">Transit ETA:</span>
                     <span className="text-primary">
                       {locationService.getTravelDirections({ lat: -1.3033, lng: 36.7900 }, activeAddress.location).durationMins} minutes
                     </span>
@@ -271,7 +271,7 @@ export const LocationPage = () => {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <Card className="p-5 border border-primary bg-white dark:bg-slate-900 shadow-md">
+                <Card className="p-5 border border-primary bg-card shadow-md">
                   <h3 className="font-bold text-xs uppercase tracking-wider text-primary mb-3">
                     Add Location Coordinates
                   </h3>
@@ -301,7 +301,7 @@ export const LocationPage = () => {
 
                     <div>
                       <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Coordinates Pin</label>
-                      <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 font-bold bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground font-bold bg-slate-50 p-2 rounded-lg border border-slate-100">
                         <span>Lat: {formCoords.lat.toFixed(5)}</span>
                         <span>Lng: {formCoords.lng.toFixed(5)}</span>
                       </div>
@@ -350,7 +350,7 @@ export const LocationPage = () => {
 
           {/* SAVED ADDRESSES DIRECTORY LISTS */}
           <div className="space-y-3">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
               Address Directory ({addressList.length})
             </h3>
 
@@ -367,13 +367,13 @@ export const LocationPage = () => {
                     className={`p-4 border transition-all cursor-pointer shadow-sm ${
                       isSelected 
                         ? 'border-primary bg-primary/5' 
-                        : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md'
+                        : 'border-border bg-card hover:shadow-md'
                     }`}
                   >
                     <div className="flex justify-between items-start gap-4 mb-2">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <h4 className={`font-bold text-xs ${isSelected ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
+                          <h4 className={`font-bold text-xs ${isSelected ? 'text-primary' : 'text-foreground'}`}>
                             {addr.title}
                           </h4>
                           {addr.isDefault && (
@@ -383,7 +383,7 @@ export const LocationPage = () => {
                           )}
                         </div>
                         
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-[10px] text-muted-foreground mt-1">
                           {addr.addressLine}, {addr.city}
                         </p>
                       </div>

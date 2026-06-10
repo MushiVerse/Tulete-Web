@@ -5,7 +5,7 @@ import { useAuthStore } from '../../core/auth/useAuthStore';
 import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 
 const navigation = [
-  { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+
   { name: 'Orders', to: '/orders', icon: ShoppingBag },
   { name: 'Cart', to: '/cart', icon: ShoppingBag }, // Usually in top nav, but kept here for completeness
   { name: 'Favorites', to: '/favorites', icon: Heart },

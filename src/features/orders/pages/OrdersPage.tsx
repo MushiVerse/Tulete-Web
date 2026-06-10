@@ -87,8 +87,8 @@ export const OrdersPage = () => {
       <ContentContainer size="md">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-950 dark:text-white">Your Orders</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage and track your service and delivery requests.</p>
+          <h1 className="text-3xl font-extrabold text-foreground">Your Orders</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage and track your service and delivery requests.</p>
         </div>
 
         {/* Search */}
@@ -98,13 +98,13 @@ export const OrdersPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by store or ID..."
-            className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-primary focus-visible:ring-1"
+            className="pl-9 bg-card border-border focus-visible:ring-primary focus-visible:ring-1"
           />
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 mb-6">
+      <div className="flex border-b border-border gap-6 mb-6">
         {(['active', 'completed', 'cancelled'] as const).map((tab) => (
           <button
             key={tab}
@@ -112,7 +112,7 @@ export const OrdersPage = () => {
             className={`pb-3 font-semibold text-sm capitalize relative transition-all ${
               activeTab === tab 
                 ? 'text-primary' 
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {tab} Requests
@@ -130,7 +130,7 @@ export const OrdersPage = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-6 border border-slate-100 dark:border-slate-800 animate-pulse">
+            <Card key={i} className="p-6 border border-border animate-pulse">
               <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3 mb-4"></div>
               <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-2/3 mb-2"></div>
               <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/2"></div>
@@ -142,13 +142,13 @@ export const OrdersPage = () => {
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center py-16 px-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800"
+          className="text-center py-16 px-4 bg-muted rounded-2xl border border-border"
         >
           <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShoppingBag className="w-8 h-8 text-slate-400" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">No Orders Found</h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mb-6">
+          <h3 className="text-lg font-bold text-foreground mb-1">No Orders Found</h3>
+          <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-6">
             We couldn't find any orders in the "{activeTab}" tab. Let's make your first request today!
           </p>
           <Button onClick={() => navigate('/discover')}>Discover Stores</Button>
@@ -172,12 +172,12 @@ export const OrdersPage = () => {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Card className="p-6 border border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all">
+                  <Card className="p-6 border border-border hover:border-slate-200 dark:hover:border-slate-700 bg-card shadow-sm hover:shadow-md transition-all">
                     {/* Header */}
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                       <div className="space-y-1">
-                        <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500 block">Order ID: #{order.id.slice(-8).toUpperCase()}</span>
-                        <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">{order.storeName}</h3>
+                        <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-muted-foreground block">Order ID: #{order.id.slice(-8).toUpperCase()}</span>
+                        <h3 className="font-extrabold text-foreground text-lg">{order.storeName}</h3>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -200,8 +200,8 @@ export const OrdersPage = () => {
                     )}
 
                     {/* Items Info */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-b border-slate-100 dark:border-slate-800 py-3 mb-4 gap-4">
-                      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-b border-border py-3 mb-4 gap-4">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
                           {dateStr}
@@ -212,7 +212,7 @@ export const OrdersPage = () => {
                         </div>
                       </div>
 
-                      <div className="font-bold text-slate-900 dark:text-white text-base">
+                      <div className="font-bold text-foreground text-base">
                         {order.totalAmount.toLocaleString()} ${APP_SETTINGS.currency}
                       </div>
                     </div>
@@ -233,7 +233,7 @@ export const OrdersPage = () => {
                         <Button
                           variant="ghost"
                           onClick={() => setSupportOrder(order)}
-                          className="text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold"
+                          className="text-foreground hover:bg-accent text-xs font-semibold"
                         >
                           <Phone className="w-4 h-4 mr-1.5" />
                           Support
@@ -255,7 +255,7 @@ export const OrdersPage = () => {
                             onClick={() => handleReorder(order)}
                             size="sm"
                             variant="secondary"
-                            className="font-bold text-xs flex items-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            className="font-bold text-xs flex items-center gap-1 hover:bg-accent"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
                             Reorder
@@ -277,13 +277,13 @@ export const OrdersPage = () => {
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl"
           >
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Phone className="w-6 h-6 text-primary animate-bounce" />
             </div>
-            <h3 className="text-lg font-extrabold text-slate-950 dark:text-white mb-2">Contact Tulete Support</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+            <h3 className="text-lg font-extrabold text-foreground mb-2">Contact Tulete Support</h3>
+            <p className="text-xs text-muted-foreground mb-6">
               Need assistance with your order from <strong>{supportOrder.storeName}</strong>? Select an action below to connect.
             </p>
             <div className="space-y-2">

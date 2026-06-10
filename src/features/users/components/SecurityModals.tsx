@@ -76,17 +76,17 @@ export const ChangePasswordModal = ({ isOpen, onClose }: { isOpen: boolean; onCl
           {success && <div className="text-[11px] text-success bg-success/10 border border-success/20 p-2 rounded-lg">Password updated successfully!</div>}
           
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Current Password</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">Current Password</label>
             <Input type="password" {...register('currentPassword')} />
             {errors.currentPassword && <p className="text-rose-500 text-[10px] mt-1">{errors.currentPassword.message}</p>}
           </div>
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">New Password</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">New Password</label>
             <Input type="password" {...register('newPassword')} />
             {errors.newPassword && <p className="text-rose-500 text-[10px] mt-1">{errors.newPassword.message}</p>}
           </div>
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Confirm New Password</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">Confirm New Password</label>
             <Input type="password" {...register('confirmPassword')} />
             {errors.confirmPassword && <p className="text-rose-500 text-[10px] mt-1">{errors.confirmPassword.message}</p>}
           </div>
@@ -151,7 +151,7 @@ export const DeleteAccountModal = ({ isOpen, onClose }: { isOpen: boolean; onClo
           {error && <div className="text-[11px] text-rose-500 bg-rose-50 p-2 rounded-lg">{error}</div>}
           
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Confirm Password</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">Confirm Password</label>
             <Input 
               type="password" 
               value={password}

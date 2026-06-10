@@ -26,7 +26,7 @@ const Pages = React.lazy(() => import('../pages').then(module => ({
 // Standard Lazy Imports (Best Practice)
 const Home = React.lazy(() => import('../pages').then(m => ({ default: m.HomePage })));
 const Landing = React.lazy(() => import('../pages').then(m => ({ default: m.LandingPage })));
-const Dashboard = React.lazy(() => import('../features/dashboard/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+
 const Discovery = React.lazy(() => import('../features/discovery/pages/DiscoveryPage').then(m => ({ default: m.DiscoveryPage })));
 const ProductDetail = React.lazy(() => import('../features/products/pages/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
 const Orders = React.lazy(() => import('../pages').then(m => ({ default: m.OrdersPage })));
@@ -85,7 +85,6 @@ export const router = createBrowserRouter([
           </AuthGuard>
         ),
         children: [
-          { path: 'dashboard', element: withSuspense(Dashboard) },
           { path: 'discover', element: <Suspense fallback={<GridSkeleton />}><Discovery /></Suspense> },
           { path: 'stores', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
           { path: 'orders', element: withSuspense(Orders) },

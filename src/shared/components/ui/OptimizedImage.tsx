@@ -30,7 +30,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
       {/* Error State */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-900 border border-border">
           <ImageIcon size={fallbackIconSize} className="text-slate-400" />
         </div>
       )}
