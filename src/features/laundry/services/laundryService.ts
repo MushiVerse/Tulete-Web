@@ -48,6 +48,12 @@ class LaundryService extends BaseFirestoreService<LaundryItem> {
     } else if (data.rating !== undefined) {
       rating = Number(data.rating);
     }
+    
+    // Fallback to a static rating if there are no reviews yet
+    if (rating === 0 || reviewCount === 0) {
+      // Deterministic static rating (e.g., 4.5, 4.6, 4.7...) so it doesn't flicker
+      rating = 4.5 + ((data.name?.length || 5) % 5) / 10;
+    }
     return {
       ...data,
       id: data.id,

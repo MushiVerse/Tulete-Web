@@ -19,6 +19,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   imageUrl: string;
+  cat?: string;
 }
 
 export interface OrderLocation {
@@ -229,6 +230,71 @@ class OrderService extends BaseFirestoreService<Order> {
         }, step.delay);
       });
     });
+  /**
+   * Translates the unified web app order into individual Flutter-compliant documents
+   * and saves them to `newcomfirmedorders` (Global) and `userOrderId/{uid}/newcomfirmedorders`.
+   * This bridges the gap between the Web App's unified cart UX and Flutter's item-based checkout.
+   */
+  async createLiveFlutterOrders(order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) {
+    try {
+      const uids = order.userId;
+      
+      for (const item of order.items) {
+        // Map category properly if not provided
+        const cat = (item as any).cat || (order.isLaundryOrder ? 'Nguo' : 'Food');
+        
+        // Flutter expects the total for the single item line
+        const lineTotal = item.price * item.quantity;
+        const deliveryFee = 0; // Handled per-item or globally depending on the business rule, mock 0 for now.
+
+        const flutterPayload = {
+          uid: uids,
+          foodId: item.productId,
+          uname: 'Web User', // Could pull from auth
+          no: order.contactPhone || '0000000000',
+          name: item.name,
+          price: item.price,
+          deliveryfee: deliveryFee,
+          imgURL: item.imageUrl,
+          chose: true,
+          quantity: 100, // Stock remaining (mock large number)
+          location: order.deliveryLocation.address,
+          count: item.quantity, // Ordered amount
+          store: order.storeName,
+          total: lineTotal,
+          irondelivery: order.irondelivery || false,
+          packagepickup: order.packagepickup || false,
+          express: order.express || false,
+          cancel: false,
+          show: true,
+          paid: false,
+          instructions: order.notes || order.instructions || '',
+          ordersts: ['Order Placed'],
+          orderststime: [new Date().toString()],
+          amaountpaid: 0,
+          email: 'web@tulete.net',
+          tokOnesignal: '',
+          deliverytime: order.deliverytime || 'ASAP',
+          cat: cat,
+          showtrackbtn: false,
+          deliveryDone: false,
+          status: 'Order Placed',
+          latlong: `${order.deliveryLocation.lat},${order.deliveryLocation.lng}`,
+          ProductLatlong: '0.0,0.0',
+          time: new Date().toString(),
+        };
+
+        // 1. Add to global `newcomfirmedorders` (Admin/Driver feed)
+        const globalRef = collection(db, 'newcomfirmedorders');
+        await setDoc(doc(globalRef), flutterPayload);
+
+        // 2. Add to user's personal `userOrderId/{uid}/newcomfirmedorders` (User feed)
+        const userOrdersRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', item.productId);
+        await setDoc(userOrdersRef, flutterPayload);
+      }
+    } catch (e) {
+      console.error('Failed to create live flutter orders:', e);
+    }
   }
 }
 

@@ -307,7 +307,8 @@ export const FoodPage = () => {
                                     price: meal.price,
                                     imageUrl: meal.imgUrl,
                                     storeId: meal.storeId,
-                                    storeName: meal.store
+                                    storeName: meal.store,
+                                    cat: 'Food'
                                   })}
                                   className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
                                 >

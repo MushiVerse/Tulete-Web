@@ -83,6 +83,7 @@ export const CheckoutPage = () => {
           price: item.price, // TODO (Security): Price shouldn't be trusted from client, recalculate on backend via rules/functions.
           quantity: item.quantity,
           imageUrl: item.imageUrl,
+          cat: item.cat, // Pass category for Flutter Live Order routing
         })),
         totalAmount: total, // TODO (Security): Calculate total server-side
         status: 'Pending',
@@ -109,8 +110,11 @@ export const CheckoutPage = () => {
         }),
       };
 
-      // Create order in firestore
+      // Create order in firestore (Web App format)
       const createdOrder = await orderService.create(orderPayload);
+
+      // Create orders in firestore (Live Flutter Format: 'newcomfirmedorders')
+      await orderService.createLiveFlutterOrders(orderPayload);
 
       // Start background simulation to dynamically route the driver and update order status in Firestore!
       orderService.simulateOrderLifecycle(

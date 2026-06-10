@@ -47,6 +47,12 @@ class ProductService extends BaseFirestoreService<Product> {
       reviewCount = data.reviewCount !== undefined ? Number(data.reviewCount) : 0;
     }
 
+    // Fallback to a static rating if there are no reviews yet
+    if (rating === 0 || reviewCount === 0) {
+      // Deterministic static rating (e.g., 4.5, 4.6, 4.7...) so it doesn't flicker
+      rating = 4.5 + ((data.name?.length || 5) % 5) / 10;
+    }
+
     return {
       id: data.id,
       name: data.name || '',

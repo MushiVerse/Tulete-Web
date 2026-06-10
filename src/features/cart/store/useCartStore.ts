@@ -20,6 +20,9 @@ export interface CartItem {
   
   // Food & Product Configurations
   isDeliverySelected?: boolean; // True means Delivery, False means Pickup
+  
+  // App-specific category ("Food", "Nguo", "Product") used by backend schema
+  cat?: string; 
 }
 
 export const calculateItemTotal = (item: CartItem): number => {

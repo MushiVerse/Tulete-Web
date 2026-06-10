@@ -413,6 +413,7 @@ export const LaundryPage = () => {
       storeId: item.brand || 'laundry',
       storeName: item.store || 'Laundry Service',
       isLaundry: true,
+      cat: 'Nguo',
       ...config
     });
     showToast(`${item.name} added to cart`);

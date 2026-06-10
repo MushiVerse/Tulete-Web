@@ -602,7 +602,7 @@ export const HomePage = () => {
 
             {/* 9. What we clean (Laundry) */}
             {laundryClean.length > 0 && (
-              <HorizontalCarousel title="What we clean" icon={<Shirt className="w-5 h-5 text-secondary" />} actionLink="/laundry" autoScrollSpeed={0.4}>
+              <HorizontalCarousel title="What we clean" icon={<Sparkles className="w-5 h-5 text-primary" />} actionLink="/laundry" autoScrollSpeed={0.4}>
                 {laundryClean.map(product => (
                   <div key={`laundry-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 

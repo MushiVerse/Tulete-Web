@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Plus, Heart } from 'lucide-react';
+import { Star, Plus, Heart, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Product } from '../../../features/products/services/productService';
 import { Card, CardContent } from '../ui/Card';
@@ -84,9 +84,12 @@ export const ProductCard = ({
           {/* Content */}
           <CardContent className="p-3.5 flex flex-col flex-grow bg-card">
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <span className="text-[11px] font-bold text-muted-foreground truncate flex-1">
-                {product.store}
-              </span>
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                <Store className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-[11px] font-bold text-muted-foreground truncate">
+                  {product.store}
+                </span>
+              </div>
               <div className="flex items-center gap-1 bg-black/50 backdrop-blur-md px-1.5 py-0.5 rounded-full shrink-0 shadow-sm">
                 <Star className="w-3 h-3 fill-warning stroke-warning" />
                 <span className="text-[10px] font-extrabold text-white">{(product.rating ?? 0).toFixed(1)}</span>

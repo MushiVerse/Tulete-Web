@@ -314,6 +314,7 @@ export const ProductsPage = () => {
                                       imageUrl: product.imgUrl,
                                       storeId: product.storeId,
                                       storeName: product.store,
+                                      cat: 'Product',
                                     });
                                   }}
                                   className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
