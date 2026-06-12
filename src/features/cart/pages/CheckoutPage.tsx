@@ -24,8 +24,11 @@ const LOCATIONS = [
 export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { items, getTotals, clearCart } = useCartStore();
+  const { items, getTotals, clearCart, laundryPreferences } = useCartStore();
   const { subtotal, deliveryFee, serviceFee, total } = getTotals();
+
+  const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
+  const { deliverytime, instructions: laundryInstructions } = laundryPreferences;
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [addressIndex, setAddressIndex] = useState(0);
@@ -33,15 +36,6 @@ export const CheckoutPage = () => {
   const [notes, setNotes] = useState('');
   const paymentMethod = 'Cash'; // Forced for now
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Laundry-specific state (mirrors Flutter MamboLaundry.dart / reorder.dart fields)
-  const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry'));
-  const [irondelivery, setIrondelivery] = useState(false);
-  const [packagepickup, setPackagepickup] = useState(false);
-  const [express, setExpress] = useState(false);
-  const [deliverytime, setDeliverytime] = useState('');
-  const [laundryInstructions, setLaundryInstructions] = useState('');
-
   if (items.length === 0) {
     return (
       <PageContainer>
@@ -77,6 +71,8 @@ export const CheckoutPage = () => {
 
       const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.id,
+        email: user.email || '',
+        uname: user.displayName || 'Web User',
         items: items.map(item => ({
           productId: item.productId,
           name: item.name,
@@ -85,7 +81,7 @@ export const CheckoutPage = () => {
           imageUrl: item.imageUrl,
           cat: item.cat, // Pass category for Flutter Live Order routing
         })),
-        totalAmount: total, // TODO (Security): Calculate total server-side
+        totalAmount: total, // Computed with global modifiers in store
         status: 'Pending',
         storeId: items[0].storeId,
         storeName: items[0].storeName,
@@ -97,15 +93,12 @@ export const CheckoutPage = () => {
         paymentMethod: 'Cash',
         paymentStatus: 'Pending',
         contactPhone: phoneNumber,
+        notes: deliverytime ? `${notes}\n[Preferred Time: ${new Date(deliverytime).toLocaleString()}]` : notes,
+        deliverytime: isLaundryOrder ? 'Pickup' : 'ASAP',
         no: phoneNumber, // Legacy backward compatibility for Flutter/Admin apps
-        ...(notes && { notes }),
         // Laundry-specific fields
         ...(isLaundryOrder && {
           isLaundryOrder: true,
-          irondelivery,
-          packagepickup,
-          express,
-          ...(deliverytime && { deliverytime }),
           ...(laundryInstructions && { instructions: laundryInstructions }),
         }),
       };
@@ -116,12 +109,8 @@ export const CheckoutPage = () => {
       // Create orders in firestore (Live Flutter Format: 'newcomfirmedorders')
       await orderService.createLiveFlutterOrders(orderPayload);
 
-      // Start background simulation to dynamically route the driver and update order status in Firestore!
-      orderService.simulateOrderLifecycle(
-        createdOrder.id,
-        storeLocation,
-        { lat: selectedLocation.lat, lng: selectedLocation.lng }
-      );
+      // Removed background simulation to allow the Flutter Admin app to actually process the order in real-time.
+      await orderService.initializeOrderTracking(createdOrder.id);
 
       // Clear the local shopping cart
       clearCart();
@@ -232,79 +221,7 @@ export const CheckoutPage = () => {
             </div>
           </Card>
 
-          {/* Laundry-Specific Options (shown only for laundry orders — mirrors Flutter's MamboLaundry flow) */}
-          {isLaundryOrder && (
-            <Card className="p-6 border-2 border-primary/20 dark:border-primary/30 bg-primary/2 shadow-sm">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
-                <span className="text-xl">🧺</span>
-                Laundry Preferences
-              </h2>
-
-              <div className="space-y-4">
-                {/* Service toggles */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {[
-                    { key: 'iron', label: '🔥 Iron After Wash', sub: 'We press all items', state: irondelivery, set: setIrondelivery },
-                    { key: 'pack', label: '📦 Package & Pickup', sub: 'We pick & deliver', state: packagepickup, set: setPackagepickup },
-                    { key: 'express', label: '⚡ Express (24h)', sub: 'Priority turnaround', state: express, set: setExpress },
-                  ].map(({ key, label, sub, state, set }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => set(!state)}
-                      className={`border rounded-xl p-3 text-left transition-all ${
-                        state
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-border hover:bg-muted/40'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-bold text-foreground">{label}</span>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                          state ? 'border-primary bg-primary' : 'border-slate-300'
-                        }`}>
-                          {state && <div className="w-2 h-2 rounded-full bg-white" />}
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">{sub}</p>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Preferred pickup date/time */}
-                <div className="space-y-2">
-                  <Label htmlFor="deliverytime" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    📅 Preferred Pickup Date & Time
-                  </Label>
-                  <Input
-                    id="deliverytime"
-                    type="datetime-local"
-                    value={deliverytime}
-                    onChange={(e) => setDeliverytime(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
-                    className="bg-card border-border"
-                  />
-                </div>
-
-                {/* Special instructions */}
-                <div className="space-y-2">
-                  <Label htmlFor="laundry-instructions" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    📝 Special Instructions (Optional)
-                  </Label>
-                  <Textarea
-                    id="laundry-instructions"
-                    value={laundryInstructions}
-                    onChange={(e) => setLaundryInstructions(e.target.value)}
-                    placeholder="e.g. Separate whites from colours. Handle silk blouse gently."
-                    rows={2}
-                    className="bg-card border-border"
-                  />
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Payment Method */}
+          {/* Contact Details */}
           <Card className="p-6 border border-border shadow-sm">
             <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
               <CreditCard className="w-5 h-5 text-primary" />
@@ -354,7 +271,7 @@ export const CheckoutPage = () => {
                     <p className="text-[10px] text-muted-foreground">Qty: {item.quantity}</p>
                   </div>
                   <span className="font-bold text-xs text-foreground">
-                    {(item.price * item.quantity).toLocaleString()} ${APP_SETTINGS.currency}
+                    {(item.price * item.quantity).toLocaleString()} {APP_SETTINGS.currency}
                   </span>
                 </div>
               ))}

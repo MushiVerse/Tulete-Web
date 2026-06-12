@@ -213,7 +213,7 @@ export const OrdersPage = () => {
                       </div>
 
                       <div className="font-bold text-foreground text-base">
-                        {order.totalAmount.toLocaleString()} ${APP_SETTINGS.currency}
+                        {order.totalAmount.toLocaleString()} {APP_SETTINGS.currency}
                       </div>
                     </div>
 

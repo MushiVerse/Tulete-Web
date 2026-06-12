@@ -30,10 +30,10 @@ export const calculateItemTotal = (item: CartItem): number => {
   let itemTotal = 0;
 
   if (item.isLaundry) {
-    if (item.washingSelected !== false) itemTotal += itemBaseSubtotal;
+    itemTotal = itemBaseSubtotal;
     if (item.ironingSelected) itemTotal += itemBaseSubtotal * 0.95;
     if (item.packagingSelected) itemTotal += itemBaseSubtotal * 0.60;
-    if (item.expressSelected) itemTotal += (item.quantity * 1900); 
+    if (item.expressSelected) itemTotal += (item.quantity * 1900);
   } else {
     // Food and Products: Base Price + Delivery Fee (if Delivery is selected)
     itemTotal = itemBaseSubtotal;
@@ -46,8 +46,18 @@ export const calculateItemTotal = (item: CartItem): number => {
   return Math.round(itemTotal);
 };
 
+export interface LaundryPreferences {
+  deliverytime: string;
+  instructions: string;
+}
+
 interface CartState {
   items: CartItem[];
+  laundryPreferences: LaundryPreferences;
+  setLaundryPreferences: (prefs: Partial<LaundryPreferences>) => void;
+  updateLaundryItemConfig: (productId: string, config: { ironingSelected?: boolean; packagingSelected?: boolean; expressSelected?: boolean }) => void;
+  applyLaundryServicesToAll: (config: { ironingSelected?: boolean; packagingSelected?: boolean; expressSelected?: boolean }) => void;
+  clearAllLaundryServices: () => void;
   addToCart: (item: Omit<CartItem, 'quantity'>) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -66,6 +76,32 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      laundryPreferences: {
+        deliverytime: '',
+        instructions: '',
+      },
+
+      setLaundryPreferences: (prefs) => set((state) => ({
+        laundryPreferences: { ...state.laundryPreferences, ...prefs }
+      })),
+
+      updateLaundryItemConfig: (productId, config) => set((state) => ({
+        items: state.items.map(i => i.productId === productId ? { ...i, ...config } : i)
+      })),
+
+      applyLaundryServicesToAll: (config) => set((state) => ({
+        items: state.items.map(i => i.isLaundry ? { ...i, ...config } : i)
+      })),
+
+      clearAllLaundryServices: () => set((state) => ({
+        laundryPreferences: { deliverytime: '', instructions: '' },
+        items: state.items.map(i => i.isLaundry ? { 
+          ...i, 
+          ironingSelected: false, 
+          packagingSelected: false, 
+          expressSelected: false 
+        } : i)
+      })),
 
       addToCart: (item) => set((state) => {
         const existingItem = state.items.find((i) => i.productId === item.productId);
@@ -114,7 +150,7 @@ export const useCartStore = create<CartState>()(
         // Dynamic mock rules for delivery and service fees
         const deliveryFee = subtotal > 0 ? (subtotal > 1500 ? 0 : 150) : 0; // Free delivery over 1500 ${APP_SETTINGS.currency}
         const serviceFee = subtotal > 0 ? 45 : 0;
-        const total = subtotal + deliveryFee + serviceFee;
+        let total = subtotal + deliveryFee + serviceFee;
 
         return { subtotal: Math.round(subtotal), deliveryFee, serviceFee, total: Math.round(total), itemCount };
       },

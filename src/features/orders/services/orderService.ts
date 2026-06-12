@@ -48,8 +48,29 @@ export interface Order extends BaseDocument {
   express?: boolean;         // Express 24h turnaround
   deliverytime?: string;     // Preferred pickup date/time
   instructions?: string;     // Special garment instructions
+  email?: string;
+  uname?: string;
   createdAt: any;
   updatedAt: any;
+}
+
+/**
+ * Formats a JS Date to the exact string format expected by Dart's DateTime.parse()
+ * for Flutter compatibility: "yyyy-MM-dd HH:mm:ss.SSSSSS"
+ */
+function getFlutterTime(): string {
+  const now = new Date();
+  const pad = (num: number, size = 2) => String(num).padStart(size, '0');
+  
+  const year = now.getFullYear();
+  const month = pad(now.getMonth() + 1);
+  const day = pad(now.getDate());
+  const hours = pad(now.getHours());
+  const minutes = pad(now.getMinutes());
+  const seconds = pad(now.getSeconds());
+  const micro = pad(now.getMilliseconds() * 1000, 6); // Mock microseconds
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${micro}`;
 }
 
 export interface DriverLocation {
@@ -230,6 +251,22 @@ class OrderService extends BaseFirestoreService<Order> {
         }, step.delay);
       });
     });
+  }
+
+  /**
+   * Initializes order tracking for the web app without automatic simulation,
+   * allowing the Flutter admin app to drive the status updates.
+   */
+  async initializeOrderTracking(orderId: string) {
+    const trackingRef = doc(db, 'tracking', orderId);
+    const initialTracking: Omit<OrderTracking, 'id'> = {
+      orderId,
+      status: 'Pending',
+      updatedAt: serverTimestamp(),
+    };
+    await setDoc(trackingRef, initialTracking);
+  }
+
   /**
    * Translates the unified web app order into individual Flutter-compliant documents
    * and saves them to `newcomfirmedorders` (Global) and `userOrderId/{uid}/newcomfirmedorders`.
@@ -243,25 +280,41 @@ class OrderService extends BaseFirestoreService<Order> {
         // Map category properly if not provided
         const cat = (item as any).cat || (order.isLaundryOrder ? 'Nguo' : 'Food');
         
+        // Flutter uses deliverytime to determine the UI badge (e.g. #Laundry Order, #Product Order)
+        let finalDeliveryTime = 'ASAP';
+        if (order.isLaundryOrder || cat === 'Nguo') {
+          finalDeliveryTime = 'Pickup';
+        } else if (cat === 'Product') {
+          finalDeliveryTime = 'Product';
+        }
+        
         // Flutter expects the total for the single item line
-        const lineTotal = item.price * item.quantity;
+        let lineTotal = item.price * item.quantity;
+        
+        // Apply per-item laundry modifiers to the item lineTotal
+        if (order.isLaundryOrder && (item as any).isLaundry !== false) {
+          if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * 0.95;
+          if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * 0.60;
+          if ((item as any).expressSelected) lineTotal += (item.quantity * 1900);
+        }
+
         const deliveryFee = 0; // Handled per-item or globally depending on the business rule, mock 0 for now.
 
         const flutterPayload = {
-          uid: uids,
-          foodId: item.productId,
-          uname: 'Web User', // Could pull from auth
+          uid: uids || 'unknown_uid',
+          foodId: item.productId || 'unknown_product',
+          uname: order.uname || 'Web User',
           no: order.contactPhone || '0000000000',
-          name: item.name,
-          price: item.price,
-          deliveryfee: deliveryFee,
-          imgURL: item.imageUrl,
+          name: item.name || 'Unknown Item',
+          price: Math.round(item.price || 0),
+          deliveryfee: Math.round(deliveryFee || 0),
+          imgURL: item.imageUrl || 'https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media',
           chose: true,
-          quantity: 100, // Stock remaining (mock large number)
-          location: order.deliveryLocation.address,
-          count: item.quantity, // Ordered amount
-          store: order.storeName,
-          total: lineTotal,
+          quantity: 100,
+          location: order.deliveryLocation?.address || 'Unknown Location',
+          count: Math.round(item.quantity || 1),
+          store: order.storeName || 'Tulete Store',
+          total: Math.round(lineTotal || 0),
           irondelivery: order.irondelivery || false,
           packagepickup: order.packagepickup || false,
           express: order.express || false,
@@ -270,18 +323,18 @@ class OrderService extends BaseFirestoreService<Order> {
           paid: false,
           instructions: order.notes || order.instructions || '',
           ordersts: ['Order Placed'],
-          orderststime: [new Date().toString()],
+          orderststime: [getFlutterTime()],
           amaountpaid: 0,
-          email: 'web@tulete.net',
+          email: order.email || 'web@tulete.net',
           tokOnesignal: '',
-          deliverytime: order.deliverytime || 'ASAP',
-          cat: cat,
+          deliverytime: finalDeliveryTime,
+          cat: cat || 'Product',
           showtrackbtn: false,
           deliveryDone: false,
           status: 'Order Placed',
-          latlong: `${order.deliveryLocation.lat},${order.deliveryLocation.lng}`,
-          ProductLatlong: '0.0,0.0',
-          time: new Date().toString(),
+          latlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
+          ProductLatlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
+          time: getFlutterTime(),
         };
 
         // 1. Add to global `newcomfirmedorders` (Admin/Driver feed)

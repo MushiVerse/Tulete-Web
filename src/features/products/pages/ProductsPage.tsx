@@ -117,12 +117,6 @@ export const ProductsPage = () => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.store.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
-  }).sort((a, b) => {
-    const aInCart = cartItems.some(i => i.productId === a.id);
-    const bInCart = cartItems.some(i => i.productId === b.id);
-    if (aInCart && !bInCart) return -1;
-    if (!aInCart && bInCart) return 1;
-    return 0;
   });
 
   const { total: cartTotal } = getTotals();
@@ -294,14 +288,6 @@ export const ProductsPage = () => {
                                       <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                     </button>
                                   </div>
-                                  <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => updateQuantity(product.id, 0)}
-                                    title="Remove from cart"
-                                    className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
-                                  >
-                                    <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                  </motion.button>
                                 </div>
                               ) : (
                                 <button

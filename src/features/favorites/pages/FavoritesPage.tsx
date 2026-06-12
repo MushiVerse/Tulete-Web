@@ -290,7 +290,7 @@ export const FavoritesPage = () => {
                           <div className="flex justify-between items-center">
                             {fav.price ? (
                               <span className="font-extrabold text-xs text-foreground">
-                                {fav.price.toLocaleString()} ${APP_SETTINGS.currency}
+                                {fav.price.toLocaleString()} {APP_SETTINGS.currency}
                               </span>
                             ) : (
                               <span className="text-[10px] font-semibold text-emerald-500">

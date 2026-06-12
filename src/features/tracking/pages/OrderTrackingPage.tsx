@@ -381,7 +381,7 @@ export const OrderTrackingPage = () => {
               </div>
               <div className="flex justify-between border-b border-border pb-2">
                 <span className="text-muted-foreground">Recipient Phone:</span>
-                <span className="font-bold text-slate-950 dark:text-white">+254 712 345678</span>
+                <span className="font-bold text-slate-950 dark:text-white">{order.contactPhone || order.no || 'Not provided'}</span>
               </div>
               <div className="flex justify-between border-b border-border pb-2">
                 <span className="text-muted-foreground">Payment Status:</span>

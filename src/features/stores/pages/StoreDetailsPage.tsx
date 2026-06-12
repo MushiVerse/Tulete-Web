@@ -479,11 +479,11 @@ export const StoreDetailsPage = () => {
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-1.5">
                           <span className="font-extrabold text-sm text-foreground">
-                            {prod.price.toLocaleString()} ${APP_SETTINGS.currency}
+                            {prod.price.toLocaleString()} {APP_SETTINGS.currency}
                           </span>
                           {prod.oldprice && (
                             <span className="text-[10px] text-slate-400 line-through">
-                              {prod.oldprice.toLocaleString()} ${APP_SETTINGS.currency}
+                              {prod.oldprice.toLocaleString()} {APP_SETTINGS.currency}
                             </span>
                           )}
                         </div>

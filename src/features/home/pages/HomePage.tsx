@@ -207,7 +207,7 @@ export const HomePage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
-  const { items: cartItems, getTotals } = useCartStore();
+  const { items: cartItems, getTotals, addToCart } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
 
@@ -235,6 +235,23 @@ export const HomePage = () => {
       price: p.price,
       rating: p.rating,
       reviewCount: p.reviewCount,
+    });
+  };
+
+  const handleAddToCart = (p: Product) => {
+    let cat = 'Product';
+    const collection = (p as any)._collection;
+    if (collection === 'foods' || foods.some(f => f.id === p.id)) cat = 'Food';
+    else if (collection === 'cloths' || cloths.some(c => c.id === p.id)) cat = 'Laundry';
+    
+    addToCart({
+      productId: p.id,
+      name: p.name,
+      price: p.price,
+      imageUrl: p.imgUrl,
+      storeId: p.storeId,
+      storeName: p.store,
+      cat
     });
   };
 
@@ -503,6 +520,7 @@ export const HomePage = () => {
                       product={product} 
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
                     />
                   </div>
                 ))}
@@ -534,6 +552,7 @@ export const HomePage = () => {
                       product={product} 
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
                     />
                   </div>
                 ))}
@@ -549,6 +568,7 @@ export const HomePage = () => {
                       product={product} 
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
                     />
                   </div>
                 ))}
@@ -564,6 +584,7 @@ export const HomePage = () => {
                       product={product} 
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
                     />
                   </div>
                 ))}
@@ -579,6 +600,7 @@ export const HomePage = () => {
                       product={product} 
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
                     />
                   </div>
                 ))}
@@ -594,6 +616,7 @@ export const HomePage = () => {
                       product={product} 
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
                     />
                   </div>
                 ))}
@@ -609,6 +632,7 @@ export const HomePage = () => {
                       product={product} 
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
                     />
                   </div>
                 ))}

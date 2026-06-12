@@ -43,39 +43,21 @@ const LaundryItemCard = ({
   item: LaundryItem;
   getCartQuantity: (id: string) => number;
   addingId: string | null;
-  onAddToCart: (item: LaundryItem, config: { washingSelected: boolean; ironingSelected: boolean; packagingSelected: boolean; expressSelected: boolean }) => void;
-  onDecrement: (compositeId: string) => void;
-  onRemoveAll: (compositeId: string) => void;
+  onAddToCart: (item: LaundryItem) => void;
+  onDecrement: (id: string) => void;
+  onRemoveAll: (id: string) => void;
   hasAnyInCart: boolean;
 }) => {
-  const [showConfig, setShowConfig] = useState(false);
-  const [washing, setWashing] = useState(true);
-  const [ironing, setIroning] = useState(false);
-  const [packaging, setPackaging] = useState(false);
-  const [express, setExpress] = useState(false);
-
   const isAvailable = item.quantity > 0;
+  const livePrice = item.price;
+  const id = item.id;
+  const isAddingThis = addingId === id;
+  const cartQty = getCartQuantity(id);
 
-  let livePrice = 0;
-  if (washing) livePrice += item.price;
-  if (ironing) livePrice += item.price * 0.95;
-  if (packaging) livePrice += item.price * 0.60;
-  if (express) livePrice += 1900;
-
-  const compositeId = `${item.id}-${washing ? 'wash' : 'no'}-${ironing ? 'iron' : 'no'}-${packaging ? 'pack' : 'no'}-${express ? 'exp' : 'no'}`;
-  const isAddingThis = addingId === compositeId;
-  const cartQty = getCartQuantity(compositeId);
-
-  /** Open config panel and scroll into view for discovery */
-  const handleOpenConfig = () => setShowConfig(true);
-
-  /** Confirm: add to cart then collapse panel */
+  /** Confirm: add to cart immediately */
   const handleConfirmAdd = () => {
-    onAddToCart(item, { washingSelected: washing, ironingSelected: ironing, packagingSelected: packaging, expressSelected: express });
-    setShowConfig(false);
+    onAddToCart(item);
   };
-
-  const hasService = washing || ironing || packaging || express;
 
   return (
     <motion.div
@@ -140,171 +122,45 @@ const LaundryItemCard = ({
         </div>
       </div>
 
-      {/* ── Services Configurator Row ── */}
-      <div className="mt-auto pt-4 border-t border-border flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-
-          {/* Toggle label — icon-only on very small screens */}
-          <button
-            onClick={() => setShowConfig(!showConfig)}
-            className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors min-w-0"
-          >
-            <Settings2 className="w-4 h-4 shrink-0" />
-            <span className="hidden xs:inline sm:inline">Customize Service</span>
-          </button>
-
-          {/* Right-side controls */}
-          <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
-            {cartQty === 0 ? (
-              /* ── Not in cart: single CTA to open config ── */
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                disabled={!isAvailable}
-                onClick={handleOpenConfig}
-                className={`h-9 sm:h-10 px-3 sm:px-4 rounded-xl flex items-center gap-1 sm:gap-1.5 transition-all shadow-sm text-xs sm:text-sm font-extrabold ${
-                  isAvailable
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md'
-                    : 'bg-muted text-muted-foreground cursor-not-allowed'
-                }`}
-              >
-                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                Add
-              </motion.button>
-            ) : (
-              /* ── In cart: qty counter + trash to remove all ── */
-              <>
-                <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-9 sm:h-10">
-                  <button
-                    onClick={() => onDecrement(compositeId)}
-                    className="w-8 sm:w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
-                  >
-                    <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                  <span className="w-6 sm:w-8 text-center font-extrabold text-xs sm:text-sm text-foreground">
-                    {cartQty}
-                  </span>
-                  <button
-                    onClick={() => onAddToCart(item, { washingSelected: washing, ironingSelected: ironing, packagingSelected: packaging, expressSelected: express })}
-                    className="w-8 sm:w-10 h-full flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                  >
-                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                </div>
-
-                {/* Trash: remove item from cart entirely */}
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => onRemoveAll(compositeId)}
-                  title="Remove from cart"
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm shrink-0"
+      {/* ── Add to Cart Actions ── */}
+      <div className="mt-auto pt-4 border-t border-border flex items-center justify-end gap-2">
+        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
+          {cartQty === 0 ? (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              disabled={!isAvailable}
+              onClick={handleConfirmAdd}
+              className={`h-9 sm:h-10 px-4 sm:px-6 rounded-xl flex items-center gap-1 sm:gap-1.5 transition-all shadow-sm text-xs sm:text-sm font-extrabold ${
+                isAvailable
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              Add to Cart
+            </motion.button>
+          ) : (
+            <>
+              <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-9 sm:h-10">
+                <button
+                  onClick={() => onDecrement(id)}
+                  className="w-8 sm:w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
                 >
-                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                </motion.button>
-              </>
-            )}
-          </div>
+                  <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+                <span className="w-6 sm:w-8 text-center font-extrabold text-xs sm:text-sm text-foreground">
+                  {cartQty}
+                </span>
+                <button
+                  onClick={handleConfirmAdd}
+                  className="w-8 sm:w-10 h-full flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
-
-        {/* Toggles Panel as Modal Dialog */}
-        <Dialog open={showConfig} onOpenChange={setShowConfig}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Customize Service</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-3 p-1">
-              {/* Washing Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Washing &amp; Folding</p>
-                    <p className="text-xs text-muted-foreground">Standard cleaning</p>
-                  </div>
-                </div>
-                <Switch checked={washing} onCheckedChange={setWashing} />
-              </div>
-
-              {/* Ironing Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                    <Shirt className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Ironing</p>
-                    <p className="text-xs text-muted-foreground">+95% of base price</p>
-                  </div>
-                </div>
-                <Switch checked={ironing} onCheckedChange={setIroning} />
-              </div>
-
-              {/* Packaging Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                    <Package className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Special Packaging</p>
-                    <p className="text-xs text-muted-foreground">+60% of base price</p>
-                  </div>
-                </div>
-                <Switch checked={packaging} onCheckedChange={setPackaging} />
-              </div>
-
-              {/* Express Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center text-warning">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Express Delivery</p>
-                    <p className="text-xs text-muted-foreground">Premium flat fee</p>
-                  </div>
-                </div>
-                <Switch checked={express} onCheckedChange={setExpress} />
-              </div>
-
-              {/* ── Confirm / Cancel row ── */}
-              {cartQty === 0 ? (
-                <div className="flex gap-2 pt-4 mt-2 border-t border-border">
-                  <button
-                    onClick={() => setShowConfig(false)}
-                    className="flex-1 h-12 rounded-xl text-sm font-bold text-muted-foreground border border-border hover:bg-muted transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    disabled={!hasService || isAddingThis}
-                    onClick={handleConfirmAdd}
-                    className={`flex-1 h-12 rounded-xl text-sm font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-md ${
-                      hasService
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                        : 'bg-muted text-muted-foreground cursor-not-allowed'
-                    }`}
-                  >
-                    {isAddingThis
-                      ? <><Plus className="w-4 h-4 animate-spin" /> Adding...</>
-                      : <><CheckCircle2 className="w-4 h-4" /> Add to Cart</>}
-                  </motion.button>
-                </div>
-              ) : (
-                <div className="flex gap-2 pt-4 mt-2 border-t border-border">
-                   <button
-                    onClick={() => setShowConfig(false)}
-                    className="w-full h-12 rounded-xl text-sm font-bold text-foreground border border-border hover:bg-muted transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </motion.div>
   );
@@ -381,12 +237,6 @@ export const LaundryPage = () => {
       // We will skip strict category filtering here unless backend has it, but this adds the UI element.
     }
     return true;
-  }).sort((a, b) => {
-    const aInCart = cartItems.some(i => i.baseProductId === a.id);
-    const bInCart = cartItems.some(i => i.baseProductId === b.id);
-    if (aInCart && !bInCart) return -1;
-    if (!aInCart && bInCart) return 1;
-    return 0;
   });
 
   const getCartQuantity = (productId: string) => {
@@ -398,14 +248,12 @@ export const LaundryPage = () => {
     setTimeout(() => setToastMessage(null), 2500);
   }, []);
 
-  const handleAddToCart = async (item: LaundryItem, config: { washingSelected: boolean; ironingSelected: boolean; packagingSelected: boolean; expressSelected: boolean }) => {
+  const handleAddToCart = async (item: LaundryItem) => {
     if (item.quantity <= 0) return; // Service unavailable
 
-    const compositeId = `${item.id}-${config.washingSelected ? 'wash' : 'no'}-${config.ironingSelected ? 'iron' : 'no'}-${config.packagingSelected ? 'pack' : 'no'}-${config.expressSelected ? 'exp' : 'no'}`;
-
-    setAddingId(compositeId);
+    setAddingId(item.id);
     addToCart({
-      productId: compositeId,
+      productId: item.id,
       baseProductId: item.id,
       name: item.name,
       price: item.price,
@@ -414,7 +262,6 @@ export const LaundryPage = () => {
       storeName: item.store || 'Laundry Service',
       isLaundry: true,
       cat: 'Nguo',
-      ...config
     });
     showToast(`${item.name} added to cart`);
     setTimeout(() => setAddingId(null), 600);
