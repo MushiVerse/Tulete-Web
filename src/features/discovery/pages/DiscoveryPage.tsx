@@ -1,28 +1,82 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Filter, Grid, List as ListIcon, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Filter, Grid, List as ListIcon, X, Search } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
-import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { useFilterStore } from '../store/useFilterStore';
+import { searchTuleteItems } from '../../../core/services/algoliaService';
+import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 
 export const DiscoveryPage = () => {
-  const [searchParams] = useSearchParams();
-  const query = searchParams.get('q');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const query = searchParams.get('q') || '';
+  const urlCategory = searchParams.get('category');
   
+  const { 
+    category, setCategory, clearAllFilters, 
+    minPrice, maxPrice, isAvailableOnly 
+  } = useFilterStore();
+  
+  const [localQuery, setLocalQuery] = useState(query);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [loading, setLoading] = useState(true);
 
-  const { category, clearAllFilters } = useFilterStore();
+  const [products, setProducts] = useState<any[]>([]);
 
-  // Simulate Network loading
+  // Sync URL category to store on mount
   useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, [query, category]); // Refetch when search query or category changes
+    if (urlCategory && urlCategory !== category) {
+      setCategory(urlCategory);
+    }
+  }, [urlCategory]);
+
+  // Handle local query debounce
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (localQuery !== query) {
+        setSearchParams((prev) => {
+          if (localQuery) prev.set('q', localQuery);
+          else prev.delete('q');
+          return prev;
+        });
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [localQuery, query, setSearchParams]);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      setLoading(true);
+      let filterStr = undefined;
+      if (category) {
+        filterStr = `category:"${category}"`;
+      } else {
+        filterStr = `NOT recordType:brand`;
+      }
+
+      // Build numeric filters
+      const numericFilters: string[] = [];
+      if (minPrice !== null) numericFilters.push(`price >= ${minPrice}`);
+      if (maxPrice !== null) numericFilters.push(`price <= ${maxPrice}`);
+
+      // Handle availability via filters string since it's a boolean
+      if (isAvailableOnly) {
+        filterStr += ` AND availability:true`;
+      }
+      
+      const results = await searchTuleteItems(query, {
+        filters: filterStr,
+        numericFilters: numericFilters.length > 0 ? numericFilters : undefined
+      });
+      setProducts(results);
+      setLoading(false);
+    };
+    
+    fetchResults();
+  }, [query, category, minPrice, maxPrice, isAvailableOnly]);
 
   return (
     <PageWrapper className="min-h-screen bg-background">
@@ -35,13 +89,15 @@ export const DiscoveryPage = () => {
           
           {/* Header Controls */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {query ? `Search results for "${query}"` : 'Discover'}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Showing 12 results
-              </p>
+            <div className="flex-1 max-w-xl relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                value={localQuery}
+                onChange={(e) => setLocalQuery(e.target.value)}
+                placeholder="Search everything..."
+                className="w-full h-14 pl-12 pr-4 bg-card border border-border rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition-all"
+              />
             </div>
 
             <div className="flex items-center gap-3">
@@ -102,27 +158,24 @@ export const DiscoveryPage = () => {
               </div>
             ) : (
               <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className={viewMode === 'list' ? 'h-[140px]' : ''}>
-                    <ProductCard 
-                      product={{
-                        id: `prod-${i}`,
-                        name: `Tulete Product ${i} - Premium Quality`,
-                        description: 'Detailed description of the product',
-                        price: 15000 + (i * 2500),
-                        oldprice: i % 3 === 0 ? 30000 : undefined,
-                        imgUrl: `https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80`,
-                        storeId: 's1',
-                        store: 'Verified Store',
-                        rating: 4.8,
-                        reviewCount: 120,
-                        category: category || 'Retail',
-                        tags: i % 2 === 0 ? ['Most TamTam'] : [],
-                        availability: true
-                      }}
-                    />
-                  </div>
-                ))}
+                {products.length === 0 ? (
+                  <div className="col-span-full py-10 text-center text-muted-foreground">No results found for your search.</div>
+                ) : products.map((item: any) => {
+                  const product = {
+                    ...item,
+                    id: item.objectID || item.id,
+                    imgUrl: item.imgURL || item.image || item.imgUrl || '',
+                    rating: item.rating || 0,
+                    reviewCount: item.reviewCount || 0
+                  };
+                  return (
+                    <div key={product.id} className={viewMode === 'list' ? 'h-[140px]' : ''}>
+                      <ProductCard 
+                        product={product}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

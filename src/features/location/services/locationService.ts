@@ -48,40 +48,64 @@ class LocationService {
   }
 
   /**
-   * Reverse Geocoding helper (Coordinates -> Human Address string)
+   * Reverse Geocoding helper (Coordinates -> Human Address string) using OpenStreetMap Nominatim
    */
   async reverseGeocode(lat: number, lng: number): Promise<string> {
-    // Standard mock database lookup based on Nairobi coordinates
-    if (Math.abs(lat - (-1.2921)) < 0.01 && Math.abs(lng - 36.8219) < 0.01) {
-      return 'Kenyatta Avenue, Nairobi Central, Kenya';
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+        headers: {
+          'Accept-Language': 'en'
+        }
+      });
+      
+      if (!response.ok) throw new Error('Geocoding failed');
+      
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        // Return a slightly simplified version of the address if possible
+        const addressParts = data.display_name.split(', ');
+        if (addressParts.length > 3) {
+           return addressParts.slice(0, 3).join(', ');
+        }
+        return data.display_name;
+      }
+      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      // Fallback if API fails
+      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     }
-    if (Math.abs(lat - (-1.3033)) < 0.01 && Math.abs(lng - 36.7900) < 0.01) {
-      return 'Ngong Road, Adams Arcade, Nairobi, Kenya';
-    }
-    if (Math.abs(lat - (-1.2915)) < 0.01 && Math.abs(lng - 36.7900) < 0.01) {
-      return 'Wood Avenue, Kilimani, Nairobi, Kenya';
-    }
-
-    return `${lat.toFixed(5)}, ${lng.toFixed(5)}, Kilimani, Nairobi, Kenya`;
   }
 
   /**
-   * Forward Geocoding helper (Address string -> Coordinates)
+   * Forward Geocoding helper (Address string -> Coordinates) using OpenStreetMap Nominatim
    */
   async forwardGeocode(address: string): Promise<GeoLocation> {
-    const clean = address.toLowerCase();
-    if (clean.includes('ngong')) {
-      return { lat: -1.3033, lng: 36.7900 };
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`, {
+        headers: {
+          'Accept-Language': 'en'
+        }
+      });
+      
+      if (!response.ok) throw new Error('Geocoding failed');
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon)
+        };
+      }
+      
+      throw new Error('Address not found');
+    } catch (error) {
+      console.error('Forward geocoding error:', error);
+      // Fallback to center of Nairobi/Kilimani hub if API fails or address not found
+      return { lat: -1.2920, lng: 36.7910 };
     }
-    if (clean.includes('kilimani') || clean.includes('wood')) {
-      return { lat: -1.2915, lng: 36.7900 };
-    }
-    if (clean.includes('kenyatta') || clean.includes('cbd')) {
-      return { lat: -1.2921, lng: 36.8219 };
-    }
-
-    // Default to center of Kilimani hub
-    return { lat: -1.2920, lng: 36.7910 };
   }
 
   /**

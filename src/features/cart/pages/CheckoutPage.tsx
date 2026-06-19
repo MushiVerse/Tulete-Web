@@ -10,8 +10,8 @@ import { Textarea } from '../../../shared/components/ui/Textarea';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { locationService } from '../../location/services/locationService';
 
 // Mock Nairobi coordinate hubs for high-fidelity order routing simulation
 const LOCATIONS = [
@@ -25,7 +25,7 @@ export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { items, getTotals, clearCart, laundryPreferences } = useCartStore();
-  const { subtotal, deliveryFee, serviceFee, total } = getTotals();
+  const { subtotal, serviceFee, total } = getTotals();
 
   const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
   const { deliverytime, instructions: laundryInstructions } = laundryPreferences;
@@ -34,8 +34,53 @@ export const CheckoutPage = () => {
   const [addressIndex, setAddressIndex] = useState(0);
   const [customAddress, setCustomAddress] = useState('');
   const [notes, setNotes] = useState('');
-  const paymentMethod = 'Cash'; // Forced for now
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deliveryRation, setDeliveryRation] = React.useState<number>(1000);
+
+  // Fetch delivery ration on mount
+  React.useEffect(() => {
+    orderService.getDeliveryRation().then(ration => {
+      setDeliveryRation(ration);
+    });
+  }, []);
+
+  const selectedLocation = customAddress 
+    ? { address: customAddress, lat: -1.2894, lng: 36.7909 } // default coords
+    : LOCATIONS[addressIndex];
+
+  // Standard mock store coordinate in Westlands
+  const storeLocation = { lat: -1.2635, lng: 36.8049 };
+  
+  // Calculate dynamic delivery fee based on Flutter legacy math
+  const distanceKm = locationService.calculateDistance(storeLocation, selectedLocation);
+  let computedDeliveryFee = 0;
+  
+  if (isLaundryOrder) {
+    // Nguo (Laundry) tiered delivery fee math
+    const roundedFee = Math.ceil(Math.round(distanceKm) * deliveryRation);
+    let multiplier = 0;
+    while (roundedFee > (100 * (multiplier + 1))) {
+      multiplier++;
+    }
+    let baseFee = roundedFee - (100 * multiplier);
+    if (roundedFee <= 0) baseFee += 50;
+    else if (roundedFee >= 0 && roundedFee < 2000) baseFee += 0;
+    else if (roundedFee >= 2000 && roundedFee <= 3000) baseFee += 200;
+    else if (roundedFee >= 3000 && roundedFee <= 5000) baseFee += 300;
+    else if (roundedFee >= 5000 && roundedFee <= 7000) baseFee += 400;
+    else if (roundedFee >= 7000 && roundedFee <= 9000) baseFee += 500;
+    else if (roundedFee >= 9000 && roundedFee <= 15000) baseFee += 700;
+    else if (roundedFee >= 15000) baseFee += 1200;
+    computedDeliveryFee = baseFee;
+  } else {
+    // Food/Products delivery fee math
+    const priceOg = total; // Without delivery
+    const priceWithDelivery = Math.ceil((Math.round(distanceKm) * deliveryRation) + priceOg);
+    computedDeliveryFee = Math.ceil(priceWithDelivery - priceOg);
+  }
+
+  const finalTotalWithDelivery = total + computedDeliveryFee;
+
   if (items.length === 0) {
     return (
       <PageContainer>
@@ -62,13 +107,15 @@ export const CheckoutPage = () => {
     setIsSubmitting(true);
 
     try {
-      const selectedLocation = customAddress 
-        ? { address: customAddress, lat: -1.2894, lng: 36.7909 } // default coords
-        : LOCATIONS[addressIndex];
+      // 1. Validate Live Inventory / Stock constraint
+      const inventoryErrors = await orderService.validateInventory(items);
+      if (inventoryErrors.length > 0) {
+        alert("Checkout Failed:\n\n" + inventoryErrors.join('\n'));
+        setIsSubmitting(false);
+        return;
+      }
 
-      // Standard mock store coordinate in Westlands
-      const storeLocation = { lat: -1.2635, lng: 36.8049 };
-
+      // Dynamic delivery fee is already computed in the render scope
       const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.id,
         email: user.email || '',
@@ -81,7 +128,8 @@ export const CheckoutPage = () => {
           imageUrl: item.imageUrl,
           cat: item.cat, // Pass category for Flutter Live Order routing
         })),
-        totalAmount: total, // Computed with global modifiers in store
+        totalAmount: finalTotalWithDelivery, // Computed with global modifiers and dynamic distance delivery fee
+        deliveryFee: computedDeliveryFee,
         status: 'Pending',
         storeId: items[0].storeId,
         storeName: items[0].storeName,
@@ -107,7 +155,7 @@ export const CheckoutPage = () => {
       const createdOrder = await orderService.create(orderPayload);
 
       // Create orders in firestore (Live Flutter Format: 'newcomfirmedorders')
-      await orderService.createLiveFlutterOrders(orderPayload);
+      await orderService.createLiveFlutterOrders(orderPayload, createdOrder.id);
 
       // Removed background simulation to allow the Flutter Admin app to actually process the order in real-time.
       await orderService.initializeOrderTracking(createdOrder.id);
@@ -282,9 +330,13 @@ export const CheckoutPage = () => {
                 <span>Subtotal</span>
                 <span className="font-semibold text-foreground">{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Delivery</span>
-                <span>{deliveryFee === 0 ? 'FREE' : `${deliveryFee.toLocaleString()} ${APP_SETTINGS.currency}`}</span>
+              
+              {/* Dynamic Delivery Fee Estimate */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Delivery Fee (Est.)</span>
+                <span className="font-medium text-slate-700">
+                  {computedDeliveryFee === 0 ? 'FREE' : `${computedDeliveryFee.toLocaleString()} ${APP_SETTINGS.currency}`}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>Service Fee</span>
@@ -292,7 +344,7 @@ export const CheckoutPage = () => {
               </div>
               <div className="border-t border-border pt-4 flex justify-between text-sm font-extrabold text-foreground">
                 <span>Total Amount</span>
-                <span>{total.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span>{finalTotalWithDelivery.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>
 

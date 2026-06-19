@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useOrderSingleRealtime, useOrderTrackingRealtime } from '../../orders/hooks/useOrderRealtime';
+import { useOrderSingleRealtime, useOrderTrackingRealtime, useLiveFlutterOrderTracking } from '../../orders/hooks/useOrderRealtime';
 import { OrderStatus } from '../../orders/services/orderService';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
@@ -29,8 +29,46 @@ export const OrderTrackingPage = () => {
 
   const { order, isLoading: isOrderLoading } = useOrderSingleRealtime(id);
   const { tracking, isLoading: isTrackingLoading } = useOrderTrackingRealtime(id);
+  const { liveItems, isLoading: isLiveLoading } = useLiveFlutterOrderTracking(order?.userId, id);
 
-  const currentStatus = order?.status || 'Pending';
+  let currentStatus = order?.status || 'Pending';
+
+  if (liveItems && liveItems.length > 0) {
+    if (liveItems.some(item => item.cancel)) {
+      currentStatus = 'Cancelled';
+    } else {
+      const flutterToWebStatus = (flutterStatus: string, deliveryDone: boolean): OrderStatus => {
+        if (deliveryDone) return 'Delivered';
+        switch (flutterStatus?.toLowerCase()) {
+          case 'order placed': return 'Pending';
+          case 'confirmed': return 'Confirmed';
+          case 'preparing': return 'Preparing';
+          case 'picked up': return 'Picked Up';
+          case 'on the way': return 'On The Way';
+          case 'delivered': return 'Delivered';
+          case 'cancelled': return 'Cancelled';
+          default: return 'Pending';
+        }
+      };
+
+      let minStepIndex = 999;
+      let minStatus: OrderStatus = 'Pending';
+      
+      liveItems.forEach(item => {
+        const itemStatus = flutterToWebStatus(item.status, item.deliveryDone);
+        const stepIdx = STEPS.findIndex(s => s.status === itemStatus);
+        if (stepIdx !== -1 && stepIdx < minStepIndex) {
+          minStepIndex = stepIdx;
+          minStatus = itemStatus;
+        }
+      });
+      
+      if (minStepIndex !== 999) {
+        currentStatus = minStatus;
+      }
+    }
+  }
+
   const isFinished = currentStatus === 'Delivered' || currentStatus === 'Cancelled' || currentStatus === 'Failed';
 
   // Get active step index

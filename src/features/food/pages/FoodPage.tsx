@@ -7,6 +7,7 @@ import {
   ShoppingBag, Flame, Clock, Navigation, Phone
 } from 'lucide-react';
 import { PageContainer } from '../../../shared/components/layout';
+import { HomeSearchResultsView } from '../../home/components/HomeSearchResultsView';
 import { Button } from '../../../shared/components/ui/Button';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
@@ -63,6 +64,12 @@ export const FoodPage = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   // Cart & Auth
   const { items: cartItems, addToCart, removeFromCart, clearCart, updateQuantity, getTotals } = useCartStore();
@@ -131,8 +138,8 @@ export const FoodPage = () => {
   };
 
   return (
-    <PageContainer>
-      <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
+    <PageContainer className="flex-1 flex flex-col min-h-0">
+      <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
         
         {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
@@ -157,7 +164,7 @@ export const FoodPage = () => {
         </div>
 
         {/* ── CENTER/MAIN COLUMN ── */}
-        <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
+        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
           
           {/* Header & Search */}
           <div>
@@ -166,20 +173,33 @@ export const FoodPage = () => {
             </h1>
             <p className="text-sm text-muted-foreground mb-6">Discover the best food and drinks near you.</p>
             
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14">
+              <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" />
+              <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
+                Food
+              </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for meals, restaurants, or cuisines..."
-                className="w-full h-14 pl-12 pr-4 bg-card border border-border rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition-all"
+                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
               />
             </div>
           </div>
 
-          {/* Promo Banners */}
-          <div ref={promoRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory scroll-smooth">
+          {debouncedSearchQuery.trim().length > 0 ? (
+            <div className="animate-in fade-in zoom-in duration-300">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-extrabold text-foreground">Search Results</h2>
+                <span className="text-sm font-medium text-muted-foreground">For "{debouncedSearchQuery}"</span>
+              </div>
+              <HomeSearchResultsView query={debouncedSearchQuery} filterValue="food" />
+            </div>
+          ) : (
+            <>
+              {/* Promo Banners */}
+              <div ref={promoRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory scroll-smooth">
             {PROMOS.map((promo, i) => (
               <motion.div
                 key={promo.id}
@@ -311,6 +331,8 @@ export const FoodPage = () => {
               </div>
             )}
           </div>
+          </>
+          )}
         </div>
 
         {/* ── RIGHT SIDEBAR (WIDGETS & CART) ── */}

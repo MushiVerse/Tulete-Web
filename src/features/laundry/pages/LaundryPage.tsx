@@ -275,8 +275,8 @@ export const LaundryPage = () => {
   const { total: cartTotal, itemCount: totalCartItems } = useCartStore.getState().getTotals();
 
   return (
-    <PageContainer>
-      <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
+    <PageContainer className="flex-1 flex flex-col min-h-0">
+      <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
         
         {/* ── LEFT SIDEBAR (FILTERS & NAVIGATION) ── */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
@@ -303,7 +303,7 @@ export const LaundryPage = () => {
         </div>
 
         {/* ── CENTER/MAIN COLUMN ── */}
-        <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
+        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
           
           {/* Header */}
           <div>
@@ -357,18 +357,22 @@ export const LaundryPage = () => {
 
           {/* Search Row */}
           <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
+            <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14">
+              <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" />
+              <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
+                Laundry
+              </div>
+              <input
+                type="text"
                 value={searchQuery}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search services, items..."
-                className="w-full pl-11 pr-10 py-3.5 bg-card border border-border rounded-2xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all shadow-sm"
+                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground shrink-0 mr-2"
                 >
                   <X className="w-4 h-4" />
                 </button>

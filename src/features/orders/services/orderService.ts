@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
-import { doc, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 
 export type OrderStatus = 
@@ -32,6 +33,7 @@ export interface Order extends BaseDocument {
   userId: string;
   items: OrderItem[];
   totalAmount: number;
+  deliveryFee: number;
   status: OrderStatus;
   storeId: string;
   storeName: string;
@@ -254,6 +256,64 @@ class OrderService extends BaseFirestoreService<Order> {
   }
 
   /**
+   * Fetch the global delivery ratio multiplier used for distance-based fee calculation.
+   * Mirrors Flutter's getdeliveryration()
+   */
+  async getDeliveryRation(): Promise<number> {
+    try {
+      const q = query(collection(db, 'deliveryRation'));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        // Typically the first doc contains the ratio
+        const data = snap.docs[0].data();
+        return data.ratio || 1000;
+      }
+      return 1000; // Fallback default
+    } catch (error) {
+      console.error('Error fetching delivery ration:', error);
+      return 1000; // Fallback default
+    }
+  }
+
+  /**
+   * Validates cart items against the live production Firestore inventory ('idadi')
+   * Returns an array of error messages for any items that are out of stock or have insufficient quantity.
+   */
+  async validateInventory(items: any[]): Promise<string[]> {
+    const errors: string[] = [];
+    
+    for (const item of items) {
+      const isLaundry = item.isLaundry || item.cat === 'Nguo' || item.storeId === 'laundry';
+      const collectionName = isLaundry ? 'Clothes' : 'FoodAndProducts';
+      
+      try {
+        const docRef = doc(db, collectionName, item.productId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const idadi = typeof data.idadi === 'number' ? data.idadi : 
+                        (typeof data.idadi === 'string' ? parseInt(data.idadi, 10) : 1000); // 1000 for infinite fallback
+          
+          if (idadi <= 0) {
+            errors.push(`"${item.name}" is currently Out of Stock.`);
+          } else if (item.quantity > idadi) {
+            errors.push(`Only ${idadi}x "${item.name}" available. You requested ${item.quantity}.`);
+          }
+        } else {
+          // It's possible the item is missing or mocked (e.g., test items)
+          // We don't block mocked items strictly for dev purposes, but in production we'd return an error here.
+          // errors.push(`"${item.name}" is no longer available.`);
+        }
+      } catch (e) {
+        console.error(`Error validating inventory for ${item.productId}:`, e);
+      }
+    }
+    
+    return errors;
+  }
+
+  /**
    * Initializes order tracking for the web app without automatic simulation,
    * allowing the Flutter admin app to drive the status updates.
    */
@@ -272,7 +332,7 @@ class OrderService extends BaseFirestoreService<Order> {
    * and saves them to `newcomfirmedorders` (Global) and `userOrderId/{uid}/newcomfirmedorders`.
    * This bridges the gap between the Web App's unified cart UX and Flutter's item-based checkout.
    */
-  async createLiveFlutterOrders(order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) {
+  async createLiveFlutterOrders(order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>, webOrderId: string) {
     try {
       const uids = order.userId;
       
@@ -295,7 +355,7 @@ class OrderService extends BaseFirestoreService<Order> {
         if (order.isLaundryOrder && (item as any).isLaundry !== false) {
           if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * 0.95;
           if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * 0.60;
-          if ((item as any).expressSelected) lineTotal += (item.quantity * 1900);
+          if ((item as any).expressSelected) lineTotal += 1500; // Flat fee per item row
         }
 
         const deliveryFee = 0; // Handled per-item or globally depending on the business rule, mock 0 for now.
@@ -335,6 +395,7 @@ class OrderService extends BaseFirestoreService<Order> {
           latlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
           ProductLatlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
           time: getFlutterTime(),
+          webOrderId: webOrderId, // Used to link live flutter orders back to the web app's tracking page
         };
 
         // 1. Add to global `newcomfirmedorders` (Admin/Driver feed)

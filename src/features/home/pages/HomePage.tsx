@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer, ContentContainer } from '../../../shared/components/layout';
-import { Card } from '../../../shared/components/ui/Card';
-import { Badge } from '../../../shared/components/ui/Badge';
+import { PageContainer } from '../../../shared/components/layout';
 import { Button } from '../../../shared/components/ui/Button';
-import { Skeleton } from '../../../shared/components/ui/Skeleton';
-import {
-  Utensils, Shirt, Zap, Sparkles, Car,
-  ChevronRight, Star, MapPin, CheckCircle2,
-  Navigation, Clock, TrendingUp, Tag, Store as StoreIcon,
-  ShoppingBag, Package, Bell, ArrowRight, Flame,
-  Search, Heart
+import { 
+  Search, MapPin, Star, Heart, Flame, 
+  Utensils, Store as StoreIcon, Tag, ArrowRight, 
+  Sparkles, Bell, CheckCircle2, Clock, ShoppingBag, ChevronRight, LayoutGrid 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
@@ -23,100 +18,237 @@ import { HorizontalCarousel } from '../../../shared/components/ui/HorizontalCaro
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { productService, Product } from '../../products/services/productService';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
+import { BrandsView } from '../../brands/components/BrandsView';
+import { BrandDetailsView } from '../../brands/components/BrandDetailsView';
+import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 
-/* ─── Shared Configs ──────────────────────────────────────── */
+
+/*  Shared Configs  */
 const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string }> = {
-  Food:       { emoji: '🍽️', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
-  Laundry:    { emoji: '🧺', color: 'text-secondary', bg: 'bg-secondary/10 border-secondary/20' },
+  Food:       { emoji: '🍔', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
+  Laundry:    { emoji: '👔', color: 'text-secondary', bg: 'bg-secondary/10 border-secondary/20' },
   Products:   { emoji: '🛍️', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20' },
   Electrical: { emoji: '⚡', color: 'text-warning', bg: 'bg-warning/10 border-warning/20' },
   Beauty:     { emoji: '💅', color: 'text-primary', bg: 'bg-primary/5 border-primary/10' },
   Rides:      { emoji: '🚗', color: 'text-success', bg: 'bg-success/10 border-success/20' },
 };
 
-/* ─── Static Data ─────────────────────────────────────────── */
-const CATEGORIES = [
-  { name: 'Food', icon: Utensils, color: 'from-primary/90 to-primary/70', light: 'bg-primary/10 text-primary', href: '/food', emoji: '🍽️' },
-  { name: 'Laundry', icon: Shirt, color: 'from-secondary to-secondary/80', light: 'bg-secondary/10 text-secondary', href: '/laundry', emoji: '🧺' },
-  { name: 'Products', icon: Package, color: 'from-emerald-500/90 to-emerald-500/70', light: 'bg-emerald-500/20 text-emerald-500', href: '/products', emoji: '🛍️' },
-  { name: 'Electrical', icon: Zap, color: 'from-warning/90 to-warning/70', light: 'bg-warning/20 text-warning', href: '/explore?category=Electrical', emoji: '⚡' },
-  { name: 'Beauty', icon: Sparkles, color: 'from-primary to-primary/80', light: 'bg-primary/20 text-primary', href: '/explore?category=Beauty', emoji: '💅' },
-  { name: 'Rides', icon: Car, color: 'from-success/90 to-success/70', light: 'bg-success/20 text-success', href: '/explore?category=Rides', emoji: '🚗' },
-];
-
+/*  Static Data */
 const PROMOS = [
   {
     id: 1,
-    badge: '🔥 Limited Offer',
+    badge: ' Limited Offer',
     title: '50% Off First Laundry',
-    subtitle: 'Fresh & pressed — use code WASH50',
+    subtitle: 'Fresh & pressed  use code WASH50',
     image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?q=80&w=800&auto=format&fit=crop',
     cta: 'Order Now',
     href: '/laundry',
     gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'laundry'
   },
   {
+    id: 101,
+    badge: ' Express Service',
+    title: 'Same Day Dry Cleaning',
+    subtitle: 'Drop by 10AM, pickup by 5PM',
+    image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?q=80&w=800&auto=format&fit=crop',
+    cta: 'Book Express',
+    href: '/laundry',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'laundry'
+  },
+  {
+    id: 102,
+    badge: ' Executive Care',
+    title: 'Premium Suit Pressing',
+    subtitle: 'Keep your professional wardrobe sharp',
+    image: 'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=800&auto=format&fit=crop',
+    cta: 'View Services',
+    href: '/laundry',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'laundry'
+  },
+  {
+    id: 103,
+    badge: ' Heavy Duty',
+    title: 'Duvet & Blanket Wash',
+    subtitle: 'Deep cleaning for large bedding items',
+    image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?q=80&w=800&auto=format&fit=crop',
+    cta: 'Clean Bedding',
+    href: '/laundry',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'laundry'
+  },
+  {
+    id: 104,
+    badge: ' Sneaker Care',
+    title: 'Professional Shoe Cleaning',
+    subtitle: 'Revive your favorite kicks',
+    image: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=800&auto=format&fit=crop',
+    cta: 'Clean Shoes',
+    href: '/laundry',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'laundry'
+  },
+  {
+    id: 105,
+    badge: ' Curtains & Drapes',
+    title: 'Home Fabric Refresh',
+    subtitle: 'Dust removal and deep wash for curtains',
+    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop',
+    cta: 'Book Curtains',
+    href: '/laundry',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'laundry'
+  },
+
+  //  FOOD PROMOS 
+  {
     id: 2,
-    badge: '🍕 Today Only',
+    badge: ' Today Only',
     title: 'Free Delivery on Food',
     subtitle: 'From top-rated kitchens near you',
     image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop',
     cta: 'Order Food',
     href: '/food',
     gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'food'
   },
   {
+    id: 201,
+    badge: ' Local Taste',
+    title: 'Authentic Local Dishes',
+    subtitle: 'Pilau, Biryani, and fresh stews',
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop',
+    cta: 'Explore Menu',
+    href: '/food',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'food'
+  },
+  {
+    id: 202,
+    badge: ' Quick Bite',
+    title: 'Fast Food Combos',
+    subtitle: 'Burgers, fries, and cold drinks',
+    image: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?q=80&w=800&auto=format&fit=crop',
+    cta: 'Get Combo',
+    href: '/food',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'food'
+  },
+  {
+    id: 203,
+    badge: ' Healthy Choice',
+    title: 'Fresh Salads & Bowls',
+    subtitle: 'Nutritious meals delivered fresh',
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop',
+    cta: 'Eat Healthy',
+    href: '/food',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'food'
+  },
+  {
+    id: 204,
+    badge: ' Weekend Special',
+    title: 'Family Size Pizza',
+    subtitle: 'Buy 1 Get 1 Free on all large pizzas',
+    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop',
+    cta: 'Order Pizza',
+    href: '/food',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'food'
+  },
+  {
+    id: 205,
+    badge: ' Sweet Tooth',
+    title: 'Desserts & Pastries',
+    subtitle: 'Freshly baked cakes and cookies',
+    image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?q=80&w=800&auto=format&fit=crop',
+    cta: 'Satisfy Cravings',
+    href: '/food',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'food'
+  },
+
+  //  PRODUCT PROMOS 
+  {
     id: 3,
-    badge: '🛍️ New Arrivals',
+    badge: ' New Arrivals',
     title: 'Shop Top Products',
-    subtitle: 'Electronics, fashion & more — delivered fast',
+    subtitle: 'Electronics, fashion & more  delivered fast',
     image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=800&auto=format&fit=crop',
     cta: 'Shop Now',
     href: '/products',
     gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'product'
   },
   {
     id: 4,
-    badge: '⚡ Fast Response',
+    badge: ' Fast Response',
     title: 'Electricians In 30 min',
     subtitle: 'Certified pros ready near you',
     image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop',
     cta: 'Book Fundi',
     href: '/explore?category=Electrical',
     gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'product'
   },
+  {
+    id: 301,
+    badge: ' Beauty Bar',
+    title: 'Top Beauty & Cosmetics',
+    subtitle: 'Skincare, makeup, and hair essentials',
+    image: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?q=80&w=800&auto=format&fit=crop',
+    cta: 'Shop Beauty',
+    href: '/products',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'product'
+  },
+  {
+    id: 302,
+    badge: ' Tech Deals',
+    title: 'Latest Mobile Phones',
+    subtitle: 'Upgrade your device today',
+    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop',
+    cta: 'View Phones',
+    href: '/products',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'product'
+  },
+  {
+    id: 303,
+    badge: ' Home Essentials',
+    title: 'Smart Home Devices',
+    subtitle: 'Automate your living space',
+    image: 'https://images.unsplash.com/photo-1558002038-1055907df827?q=80&w=800&auto=format&fit=crop',
+    cta: 'Shop Smart Home',
+    href: '/products',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'product'
+  },
+  {
+    id: 304,
+    badge: ' Fashion Week',
+    title: 'Trending Apparel',
+    subtitle: 'Upgrade your wardrobe with latest styles',
+    image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=800&auto=format&fit=crop',
+    cta: 'Shop Fashion',
+    href: '/products',
+    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    category: 'product'
+  }
 ];
 
-const DISCOVERY_PILLS = [
-  { label: 'Near Me', icon: Navigation, href: '/explore?sort=nearest', style: 'bg-success text-primary-foreground' },
-  { label: 'Open Now', icon: Clock, href: '/explore?available=true', style: 'bg-secondary text-secondary-foreground' },
-  { label: 'Trending', icon: Flame, href: '/explore?sort=popular', style: 'bg-destructive text-primary-foreground' },
-  { label: 'Deals', icon: Tag, href: '/explore?sort=savings', style: 'bg-warning text-primary-foreground' },
-  { label: 'All Stores', icon: StoreIcon, href: '/explore', style: 'bg-muted-foreground text-primary-foreground' },
-];
+
 
 const STATS = [
   { value: '200+', label: 'Providers', icon: StoreIcon },
-  { value: '4.8★', label: 'Avg Rating', icon: Star },
+  { value: '4.8⭐', label: 'Avg Rating', icon: Star },
   { value: '30min', label: 'Avg Delivery', icon: Clock },
   { value: '24/7', label: 'Support', icon: Bell },
 ];
 
-/* ─── Hero Promo Dot Indicator ────────────────────────────── */
-const DotIndicator = ({ count, active }: { count: number; active: number }) => (
-  <div className="flex items-center justify-center gap-1.5 mt-3">
-    {Array.from({ length: count }).map((_, i) => (
-      <div
-        key={i}
-        className={`rounded-full transition-all duration-300 ${
-          i === active ? 'w-5 h-1.5 bg-primary' : 'w-1.5 h-1.5 bg-muted-foreground/30'
-        }`}
-      />
-    ))}
-  </div>
-);
-
-/* ─── Store Card ──────────────────────────────────────────── */
+/*  Store Card  */
 const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
   store: Store & { distance?: number };
   onClick: () => void;
@@ -163,7 +295,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
             </div>
             <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
               <Star className="w-4 h-4 fill-warning stroke-warning" />
-              <span className="text-white text-sm font-extrabold">{store.rating || '—'}</span>
+              <span className="text-white text-sm font-extrabold">{store.rating || ''}</span>
             </div>
           </div>
         </div>
@@ -191,7 +323,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
               </div>
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Star className="w-3.5 h-3.5 fill-warning stroke-warning shrink-0" />
-                <span className="text-xs font-semibold text-foreground">{store.rating || '—'}</span>
+                <span className="text-xs font-semibold text-foreground">{store.rating || ''}</span>
                 <span className="text-xs text-muted-foreground">({store.reviewCount || 0})</span>
               </div>
             </div>
@@ -202,7 +334,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
   );
 };
 
-/* ─── Main HomePage ───────────────────────────────────────── */
+/*  Main HomePage  */
 export const HomePage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
@@ -210,6 +342,16 @@ export const HomePage = () => {
   const { items: cartItems, getTotals, addToCart } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
+
+  const [filterValue, setFilterValue] = useState<'food' | 'product' | 'laundry' | 'brands' | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<{name: string, category: string} | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const [favorites, setFavorites] = useState<string[]>(() => {
     const s = localStorage.getItem('tulete_favorite_stores');
@@ -219,7 +361,7 @@ export const HomePage = () => {
   const openNowRef = useRef<HTMLDivElement>(null);
   const topRatedRef = useRef<HTMLDivElement>(null);
 
-  const { favorites: productFavs, isFavorited, toggleFavorite: toggleProductFavorite, initialize: initFavs } = useFavoritesStore();
+  const { isFavorited, toggleFavorite: toggleProductFavorite, initialize: initFavs } = useFavoritesStore();
 
   useEffect(() => {
     initFavs(user?.id || 'guest_user');
@@ -240,7 +382,7 @@ export const HomePage = () => {
 
   const handleAddToCart = (p: Product) => {
     let cat = 'Product';
-    const collection = (p as any)._collection;
+    const collection = (p as Product & { _collection?: string })._collection;
     if (collection === 'foods' || foods.some(f => f.id === p.id)) cat = 'Food';
     else if (collection === 'cloths' || cloths.some(c => c.id === p.id)) cat = 'Laundry';
     
@@ -256,10 +398,10 @@ export const HomePage = () => {
   };
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning ☀️' : hour < 17 ? 'Good afternoon 👋' : 'Good evening 🌙';
+  const greeting = hour < 12 ? 'Good morning ' : hour < 17 ? 'Good afternoon ' : 'Good evening ';
   const firstName = user?.displayName?.split(' ')[0] || 'there';
 
-  const { data: storesData, isLoading } = useFirestoreQuery(
+  const { data: storesData } = useFirestoreQuery(
     ['stores', 'home'],
     storeService,
     { limit: 12 }
@@ -278,13 +420,22 @@ export const HomePage = () => {
   const cloths = clothsData?.data || [];
   const allItems = [...foods, ...products, ...cloths];
 
-  const recommendedProducts = allItems.slice(0, 8);
-  const mostRatedProducts = [...allItems].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
-  const interestedLately = allItems.slice(0, 6);
-  const wishListProducts = allItems.slice(2, 7);
+  let currentItems = allItems;
+  if (filterValue === 'food') currentItems = foods;
+  if (filterValue === 'product') currentItems = products;
+  if (filterValue === 'laundry') currentItems = cloths;
+
+  const recommendedProducts = currentItems.slice(0, 8);
+  const mostRatedProducts = [...currentItems].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
+  const interestedLately = currentItems.slice(0, 6);
+  const wishlistProducts = currentItems.slice(0, 5); // Fallback slice from 0 if there are fewer than 3 items
+  const productsNearMe = [...currentItems].sort(() => 0.5 - Math.random()).slice(0, 8);
+
   const dailyMeals = foods;
   const dailyDeals = products.filter(p => p.oldprice && p.oldprice > p.price);
   const laundryClean = cloths;
+
+  const filteredPromos = PROMOS.filter(p => !filterValue || p.category === filterValue);
 
   // Interval-based snapping for Promo Carousel (Holds for 5 seconds so users can read)
   useEffect(() => {
@@ -364,36 +515,45 @@ export const HomePage = () => {
   };
 
   return (
-    <PageContainer>
-      <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
+    <PageContainer className="flex-1 flex flex-col min-h-0">
+      <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
 
-        {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
-        <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
-          <div className="space-y-2">
-            <h2 className="text-sm font-extrabold text-foreground mb-4 uppercase tracking-wider">Browse Services</h2>
-            {CATEGORIES.map((cat, i) => (
-              <motion.button
-                key={cat.name}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => navigate(cat.href)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted transition-colors text-left group"
-              >
-                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${cat.color} flex items-center justify-center text-primary-foreground shadow-sm group-hover:scale-105 transition-transform shrink-0`}>
-                  <span className="text-sm">{cat.emoji}</span>
-                </div>
-                <span className="font-bold text-sm text-muted-foreground group-hover:text-foreground transition-colors">{cat.name}</span>
-                <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
-              </motion.button>
-            ))}
+        {/*  LEFT SIDEBAR (FILTERS)  */}
+        <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-hidden px-6 pt-6 pb-8">
+          <div className="space-y-3">
+            <h2 className="text-sm font-extrabold text-foreground mb-4 uppercase tracking-wider">Filters</h2>
+            
+            <button onClick={() => setFilterValue(null)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === null ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-card text-foreground border-border hover:border-primary/50 hover:bg-muted'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${filterValue === null ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}><LayoutGrid className="w-4 h-4"/></div>
+              <span className="font-bold text-sm">All</span>
+            </button>
+            
+            <button onClick={() => { setFilterValue(filterValue === 'food' ? null : 'food'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'food' ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-card text-foreground border-border hover:border-primary/50 hover:bg-muted'}`}>
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0"><Utensils className="w-4 h-4"/></div>
+              <span className="font-bold text-sm">Foods</span>
+            </button>
+            
+            <button onClick={() => { setFilterValue(filterValue === 'product' ? null : 'product'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'product' ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-card text-foreground border-border hover:border-emerald-500/50 hover:bg-muted'}`}>
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-105 transition-transform shrink-0"><ShoppingBag className="w-4 h-4"/></div>
+              <span className="font-bold text-sm">Shopping</span>
+            </button>
+
+            <button onClick={() => { setFilterValue(filterValue === 'laundry' ? null : 'laundry'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'laundry' ? 'bg-secondary text-secondary-foreground border-secondary shadow-md' : 'bg-card text-foreground border-border hover:border-secondary/50 hover:bg-muted'}`}>
+              <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-105 transition-transform shrink-0"><Sparkles className="w-4 h-4"/></div>
+              <span className="font-bold text-sm">Laundry</span>
+            </button>
+
+            <button onClick={() => { setFilterValue(filterValue === 'brands' ? null : 'brands'); setSelectedBrand(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'brands' ? 'bg-muted text-foreground border-border shadow-md scale-105' : 'bg-card text-foreground border-border hover:border-muted-foreground/50 hover:bg-muted'}`}>
+              <div className="w-8 h-8 rounded-lg bg-muted-foreground/10 flex items-center justify-center text-muted-foreground group-hover:scale-105 transition-transform shrink-0"><Tag className="w-4 h-4"/></div>
+              <span className="font-bold text-sm">Brands</span>
+            </button>
           </div>
         </div>
 
-        {/* ── CENTER/MAIN COLUMN ── */}
-        <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
+        {/*  CENTER/MAIN COLUMN  */}
+        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
 
-          {/* ── HEADER SECTION ─────────────────────────────────── */}
+          {/*  HEADER SECTION  */}
         <div className="pt-2 pb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -412,30 +572,134 @@ export const HomePage = () => {
             </button>
           </div>
 
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/discover')}
-            className="w-full flex items-center gap-3 bg-card hover:bg-muted border border-border rounded-2xl px-5 py-4 text-muted-foreground text-sm font-medium transition-all shadow-sm"
-          >
-            <Search className="w-5 h-5 shrink-0" />
-            <span>Search stores, food, laundry providers...</span>
-          </motion.button>
+          <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14">
+            <Search 
+              className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" 
+            />
+            
+            {/* Tag / Badge */}
+            {(selectedBrand || filterValue) && (
+              <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
+                {selectedBrand ? selectedBrand.name : filterValue === 'brands' ? 'Brands' : filterValue === 'food' ? 'Food' : filterValue === 'product' ? 'Shopping' : 'Laundry'}
+              </div>
+            )}
+
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry...'}
+              className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
+            />
+          </div>
         </div>
 
+          {/*  FILTER CHIPS (Mobile Only)  */}
+          <div className="lg:hidden -mx-4 px-4 flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
+            <button
+              onClick={() => setFilterValue(null)}
+              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+                filterValue === null
+                  ? 'bg-primary text-primary-foreground border-primary scale-105'
+                  : 'bg-card text-foreground border-border hover:border-primary/30'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4 opacity-70" />
+              All
+            </button>
+            <button
+              onClick={() => {
+                setFilterValue(filterValue === 'food' ? null : 'food');
+              }}
+              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+                filterValue === 'food'
+                  ? 'bg-primary text-primary-foreground border-primary scale-105'
+                  : 'bg-card text-foreground border-border hover:border-primary/30'
+              }`}
+            >
+              <Utensils className="w-4 h-4 opacity-70" />
+              Foods
+            </button>
+            <button
+              onClick={() => {
+                setFilterValue(filterValue === 'product' ? null : 'product');
+              }}
+              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+                filterValue === 'product'
+                  ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
+                  : 'bg-card text-foreground border-border hover:border-emerald-500/30'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4 opacity-70" />
+              Shopping
+            </button>
+            <button
+              onClick={() => {
+                setFilterValue(filterValue === 'laundry' ? null : 'laundry');
+              }}
+              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+                filterValue === 'laundry'
+                  ? 'bg-secondary text-secondary-foreground border-secondary scale-105'
+                  : 'bg-card text-foreground border-border hover:border-secondary/30'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 opacity-70" />
+              Laundry
+            </button>
+            <button
+              onClick={() => { setFilterValue(filterValue === 'brands' ? null : 'brands'); setSelectedBrand(null); }}
+              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+                filterValue === 'brands'
+                  ? 'bg-muted text-foreground border-border scale-105'
+                  : 'bg-card text-foreground border-border hover:border-muted-foreground/30'
+              }`}
+            >
+              <Tag className="w-4 h-4 opacity-70" />
+              Brands
+            </button>
+          </div>
+
+          {filterValue === 'brands' ? (
+            selectedBrand ? (
+              <BrandDetailsView 
+                brandName={selectedBrand.name} 
+                categoryParam={selectedBrand.category} 
+                searchQuery={searchQuery}
+                onBack={() => { setSelectedBrand(null); setSearchQuery(''); }} 
+              />
+            ) : (
+              <BrandsView 
+                searchQuery={searchQuery}
+                onSelectBrand={(name, category) => { setSelectedBrand({ name, category }); setSearchQuery(''); }} 
+              />
+            )
+          ) : debouncedSearchQuery.trim().length > 0 ? (
+            <div className="animate-in fade-in zoom-in duration-300">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-extrabold text-foreground">Search Results</h2>
+                <span className="text-sm font-medium text-muted-foreground">For "{debouncedSearchQuery}"</span>
+              </div>
+              <HomeSearchResultsView query={debouncedSearchQuery} filterValue={filterValue} />
+            </div>
+          ) : (
+            <>
           {/* PROMO CAROUSEL */}
           <div>
               <div
                 ref={promoRef}
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2"
               >
-                {PROMOS.map((promo, i) => (
-                  <motion.div
-                    key={promo.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                    className="snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[50%] xl:w-[45%]"
-                  >
+                <AnimatePresence mode="popLayout">
+                  {filteredPromos.map((promo, i) => (
+                    <motion.div
+                      key={promo.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3, delay: i * 0.05 }}
+                      className="snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[50%] xl:w-[45%]"
+                    >
                     <div
                       onClick={() => navigate(promo.href)}
                       className="relative h-72 rounded-3xl overflow-hidden cursor-pointer group shadow-md hover:shadow-xl transition-all border border-border/50"
@@ -461,58 +725,15 @@ export const HomePage = () => {
                     </div>
                   </motion.div>
                 ))}
+                </AnimatePresence>
               </div>
             </div>
 
-            {/* CATEGORIES (Mobile Only) */}
-            <div className="lg:hidden">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-extrabold text-foreground">Browse Services</h2>
-                <button onClick={() => navigate('/explore')} className="text-xs font-bold text-primary flex items-center gap-1 hover:underline">
-                  See all <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                {CATEGORIES.map((cat, i) => (
-                  <motion.button
-                    key={cat.name}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.07 }}
-                    whileHover={{ y: -3 }}
-                    whileTap={{ scale: 0.93 }}
-                    onClick={() => navigate(cat.href)}
-                    className="flex flex-col items-center gap-2 group"
-                  >
-                    <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${cat.color} flex items-center justify-center text-primary-foreground shadow-sm group-hover:shadow-md transition-all`}>
-                      <span className="text-xl sm:text-2xl leading-none">{cat.emoji}</span>
-                    </div>
-                    <span className="text-xs font-bold text-muted-foreground text-center leading-tight">
-                      {cat.name}
-                    </span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
 
-            {/* DISCOVERY PILLS */}
-            <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
-              {DISCOVERY_PILLS.map(({ label, icon: Icon, href, style }) => (
-                <motion.button
-                  key={label}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => navigate(href)}
-                  className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-extrabold shadow-sm hover:shadow-md transition-all ${style}`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </motion.button>
-              ))}
-            </div>
 
             {/* 1. Recommended for you (Products) */}
-            {recommendedProducts.length > 0 && (
+            {(!filterValue || filterValue === 'product' || filterValue === 'laundry') && recommendedProducts.length > 0 && (
               <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products" autoScrollSpeed={0.3}>
                 {recommendedProducts.slice(0, 8).map(product => (
                   <div key={`rec-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -528,9 +749,23 @@ export const HomePage = () => {
             )}
 
             {/* 3. Stores near me (Stores) */}
-            {openStores.length > 0 && (
+            {filterValue !== 'laundry' && openStores
+              .filter((store) => {
+                if (!filterValue) return true;
+                if (filterValue === 'food') return store.category === 'Food';
+                if (filterValue === 'product') return (store.category as string) === 'Products' || store.category === 'Electrical' || store.category === 'Beauty';
+                return true;
+              })
+              .length > 0 && (
               <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
-                {openStores.slice(0, 6).map((store) => (
+                {openStores
+                  .filter((store) => {
+                    if (!filterValue) return true;
+                    if (filterValue === 'food') return store.category === 'Food';
+                    if (filterValue === 'product') return (store.category as string) === 'Products' || store.category === 'Electrical' || store.category === 'Beauty';
+                    return true;
+                  })
+                  .slice(0, 6).map((store) => (
                   <div key={`store-${store.id}`} className="w-[280px] sm:w-[320px] shrink-0">
                     <FeaturedStoreCard
                       store={store}
@@ -543,8 +778,27 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
+            {/* 3.5 Products near me */}
+            {filterValue !== 'laundry' && productsNearMe.length > 0 && (
+              <HorizontalCarousel title="Near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore" autoScrollSpeed={0.35}>
+                {productsNearMe.map((product, idx) => (
+                  <div key={`near-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0 relative group">
+                    <div className="absolute top-2 left-2 z-10 bg-background/95 backdrop-blur text-foreground text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 border border-border group-hover:scale-105 transition-transform">
+                      <MapPin className="w-3 h-3 text-primary" /> {Math.max(0.2, (1 + (idx * 0.3))).toFixed(1)} km
+                    </div>
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            )}
+
             {/* 4. Most rated (Products) */}
-            {mostRatedProducts.length > 0 && (
+            {(!filterValue || filterValue === 'product') && mostRatedProducts.length > 0 && (
               <HorizontalCarousel title="Most rated" icon={<Flame className="w-5 h-5 text-orange-500 fill-orange-500" />} actionLink="/explore?sort=popular" autoScrollSpeed={0.4}>
                 {mostRatedProducts.slice(0, 8).map(product => (
                   <div key={`rated-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -560,7 +814,7 @@ export const HomePage = () => {
             )}
 
             {/* 5. What interested you lately (Products) */}
-            {interestedLately.length > 0 && (
+            {(!filterValue || filterValue === 'product') && interestedLately.length > 0 && (
               <HorizontalCarousel title="What interested you lately" icon={<Clock className="w-5 h-5 text-muted-foreground" />} actionLink="/explore" autoScrollSpeed={0.2}>
                 {interestedLately.map(product => (
                   <div key={`int-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -576,9 +830,9 @@ export const HomePage = () => {
             )}
 
             {/* 6. What you wish for (Products) */}
-            {wishListProducts.length > 0 && (
+            {(!filterValue || filterValue === 'product') && wishlistProducts.length > 0 && (
               <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
-                {wishListProducts.map(product => (
+                {wishlistProducts.map(product => (
                   <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -592,7 +846,7 @@ export const HomePage = () => {
             )}
 
             {/* 7. Daily meals & drinks (Food) */}
-            {dailyMeals.length > 0 && (
+            {(!filterValue || filterValue === 'food') && dailyMeals.length > 0 && (
               <HorizontalCarousel title="Daily meals & drinks" icon={<Utensils className="w-5 h-5 text-primary" />} actionLink="/food">
                 {dailyMeals.map(product => (
                   <div key={`food-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -608,7 +862,7 @@ export const HomePage = () => {
             )}
 
             {/* 8. Daily deals in shopping (Products) */}
-            {dailyDeals.length > 0 && (
+            {(!filterValue || filterValue === 'product') && dailyDeals.length > 0 && (
               <HorizontalCarousel title="Daily deals in shopping" icon={<Tag className="w-5 h-5 text-warning" />} actionLink="/products?deals=true" autoScrollSpeed={0.3}>
                 {dailyDeals.map(product => (
                   <div key={`deal-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -624,7 +878,7 @@ export const HomePage = () => {
             )}
 
             {/* 9. What we clean (Laundry) */}
-            {laundryClean.length > 0 && (
+            {(!filterValue || filterValue === 'laundry') && laundryClean.length > 0 && (
               <HorizontalCarousel title="What we clean" icon={<Sparkles className="w-5 h-5 text-primary" />} actionLink="/laundry" autoScrollSpeed={0.4}>
                 {laundryClean.map(product => (
                   <div key={`laundry-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -638,11 +892,13 @@ export const HomePage = () => {
                 ))}
               </HorizontalCarousel>
             )}
+            </>
+          )}
 
         </div>
 
-        {/* ── RIGHT SIDEBAR (WIDGETS & CART) ── */}
-        <div className="hidden xl:block flex-none w-[320px] shrink-0 border-l border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
+        {/*  RIGHT SIDEBAR (WIDGETS & CART)  */}
+        <div className="hidden xl:block flex-none w-[320px] shrink-0 border-l border-border h-full overflow-hidden px-6 pt-6 pb-8">
           <div className="space-y-6">
               
               {/* LIVE CART WIDGET */}
@@ -688,32 +944,32 @@ export const HomePage = () => {
                 <div className="grid grid-cols-1 gap-3">
                   {[
                     {
-                      emoji: '🧺',
+                      emoji: '',
                       title: 'Book Laundry',
                       sub: 'Express pickup',
                       href: '/laundry',
-                      gradient: 'from-secondary to-secondary/80 text-secondary-foreground',
+                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
                     },
                     {
-                      emoji: '📦',
+                      emoji: '',
                       title: 'My Orders',
                       sub: 'Track deliveries',
                       href: '/orders',
-                      gradient: 'from-secondary to-secondary/80 text-secondary-foreground',
+                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
                     },
                     {
-                      emoji: '❤️',
+                      emoji: '',
                       title: 'Favourites',
                       sub: 'Saved items',
                       href: '/favorites',
-                      gradient: 'from-warning/90 to-warning/70 text-warning-foreground',
+                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
                     },
                     {
-                      emoji: '🏪',
+                      emoji: '',
                       title: 'All Stores',
                       sub: 'Browse network',
                       href: '/explore',
-                      gradient: 'from-success/90 to-success/70 text-success-foreground',
+                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
                     },
                   ].map(({ emoji, title, sub, href, gradient }) => (
                     <motion.button
@@ -771,7 +1027,7 @@ export const HomePage = () => {
                       <Sparkles className="w-3 h-3" /> Professional Cleaning
                     </p>
                     <h3 className="font-extrabold text-xl leading-tight">Laundry at Your Door</h3>
-                    <p className="opacity-80 text-xs mt-1">Pick up in 2 hrs · Express available</p>
+                    <p className="opacity-80 text-xs mt-1">Pick up in 2 hrs  Express available</p>
                   </div>
                   <div className="self-start flex items-center gap-1.5 bg-background text-foreground font-extrabold text-xs px-4 py-2 rounded-full shadow-sm hover:bg-secondary hover:text-secondary-foreground transition-colors">
                     Order Now <ArrowRight className="w-3.5 h-3.5" />

@@ -32,4 +32,5 @@ export { LocationPage } from '../features/location/pages/LocationPage';
 export { ProfilePage } from '../features/users/pages/ProfilePage';
 export { SettingsPage } from '../features/users/pages/SettingsPage';
 export { NotificationsPage } from '../features/notifications/pages/NotificationsPage';
+export const BrandDetailsPage = createPage('Brand Details', 'View brand specific products.');
 export { NotFoundPage } from './NotFoundPage';

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { orderService, Order, OrderTracking } from '../services/orderService';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { db } from '../../../core/firebase/config';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export const useOrderListRealtime = () => {
   const { user } = useAuthStore();
@@ -73,4 +75,39 @@ export const useOrderTrackingRealtime = (orderId: string | undefined) => {
   }, [orderId]);
 
   return { tracking, isLoading, error };
+};
+
+export const useLiveFlutterOrderTracking = (userId: string | undefined, webOrderId: string | undefined) => {
+  const [liveItems, setLiveItems] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId || !webOrderId) {
+      setLiveItems([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    // Note: This listens to the global newcomfirmedorders collection
+    // where the Flutter Admin App makes its live updates.
+    const q = query(
+      collection(db, 'newcomfirmedorders'),
+      where('uid', '==', userId),
+      where('webOrderId', '==', webOrderId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLiveItems(items);
+      setIsLoading(false);
+    }, (err) => {
+      console.error('Error fetching live flutter orders:', err);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId, webOrderId]);
+
+  return { liveItems, isLoading };
 };

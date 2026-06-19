@@ -33,14 +33,11 @@ export const calculateItemTotal = (item: CartItem): number => {
     itemTotal = itemBaseSubtotal;
     if (item.ironingSelected) itemTotal += itemBaseSubtotal * 0.95;
     if (item.packagingSelected) itemTotal += itemBaseSubtotal * 0.60;
-    if (item.expressSelected) itemTotal += (item.quantity * 1900);
+    if (item.expressSelected) itemTotal += 1500; // Flat fee per line item, mirrors Flutter (deliveryFee * 2 + 1500) where deliveryFee=0
   } else {
-    // Food and Products: Base Price + Delivery Fee (if Delivery is selected)
+    // Food and Products: Base Price only
     itemTotal = itemBaseSubtotal;
-    // We default to true (Delivery) if undefined, just like Flutter
-    if (item.isDeliverySelected !== false) {
-      itemTotal += (250 * item.quantity); // 250 ${APP_SETTINGS.currency} flat delivery fee per item count
-    }
+    // Delivery fee is now calculated dynamically at checkout based on distance and deliveryRation
   }
   
   return Math.round(itemTotal);
