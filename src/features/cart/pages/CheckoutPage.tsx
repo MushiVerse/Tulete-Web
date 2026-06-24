@@ -13,13 +13,13 @@ import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck } from 'luc
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
 
-// Mock Nairobi coordinate hubs for high-fidelity order routing simulation
-const LOCATIONS = [
-  { address: 'Kilimani, Wood Avenue, Nairobi', lat: -1.2894, lng: 36.7909 },
-  { address: 'Westlands, Ring Road, Nairobi', lat: -1.2635, lng: 36.8049 },
-  { address: 'Nairobi CBD, Kenyatta Avenue', lat: -1.2821, lng: 36.8185 },
-  { address: 'Hurlingham, Argwings Kodhek, Nairobi', lat: -1.2941, lng: 36.7981 },
-];
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { LocationPickerModal, GOOGLE_MAPS_LIBRARIES } from '../../location/components/LocationPickerModal';
+import { MiniMapPreview } from '../../location/components/MiniMapPreview';
+import { useJsApiLoader } from '@react-google-maps/api';
+
+// Default mock center if no location is selected
+const DEFAULT_CENTER = { lat: -1.2894, lng: 36.7909, address: 'Nairobi' };
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -31,11 +31,17 @@ export const CheckoutPage = () => {
   const { deliverytime, instructions: laundryInstructions } = laundryPreferences;
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [addressIndex, setAddressIndex] = useState(0);
-  const [customAddress, setCustomAddress] = useState('');
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const { currentLocation } = useLocationStore();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deliveryRation, setDeliveryRation] = React.useState<number>(1000);
+
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
 
   // Fetch delivery ration on mount
   React.useEffect(() => {
@@ -44,9 +50,14 @@ export const CheckoutPage = () => {
     });
   }, []);
 
-  const selectedLocation = customAddress 
-    ? { address: customAddress, lat: -1.2894, lng: 36.7909 } // default coords
-    : LOCATIONS[addressIndex];
+  // Auto-open modal if no location is set on page load
+  React.useEffect(() => {
+    if (!currentLocation && items.length > 0) {
+      setIsLocationModalOpen(true);
+    }
+  }, [currentLocation, items.length]);
+
+  const selectedLocation = currentLocation || DEFAULT_CENTER;
 
   // Standard mock store coordinate in Westlands
   const storeLocation = { lat: -1.2635, lng: 36.8049 };
@@ -194,41 +205,50 @@ export const CheckoutPage = () => {
               Delivery Location
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-              {LOCATIONS.map((loc, i) => (
-                <div 
-                  key={i}
-                  onClick={() => {
-                    setAddressIndex(i);
-                    setCustomAddress('');
-                  }}
-                  className={`border p-4 rounded-xl cursor-pointer transition-all ${
-                    addressIndex === i && !customAddress
-                      ? 'border-primary bg-primary/5 text-primary-foreground' 
-                      : 'border-border hover:bg-muted/40'
-                  }`}
-                >
-                  <p className="font-bold text-sm text-foreground mb-1">Location Option {i + 1}</p>
-                  <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
+            {currentLocation ? (
+              <div className="border border-primary bg-primary/5 p-4 rounded-xl mb-4 relative overflow-hidden">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 pr-4">
+                    <p className="font-extrabold text-sm text-foreground mb-1">Selected Destination</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentLocation.address}</p>
+                    {currentLocation.specificInstructions && (
+                      <p className="text-xs text-slate-500 mt-1 italic font-medium bg-white/50 dark:bg-black/20 p-2 rounded-md">
+                        Note: {currentLocation.specificInstructions}
+                      </p>
+                    )}
+                  </div>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="font-bold shadow-sm whitespace-nowrap"
+                  >
+                    Change
+                  </Button>
                 </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="custom-address" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Or enter custom Nairobi address
-              </Label>
-              <Input
-                id="custom-address"
-                placeholder="e.g. State House Road, Nairobi"
-                value={customAddress}
-                onChange={(e) => {
-                  setCustomAddress(e.target.value);
-                  setAddressIndex(-1);
-                }}
-                className="bg-card border-border"
-              />
-            </div>
+                
+                {/* Visual Map Preview */}
+                <MiniMapPreview isLoaded={isMapLoaded} lat={currentLocation.lat} lng={currentLocation.lng} />
+              </div>
+            ) : (
+              <div className="bg-muted p-6 rounded-xl text-center border border-dashed border-border mb-4">
+                <MapPin className="w-8 h-8 mx-auto text-muted-foreground mb-3 opacity-50" />
+                <p className="text-sm text-foreground font-medium mb-4">No delivery location set</p>
+                <Button 
+                  type="button" 
+                  onClick={() => setIsLocationModalOpen(true)}
+                  className="font-bold shadow-md"
+                >
+                  Set Delivery Location
+                </Button>
+              </div>
+            )}
+            
+            {!currentLocation && (
+              <p className="text-xs text-destructive font-semibold flex justify-center">
+                * A delivery location is required
+              </p>
+            )}
           </Card>
 
           {/* Contact Details */}
@@ -331,9 +351,8 @@ export const CheckoutPage = () => {
                 <span className="font-semibold text-foreground">{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
               
-              {/* Dynamic Delivery Fee Estimate */}
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Delivery Fee (Est.)</span>
+                <span className="text-slate-500">Distance Cost (Est.)</span>
                 <span className="font-medium text-slate-700">
                   {computedDeliveryFee === 0 ? 'FREE' : `${computedDeliveryFee.toLocaleString()} ${APP_SETTINGS.currency}`}
                 </span>
@@ -360,6 +379,11 @@ export const CheckoutPage = () => {
           </Card>
         </div>
       </form>
+      <LocationPickerModal 
+        isOpen={isLocationModalOpen} 
+        onClose={() => setIsLocationModalOpen(false)} 
+        isLoaded={isMapLoaded}
+      />
       </ContentContainer>
     </PageContainer>
   );

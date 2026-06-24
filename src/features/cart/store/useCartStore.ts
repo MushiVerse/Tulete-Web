@@ -145,7 +145,7 @@ export const useCartStore = create<CartState>()(
         });
 
         // Dynamic mock rules for delivery and service fees
-        const deliveryFee = subtotal > 0 ? (subtotal > 1500 ? 0 : 150) : 0; // Free delivery over 1500 ${APP_SETTINGS.currency}
+        const deliveryFee = 0; // The fee is inside the prices
         const serviceFee = subtotal > 0 ? 45 : 0;
         let total = subtotal + deliveryFee + serviceFee;
 

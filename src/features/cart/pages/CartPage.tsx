@@ -120,22 +120,7 @@ export const CartPage = () => {
                         </div>
                       </div>
 
-                      {/* Delivery vs Pickup Toggle for Food/Products */}
-                      {!item.isLaundry && (
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold transition-colors ${item.isDeliverySelected === false ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
-                            <Store className="w-3.5 h-3.5" /> Pickup
-                          </div>
-                          <Switch 
-                            checked={item.isDeliverySelected !== false} 
-                            onCheckedChange={(checked) => toggleDelivery(item.productId, checked)}
-                            className="scale-75"
-                          />
-                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold transition-colors ${item.isDeliverySelected !== false ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
-                            <Truck className="w-3.5 h-3.5" /> Delivery (+250)
-                          </div>
-                        </div>
-                      )}
+
 
                       {/* Per-Item Laundry Customization */}
                       {item.isLaundry && (
@@ -282,14 +267,7 @@ export const CartPage = () => {
                 <span>Subtotal</span>
                 <span className="font-medium text-foreground">{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Delivery Fee</span>
-                {deliveryFee === 0 ? (
-                  <span className="font-semibold text-emerald-600">FREE</span>
-                ) : (
-                  <span className="font-medium text-foreground">{deliveryFee.toLocaleString()} {APP_SETTINGS.currency}</span>
-                )}
-              </div>
+              {/* Delivery fee is included in prices */}
               <div className="flex justify-between text-muted-foreground">
                 <span>Service Fee</span>
                 <span className="font-medium text-foreground">{serviceFee.toLocaleString()} {APP_SETTINGS.currency}</span>
@@ -301,11 +279,6 @@ export const CartPage = () => {
               </div>
             </div>
 
-            {deliveryFee > 0 && (
-              <div className="bg-primary/5 rounded-lg p-3 text-xs text-primary mb-6 text-center font-medium">
-                Add {(1500 - subtotal > 0 ? 1500 - subtotal : 0).toLocaleString()} {APP_SETTINGS.currency} more for FREE Delivery!
-              </div>
-            )}
 
             <Button
               onClick={() => navigate('/checkout')}
