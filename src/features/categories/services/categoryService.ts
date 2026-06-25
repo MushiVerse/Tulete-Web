@@ -2,12 +2,15 @@ import { BaseFirestoreService } from '../../../core/services/BaseFirestoreServic
 import { BaseDocument } from '../../../core/services/types';
 
 export interface Category extends BaseDocument {
-  // Define domain-specific fields here
+  name: string;
+  imgURL?: string;
+  image?: string;
+  color?: string;
 }
 
 class CategoryService extends BaseFirestoreService<Category> {
   constructor() {
-    super('categories');
+    super('Categories'); // Matches the uppercase C used in the Flutter app
   }
 }
 

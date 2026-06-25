@@ -1,9 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Scissors, Coffee, Laptop, Wrench, Shirt, Zap } from 'lucide-react';
+import { ShoppingBag, Scissors, Coffee, Laptop, Wrench, Shirt, Zap, Circle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
+import { categoryService } from '../../categories/services/categoryService';
 
-const categories = [
+const fallbackCategories = [
   { id: '1', name: 'Retail', icon: ShoppingBag, color: 'bg-blue-100 text-blue-600' },
   { id: '2', name: 'Salon', icon: Scissors, color: 'bg-pink-100 text-pink-600' },
   { id: '3', name: 'Food', icon: Coffee, color: 'bg-orange-100 text-orange-600' },
@@ -14,10 +16,27 @@ const categories = [
 ];
 
 export const CategoryScroll = () => {
+  const { data: categoriesData } = useFirestoreQuery(['categories', 'scroll'], categoryService);
+  
+  // Merge dynamic categories with local icons, or use fallback
+  const dynamicCategories = categoriesData?.data.map((cat, index) => {
+    // Try to find a matching fallback icon based on name
+    const match = fallbackCategories.find(f => f.name.toLowerCase() === cat.name.toLowerCase());
+    return {
+      id: cat.id,
+      name: cat.name,
+      icon: match ? match.icon : Circle,
+      color: match ? match.color : 'bg-muted text-muted-foreground',
+      imgURL: cat.imgURL || cat.image
+    };
+  }) || [];
+
+  const displayCategories = dynamicCategories.length > 0 ? dynamicCategories : fallbackCategories;
+
   return (
     <div className="py-4">
       <div className="flex overflow-x-auto gap-4 px-4 md:px-6 pb-2 hide-scrollbar snap-x">
-        {categories.map((category, index) => (
+        {displayCategories.map((category, index) => (
           <motion.div
             key={category.id}
             initial={{ opacity: 0, scale: 0.8 }}
@@ -27,13 +46,17 @@ export const CategoryScroll = () => {
           >
             <Link 
               to={`/categories/${category.name.toLowerCase()}`}
-              className="flex items-center justify-center w-14 h-14 rounded-2xl shadow-sm border border-border/50 bg-card hover:scale-105 active:scale-95 transition-transform"
+              className="flex items-center justify-center w-14 h-14 rounded-2xl shadow-sm border border-border/50 bg-card hover:scale-105 active:scale-95 transition-transform overflow-hidden relative"
             >
-              <div className={`p-2.5 rounded-xl ${category.color}`}>
-                <category.icon className="w-5 h-5" />
-              </div>
+              {(category as any).imgURL ? (
+                <img src={(category as any).imgURL} alt={category.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className={`p-2.5 rounded-xl ${category.color}`}>
+                  <category.icon className="w-5 h-5" />
+                </div>
+              )}
             </Link>
-            <span className="text-[11px] font-medium text-muted-foreground">
+            <span className="text-[11px] font-medium text-muted-foreground text-center line-clamp-1 w-14">
               {category.name}
             </span>
           </motion.div>

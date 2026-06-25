@@ -255,7 +255,17 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
   isFav: boolean;
   onFav: (e: React.MouseEvent) => void;
 }) => {
-  const cfg = CAT_CONFIG[store.category] || CAT_CONFIG.Food;
+  const getDynamicStoreCat = (s: any) => {
+    const text = `${s.store} ${s.name || ''} ${s.description || ''}`.toLowerCase();
+    if (text.match(/laundry|cloth|suit|wash|bedding|dryclean|iron|fashion|fits|boutique|wear|shoes|apparel/)) return 'Laundry';
+    if (text.match(/food|meal|platter|restaurant|bakery|meat|pizza|burger|kitchen|cafe|dine/)) return 'Food';
+    if (s.category === 'Food') return 'Food';
+    if (s.category === 'Laundry') return 'Laundry';
+    return 'Products';
+  };
+  const actualCategory = getDynamicStoreCat(store);
+  const cfg = CAT_CONFIG[actualCategory] || CAT_CONFIG.Food;
+  
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
@@ -291,7 +301,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
           <div className="absolute bottom-3 inset-x-3 flex justify-between items-end">
             <div className={`flex items-center gap-1.5 ${cfg.bg} border px-2.5 py-1.5 rounded-full bg-background/95 backdrop-blur shadow-sm`}>
               <span className="text-sm">{cfg.emoji}</span>
-              <span className={`text-[11px] font-extrabold uppercase tracking-widest ${cfg.color}`}>{store.category}</span>
+              <span className={`text-[11px] font-extrabold uppercase tracking-widest ${cfg.color}`}>{actualCategory}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
               <Star className="w-4 h-4 fill-warning stroke-warning" />
@@ -418,6 +428,8 @@ export const HomePage = () => {
   const foods = foodsData?.data || [];
   const products = productsData?.data || [];
   const cloths = clothsData?.data || [];
+  
+  // Create allItems without deduplicating incorrectly
   const allItems = [...foods, ...products, ...cloths];
 
   let currentItems = allItems;
@@ -577,13 +589,6 @@ export const HomePage = () => {
               className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" 
             />
             
-            {/* Tag / Badge */}
-            {(selectedBrand || filterValue) && (
-              <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
-                {selectedBrand ? selectedBrand.name : filterValue === 'brands' ? 'Brands' : filterValue === 'food' ? 'Food' : filterValue === 'product' ? 'Shopping' : 'Laundry'}
-              </div>
-            )}
-
             <input
               type="text"
               value={searchQuery}
@@ -591,6 +596,21 @@ export const HomePage = () => {
               placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry...'}
               className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
             />
+
+            {/* Tag / Badge */}
+            <div 
+              onClick={() => {
+                const filters: ('food' | 'product' | 'laundry' | 'brands' | null)[] = [null, 'food', 'product', 'laundry', 'brands'];
+                const currentIndex = filters.indexOf(filterValue);
+                const nextIndex = (currentIndex + 1) % filters.length;
+                const nextFilter = filters[nextIndex];
+                setFilterValue(nextFilter);
+                if (nextFilter !== 'brands') setSelectedBrand(null);
+              }}
+              className="flex items-center gap-1.5 ml-3 mr-2 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0 cursor-pointer hover:bg-primary/20 transition-colors select-none"
+            >
+              {selectedBrand ? selectedBrand.name : filterValue === 'brands' ? 'Brands' : filterValue === 'food' ? 'Food' : filterValue === 'product' ? 'Shopping' : filterValue === 'laundry' ? 'Laundry' : 'All'}
+            </div>
           </div>
         </div>
 
@@ -733,7 +753,7 @@ export const HomePage = () => {
 
 
             {/* 1. Recommended for you (Products) */}
-            {(!filterValue || filterValue === 'product' || filterValue === 'laundry') && recommendedProducts.length > 0 && (
+            {recommendedProducts.length > 0 && (
               <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products" autoScrollSpeed={0.3}>
                 {recommendedProducts.slice(0, 8).map(product => (
                   <div key={`rec-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -749,20 +769,45 @@ export const HomePage = () => {
             )}
 
             {/* 3. Stores near me (Stores) */}
-            {filterValue !== 'laundry' && openStores
+            {filterValue !== 'food' && openStores
               .filter((store) => {
+                const getStoreCategoryGroup = (store: any) => {
+                  const text = `${store.store} ${store.name || ''} ${store.description || ''}`.toLowerCase();
+                  if (text.match(/laundry|cloth|suit|wash|bedding|dryclean|iron|fashion|fits|boutique|wear|shoes|apparel/)) return 'laundry';
+                  if (text.match(/food|meal|platter|restaurant|bakery|meat|pizza|burger|kitchen|cafe|dine/)) return 'food';
+                  
+                  // If it doesn't match descriptions, fallback to whatever the database says just in case it's actually correct and missing keywords
+                  if (store.category === 'Food') return 'food';
+                  if (store.category === 'Laundry') return 'laundry';
+                  
+                  return 'product';
+                };
+
+                const actualCategory = getStoreCategoryGroup(store);
                 if (!filterValue) return true;
-                if (filterValue === 'food') return store.category === 'Food';
-                if (filterValue === 'product') return (store.category as string) === 'Products' || store.category === 'Electrical' || store.category === 'Beauty';
+                if (filterValue === 'product') return actualCategory === 'product';
+                if (filterValue === 'laundry') return actualCategory === 'laundry';
                 return true;
               })
               .length > 0 && (
               <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
                 {openStores
                   .filter((store) => {
+                    const getStoreCategoryGroup = (store: any) => {
+                      const text = `${store.store} ${store.name || ''} ${store.description || ''}`.toLowerCase();
+                      if (text.match(/laundry|cloth|suit|wash|bedding|dryclean|iron|fashion|fits|boutique|wear|shoes|apparel/)) return 'laundry';
+                      if (text.match(/food|meal|platter|restaurant|bakery|meat|pizza|burger|kitchen|cafe|dine/)) return 'food';
+                      
+                      if (store.category === 'Food') return 'food';
+                      if (store.category === 'Laundry') return 'laundry';
+                      
+                      return 'product';
+                    };
+
+                    const actualCategory = getStoreCategoryGroup(store);
                     if (!filterValue) return true;
-                    if (filterValue === 'food') return store.category === 'Food';
-                    if (filterValue === 'product') return (store.category as string) === 'Products' || store.category === 'Electrical' || store.category === 'Beauty';
+                    if (filterValue === 'product') return actualCategory === 'product';
+                    if (filterValue === 'laundry') return actualCategory === 'laundry';
                     return true;
                   })
                   .slice(0, 6).map((store) => (
@@ -779,7 +824,7 @@ export const HomePage = () => {
             )}
 
             {/* 3.5 Products near me */}
-            {filterValue !== 'laundry' && productsNearMe.length > 0 && (
+            {productsNearMe.length > 0 && (
               <HorizontalCarousel title="Near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore" autoScrollSpeed={0.35}>
                 {productsNearMe.map((product, idx) => (
                   <div key={`near-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0 relative group">
@@ -797,8 +842,8 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 4. Most rated (Products) */}
-            {(!filterValue || filterValue === 'product') && mostRatedProducts.length > 0 && (
+            {/* 4. Most rated */}
+            {mostRatedProducts.length > 0 && (
               <HorizontalCarousel title="Most rated" icon={<Flame className="w-5 h-5 text-orange-500 fill-orange-500" />} actionLink="/explore?sort=popular" autoScrollSpeed={0.4}>
                 {mostRatedProducts.slice(0, 8).map(product => (
                   <div key={`rated-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -813,8 +858,8 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 5. What interested you lately (Products) */}
-            {(!filterValue || filterValue === 'product') && interestedLately.length > 0 && (
+            {/* 5. What interested you lately */}
+            {interestedLately.length > 0 && (
               <HorizontalCarousel title="What interested you lately" icon={<Clock className="w-5 h-5 text-muted-foreground" />} actionLink="/explore" autoScrollSpeed={0.2}>
                 {interestedLately.map(product => (
                   <div key={`int-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -829,8 +874,8 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 6. What you wish for (Products) */}
-            {(!filterValue || filterValue === 'product') && wishlistProducts.length > 0 && (
+            {/* 6. What you wish for */}
+            {wishlistProducts.length > 0 && (
               <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
                 {wishlistProducts.map(product => (
                   <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -845,7 +890,7 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 7. Daily meals & drinks (Food) */}
+            {/* 7. Daily meals & drinks (Food Only) */}
             {(!filterValue || filterValue === 'food') && dailyMeals.length > 0 && (
               <HorizontalCarousel title="Daily meals & drinks" icon={<Utensils className="w-5 h-5 text-primary" />} actionLink="/food">
                 {dailyMeals.map(product => (
@@ -861,7 +906,7 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 8. Daily deals in shopping (Products) */}
+            {/* 8. Daily deals in shopping (Products Only) */}
             {(!filterValue || filterValue === 'product') && dailyDeals.length > 0 && (
               <HorizontalCarousel title="Daily deals in shopping" icon={<Tag className="w-5 h-5 text-warning" />} actionLink="/products?deals=true" autoScrollSpeed={0.3}>
                 {dailyDeals.map(product => (
@@ -877,7 +922,7 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 9. What we clean (Laundry) */}
+            {/* 9. What we clean (Laundry Only) */}
             {(!filterValue || filterValue === 'laundry') && laundryClean.length > 0 && (
               <HorizontalCarousel title="What we clean" icon={<Sparkles className="w-5 h-5 text-primary" />} actionLink="/laundry" autoScrollSpeed={0.4}>
                 {laundryClean.map(product => (
