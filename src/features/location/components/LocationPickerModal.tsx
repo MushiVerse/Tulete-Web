@@ -12,7 +12,7 @@ import {
 } from '../../../shared/components/ui/Dialog';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
-import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock } from 'lucide-react';
+import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock, Plus, Minus, RotateCw, Crosshair, Maximize2 } from 'lucide-react';
 import { useLocationStore, SavedLocation } from '../store/useLocationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { storageService } from '../../../core/services/storageService';
@@ -54,10 +54,16 @@ export const LocationPickerModal = ({
   const [addressText, setAddressText] = useState('');
   const [specificInstructions, setSpecificInstructions] = useState('');
   const [isLocating, setIsLocating] = useState(false);
-  
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  // Adjust container height based on fullscreen mode
+  const dynamicContainerStyle = {
+    ...containerStyle,
+    height: isFullScreen ? '80vh' : containerStyle.height,
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -238,8 +244,8 @@ export const LocationPickerModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden bg-card">
-        <DialogHeader className="p-5 border-b border-border bg-gradient-to-r from-primary/10 to-transparent relative overflow-hidden">
+      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden bg-card flex flex-col max-h-[90vh] w-[95vw] sm:w-full">
+        <DialogHeader className="p-5 border-b border-border bg-gradient-to-r from-primary/10 to-transparent relative overflow-hidden shrink-0">
           <DialogTitle className="text-xl font-extrabold flex flex-col gap-1 text-foreground relative z-10">
             <span className="flex items-center gap-2">
               <MapPin className="w-6 h-6 text-primary" />
@@ -252,7 +258,7 @@ export const LocationPickerModal = ({
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
         </DialogHeader>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-5 overflow-y-auto flex-1 hide-scrollbar">
           {/* Quick Select Saved Locations */}
           {savedLocations.length > 0 && (
             <div className="space-y-2.5">
@@ -328,16 +334,19 @@ export const LocationPickerModal = ({
           >
             {isLoaded ? (
               <GoogleMap
-                mapContainerStyle={containerStyle}
+                mapContainerStyle={dynamicContainerStyle}
                 center={mapCenter}
                 zoom={14}
                 onClick={onMapClick}
                 onLoad={(map) => { mapRef.current = map; }}
                 options={{
                   disableDefaultUI: true,
-                  zoomControl: true,
+                  zoomControl: false,
+                  gestureHandling: 'greedy',
+                  streetViewControl: false,
+                  mapTypeControl: false,
+                  fullscreenControl: false,
                   styles: [
-                    // Modern clean styling
                     { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
                   ]
                 }}
@@ -348,6 +357,29 @@ export const LocationPickerModal = ({
                     animation={google.maps.Animation.DROP}
                   />
                 )}
+                {/* One‑hand toolbar – top‑left for thumb reach */}
+                <div className="absolute left-2 top-2 flex flex-col bg-white/80 rounded-lg shadow-md p-1 space-y-1">
+                  <button onClick={() => {
+                    const map = mapRef.current;
+                    if (map) map.setZoom((map.getZoom() || 14) + 1);
+                  }} className="p-1 hover:bg-primary/10">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => {
+                    const map = mapRef.current;
+                    if (map) map.setZoom((map.getZoom() || 14) - 1);
+                  }} className="p-1 hover:bg-primary/10">
+                    <Minus className="w-5 h-5" />
+                  </button>
+                  <button onClick={handleUseCurrentLocation} className="p-1 hover:bg-primary/10">
+                    <Crosshair className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => {
+                    setIsFullScreen(prev => !prev);
+                  }} className="p-1 hover:bg-primary/10">
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                </div>
               </GoogleMap>
             ) : (
               <div className="w-full h-[200px] bg-muted flex items-center justify-center animate-pulse">
@@ -421,7 +453,7 @@ export const LocationPickerModal = ({
 
         </div>
 
-        <div className="p-5 border-t border-border bg-muted/30 flex justify-between items-center">
+        <div className="p-5 border-t border-border bg-muted/30 flex justify-between items-center shrink-0">
           <Button variant="ghost" onClick={onClose} className="text-muted-foreground font-semibold">
             Cancel
           </Button>
