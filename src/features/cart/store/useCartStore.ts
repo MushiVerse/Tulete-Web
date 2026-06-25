@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { storeService } from '../../stores/services/storeService';
 import { APP_SETTINGS } from '@/core/config/settings';
 
 export interface CartItem {
@@ -141,12 +143,10 @@ export const useCartStore = create<CartState>()(
         let subtotal = 0;
         let deliveryFee = 0;
 
-        // Try to get user location and stores for dynamic pricing
+        // Get user location and stores for dynamic pricing
         let userLocation = null;
         let allStores: any[] = [];
         try {
-          const { useLocationStore } = require('../../location/store/useLocationStore');
-          const { storeService } = require('../../stores/services/storeService');
           userLocation = useLocationStore.getState().currentLocation;
           allStores = storeService.getMockStores();
         } catch (e) {
