@@ -12,8 +12,9 @@ import {
 } from '../../../shared/components/ui/Dialog';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
-import { MapPin, Navigation, Search, Check } from 'lucide-react';
+import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle } from 'lucide-react';
 import { useLocationStore } from '../store/useLocationStore';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const containerStyle = {
   width: '100%',
@@ -185,11 +186,17 @@ export const LocationPickerModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden bg-card">
-        <DialogHeader className="p-5 border-b border-border bg-muted/40">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
-            <MapPin className="w-5 h-5 text-primary" />
-            Set Delivery Location
+        <DialogHeader className="p-5 border-b border-border bg-gradient-to-r from-primary/10 to-transparent relative overflow-hidden">
+          <DialogTitle className="text-xl font-extrabold flex flex-col gap-1 text-foreground relative z-10">
+            <span className="flex items-center gap-2">
+              <MapPin className="w-6 h-6 text-primary" />
+              Where to? 🛵
+            </span>
+            <span className="text-xs font-semibold text-muted-foreground mt-1 leading-relaxed">
+              Set your location to see accurate pricing and exact delivery times. ✨
+            </span>
           </DialogTitle>
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
         </DialogHeader>
 
         <div className="p-5 space-y-5">
@@ -222,16 +229,22 @@ export const LocationPickerModal = ({
 
           <Button 
             variant="outline" 
-            className="w-full justify-start gap-2 border-primary/20 text-primary hover:bg-primary/5 hover:text-primary transition-all font-bold"
+            className={`w-full justify-start gap-2 border-primary/30 text-primary transition-all font-extrabold py-6 rounded-xl shadow-sm ${
+              isLocating ? 'bg-primary/10 animate-pulse' : 'hover:bg-primary/10 hover:border-primary'
+            }`}
             onClick={handleUseCurrentLocation}
             disabled={isLocating}
           >
-            <Navigation className={`w-4 h-4 ${isLocating ? 'animate-pulse' : ''}`} />
-            {isLocating ? 'Locating you...' : 'Use Current Location'}
+            <Navigation className={`w-5 h-5 ${isLocating ? 'animate-bounce' : ''}`} />
+            {isLocating ? 'Locating you...' : 'Use Current Location 📍'}
           </Button>
 
           {/* Map Area */}
-          <div className="relative rounded-xl overflow-hidden shadow-inner border border-border">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative rounded-2xl overflow-hidden shadow-inner border border-border/60"
+          >
             {isLoaded ? (
               <GoogleMap
                 mapContainerStyle={containerStyle}
@@ -260,25 +273,34 @@ export const LocationPickerModal = ({
                 <span className="text-muted-foreground font-medium">Loading Map...</span>
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Specific Instructions input appears only if location is selected */}
+          <AnimatePresence>
           {selectedPos && (
-            <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <label className="text-sm font-bold text-foreground">
-                Specific Destination Details
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-2 overflow-hidden"
+            >
+              <label className="text-sm font-extrabold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-warning" />
+                Any landmarks? (Optional)
               </label>
               <Input
-                placeholder="Ex Nyerere Square, NHIF, Plot No, Floor..."
+                placeholder="e.g. Near the big mango tree, Red gate..."
                 value={specificInstructions}
                 onChange={(e) => setSpecificInstructions(e.target.value)}
-                className="bg-card border-border"
+                className="bg-card border-border/60 h-12 rounded-xl focus:ring-primary shadow-sm"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Help our delivery partner find you quickly.
+              <p className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Helps our riders find you lightning fast ⚡
               </p>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
         </div>
 

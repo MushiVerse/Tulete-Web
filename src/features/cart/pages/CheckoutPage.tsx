@@ -62,35 +62,9 @@ export const CheckoutPage = () => {
   // Standard mock store coordinate in Westlands
   const storeLocation = { lat: -1.2635, lng: 36.8049 };
   
-  // Calculate dynamic delivery fee based on Flutter legacy math
-  const distanceKm = locationService.calculateDistance(storeLocation, selectedLocation);
-  let computedDeliveryFee = 0;
-  
-  if (isLaundryOrder) {
-    // Nguo (Laundry) tiered delivery fee math
-    const roundedFee = Math.ceil(Math.round(distanceKm) * deliveryRation);
-    let multiplier = 0;
-    while (roundedFee > (100 * (multiplier + 1))) {
-      multiplier++;
-    }
-    let baseFee = roundedFee - (100 * multiplier);
-    if (roundedFee <= 0) baseFee += 50;
-    else if (roundedFee >= 0 && roundedFee < 2000) baseFee += 0;
-    else if (roundedFee >= 2000 && roundedFee <= 3000) baseFee += 200;
-    else if (roundedFee >= 3000 && roundedFee <= 5000) baseFee += 300;
-    else if (roundedFee >= 5000 && roundedFee <= 7000) baseFee += 400;
-    else if (roundedFee >= 7000 && roundedFee <= 9000) baseFee += 500;
-    else if (roundedFee >= 9000 && roundedFee <= 15000) baseFee += 700;
-    else if (roundedFee >= 15000) baseFee += 1200;
-    computedDeliveryFee = baseFee;
-  } else {
-    // Food/Products delivery fee math
-    const priceOg = total; // Without delivery
-    const priceWithDelivery = Math.ceil((Math.round(distanceKm) * deliveryRation) + priceOg);
-    computedDeliveryFee = Math.ceil(priceWithDelivery - priceOg);
-  }
-
-  const finalTotalWithDelivery = total + computedDeliveryFee;
+  // Delivery fee is already baked into the total via useCartStore.
+  const finalTotalWithDelivery = total;
+  const computedDeliveryFee = 0;
 
   if (items.length === 0) {
     return (
@@ -347,11 +321,7 @@ export const CheckoutPage = () => {
 
             <div className="border-t border-border pt-4 space-y-3 mb-6">
               <div className="flex justify-between items-center text-lg font-extrabold text-foreground">
-                <span>
-                  {isLaundryOrder 
-                    ? `Total + Pickup Fee (${deliveryFee.toLocaleString()})`
-                    : 'Total'}
-                </span>
+                <span>Total to Pay</span>
                 <span className="text-primary">{finalTotalWithDelivery.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>

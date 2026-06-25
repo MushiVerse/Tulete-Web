@@ -6,6 +6,7 @@ import { Product } from '../../../features/products/services/productService';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { useDynamicPrice } from '../../../features/location/hooks/useDynamicPrice';
 
 interface ProductCardProps {
   product: Product;
@@ -21,12 +22,16 @@ export const ProductCard = ({
   isFavorite = false 
 }: ProductCardProps) => {
   
+  const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
+  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory);
+  const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory) : undefined;
+
   // Format price
   const formattedPrice = new Intl.NumberFormat('en-TZ', {
     style: 'currency',
     currency: 'TZS',
     maximumFractionDigits: 0
-  }).format(product.price);
+  }).format(magicPrice);
 
   return (
     <motion.div
@@ -43,7 +48,7 @@ export const ProductCard = ({
                 HOT 🔥
               </span>
             )}
-            {product.oldprice && product.oldprice > product.price && (
+            {magicOldPrice && magicOldPrice > magicPrice && (
               <span className="text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md bg-success/90 text-primary-foreground tracking-wide">
                 SALE
               </span>
@@ -102,9 +107,9 @@ export const ProductCard = ({
 
             <div className="flex items-end justify-between mt-auto pt-3 border-t border-border/50">
               <div className="flex flex-col">
-                {product.oldprice && product.oldprice > product.price && (
+                {magicOldPrice && magicOldPrice > magicPrice && (
                   <span className="text-[10px] font-bold text-muted-foreground line-through mb-0.5">
-                    {new Intl.NumberFormat('en-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(product.oldprice)}
+                    {new Intl.NumberFormat('en-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(magicOldPrice)}
                   </span>
                 )}
                 <span className="font-extrabold text-sm sm:text-[15px] text-foreground">

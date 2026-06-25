@@ -16,6 +16,7 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { productService, Product } from '../../products/services/productService';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 
 // --- Static Data ---
 const FOOD_CATEGORIES = [
@@ -58,6 +59,75 @@ const PROMOS = [
   }
 ];
 
+
+
+const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
+  const dynamicPrice = useDynamicPrice(meal.price, meal.storeId, false);
+
+  return (
+    <div className="flex flex-col h-full">
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group bg-card border-border"
+      >
+        <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
+          <img src={meal.imgUrl} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+            <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
+            <span className="text-xs font-extrabold">{meal.rating}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col flex-1">
+          <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5">{meal.store}</p>
+          <h3 className="font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors">{meal.name}</h3>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
+            <Clock className="w-3.5 h-3.5" /> 20-30 min
+          </div>
+          
+          <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border">
+            <div>
+              <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
+              <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {dynamicPrice.toLocaleString()}</span>
+            </div>
+            
+            {cartItem ? (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
+                  <button onClick={() => updateQuantity(meal.id, cartItem.quantity - 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm">
+                    <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  </button>
+                  <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
+                  <button onClick={() => updateQuantity(meal.id, cartItem.quantity + 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                    <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => addToCart({
+                  productId: meal.id,
+                  name: meal.name,
+                  price: meal.price,
+                  imageUrl: meal.imgUrl,
+                  storeId: meal.storeId,
+                  storeName: meal.store,
+                  cat: 'Food'
+                })}
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" /> Add
+              </button>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 
 export const FoodPage = () => {
@@ -264,67 +334,7 @@ export const FoodPage = () => {
                   {filteredMeals.map((meal) => {
                     const cartItem = cartItems.find(i => i.productId === meal.id);
                     return (
-                      <div key={meal.id} className="flex flex-col h-full">
-                        <motion.div
-                          layout
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group bg-card border-border"
-                        >
-                          <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
-                            <img src={meal.imgUrl} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                            <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                              <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
-                              <span className="text-xs font-extrabold">{meal.rating}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col flex-1">
-                            <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5">{meal.store}</p>
-                            <h3 className="font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors">{meal.name}</h3>
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
-                              <Clock className="w-3.5 h-3.5" /> 20-30 min
-                            </div>
-                            
-                            <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border">
-                              <div>
-                                <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
-                                <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {meal.price.toLocaleString()}</span>
-                              </div>
-                              
-                              {cartItem ? (
-                                <div className="flex items-center gap-1.5 sm:gap-2">
-                                  <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
-                                    <button onClick={() => updateQuantity(meal.id, cartItem.quantity - 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm">
-                                      <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                    </button>
-                                    <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
-                                    <button onClick={() => updateQuantity(meal.id, cartItem.quantity + 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
-                                      <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => addToCart({
-                                    productId: meal.id,
-                                    name: meal.name,
-                                    price: meal.price,
-                                    imageUrl: meal.imgUrl,
-                                    storeId: meal.storeId,
-                                    storeName: meal.store,
-                                    cat: 'Food'
-                                  })}
-                                  className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
-                                >
-                                  <Plus className="w-4 h-4" /> Add
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </motion.div>
-                      </div>
+                      <MealCard key={meal.id} meal={meal} cartItem={cartItem} updateQuantity={updateQuantity} addToCart={addToCart} />
                     );
                   })}
                 </AnimatePresence>

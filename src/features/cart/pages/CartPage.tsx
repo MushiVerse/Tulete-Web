@@ -281,11 +281,7 @@ export const CartPage = () => {
             
             <div className="space-y-3 text-sm mb-6">
               <div className="flex justify-between text-base font-extrabold text-foreground">
-                <span>
-                  {isLaundryOrder 
-                    ? `Total + Pickup Fee (${deliveryFee.toLocaleString()})`
-                    : 'Total'}
-                </span>
+                <span>Total to Pay</span>
                 <span>{total.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>

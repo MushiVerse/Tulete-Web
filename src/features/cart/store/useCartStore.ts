@@ -181,7 +181,7 @@ export const useCartStore = create<CartState>()(
                  else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
                  else { itemDeliveryFee = 1200; }
                  
-                 deliveryFee += itemDeliveryFee;
+                 itemTotal += itemDeliveryFee; // Baked directly into the item cost
                } else {
                  // For Food/Products, distance fee is baked into the price
                  // Unless the user chose Pick Up (isDeliverySelected === false)
@@ -198,12 +198,9 @@ export const useCartStore = create<CartState>()(
         // The fee is inside the prices, no separate service fee (matches Flutter)
         const serviceFee = 0;
         let total = subtotal;
-        
-        if (items.some(i => i.isLaundry)) {
-           total += deliveryFee;
-        }
 
-        return { subtotal: Math.round(subtotal), deliveryFee: Math.round(deliveryFee), serviceFee, total: Math.round(total), itemCount };
+        // Delivery fee is forced to 0 for the UI since it is already baked into the subtotal/item costs
+        return { subtotal: Math.round(subtotal), deliveryFee: 0, serviceFee, total: Math.round(total), itemCount };
       },
     }),
     {
