@@ -170,7 +170,7 @@ export const LaundryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
-  const { addToCart, items: cartItems, updateQuantity, clearCart } = useCartStore();
+  const { addToCart, items: cartItems, removeFromCart, updateQuantity, clearCart } = useCartStore();
 
   const [items, setItems] = useState<LaundryItem[]>([]);
   const [ads, setAds] = useState<{ imgURL: string; store: string }[]>([]);
@@ -453,10 +453,10 @@ export const LaundryPage = () => {
                             {APP_SETTINGS.currency} {calculateItemTotal(cartItem).toLocaleString()}
                           </span>
                           <button
-                            onClick={() => updateQuantity(cartItem.productId, 0)}
+                            onClick={() => removeFromCart(cartItem.productId)}
                             title="Remove item"
                             aria-label={`Remove ${cartItem.name}`}
-                            className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all ml-1"
+                            className="focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-destructive hover:text-primary hover:bg-primary/10 transition-all ml-1"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -477,9 +477,9 @@ export const LaundryPage = () => {
                     </Button>
                     <button
                       onClick={() => clearCart()}
-                      className="w-full mt-3 text-xs font-semibold text-muted-foreground hover:text-red-500 transition-colors py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20"
+                      className="w-full mt-3 text-xs font-semibold text-destructive hover:text-primary transition-colors py-2 rounded-xl hover:bg-primary/10 flex items-center justify-center gap-1.5"
                     >
-                      Clear Cart
+                      <Trash2 className="w-3.5 h-3.5" /> Clear Cart
                     </button>
                   </div>
                 </>

@@ -5,7 +5,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { 
   Search, MapPin, Star, Heart, Flame, 
   Utensils, Store as StoreIcon, Tag, ArrowRight, 
-  Sparkles, Bell, CheckCircle2, Clock, ShoppingBag, ChevronRight, LayoutGrid 
+  Sparkles, Bell, CheckCircle2, Clock, ShoppingBag, ChevronRight, LayoutGrid, Trash2 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
@@ -349,7 +349,7 @@ export const HomePage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
-  const { items: cartItems, getTotals, addToCart } = useCartStore();
+  const { items: cartItems, getTotals, addToCart, removeFromCart, clearCart } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
 
@@ -956,13 +956,22 @@ export const HomePage = () => {
 
                   <div className="space-y-3 mb-4 max-h-[250px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="flex justify-between items-center text-sm">
+                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
                         <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
                           {cartItem.quantity}x {cartItem.name}
                         </span>
-                        <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <span className="font-extrabold text-foreground">
+                            {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
+                          </span>
+                          <button
+                            onClick={() => removeFromCart(cartItem.productId)}
+                            title="Remove item"
+                            className="focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-destructive hover:text-primary hover:bg-primary/10 transition-all ml-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -978,6 +987,12 @@ export const HomePage = () => {
                     >
                       Checkout Now <ArrowRight className="w-4 h-4" />
                     </Button>
+                    <button
+                      onClick={() => clearCart()}
+                      className="w-full mt-3 text-xs font-semibold text-destructive hover:text-primary transition-colors py-2 rounded-xl hover:bg-primary/10 flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Clear Cart
+                    </button>
                   </div>
                 </div>
               )}
@@ -1092,18 +1107,28 @@ export const HomePage = () => {
               exit={{ y: 80, opacity: 0 }}
               className="xl:hidden fixed bottom-20 left-4 right-4 z-50"
             >
-              <Button
-                onClick={handleCheckout}
-                className="w-full py-6 text-base font-extrabold shadow-2xl flex items-center justify-between px-6 rounded-3xl bg-primary text-primary-foreground"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-background/20 px-3 py-1 rounded-full text-xs">
-                    {cartItems.length}
+              <div className="flex items-stretch gap-2">
+                <Button
+                  onClick={handleCheckout}
+                  className="flex-1 py-4 md:py-6 text-sm md:text-base font-extrabold shadow-2xl flex items-center justify-between px-4 md:px-6 rounded-3xl bg-primary text-primary-foreground"
+                >
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="bg-background/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs">
+                      {cartItems.length}
+                    </div>
+                    <span>Checkout</span>
                   </div>
-                  <span>Checkout</span>
-                </div>
-                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
-              </Button>
+                  <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                </Button>
+                
+                <button
+                  onClick={() => clearCart()}
+                  title="Clear Cart"
+                  className="w-14 shrink-0 bg-card border border-border shadow-2xl rounded-3xl flex items-center justify-center text-destructive hover:text-primary transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

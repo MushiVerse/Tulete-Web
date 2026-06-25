@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Filter, Grid, List as ListIcon, X, Search } from 'lucide-react';
+import { Filter, Grid, List as ListIcon, X, Search, Trash2, ArrowRight } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { useFilterStore } from '../store/useFilterStore';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { useCartStore } from '../../cart/store/useCartStore';
+import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
+import { APP_SETTINGS } from '../../../core/config/settings';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '../../../shared/components/ui/Button';
 
 export const DiscoveryPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,6 +31,34 @@ export const DiscoveryPage = () => {
   const [loading, setLoading] = useState(true);
 
   const [products, setProducts] = useState<any[]>([]);
+
+  // Cart & Auth
+  const { items: cartItems, addToCart, clearCart, getTotals } = useCartStore();
+  const { openModal } = useAuthModalStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  const { total: cartTotal } = getTotals();
+  const hasItems = cartItems.length > 0;
+
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      openModal('login');
+      return;
+    }
+    navigate('/cart');
+  };
+
+  const handleAddToCart = (product: any) => {
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      imageUrl: product.imgUrl,
+      storeId: product.storeId || 'unknown',
+      storeName: product.store || 'Unknown Store',
+      cat: 'Product',
+    });
+  };
 
   // Sync URL category to store on mount
   useEffect(() => {
@@ -172,6 +206,7 @@ export const DiscoveryPage = () => {
                     <div key={product.id} className={viewMode === 'list' ? 'h-[140px]' : ''}>
                       <ProductCard 
                         product={product}
+                        onAddToCart={handleAddToCart}
                       />
                     </div>
                   );
@@ -180,6 +215,42 @@ export const DiscoveryPage = () => {
             )}
           </div>
         </div>
+
+        {/* Mobile Sticky Cart */}
+        <AnimatePresence>
+          {hasItems && (
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              className="xl:hidden fixed bottom-20 left-4 right-4 z-50"
+            >
+              <div className="flex items-stretch gap-2">
+                <Button
+                  onClick={handleCheckout}
+                  className="flex-1 py-4 md:py-6 text-sm md:text-base font-extrabold shadow-2xl flex items-center justify-between px-4 md:px-6 rounded-3xl bg-primary text-primary-foreground"
+                >
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="bg-background/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs">
+                      {cartItems.length}
+                    </div>
+                    <span>Checkout</span>
+                  </div>
+                  <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                </Button>
+                
+                <button
+                  onClick={() => clearCart()}
+                  title="Clear Cart"
+                  className="w-14 shrink-0 bg-card border border-border shadow-2xl rounded-3xl flex items-center justify-center text-destructive hover:text-primary transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </PageWrapper>
   );

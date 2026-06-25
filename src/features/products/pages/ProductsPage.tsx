@@ -72,7 +72,7 @@ export const ProductsPage = () => {
   }, [searchQuery]);
   
   // Cart & Auth
-  const { items: cartItems, addToCart, updateQuantity, clearCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const { openModal } = useAuthModalStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   
@@ -366,10 +366,10 @@ export const ProductsPage = () => {
                             {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
                           </span>
                           <button
-                            onClick={() => updateQuantity(cartItem.productId, 0)}
+                            onClick={() => removeFromCart(cartItem.productId)}
                             title="Remove item"
                             aria-label={`Remove ${cartItem.name}`}
-                            className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all ml-1"
+                            className="focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-destructive hover:text-primary hover:bg-primary/10 transition-all ml-1"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -390,9 +390,9 @@ export const ProductsPage = () => {
                     </Button>
                     <button
                       onClick={() => clearCart()}
-                      className="w-full mt-3 text-xs font-semibold text-muted-foreground hover:text-red-500 transition-colors py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20"
+                      className="w-full mt-3 text-xs font-semibold text-destructive hover:text-primary transition-colors py-2 rounded-xl hover:bg-primary/10 flex items-center justify-center gap-1.5"
                     >
-                      Clear Cart
+                      <Trash2 className="w-3.5 h-3.5" /> Clear Cart
                     </button>
                   </div>
                 </>

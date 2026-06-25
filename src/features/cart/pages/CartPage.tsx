@@ -61,7 +61,7 @@ export const CartPage = () => {
               <button
                 onClick={() => clearCart()}
                 title="Clear all items"
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 px-3 py-1.5 rounded-full border border-border hover:border-red-200 dark:hover:border-red-800 transition-all group"
+                className="flex items-center gap-1.5 text-xs font-semibold text-destructive hover:text-primary hover:bg-primary/10 px-3 py-1.5 rounded-full border border-border hover:border-primary/20 transition-all group"
               >
                 <X className="w-3.5 h-3.5" />
                 Clear Cart
@@ -153,7 +153,7 @@ export const CartPage = () => {
                     {/* Delete button — revealed on row hover */}
                     <button
                       onClick={() => removeFromCart(item.productId)}
-                      className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 p-1.5 sm:p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-all self-start shrink-0 focus:opacity-100"
+                      className="text-destructive hover:text-primary p-1.5 sm:p-2 rounded-full hover:bg-primary/10 transition-all self-start shrink-0 focus:opacity-100"
                       title="Remove item"
                       aria-label={`Remove ${item.name} from cart`}
                     >
