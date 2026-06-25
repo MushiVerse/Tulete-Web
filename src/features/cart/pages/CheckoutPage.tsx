@@ -25,7 +25,7 @@ export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { items, getTotals, clearCart, laundryPreferences } = useCartStore();
-  const { subtotal, serviceFee, total } = getTotals();
+  const { total, deliveryFee } = getTotals();
 
   const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
   const { deliverytime, instructions: laundryInstructions } = laundryPreferences;
@@ -345,25 +345,14 @@ export const CheckoutPage = () => {
               ))}
             </div>
 
-            <div className="border-t border-border pt-4 space-y-3 text-xs mb-6">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
-                <span className="font-semibold text-foreground">{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
-              </div>
-              
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Distance Cost (Est.)</span>
-                <span className="font-medium text-slate-700">
-                  {computedDeliveryFee === 0 ? 'FREE' : `${computedDeliveryFee.toLocaleString()} ${APP_SETTINGS.currency}`}
+            <div className="border-t border-border pt-4 space-y-3 mb-6">
+              <div className="flex justify-between items-center text-lg font-extrabold text-foreground">
+                <span>
+                  {isLaundryOrder 
+                    ? `Total + Pickup Fee (${deliveryFee.toLocaleString()})`
+                    : 'Total'}
                 </span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Service Fee</span>
-                <span className="font-semibold text-foreground">{serviceFee.toLocaleString()} {APP_SETTINGS.currency}</span>
-              </div>
-              <div className="border-t border-border pt-4 flex justify-between text-sm font-extrabold text-foreground">
-                <span>Total Amount</span>
-                <span>{finalTotalWithDelivery.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span className="text-primary">{finalTotalWithDelivery.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>
 

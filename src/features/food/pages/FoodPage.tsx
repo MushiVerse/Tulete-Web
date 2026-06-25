@@ -126,7 +126,7 @@ export const FoodPage = () => {
     return matchesSearch;
   });
 
-  const { subtotal, deliveryFee, total: cartTotal } = getTotals();
+  const { deliveryFee, total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
 
   const handleCheckout = () => {

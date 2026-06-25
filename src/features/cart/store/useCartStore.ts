@@ -139,17 +139,71 @@ export const useCartStore = create<CartState>()(
         const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
         
         let subtotal = 0;
+        let deliveryFee = 0;
+
+        // Try to get user location and stores for dynamic pricing
+        let userLocation = null;
+        let allStores: any[] = [];
+        try {
+          const { useLocationStore } = require('../../location/store/useLocationStore');
+          const { storeService } = require('../../stores/services/storeService');
+          userLocation = useLocationStore.getState().currentLocation;
+          allStores = storeService.getMockStores();
+        } catch (e) {
+           console.warn('Could not load location/store service for dynamic pricing');
+        }
         
         items.forEach(item => {
-          subtotal += calculateItemTotal(item);
+          let itemTotal = calculateItemTotal(item);
+          let itemDeliveryFee = 0;
+
+          if (userLocation && allStores.length > 0) {
+            const store = allStores.find(s => s.id === item.storeId);
+            if (store && store.location) {
+               // Using Haversine formula from storeService
+               const R = 6371;
+               const dLat = (store.location.lat - userLocation.lat) * (Math.PI / 180);
+               const dLon = (store.location.lng - userLocation.lng) * (Math.PI / 180);
+               const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLocation.lat * (Math.PI / 180)) * Math.cos(store.location.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+               const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+               const distanceKm = R * c;
+
+               const roundedFee = distanceKm * 1000; // 1000 TZS per km
+
+               if (item.isLaundry) {
+                 // Tiered pickup fee for laundry (mirrors Flutter logic)
+                 if (roundedFee <= 0) { itemDeliveryFee = 50; }
+                 else if (roundedFee < 2000) { itemDeliveryFee = 0; }
+                 else if (roundedFee <= 3000) { itemDeliveryFee = 200; }
+                 else if (roundedFee <= 5000) { itemDeliveryFee = 300; }
+                 else if (roundedFee <= 7000) { itemDeliveryFee = 400; }
+                 else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
+                 else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
+                 else { itemDeliveryFee = 1200; }
+                 
+                 deliveryFee += itemDeliveryFee;
+               } else {
+                 // For Food/Products, distance fee is baked into the price
+                 // Unless the user chose Pick Up (isDeliverySelected === false)
+                 if (item.isDeliverySelected !== false) {
+                   itemTotal += roundedFee;
+                 }
+               }
+            }
+          }
+
+          subtotal += itemTotal;
         });
 
-        // Dynamic mock rules for delivery and service fees
-        const deliveryFee = 0; // The fee is inside the prices
-        const serviceFee = subtotal > 0 ? 45 : 0;
-        let total = subtotal + deliveryFee + serviceFee;
+        // The fee is inside the prices, no separate service fee (matches Flutter)
+        const serviceFee = 0;
+        let total = subtotal;
+        
+        if (items.some(i => i.isLaundry)) {
+           total += deliveryFee;
+        }
 
-        return { subtotal: Math.round(subtotal), deliveryFee, serviceFee, total: Math.round(total), itemCount };
+        return { subtotal: Math.round(subtotal), deliveryFee: Math.round(deliveryFee), serviceFee, total: Math.round(total), itemCount };
       },
     }),
     {

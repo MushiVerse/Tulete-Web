@@ -4,7 +4,7 @@ import { useCartStore, calculateItemTotal } from '../store/useCartStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Switch } from '../../../shared/components/ui/Switch';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle, MapPin } from 'lucide-react';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
@@ -148,6 +148,23 @@ export const CartPage = () => {
                           })}
                         </div>
                       )}
+
+                      {/* Per-Item Non-Laundry Customization (Pick Up Toggle) */}
+                      {!item.isLaundry && (
+                        <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
+                          <button
+                            onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                              item.isDeliverySelected === false 
+                                ? 'bg-primary border-primary text-primary-foreground scale-105' 
+                                : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false ? 'fill-current' : ''}`} />
+                            Pick Up (No Distance Fee)
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Delete button — revealed on row hover */}
@@ -263,18 +280,12 @@ export const CartPage = () => {
             <h2 className="text-xl font-bold text-foreground mb-4">Summary</h2>
             
             <div className="space-y-3 text-sm mb-6">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
-                <span className="font-medium text-foreground">{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
-              </div>
-              {/* Delivery fee is included in prices */}
-              <div className="flex justify-between text-muted-foreground">
-                <span>Service Fee</span>
-                <span className="font-medium text-foreground">{serviceFee.toLocaleString()} {APP_SETTINGS.currency}</span>
-              </div>
-              <div className="border-t border-border my-4"></div>
               <div className="flex justify-between text-base font-extrabold text-foreground">
-                <span>Grand Total</span>
+                <span>
+                  {isLaundryOrder 
+                    ? `Total + Pickup Fee (${deliveryFee.toLocaleString()})`
+                    : 'Total'}
+                </span>
                 <span>{total.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>

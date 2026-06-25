@@ -109,17 +109,30 @@ export const LocationPickerModal = ({
               setValue(results[0].formatted_address, false);
             }
           } catch (e) {
-            console.error(e);
-            setAddressText('Current Location Selected');
+            console.error('Google Maps Geocoding failed:', e);
+            // Fallback to OpenStreetMap Nominatim from locationService
+            try {
+              const { locationService } = await import('../services/locationService');
+              const fallbackAddress = await locationService.reverseGeocode(lat, lng);
+              setAddressText(fallbackAddress);
+              setValue(fallbackAddress, false);
+            } catch (fallbackErr) {
+              setAddressText('Current Location Selected');
+            }
           }
           setIsLocating(false);
         },
-        () => {
+        (error) => {
+          console.error('Geolocation error:', error);
           setIsLocating(false);
-          // Only alert if they explicitly clicked the button, not on auto-locate
-        }
+          if (error.code === error.PERMISSION_DENIED) {
+            alert('Location access was denied. Please enable it in your browser settings.');
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
+      alert('Geolocation is not supported by your browser.');
       setIsLocating(false);
     }
   }, [setValue]);
@@ -145,7 +158,16 @@ export const LocationPickerModal = ({
         setValue(results[0].formatted_address, false);
       }
     } catch (err) {
-      setAddressText('Custom Map Location');
+      console.error('Google Maps Geocoding failed on map click:', err);
+      // Fallback to OpenStreetMap Nominatim
+      try {
+        const { locationService } = await import('../services/locationService');
+        const fallbackAddress = await locationService.reverseGeocode(lat, lng);
+        setAddressText(fallbackAddress);
+        setValue(fallbackAddress, false);
+      } catch (fallbackErr) {
+        setAddressText('Custom Map Location');
+      }
     }
   }, [setValue]);
 
