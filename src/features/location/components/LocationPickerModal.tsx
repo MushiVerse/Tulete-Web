@@ -12,9 +12,10 @@ import {
 } from '../../../shared/components/ui/Dialog';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
-import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle } from 'lucide-react';
-import { useLocationStore } from '../store/useLocationStore';
+import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock } from 'lucide-react';
+import { useLocationStore, SavedLocation } from '../store/useLocationStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { storageService } from '../../../core/services/storageService';
 
 const containerStyle = {
   width: '100%',
@@ -41,7 +42,7 @@ export const LocationPickerModal = ({
   isLoaded: boolean;
 }) => {
 
-  const { addSavedLocation, currentLocation } = useLocationStore();
+  const { addSavedLocation, currentLocation, savedLocations, setCurrentLocation } = useLocationStore();
   
   const [mapCenter, setMapCenter] = useState(
     currentLocation ? { lat: currentLocation.lat, lng: currentLocation.lng } : defaultCenter
@@ -53,8 +54,36 @@ export const LocationPickerModal = ({
   const [addressText, setAddressText] = useState('');
   const [specificInstructions, setSpecificInstructions] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+  
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+
+  // Clean up preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedImage(file);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const {
     ready,
@@ -172,14 +201,38 @@ export const LocationPickerModal = ({
     }
   }, [setValue]);
 
-  const handleSaveLocation = () => {
-    if (!selectedPos) return;
+  const handleSaveLocation = async () => {
+    if (!selectedPos || !specificInstructions.trim()) return;
+
+    let imageUrl = undefined;
+    if (selectedImage) {
+      setIsUploading(true);
+      try {
+        imageUrl = await storageService.uploadFile(selectedImage, 'location_images');
+      } catch (error) {
+        console.error('Failed to upload location image:', error);
+        // Continue saving location without image if upload fails
+      } finally {
+        setIsUploading(false);
+      }
+    }
+
     addSavedLocation({
       address: addressText || 'Custom Map Location',
       lat: selectedPos.lat,
       lng: selectedPos.lng,
       specificInstructions,
+      imageUrl,
     });
+    
+    // Reset states
+    setSpecificInstructions('');
+    removeImage();
+    onClose();
+  };
+
+  const handleQuickSelect = (loc: SavedLocation) => {
+    setCurrentLocation(loc);
     onClose();
   };
 
@@ -200,6 +253,34 @@ export const LocationPickerModal = ({
         </DialogHeader>
 
         <div className="p-5 space-y-5">
+          {/* Quick Select Saved Locations */}
+          {savedLocations.length > 0 && (
+            <div className="space-y-2.5">
+              <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5" /> Recent Locations
+              </label>
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x hide-scrollbar">
+                {savedLocations.map((loc) => (
+                  <button
+                    key={loc.id}
+                    onClick={() => handleQuickSelect(loc)}
+                    className="snap-start shrink-0 w-[200px] text-left p-3 rounded-xl border border-border bg-card hover:border-primary hover:bg-primary/5 transition-all shadow-sm group"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5 bg-primary/10 p-1 rounded-full text-primary">
+                        <MapPin className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-foreground truncate">{loc.address}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{loc.specificInstructions || 'No landmark'}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Search Box */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -282,22 +363,58 @@ export const LocationPickerModal = ({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="space-y-2 overflow-hidden"
+              className="space-y-4 overflow-hidden"
             >
-              <label className="text-sm font-extrabold text-foreground flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-warning" />
-                Any landmarks? (Optional)
-              </label>
-              <Input
-                placeholder="e.g. Near the big mango tree, Red gate..."
-                value={specificInstructions}
-                onChange={(e) => setSpecificInstructions(e.target.value)}
-                className="bg-card border-border/60 h-12 rounded-xl focus:ring-primary shadow-sm"
-              />
-              <p className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                Helps our riders find you lightning fast ⚡
-              </p>
+              <div className="space-y-2">
+                <label className="text-sm font-extrabold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-warning" />
+                  Any landmarks? <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  placeholder="e.g. Near the big mango tree, Red gate..."
+                  value={specificInstructions}
+                  onChange={(e) => setSpecificInstructions(e.target.value)}
+                  className="bg-card border-border/60 h-12 rounded-xl focus:ring-primary shadow-sm"
+                />
+                <p className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Helps our riders find you lightning fast ⚡ (Required)
+                </p>
+              </div>
+
+              {/* Optional Image Upload */}
+              <div className="space-y-2 pt-2 border-t border-border/40">
+                <label className="text-sm font-bold text-foreground flex items-center justify-between">
+                  <span>Photo of Location <span className="text-muted-foreground font-normal">(Optional)</span></span>
+                </label>
+                
+                {previewUrl ? (
+                  <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border group">
+                    <img src={previewUrl} alt="Location preview" className="w-full h-full object-cover" />
+                    <button 
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 bg-background/80 backdrop-blur p-1.5 rounded-full text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-14 border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-muted-foreground hover:text-primary"
+                  >
+                    <ImagePlus className="w-5 h-5" />
+                    Add a photo of your gate/door
+                  </button>
+                )}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                />
+              </div>
             </motion.div>
           )}
           </AnimatePresence>
@@ -310,11 +427,11 @@ export const LocationPickerModal = ({
           </Button>
           <Button 
             onClick={handleSaveLocation} 
-            disabled={!selectedPos}
+            disabled={!selectedPos || !specificInstructions.trim() || isUploading}
             className="font-bold shadow-md gap-2"
           >
-            <Check className="w-4 h-4" />
-            Set Location
+            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {isUploading ? 'Uploading...' : 'Set Location'}
           </Button>
         </div>
       </DialogContent>

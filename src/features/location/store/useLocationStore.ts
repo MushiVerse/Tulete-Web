@@ -7,6 +7,7 @@ export interface SavedLocation {
   lat: number;
   lng: number;
   specificInstructions?: string;
+  imageUrl?: string;
   lastUsedAt: number;
 }
 
