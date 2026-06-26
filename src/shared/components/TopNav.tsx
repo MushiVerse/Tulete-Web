@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Search, Menu, User, ShoppingBag, Heart, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import { Bell, Menu, User, ShoppingBag, Heart, Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../core/auth/useAuthStore';
@@ -135,14 +135,7 @@ export const TopNav = () => {
 
           {isAuthenticated ? (
             <>
-              <div className="relative hidden lg:block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="h-10 w-64 rounded-full border border-border bg-muted/50 pl-10 pr-4 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
-                />
-              </div>
+
 
               <button className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors">
                 <Bell className="size-5" />

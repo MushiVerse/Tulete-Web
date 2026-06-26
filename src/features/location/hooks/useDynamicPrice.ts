@@ -2,30 +2,41 @@ import { useState, useEffect } from 'react';
 import { useLocationStore } from '../store/useLocationStore';
 import { storeService } from '../../stores/services/storeService';
 
-export function useDynamicPrice(basePrice: number, storeId?: string, isLaundry?: boolean) {
+export function useDynamicPrice(basePrice: number, storeId?: string, isLaundry?: boolean, productLocation?: { lat: number; lng: number }) {
   const { currentLocation } = useLocationStore();
   const [magicPrice, setMagicPrice] = useState(basePrice);
 
   useEffect(() => {
-    if (!currentLocation || !storeId) {
+    if (!currentLocation) {
       setMagicPrice(basePrice);
       return;
     }
 
-    const allStores = storeService.getMockStores();
-    const store = allStores.find(s => s.id === storeId);
-    
-    if (store && store.location) {
+    let targetLocation = productLocation;
+
+    if (!targetLocation && storeId) {
+      const allStores = storeService.getMockStores();
+      const store = allStores.find(s => s.id === storeId);
+      if (store && store.location) {
+        targetLocation = store.location;
+      }
+    }
+
+    if (targetLocation) {
       const R = 6371;
-      const dLat = (store.location.lat - currentLocation.lat) * (Math.PI / 180);
-      const dLon = (store.location.lng - currentLocation.lng) * (Math.PI / 180);
+      const dLat = (targetLocation.lat - currentLocation.lat) * (Math.PI / 180);
+      const dLon = (targetLocation.lng - currentLocation.lng) * (Math.PI / 180);
       const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
-                Math.cos(currentLocation.lat * (Math.PI / 180)) * Math.cos(store.location.lat * (Math.PI / 180)) * 
+                Math.cos(currentLocation.lat * (Math.PI / 180)) * Math.cos(targetLocation.lat * (Math.PI / 180)) * 
                 Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distanceKm = R * c;
 
-      const roundedFee = distanceKm * 1000; // 1000 TZS per km
+      let calculatedFee = distanceKm * 1000;
+      if (distanceKm > 150) {
+        calculatedFee = 15000;
+      }
+      const roundedFee = Math.round(calculatedFee);
 
       if (isLaundry) {
         let itemDeliveryFee = 0;
@@ -38,14 +49,14 @@ export function useDynamicPrice(basePrice: number, storeId?: string, isLaundry?:
         else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
         else { itemDeliveryFee = 1200; }
         
-        setMagicPrice(basePrice + itemDeliveryFee);
+        setMagicPrice(Number(basePrice) + itemDeliveryFee);
       } else {
-        setMagicPrice(basePrice + roundedFee);
+        setMagicPrice(Number(basePrice) + roundedFee);
       }
     } else {
-      setMagicPrice(basePrice);
+      setMagicPrice(Number(basePrice));
     }
-  }, [basePrice, storeId, currentLocation, isLaundry]);
+  }, [basePrice, storeId, currentLocation, isLaundry, productLocation?.lat, productLocation?.lng]);
 
   return Math.round(magicPrice);
 }

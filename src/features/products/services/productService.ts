@@ -26,6 +26,7 @@ export interface Product extends BaseDocument {
   category: string;
   tags: string[]; // e.g. "Most Popular", "Super Saver"
   availability: boolean;
+  location?: { lat: number; lng: number };
 }
 
 class ProductService extends BaseFirestoreService<Product> {
@@ -53,6 +54,24 @@ class ProductService extends BaseFirestoreService<Product> {
       rating = 4.5 + ((data.name?.length || 5) % 5) / 10;
     }
 
+    let lat = undefined;
+    let lng = undefined;
+    
+    if (data.location && typeof data.location === 'string') {
+      const parts = data.location.split(',');
+      if (parts.length === 2) {
+        const parsedLat = parseFloat(parts[0].trim());
+        const parsedLng = parseFloat(parts[1].trim());
+        if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+          lat = parsedLat;
+          lng = parsedLng;
+        }
+      }
+    } else if (data.location && typeof data.location.lat === 'number' && typeof data.location.lng === 'number') {
+      lat = data.location.lat;
+      lng = data.location.lng;
+    }
+
     return {
       id: data.id,
       name: data.name || '',
@@ -67,6 +86,7 @@ class ProductService extends BaseFirestoreService<Product> {
       category: data.category || data.cat || '',
       tags: data.tags || [],
       availability: data.availability !== undefined ? !!data.availability : true,
+      location: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };

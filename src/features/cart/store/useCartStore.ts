@@ -25,6 +25,7 @@ export interface CartItem {
   
   // App-specific category ("Food", "Nguo", "Product") used by backend schema
   cat?: string; 
+  location?: { lat: number; lng: number };
 }
 
 export const calculateItemTotal = (item: CartItem): number => {
@@ -157,18 +158,29 @@ export const useCartStore = create<CartState>()(
           let itemTotal = calculateItemTotal(item);
           let itemDeliveryFee = 0;
 
-          if (userLocation && allStores.length > 0) {
-            const store = allStores.find(s => s.id === item.storeId);
-            if (store && store.location) {
+          if (userLocation) {
+            let targetLocation = item.location;
+            if (!targetLocation && allStores.length > 0) {
+              const store = allStores.find(s => s.id === item.storeId);
+              if (store && store.location) {
+                targetLocation = store.location;
+              }
+            }
+
+            if (targetLocation) {
                // Using Haversine formula from storeService
                const R = 6371;
-               const dLat = (store.location.lat - userLocation.lat) * (Math.PI / 180);
-               const dLon = (store.location.lng - userLocation.lng) * (Math.PI / 180);
-               const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLocation.lat * (Math.PI / 180)) * Math.cos(store.location.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+               const dLat = (targetLocation.lat - userLocation.lat) * (Math.PI / 180);
+               const dLon = (targetLocation.lng - userLocation.lng) * (Math.PI / 180);
+               const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLocation.lat * (Math.PI / 180)) * Math.cos(targetLocation.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                const distanceKm = R * c;
 
-               const roundedFee = distanceKm * 1000; // 1000 TZS per km
+               let calculatedFee = distanceKm * 1000;
+               if (distanceKm > 150) {
+                 calculatedFee = 15000;
+               }
+               const roundedFee = Math.round(calculatedFee);
 
                if (item.isLaundry) {
                  // Tiered pickup fee for laundry (mirrors Flutter logic)

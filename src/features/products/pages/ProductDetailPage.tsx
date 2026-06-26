@@ -13,6 +13,8 @@ import { SectionWrapper } from '../../dashboard/components/SectionWrapper';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 
@@ -30,6 +32,10 @@ export const ProductDetailPage = () => {
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const { items: cartItems, addToCart, getTotals } = useCartStore();
+  
+  // Subscribe to location store so price and cart total update instantly on location change
+  const { currentLocation } = useLocationStore();
+  
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   
@@ -95,6 +101,10 @@ export const ProductDetailPage = () => {
     'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=800&q=80',
     'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
   ];
+
+  const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(displayProduct.category);
+  const magicPrice = useDynamicPrice(displayProduct.price, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location);
+  const magicOldPrice = displayProduct.oldprice ? useDynamicPrice(displayProduct.oldprice, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location) : undefined;
 
   return (
     <PageContainer>
@@ -181,11 +191,11 @@ export const ProductDetailPage = () => {
 
                 <div className="flex items-end gap-3 mt-4">
                   <span className="text-3xl font-extrabold text-primary">
-                    TZS {displayProduct.price.toLocaleString()}
+                    TZS {magicPrice.toLocaleString()}
                   </span>
-                  {displayProduct.oldprice && displayProduct.oldprice > displayProduct.price && (
+                  {magicOldPrice && magicOldPrice > magicPrice && (
                     <span className="text-lg font-bold text-muted-foreground line-through mb-1">
-                      TZS {displayProduct.oldprice.toLocaleString()}
+                      TZS {magicOldPrice.toLocaleString()}
                     </span>
                   )}
                 </div>
@@ -200,7 +210,8 @@ export const ProductDetailPage = () => {
                       price: displayProduct.price,
                       imageUrl: displayProduct.imgUrl,
                       storeId: displayProduct.storeId,
-                      storeName: displayProduct.store
+                      storeName: displayProduct.store,
+                      isLaundry: isLaundryCategory
                     });
                   }}
                 >

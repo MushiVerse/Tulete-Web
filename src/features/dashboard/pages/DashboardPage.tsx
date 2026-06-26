@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { DashboardHeader } from '../components/DashboardHeader';
-import { SearchBar } from '../components/SearchBar';
+
 import { CategoryScroll } from '../components/CategoryScroll';
 import { PromoCarousel } from '../components/PromoCarousel';
 import { SectionWrapper } from '../components/SectionWrapper';
@@ -9,12 +9,10 @@ import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { StoreCard } from '../../../shared/components/cards/StoreCard';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
-import { productService, Product } from '../../products/services/productService';
-import { storeService, Store } from '../../stores/services/storeService';
+import { productService } from '../../products/services/productService';
+import { storeService } from '../../stores/services/storeService';
 
 export const DashboardPage = () => {
-  const [refreshing, setRefreshing] = useState(false);
-
   // Fetch "Most TamTam" products
   const { data: tamtamProducts, isLoading: loadingProducts, refetch: refetchProducts } = useFirestoreQuery(
     ['products', 'tamtam'],
@@ -29,11 +27,6 @@ export const DashboardPage = () => {
     { limit: 5 }
   );
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([refetchProducts(), refetchStores()]);
-    setTimeout(() => setRefreshing(false), 800); // UI feel
-  };
 
   // Helper for rendering horizontal loading skeletons
   const renderSkeletons = () => (
@@ -52,7 +45,6 @@ export const DashboardPage = () => {
       <DashboardHeader />
       
       <div className="max-w-7xl mx-auto w-full">
-        <SearchBar />
         <CategoryScroll />
         <PromoCarousel />
 

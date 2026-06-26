@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { storeService, Store } from '../../stores/services/storeService';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { APP_SETTINGS } from '@/core/config/settings';
@@ -352,6 +353,7 @@ export const HomePage = () => {
   const { items: cartItems, getTotals, addToCart, removeFromCart, clearCart } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
+  const { currentLocation } = useLocationStore();
 
   const [filterValue, setFilterValue] = useState<'food' | 'product' | 'laundry' | 'brands' | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<{name: string, category: string} | null>(null);

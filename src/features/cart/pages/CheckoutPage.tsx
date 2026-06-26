@@ -12,6 +12,27 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck } from 'lucide-react';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
+import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+
+const CheckoutItemRow = ({ item }: { item: any }) => {
+  const dynamicPrice = useDynamicPrice(item.price, item.storeId, !!item.isLaundry);
+  return (
+    <div className="flex gap-3 items-center">
+      <img 
+        src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100"} 
+        alt={item.name} 
+        className="w-12 h-12 rounded-lg object-cover bg-white flex-shrink-0"
+      />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-xs text-foreground truncate">{item.name}</p>
+        <p className="text-[10px] text-muted-foreground">Qty: {item.quantity}</p>
+      </div>
+      <span className="font-bold text-xs text-foreground">
+        {(dynamicPrice * item.quantity).toLocaleString()} {APP_SETTINGS.currency}
+      </span>
+    </div>
+  );
+};
 
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { LocationPickerModal, GOOGLE_MAPS_LIBRARIES } from '../../location/components/LocationPickerModal';
@@ -297,20 +318,7 @@ export const CheckoutPage = () => {
             
             <div className="max-h-[220px] overflow-y-auto space-y-3 mb-6 pr-1">
               {items.map((item) => (
-                <div key={item.productId} className="flex gap-3 items-center">
-                  <img 
-                    src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100"} 
-                    alt={item.name} 
-                    className="w-12 h-12 rounded-lg object-cover bg-white flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-xs text-foreground truncate">{item.name}</p>
-                    <p className="text-[10px] text-muted-foreground">Qty: {item.quantity}</p>
-                  </div>
-                  <span className="font-bold text-xs text-foreground">
-                    {(item.price * item.quantity).toLocaleString()} {APP_SETTINGS.currency}
-                  </span>
-                </div>
+                <CheckoutItemRow key={item.productId} item={item} />
               ))}
             </div>
 

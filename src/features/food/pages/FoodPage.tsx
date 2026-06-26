@@ -12,6 +12,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { productService, Product } from '../../products/services/productService';
@@ -62,7 +63,7 @@ const PROMOS = [
 
 
 const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
-  const dynamicPrice = useDynamicPrice(meal.price, meal.storeId, false);
+  const dynamicPrice = useDynamicPrice(meal.price, meal.storeId, false, meal.location);
 
   return (
     <div className="flex flex-col h-full">
@@ -115,7 +116,8 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
                   imageUrl: meal.imgUrl,
                   storeId: meal.storeId,
                   storeName: meal.store,
-                  cat: 'Food'
+                  cat: 'Food',
+                  location: meal.location
                 })}
                 className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
               >
@@ -198,6 +200,7 @@ export const FoodPage = () => {
 
   const { deliveryFee, total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
+  const { currentLocation } = useLocationStore();
 
   const handleCheckout = () => {
     if (!isAuthenticated) {

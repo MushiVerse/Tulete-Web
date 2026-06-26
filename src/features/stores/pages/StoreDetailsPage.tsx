@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storeService, Store } from '../services/storeService';
 import { productService, Product } from '../../products/services/productService';
+import { useLocationStore } from '../../location/store/useLocationStore';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
@@ -40,6 +41,7 @@ export const StoreDetailsPage = () => {
   const { items: cartItems, addToCart, removeFromCart, clearCart, getTotals } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
+  const { currentLocation } = useLocationStore();
   const { isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
 

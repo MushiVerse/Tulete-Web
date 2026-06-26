@@ -9,6 +9,7 @@ import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { APP_SETTINGS } from '../../../core/config/settings';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,6 +40,7 @@ export const DiscoveryPage = () => {
   
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
+  const { currentLocation } = useLocationStore();
 
   const handleCheckout = () => {
     if (!isAuthenticated) {

@@ -11,6 +11,107 @@ import { PageContainer, ContentContainer } from '../../../shared/components/layo
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 
+const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig }: any) => {
+  const dynamicPrice = useDynamicPrice(item.price, item.storeId, !!item.isLaundry);
+  
+  return (
+    <Card className="p-3 sm:p-4 flex gap-3 sm:gap-4 items-start sm:items-center bg-card border border-border shadow-sm hover:shadow-md transition-all group/item">
+      {/* Item Image */}
+      <img 
+        src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200"} 
+        alt={item.name} 
+        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover bg-slate-100 flex-shrink-0"
+      />
+
+      {/* Item Details */}
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-foreground truncate text-sm sm:text-base mb-0.5">{item.name}</h3>
+        <p className="text-xs text-muted-foreground mb-2 truncate">From {item.storeName}</p>
+        
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          {/* Price */}
+          <span className="font-bold text-foreground text-sm sm:text-base">
+            {dynamicPrice.toLocaleString()} {APP_SETTINGS.currency}
+          </span>
+
+          {/* Quantity controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 border border-border rounded-lg p-0.5 sm:p-1 bg-slate-50 dark:bg-slate-800">
+            <button
+              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-600 hover:text-primary dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
+            >
+              <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+            <span className="w-5 sm:w-6 text-center text-xs sm:text-sm font-bold text-foreground">
+              {item.quantity}
+            </span>
+            <button
+              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-600 hover:text-primary dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
+            >
+              <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Per-Item Laundry Customization */}
+        {item.isLaundry && (
+          <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
+            {[
+              { key: 'iron', label: 'Iron', prop: 'ironingSelected', icon: Flame },
+              { key: 'pack', label: 'Package', prop: 'packagingSelected', icon: Package },
+              { key: 'exp', label: 'Express', prop: 'expressSelected', icon: Zap }
+            ].map(({ key, label, prop, icon: Icon }) => {
+              const isSelected = item[prop as keyof typeof item];
+              return (
+                <button
+                  key={key}
+                  onClick={() => updateLaundryItemConfig(item.productId, { [prop]: !isSelected })}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                    isSelected 
+                      ? 'bg-primary border-primary text-primary-foreground scale-105' 
+                      : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Per-Item Non-Laundry Customization (Pick Up Toggle) */}
+        {!item.isLaundry && (
+          <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
+            <button
+              onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                item.isDeliverySelected === false 
+                  ? 'bg-primary border-primary text-primary-foreground scale-105' 
+                  : 'bg-card border-border text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false ? 'fill-current' : ''}`} />
+              Pick Up (No Distance Fee)
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Delete button — revealed on row hover */}
+      <button
+        onClick={() => removeFromCart(item.productId)}
+        className="text-destructive hover:text-primary p-1.5 sm:p-2 rounded-full hover:bg-primary/10 transition-all self-start shrink-0 focus:opacity-100"
+        title="Remove item"
+        aria-label={`Remove ${item.name} from cart`}
+      >
+        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+      </button>
+    </Card>
+  );
+};
+
 export const CartPage = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeFromCart, clearCart, getTotals, toggleDelivery, laundryPreferences, setLaundryPreferences, updateLaundryItemConfig, applyLaundryServicesToAll, clearAllLaundryServices } = useCartStore();
@@ -90,102 +191,13 @@ export const CartPage = () => {
                   exit={{ opacity: 0, x: 50 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Card className="p-3 sm:p-4 flex gap-3 sm:gap-4 items-start sm:items-center bg-card border border-border shadow-sm hover:shadow-md transition-all group/item">
-                    {/* Item Image */}
-                    <img 
-                      src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200"} 
-                      alt={item.name} 
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover bg-slate-100 flex-shrink-0"
-                    />
-
-                    {/* Item Details */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate text-sm sm:text-base mb-0.5">{item.name}</h3>
-                      <p className="text-xs text-muted-foreground mb-2 truncate">From {item.storeName}</p>
-                      
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        {/* Price */}
-                        <span className="font-bold text-foreground text-sm sm:text-base">
-                          {useDynamicPrice(item.price, item.storeId, !!item.isLaundry).toLocaleString()} {APP_SETTINGS.currency}
-                        </span>
-
-                        {/* Quantity controls */}
-                        <div className="flex items-center gap-1.5 sm:gap-2 border border-border rounded-lg p-0.5 sm:p-1 bg-slate-50 dark:bg-slate-800">
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-600 hover:text-primary dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
-                          >
-                            <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          </button>
-                          <span className="w-5 sm:w-6 text-center text-xs sm:text-sm font-bold text-foreground">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-600 hover:text-primary dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
-                          >
-                            <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-
-
-                      {/* Per-Item Laundry Customization */}
-                      {item.isLaundry && (
-                        <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
-                          {[
-                            { key: 'iron', label: 'Iron', prop: 'ironingSelected', icon: Flame },
-                            { key: 'pack', label: 'Package', prop: 'packagingSelected', icon: Package },
-                            { key: 'exp', label: 'Express', prop: 'expressSelected', icon: Zap }
-                          ].map(({ key, label, prop, icon: Icon }) => {
-                            const isSelected = item[prop as keyof typeof item];
-                            return (
-                              <button
-                                key={key}
-                                onClick={() => updateLaundryItemConfig(item.productId, { [prop]: !isSelected })}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
-                                  isSelected 
-                                    ? 'bg-primary border-primary text-primary-foreground scale-105' 
-                                    : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                                }`}
-                              >
-                                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
-                                {label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Per-Item Non-Laundry Customization (Pick Up Toggle) */}
-                      {!item.isLaundry && (
-                        <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
-                          <button
-                            onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
-                              item.isDeliverySelected === false 
-                                ? 'bg-primary border-primary text-primary-foreground scale-105' 
-                                : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                            }`}
-                          >
-                            <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false ? 'fill-current' : ''}`} />
-                            Pick Up (No Distance Fee)
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Delete button — revealed on row hover */}
-                    <button
-                      onClick={() => removeFromCart(item.productId)}
-                      className="text-destructive hover:text-primary p-1.5 sm:p-2 rounded-full hover:bg-primary/10 transition-all self-start shrink-0 focus:opacity-100"
-                      title="Remove item"
-                      aria-label={`Remove ${item.name} from cart`}
-                    >
-                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
-                  </Card>
+                  <CartItemCard 
+                    item={item} 
+                    updateQuantity={updateQuantity} 
+                    removeFromCart={removeFromCart} 
+                    toggleDelivery={toggleDelivery} 
+                    updateLaundryItemConfig={updateLaundryItemConfig} 
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>

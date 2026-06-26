@@ -23,10 +23,10 @@ const containerStyle = {
   borderRadius: '0.75rem',
 };
 
-// Default map center (Nairobi CBD)
+// Default map center (Dar es Salaam)
 const defaultCenter = {
-  lat: -1.286389,
-  lng: 36.817223,
+  lat: -6.7924,
+  lng: 39.2083,
 };
 
 // We load the script globally — must be defined outside the component to prevent re-renders
@@ -193,11 +193,11 @@ export const LocationPickerModal = ({
             const fallback = defaultCenter;
             setMapCenter(fallback);
             setSelectedPos(fallback);
-            setAddressText('Default location (Nairobi CBD)');
-            setValue('Nairobi, Kenya', false);
+            setAddressText('Default location (Dar es Salaam)');
+            setValue('Dar es Salaam, Tanzania', false);
             setCurrentLocation({
               id: Date.now().toString(),
-              address: 'Nairobi, Kenya',
+              address: 'Dar es Salaam, Tanzania',
               lat: fallback.lat,
               lng: fallback.lng,
               specificInstructions: '',

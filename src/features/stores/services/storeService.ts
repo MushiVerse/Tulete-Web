@@ -157,7 +157,7 @@ class StoreService extends BaseFirestoreService<Store> {
           { days: 'Saturday', hours: '8:00 AM - 6:00 PM' },
           { days: 'Sunday & Holidays', hours: '10:00 AM - 4:00 PM' }
         ],
-        location: { lat: -1.2915, lng: 36.7900 },
+        location: { lat: -6.7924, lng: 39.2083 },
         reviews: [
           { id: 'rev_1', userName: 'Amina Omondi', rating: 5, comment: 'Extremely professional and quick! My suits arrived immaculate.', date: 'May 28, 2026' },
           { id: 'rev_2', userName: 'John Kiprop', rating: 4, comment: 'Good quality folding, though delivery had a minor delay due to rain.', date: 'May 24, 2026' }
@@ -166,16 +166,16 @@ class StoreService extends BaseFirestoreService<Store> {
       {
         id: 'store_kibanda_delight',
         store: 'Kibanda Delight Fast Food',
-        description: 'Authentic local Kenyan delicacies, fresh Ugali, Nyama Choma, and express Chapati meals.',
+        description: 'Authentic local delicacies, fresh Ugali, Nyama Choma, and express Chapati meals.',
         imgURL: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=120',
         ownerId: 'owner_2',
         rating: 4.6,
         reviewCount: 98,
         category: 'Food',
         availability: true,
-        address: 'Ring Road, Westlands, Nairobi',
-        phone: '+254722333444',
-        whatsapp: '+254722333444',
+        address: 'Masaki, Dar es Salaam, Tanzania',
+        phone: '+255722333444',
+        whatsapp: '+255722333444',
         isVerified: true,
         gallery: [
           'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400',
@@ -187,9 +187,9 @@ class StoreService extends BaseFirestoreService<Store> {
         hours: [
           { days: 'Monday - Sunday', hours: '9:00 AM - 11:00 PM' }
         ],
-        location: { lat: -1.2640, lng: 36.8040 },
+        location: { lat: -6.7960, lng: 39.2100 },
         reviews: [
-          { id: 'rev_3', userName: 'Wanjiku Mwangi', rating: 5, comment: 'The best Choma in Westlands! Tastes completely authentic.', date: 'May 29, 2026' }
+          { id: 'rev_3', userName: 'Wanjiku Mwangi', rating: 5, comment: 'The best Choma in town! Tastes completely authentic.', date: 'May 29, 2026' }
         ]
       },
       {
@@ -202,9 +202,9 @@ class StoreService extends BaseFirestoreService<Store> {
         reviewCount: 65,
         category: 'Electrical',
         availability: true,
-        address: 'Kenyatta Avenue, Nairobi CBD',
-        phone: '+254733444555',
-        whatsapp: '+254733444555',
+        address: 'Kariakoo, Dar es Salaam, Tanzania',
+        phone: '+255733444555',
+        whatsapp: '+255733444555',
         isVerified: true,
         gallery: [
           'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400',
@@ -216,7 +216,7 @@ class StoreService extends BaseFirestoreService<Store> {
         hours: [
           { days: 'Monday - Saturday', hours: '8:00 AM - 6:00 PM' }
         ],
-        location: { lat: -1.2825, lng: 36.8190 },
+        location: { lat: -6.8180, lng: 39.2840 },
         reviews: [
           { id: 'rev_4', userName: 'David Ndolo', rating: 5, comment: 'Extremely polite technician. Fixed my breaker issue in 20 minutes.', date: 'May 20, 2026' }
         ]
@@ -231,9 +231,9 @@ class StoreService extends BaseFirestoreService<Store> {
         reviewCount: 114,
         category: 'Beauty',
         availability: false, // Closed for demo styling
-        address: 'Argwings Kodhek Rd, Hurlingham, Nairobi',
-        phone: '+254744555666',
-        whatsapp: '+254744555666',
+        address: 'Oyster Bay, Dar es Salaam, Tanzania',
+        phone: '+255744555666',
+        whatsapp: '+255744555666',
         isVerified: false,
         gallery: [
           'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400',
@@ -246,7 +246,7 @@ class StoreService extends BaseFirestoreService<Store> {
           { days: 'Monday - Saturday', hours: '9:00 AM - 8:00 PM' },
           { days: 'Sunday', hours: '10:00 AM - 5:00 PM' }
         ],
-        location: { lat: -1.2950, lng: 36.7990 },
+        location: { lat: -6.7800, lng: 39.2700 },
         reviews: [
           { id: 'rev_5', userName: 'Mercy Chelagat', rating: 4.5, comment: 'Loved my micro-braids! Very neat. Docked half a star as the place was packed.', date: 'May 27, 2026' }
         ]

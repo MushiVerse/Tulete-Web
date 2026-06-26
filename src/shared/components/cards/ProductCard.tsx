@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Plus, Heart, Store } from 'lucide-react';
+import { Star, Plus, Minus, Heart, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Product } from '../../../features/products/services/productService';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useDynamicPrice } from '../../../features/location/hooks/useDynamicPrice';
+import { useCartStore } from '../../../features/cart/store/useCartStore';
 
 interface ProductCardProps {
   product: Product;
@@ -21,10 +22,12 @@ export const ProductCard = ({
   onToggleFavorite,
   isFavorite = false 
 }: ProductCardProps) => {
+  const { items: cartItems, updateQuantity, addToCart } = useCartStore();
+  const cartItem = cartItems.find(i => i.productId === product.id);
   
   const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
-  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory);
-  const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory) : undefined;
+  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location);
+  const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory, product.location) : undefined;
 
   // Format price
   const formattedPrice = new Intl.NumberFormat('en-TZ', {
@@ -117,22 +120,65 @@ export const ProductCard = ({
                 </span>
               </div>
               
-              <button 
-                disabled={!product.availability}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onAddToCart?.(product);
-                }}
-                className={`flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0 ${
-                  product.availability 
-                    ? 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground' 
-                    : 'bg-muted text-muted-foreground cursor-not-allowed'
-                }`}
-              >
-                <Plus className="w-3.5 h-3.5 mr-0.5" strokeWidth={3} />
-                Add
-              </button>
+              {cartItem ? (
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        updateQuantity(product.id, cartItem.quantity - 1);
+                      }} 
+                      className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm hover:bg-background/80"
+                    >
+                      <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    </button>
+                    <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        updateQuantity(product.id, cartItem.quantity + 1);
+                      }} 
+                      className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                    >
+                      <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  disabled={!product.availability}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (onAddToCart) {
+                      onAddToCart(product);
+                    } else {
+                      addToCart({
+                        productId: product.id,
+                        name: product.name,
+                        price: product.price,
+                        imageUrl: product.imgUrl,
+                        storeId: product.storeId,
+                        storeName: product.store,
+                        cat: product.category,
+                        location: product.location,
+                        isLaundry: isLaundryCategory
+                      });
+                    }
+                  }}
+                  className={`flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0 ${
+                    product.availability 
+                      ? 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground' 
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-0.5" strokeWidth={3} />
+                  Add
+                </button>
+              )}
             </div>
           </CardContent>
         </Card>

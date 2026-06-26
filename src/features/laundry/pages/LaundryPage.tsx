@@ -10,6 +10,8 @@ import { Switch } from '../../../shared/components/ui/Switch';
 import { laundryService, LaundryItem } from '../services/laundryService';
 import { useCartStore, calculateItemTotal } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { APP_SETTINGS } from '@/core/config/settings';
 import {
   Search, ShoppingCart, Plus, Minus, CheckCircle2,
@@ -49,7 +51,7 @@ const LaundryItemCard = ({
   hasAnyInCart: boolean;
 }) => {
   const isAvailable = item.quantity > 0;
-  const livePrice = item.price;
+  const livePrice = useDynamicPrice(item.price, item.brand || 'laundry', true, undefined);
   const id = item.id;
   const isAddingThis = addingId === id;
   const cartQty = getCartQuantity(id);
@@ -170,7 +172,7 @@ export const LaundryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
-  const { addToCart, items: cartItems, removeFromCart, updateQuantity, clearCart } = useCartStore();
+  const { addToCart, items: cartItems, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
 
   const [items, setItems] = useState<LaundryItem[]>([]);
   const [ads, setAds] = useState<{ imgURL: string; store: string }[]>([]);
@@ -272,7 +274,13 @@ export const LaundryPage = () => {
     if (qty > 0) updateQuantity(compositeId, qty - 1);
   };
 
-  const { total: cartTotal, itemCount: totalCartItems } = useCartStore.getState().getTotals();
+  const { total: cartTotal, itemCount: totalCartItems } = getTotals();
+  const hasItems = cartItems.length > 0;
+  const { currentLocation } = useLocationStore();
+
+  const handleCheckout = () => {
+    navigate('/cart');
+  };
 
   return (
     <PageContainer className="flex-1 flex flex-col min-h-0">
