@@ -23,6 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../shared/components/ui/Dialog';
+import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
+import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 const STATS = [
   { value: '50+', label: 'Local Cleaners', icon: Shirt },
@@ -181,6 +183,26 @@ export const LaundryPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All Services');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [mobileResults, setMobileResults] = useState<any[]>([]);
+  const [mobileLoading, setMobileLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileSearchOpen || !searchQuery.trim()) { setMobileResults([]); return; }
+    const controller = new AbortController();
+    const run = async () => {
+      setMobileLoading(true);
+      try {
+        const hits = await searchTuleteItems(searchQuery, { filters: 'recordType:cloth', hitsPerPage: 40 });
+        if (!controller.signal.aborted) setMobileResults(hits);
+      } finally {
+        if (!controller.signal.aborted) setMobileLoading(false);
+      }
+    };
+    const t = setTimeout(run, 200);
+    return () => { clearTimeout(t); controller.abort(); };
+  }, [searchQuery, isMobileSearchOpen]);
+
 
   const adsRef = useRef<HTMLDivElement>(null);
 
@@ -284,6 +306,18 @@ export const LaundryPage = () => {
 
   return (
     <PageContainer className="flex-1 flex flex-col min-h-0">
+      <AnimatePresence>
+        {isMobileSearchOpen && (
+          <MobileSearchOverlay
+            query={searchQuery}
+            onChange={setSearchQuery}
+            onClose={() => { setIsMobileSearchOpen(false); setSearchQuery(''); setMobileResults([]); }}
+            loading={mobileLoading}
+            results={mobileResults}
+            placeholder="Search laundry services..."
+          />
+        )}
+      </AnimatePresence>
       <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
         
         {/* ── LEFT SIDEBAR (FILTERS & NAVIGATION) ── */}
@@ -374,6 +408,7 @@ export const LaundryPage = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => { if (window.innerWidth < 1024) setIsMobileSearchOpen(true); }}
                 placeholder="Search services, items..."
                 className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
               />

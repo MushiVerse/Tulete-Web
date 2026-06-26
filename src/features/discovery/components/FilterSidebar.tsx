@@ -34,15 +34,15 @@ export const FilterSidebar = ({ isOpen, onClose }: FilterSidebarProps) => {
       {/* Mobile Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar Container */}
       <div className={`
-        fixed lg:sticky top-0 lg:top-16 left-0 z-50 lg:z-10 h-full w-72 bg-card border-r border-border transform transition-transform duration-300 ease-in-out lg:translate-x-0
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed top-0 left-0 z-50 h-full w-72 md:w-80 bg-card border-r border-border transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -51,7 +51,7 @@ export const FilterSidebar = ({ isOpen, onClose }: FilterSidebarProps) => {
               <Filter className="w-5 h-5" />
               Filters
             </h2>
-            <button onClick={onClose} className="lg:hidden p-2 rounded-full hover:bg-muted">
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-muted">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -144,7 +144,7 @@ export const FilterSidebar = ({ isOpen, onClose }: FilterSidebarProps) => {
             </button>
             <button 
               onClick={onClose}
-              className="flex-1 bg-primary text-white py-2 rounded-lg font-bold shadow-sm hover:bg-primary/90 transition-colors lg:hidden"
+              className="flex-1 bg-primary text-white py-2 rounded-lg font-bold shadow-sm hover:bg-primary/90 transition-colors"
             >
               Apply Filters
             </button>

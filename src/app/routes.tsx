@@ -65,7 +65,8 @@ export const router = createBrowserRouter([
         element: <DynamicShellLayout />,
         children: [
           { index: true, element: <Suspense fallback={<HomeSkeleton />}><Home /></Suspense> },
-          { path: 'explore', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
+          { path: 'explore', element: <Suspense fallback={<GridSkeleton />}><Discovery /></Suspense> },
+          { path: 'stores', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
           { path: 'laundry', element: <Suspense fallback={<GridSkeleton />}><Laundry /></Suspense> },
           { path: 'food', element: <Suspense fallback={<GridSkeleton />}><Food /></Suspense> },
           { path: 'products', element: <Suspense fallback={<GridSkeleton />}><Products /></Suspense> },
@@ -88,8 +89,7 @@ export const router = createBrowserRouter([
           </AuthGuard>
         ),
         children: [
-          { path: 'discover', element: <Suspense fallback={<GridSkeleton />}><Discovery /></Suspense> },
-          { path: 'stores', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
+          { path: 'discover', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
           { path: 'orders', element: withSuspense(Orders) },
           { path: 'cart', element: withSuspense(Cart) },
           { path: 'favorites', element: <Suspense fallback={<GridSkeleton />}><Favorites /></Suspense> },

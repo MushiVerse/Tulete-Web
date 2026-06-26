@@ -67,7 +67,7 @@ export const ProductCard = ({
             }}
             className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-sm hover:bg-white/40 active:scale-95 transition-all"
           >
-            <Heart className={`w-4 h-4 transition-colors ${isFavorite ? 'fill-primary text-primary' : 'text-white'}`} />
+            <Heart className={`w-4 h-4 transition-all duration-200 ${isFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white'}`} />
           </button>
 
           {/* Image Container */}

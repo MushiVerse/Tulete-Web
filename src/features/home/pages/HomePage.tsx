@@ -22,6 +22,8 @@ import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { BrandsView } from '../../brands/components/BrandsView';
 import { BrandDetailsView } from '../../brands/components/BrandDetailsView';
 import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
+import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
+import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 
 /*  Shared Configs  */
@@ -359,11 +361,36 @@ export const HomePage = () => {
   const [selectedBrand, setSelectedBrand] = useState<{name: string, category: string} | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [mobileResults, setMobileResults] = useState<any[]>([]);
+  const [mobileLoading, setMobileLoading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Live search for mobile overlay
+  useEffect(() => {
+    if (!isMobileSearchOpen || !searchQuery.trim()) { setMobileResults([]); return; }
+    const controller = new AbortController();
+    const run = async () => {
+      setMobileLoading(true);
+      try {
+        const filterStr = filterValue === 'food' ? 'recordType:food'
+          : filterValue === 'product' ? 'recordType:product'
+          : filterValue === 'laundry' ? 'recordType:cloth'
+          : 'NOT recordType:brand';
+        const hits = await searchTuleteItems(searchQuery, { filters: filterStr, hitsPerPage: 40 });
+        if (!controller.signal.aborted) setMobileResults(hits);
+      } finally {
+        if (!controller.signal.aborted) setMobileLoading(false);
+      }
+    };
+    const t = setTimeout(run, 200);
+    return () => { clearTimeout(t); controller.abort(); };
+  }, [searchQuery, isMobileSearchOpen, filterValue]);
+
 
   const [favorites, setFavorites] = useState<string[]>(() => {
     const s = localStorage.getItem('tulete_favorite_stores');
@@ -530,6 +557,19 @@ export const HomePage = () => {
 
   return (
     <PageContainer className="flex-1 flex flex-col min-h-0">
+      {/* Mobile full-screen search overlay */}
+      <AnimatePresence>
+        {isMobileSearchOpen && (
+          <MobileSearchOverlay
+            query={searchQuery}
+            onChange={setSearchQuery}
+            onClose={() => { setIsMobileSearchOpen(false); setSearchQuery(''); setMobileResults([]); }}
+            loading={mobileLoading}
+            results={mobileResults}
+            placeholder={filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry...'}
+          />
+        )}
+      </AnimatePresence>
       <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
 
         {/*  LEFT SIDEBAR (FILTERS)  */}
@@ -595,6 +635,10 @@ export const HomePage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                // On mobile (window width < 1024px) open full-screen overlay
+                if (window.innerWidth < 1024) setIsMobileSearchOpen(true);
+              }}
               placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry...'}
               className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
             />
