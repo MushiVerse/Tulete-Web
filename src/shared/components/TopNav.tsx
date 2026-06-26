@@ -9,6 +9,8 @@ import { useThemeStore } from '../../core/theme/useThemeStore';
 import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 import { APP_SETTINGS } from '../../core/config/settings';
 import { useDeviceOS } from '../../core/hooks/useDeviceOS';
+import { useLocationStore } from '../../features/location/store/useLocationStore';
+import { MapPin } from 'lucide-react';
 
 /** Official Google Play badge from Google's CDN */
 const PlayStoreBadge = ({ className = '' }: { className?: string }) => (
@@ -33,6 +35,7 @@ export const TopNav = () => {
 
   const { isDark, toggleTheme } = useThemeStore();
   const { showPlayBadge } = useDeviceOS();
+  const { currentLocation, setPickerOpen } = useLocationStore();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -109,6 +112,18 @@ export const TopNav = () => {
               <PlayStoreBadge className="h-10 w-auto object-contain" />
             </a>
           )}
+
+          {/* Current Location Display / Trigger */}
+          <button
+            onClick={() => setPickerOpen(true)}
+            className="hidden md:flex items-center gap-2 max-w-[200px] px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer group"
+            title={currentLocation ? currentLocation.address : 'Set Location'}
+          >
+            <MapPin className="w-4 h-4 shrink-0 group-hover:animate-bounce" />
+            <span className="text-xs font-bold truncate">
+              {currentLocation ? currentLocation.address.split(',')[0] : 'Set Location'}
+            </span>
+          </button>
 
           {/* Theme toggle */}
           <button
@@ -242,6 +257,23 @@ export const TopNav = () => {
                   </button>
                 </div>
               )}
+
+              {/* Current Location Display / Trigger for Mobile */}
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); setPickerOpen(true); }}
+                className="w-full mt-2 flex items-center justify-between px-4 py-3 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <MapPin className="w-5 h-5 shrink-0" />
+                  <div className="flex flex-col items-start truncate">
+                    <span className="text-xs font-semibold text-primary/70">Delivering to</span>
+                    <span className="text-sm font-bold truncate max-w-[200px]">
+                      {currentLocation ? currentLocation.address : 'Set Location'}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-xs font-bold bg-primary text-primary-foreground px-2 py-1 rounded-md">Change</span>
+              </button>
 
               {/* Google Play badge in mobile menu — Android only */}
               {showPlayBadge && (

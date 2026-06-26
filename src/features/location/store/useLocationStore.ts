@@ -17,6 +17,8 @@ interface LocationState {
   setCurrentLocation: (location: SavedLocation) => void;
   addSavedLocation: (location: Omit<SavedLocation, 'id' | 'lastUsedAt'>) => void;
   removeSavedLocation: (id: string) => void;
+  isPickerOpen: boolean;
+  setPickerOpen: (isOpen: boolean) => void;
 }
 
 export const useLocationStore = create<LocationState>()(
@@ -24,6 +26,8 @@ export const useLocationStore = create<LocationState>()(
     (set) => ({
       currentLocation: null,
       savedLocations: [],
+      isPickerOpen: false,
+      setPickerOpen: (isOpen) => set({ isPickerOpen: isOpen }),
       setCurrentLocation: (location) => set((state) => {
         // Also update the lastUsedAt in the savedLocations list if it exists
         const updatedSaved = state.savedLocations.map(loc => 

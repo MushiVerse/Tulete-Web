@@ -50,12 +50,7 @@ export const CheckoutPage = () => {
     });
   }, []);
 
-  // Auto-open modal if no location is set on page load
-  React.useEffect(() => {
-    if (!currentLocation && items.length > 0) {
-      setIsLocationModalOpen(true);
-    }
-  }, [currentLocation, items.length]);
+  // Auto-open modal logic moved to MainLayout to enforce global location setting
 
   const selectedLocation = currentLocation || DEFAULT_CENTER;
 

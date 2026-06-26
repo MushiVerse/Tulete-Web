@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore, calculateItemTotal } from '../store/useCartStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Switch } from '../../../shared/components/ui/Switch';
@@ -12,6 +14,13 @@ import { APP_SETTINGS } from '@/core/config/settings';
 export const CartPage = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeFromCart, clearCart, getTotals, toggleDelivery, laundryPreferences, setLaundryPreferences, updateLaundryItemConfig, applyLaundryServicesToAll, clearAllLaundryServices } = useCartStore();
+  const { currentLocation } = useLocationStore();
+  const [totals, setTotals] = useState(getTotals());
+
+  // Recalculate totals whenever location or cart items change
+  useEffect(() => {
+    setTotals(getTotals());
+  }, [currentLocation, items]);
   const { subtotal, deliveryFee, serviceFee, total, itemCount } = getTotals();
   
   const isLaundryOrder = items.some(i => i.isLaundry || i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry'));
@@ -97,7 +106,7 @@ export const CartPage = () => {
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         {/* Price */}
                         <span className="font-bold text-foreground text-sm sm:text-base">
-                          {calculateItemTotal(item).toLocaleString()} {APP_SETTINGS.currency}
+                          {useDynamicPrice(item.price, item.storeId, !!item.isLaundry).toLocaleString()} {APP_SETTINGS.currency}
                         </span>
 
                         {/* Quantity controls */}

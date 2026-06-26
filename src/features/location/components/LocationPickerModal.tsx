@@ -12,7 +12,7 @@ import {
 } from '../../../shared/components/ui/Dialog';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
-import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock, Plus, Minus, RotateCw, Crosshair, Maximize2 } from 'lucide-react';
+import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock, Plus, Minus, RotateCw, Crosshair, Maximize2, Target } from 'lucide-react';
 import { useLocationStore, SavedLocation } from '../store/useLocationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { storageService } from '../../../core/services/storageService';
@@ -114,6 +114,15 @@ export const LocationPickerModal = ({
       setMapCenter({ lat, lng });
       setSelectedPos({ lat, lng });
       setAddressText(results[0].formatted_address);
+      // Update the global location store so price calculation reacts
+      setCurrentLocation({
+        id: Date.now().toString(),
+        address: results[0].formatted_address,
+        lat,
+        lng,
+        specificInstructions: '',
+        lastUsedAt: Date.now(),
+      });
       if (mapRef.current) {
         mapRef.current.panTo({ lat, lng });
         mapRef.current.setZoom(16);
@@ -143,6 +152,15 @@ export const LocationPickerModal = ({
             if (results[0]) {
               setAddressText(results[0].formatted_address);
               setValue(results[0].formatted_address, false);
+              // Update global store with the current location
+              setCurrentLocation({
+                id: Date.now().toString(),
+                address: results[0].formatted_address,
+                lat,
+                lng,
+                specificInstructions: '',
+                lastUsedAt: Date.now(),
+              });
             }
           } catch (e) {
             console.error('Google Maps Geocoding failed:', e);
@@ -152,6 +170,15 @@ export const LocationPickerModal = ({
               const fallbackAddress = await locationService.reverseGeocode(lat, lng);
               setAddressText(fallbackAddress);
               setValue(fallbackAddress, false);
+              // Update store with fallback address
+              setCurrentLocation({
+                id: Date.now().toString(),
+                address: fallbackAddress,
+                lat,
+                lng,
+                specificInstructions: '',
+                lastUsedAt: Date.now(),
+              });
             } catch (fallbackErr) {
               setAddressText('Current Location Selected');
             }
@@ -162,13 +189,29 @@ export const LocationPickerModal = ({
           console.error('Geolocation error:', error);
           setIsLocating(false);
           if (error.code === error.PERMISSION_DENIED) {
-            alert('Location access was denied. Please enable it in your browser settings.');
+            // Fallback to default location (Nairobi CBD) instead of just alerting
+            const fallback = defaultCenter;
+            setMapCenter(fallback);
+            setSelectedPos(fallback);
+            setAddressText('Default location (Nairobi CBD)');
+            setValue('Nairobi, Kenya', false);
+            setCurrentLocation({
+              id: Date.now().toString(),
+              address: 'Nairobi, Kenya',
+              lat: fallback.lat,
+              lng: fallback.lng,
+              specificInstructions: '',
+              lastUsedAt: Date.now(),
+            });
+            alert('Location permission denied. Using default location. You can pick another location on the map.');
+          } else {
+            alert('Unable to retrieve your location. Please try again or select a location manually.');
           }
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      alert('Geolocation is not supported by your browser.');
+      alert('Geolocation is not supported by your browser. Please select a location manually.');
       setIsLocating(false);
     }
   }, [setValue]);
@@ -192,6 +235,15 @@ export const LocationPickerModal = ({
       if (results[0]) {
         setAddressText(results[0].formatted_address);
         setValue(results[0].formatted_address, false);
+        // Update global location store so price recalculates
+        setCurrentLocation({
+          id: Date.now().toString(),
+          address: results[0].formatted_address,
+          lat,
+          lng,
+          specificInstructions: '',
+          lastUsedAt: Date.now(),
+        });
       }
     } catch (err) {
       console.error('Google Maps Geocoding failed on map click:', err);
@@ -201,11 +253,20 @@ export const LocationPickerModal = ({
         const fallbackAddress = await locationService.reverseGeocode(lat, lng);
         setAddressText(fallbackAddress);
         setValue(fallbackAddress, false);
+        // Update store with fallback address
+        setCurrentLocation({
+          id: Date.now().toString(),
+          address: fallbackAddress,
+          lat,
+          lng,
+          specificInstructions: '',
+          lastUsedAt: Date.now(),
+        });
       } catch (fallbackErr) {
         setAddressText('Custom Map Location');
       }
     }
-  }, [setValue]);
+  }, [setValue, setCurrentLocation]);
 
   const handleSaveLocation = async () => {
     if (!selectedPos || !specificInstructions.trim()) return;
@@ -223,14 +284,25 @@ export const LocationPickerModal = ({
       }
     }
 
-    addSavedLocation({
+    const newLocation = {
       address: addressText || 'Custom Map Location',
       lat: selectedPos.lat,
       lng: selectedPos.lng,
       specificInstructions,
       imageUrl,
+    };
+
+    addSavedLocation(newLocation);
+    // Update current location to the newly saved one
+    setCurrentLocation({
+      id: Date.now().toString(),
+      address: newLocation.address,
+      lat: newLocation.lat,
+      lng: newLocation.lng,
+      specificInstructions: newLocation.specificInstructions,
+      lastUsedAt: Date.now(),
     });
-    
+
     // Reset states
     setSpecificInstructions('');
     removeImage();
@@ -244,7 +316,7 @@ export const LocationPickerModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden bg-card flex flex-col max-h-[90vh] w-[95vw] sm:w-full">
+      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden bg-card flex flex-col max-h-screen w-[95vw] sm:w-full">
         <DialogHeader className="p-5 border-b border-border bg-gradient-to-r from-primary/10 to-transparent relative overflow-hidden shrink-0">
           <DialogTitle className="text-xl font-extrabold flex flex-col gap-1 text-foreground relative z-10">
             <span className="flex items-center gap-2">
@@ -330,57 +402,72 @@ export const LocationPickerModal = ({
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-2xl overflow-hidden shadow-inner border border-border/60"
+            className="relative rounded-2xl overflow-hidden shadow-inner bg-card"
           >
             {isLoaded ? (
-              <GoogleMap
-                mapContainerStyle={dynamicContainerStyle}
-                center={mapCenter}
-                zoom={14}
-                onClick={onMapClick}
-                onLoad={(map) => { mapRef.current = map; }}
-                options={{
-                  disableDefaultUI: true,
-                  zoomControl: false,
-                  gestureHandling: 'greedy',
-                  streetViewControl: false,
-                  mapTypeControl: false,
-                  fullscreenControl: false,
-                  styles: [
-                    { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
-                  ]
-                }}
-              >
-                {selectedPos && (
-                  <Marker 
-                    position={selectedPos} 
-                    animation={google.maps.Animation.DROP}
-                  />
-                )}
-                {/* One‑hand toolbar – top‑left for thumb reach */}
-                <div className="absolute left-2 top-2 flex flex-col bg-white/80 rounded-lg shadow-md p-1 space-y-1">
-                  <button onClick={() => {
-                    const map = mapRef.current;
-                    if (map) map.setZoom((map.getZoom() || 14) + 1);
-                  }} className="p-1 hover:bg-primary/10">
-                    <Plus className="w-5 h-5" />
-                  </button>
-                  <button onClick={() => {
-                    const map = mapRef.current;
-                    if (map) map.setZoom((map.getZoom() || 14) - 1);
-                  }} className="p-1 hover:bg-primary/10">
-                    <Minus className="w-5 h-5" />
-                  </button>
-                  <button onClick={handleUseCurrentLocation} className="p-1 hover:bg-primary/10">
-                    <Crosshair className="w-5 h-5" />
-                  </button>
-                  <button onClick={() => {
-                    setIsFullScreen(prev => !prev);
-                  }} className="p-1 hover:bg-primary/10">
-                    <Maximize2 className="w-4 h-4" />
-                  </button>
+              <>
+                <GoogleMap
+                  mapContainerStyle={dynamicContainerStyle}
+                  center={mapCenter}
+                  zoom={14}
+                  onClick={onMapClick}
+                  onLoad={(map) => { mapRef.current = map; }}
+                  options={{
+                    disableDefaultUI: true,
+                    zoomControl: false,
+                    gestureHandling: 'greedy',
+                    streetViewControl: false,
+                    mapTypeControl: false,
+                    fullscreenControl: false,
+                    styles: [
+                      { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+                    ],
+                  }}
+                >
+                  {selectedPos && (
+                    <Marker
+                      position={selectedPos}
+                      animation={google.maps.Animation.DROP}
+                    />
+                  )}
+                  {/* One‑hand toolbar – top‑left for thumb reach */}
+                  <div className="absolute left-2 top-2 flex flex-col bg-white/80 rounded-lg shadow-md p-1 space-y-1">
+                    <button
+                      onClick={() => {
+                        const map = mapRef.current;
+                        if (map) map.setZoom((map.getZoom() || 14) + 1);
+                      }}
+                      className="p-1 hover:bg-primary/10"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const map = mapRef.current;
+                        if (map) map.setZoom((map.getZoom() || 14) - 1);
+                      }}
+                      className="p-1 hover:bg-primary/10"
+                    >
+                      <Minus className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleUseCurrentLocation} className="p-1 hover:bg-primary/10">
+                      <Crosshair className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => setIsFullScreen(prev => !prev)} className="p-1 hover:bg-primary/10">
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </GoogleMap>
+                 {/* Modern centered badge icon with halo animation */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative">
+                    <div className="absolute inset-0 w-12 h-12 bg-primary/10 rounded-full animate-ping"></div>
+                    <div className="bg-primary/30 rounded-full p-2 shadow-lg animate-pulse">
+                      <MapPin className="w-6 h-6 text-primary animate-bounce" />
+                    </div>
+                  </div>
                 </div>
-              </GoogleMap>
+              </>
             ) : (
               <div className="w-full h-[200px] bg-muted flex items-center justify-center animate-pulse">
                 <span className="text-muted-foreground font-medium">Loading Map...</span>
