@@ -21,6 +21,12 @@ interface LocationState {
   setPickerOpen: (isOpen: boolean) => void;
 }
 
+const cleanPlusCode = (address: string): string => {
+  if (!address) return '';
+  const cleaned = address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '');
+  return cleaned.trim() || address;
+};
+
 export const useLocationStore = create<LocationState>()(
   persist(
     (set) => ({
@@ -29,20 +35,22 @@ export const useLocationStore = create<LocationState>()(
       isPickerOpen: false,
       setPickerOpen: (isOpen) => set({ isPickerOpen: isOpen }),
       setCurrentLocation: (location) => set((state) => {
-        // Also update the lastUsedAt in the savedLocations list if it exists
+        const cleanedLocation = { ...location, address: cleanPlusCode(location.address) };
         const updatedSaved = state.savedLocations.map(loc => 
-          loc.id === location.id ? { ...loc, lastUsedAt: Date.now() } : loc
+          loc.id === cleanedLocation.id ? { ...loc, ...cleanedLocation, lastUsedAt: Date.now() } : loc
         );
-        return { currentLocation: location, savedLocations: updatedSaved };
+        return { currentLocation: cleanedLocation, savedLocations: updatedSaved };
       }),
       addSavedLocation: (location) => set((state) => {
+        const cleanedAddr = cleanPlusCode(location.address);
         const newLocation: SavedLocation = {
           ...location,
+          address: cleanedAddr,
           id: Date.now().toString(),
           lastUsedAt: Date.now(),
         };
         // Keep only top 5 recent locations
-        const newSaved = [newLocation, ...state.savedLocations.filter(loc => loc.address !== location.address)].slice(0, 5);
+        const newSaved = [newLocation, ...state.savedLocations.filter(loc => loc.address !== cleanedAddr)].slice(0, 5);
         return { 
           savedLocations: newSaved,
           currentLocation: newLocation

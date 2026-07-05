@@ -40,6 +40,8 @@ export const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
       storeId: product.storeId || 'unknown',
       storeName: product.store || 'Unknown Store',
       cat: product.category || '',
+      location: product.location,
+      idadi: product.idadi
     });
   };
 

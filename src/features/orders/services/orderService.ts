@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
-import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 
 export type OrderStatus = 
@@ -408,6 +408,44 @@ class OrderService extends BaseFirestoreService<Order> {
       }
     } catch (e) {
       console.error('Failed to create live flutter orders:', e);
+    }
+  }
+  /**
+   * Fully cancels an order across all Firestore collections:
+   * 1. orders/{orderId}                      — sets status to 'Cancelled'
+   * 2. tracking/{orderId}                    — sets status to 'Cancelled'
+   * 3. newcomfirmedorders (global)           — sets cancel: true on all docs linked by webOrderId
+   */
+  async cancelOrder(orderId: string): Promise<void> {
+    const batch = writeBatch(db);
+
+    // 1. Update the web app's own orders document
+    const orderRef = doc(db, 'orders', orderId);
+    batch.update(orderRef, { status: 'Cancelled', updatedAt: serverTimestamp() });
+
+    // 2. Update tracking document
+    const trackingRef = doc(db, 'tracking', orderId);
+    batch.update(trackingRef, { status: 'Cancelled', updatedAt: serverTimestamp() });
+
+    // Commit web app docs first
+    await batch.commit();
+
+    // 3. Update all Flutter newcomfirmedorders docs linked by webOrderId
+    try {
+      const globalQ = query(
+        collection(db, 'newcomfirmedorders'),
+        where('webOrderId', '==', orderId)
+      );
+      const globalSnap = await getDocs(globalQ);
+      if (!globalSnap.empty) {
+        const flutterBatch = writeBatch(db);
+        globalSnap.docs.forEach((d) => {
+          flutterBatch.update(d.ref, { cancel: true, updatedAt: serverTimestamp() });
+        });
+        await flutterBatch.commit();
+      }
+    } catch (e) {
+      console.error('Failed to cancel Flutter newcomfirmedorders:', e);
     }
   }
 }

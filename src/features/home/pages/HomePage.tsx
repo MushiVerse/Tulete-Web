@@ -23,6 +23,7 @@ import { BrandsView } from '../../brands/components/BrandsView';
 import { BrandDetailsView } from '../../brands/components/BrandDetailsView';
 import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
+import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 
@@ -432,7 +433,9 @@ export const HomePage = () => {
       imageUrl: p.imgUrl,
       storeId: p.storeId,
       storeName: p.store,
-      cat
+      cat,
+      location: p.location,
+      idadi: p.idadi
     });
   };
 
@@ -1002,23 +1005,11 @@ export const HomePage = () => {
 
                   <div className="space-y-3 mb-4 max-h-[250px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
-                        <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
-                          {cartItem.quantity}x {cartItem.name}
-                        </span>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <span className="font-extrabold text-foreground">
-                            {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
-                          </span>
-                          <button
-                            onClick={() => removeFromCart(cartItem.productId)}
-                            title="Remove item"
-                            className="focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-destructive hover:text-primary hover:bg-primary/10 transition-all ml-1"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
+                      <MiniCartRow 
+                        key={cartItem.productId} 
+                        cartItem={cartItem} 
+                        removeFromCart={removeFromCart} 
+                      />
                     ))}
                   </div>
                   

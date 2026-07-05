@@ -12,29 +12,32 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck } from 'lucide-react';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
-import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+import { useLocationStore } from '../../location/store/useLocationStore';
 
 const CheckoutItemRow = ({ item }: { item: any }) => {
-  const dynamicPrice = useDynamicPrice(item.price, item.storeId, !!item.isLaundry);
+  useLocationStore((state) => state.currentLocation);
+  const getDynamicItemPrices = useCartStore((state) => state.getDynamicItemPrices);
+  const dynamicPrices = getDynamicItemPrices();
+  const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
+
   return (
     <div className="flex gap-3 items-center">
       <img 
         src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100"} 
         alt={item.name} 
-        className="w-12 h-12 rounded-lg object-cover bg-white flex-shrink-0"
+        className="w-10 h-10 rounded object-cover bg-slate-100 flex-shrink-0"
       />
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-xs text-foreground truncate">{item.name}</p>
         <p className="text-[10px] text-muted-foreground">Qty: {item.quantity}</p>
       </div>
       <span className="font-bold text-xs text-foreground">
-        {(dynamicPrice * item.quantity).toLocaleString()} {APP_SETTINGS.currency}
+        {rowTotal.toLocaleString()} {APP_SETTINGS.currency}
       </span>
     </div>
   );
 };
 
-import { useLocationStore } from '../../location/store/useLocationStore';
 import { LocationPickerModal, GOOGLE_MAPS_LIBRARIES } from '../../location/components/LocationPickerModal';
 import { MiniMapPreview } from '../../location/components/MiniMapPreview';
 import { useJsApiLoader } from '@react-google-maps/api';
@@ -44,19 +47,30 @@ const DEFAULT_CENTER = { lat: -1.2894, lng: 36.7909, address: 'Nairobi' };
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, savedPhoneNumber, savePhoneNumber } = useAuthStore();
   const { items, getTotals, clearCart, laundryPreferences } = useCartStore();
-  const { total, deliveryFee } = getTotals();
+  const { subtotal, total, deliveryFee } = getTotals();
 
   const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
   const { deliverytime, instructions: laundryInstructions } = laundryPreferences;
 
-  const [phoneNumber, setPhoneNumber] = useState('');
+  // Auto-fill phone from saved value — initialise immediately so input is pre-filled
+  const [phoneNumber, setPhoneNumber] = useState(savedPhoneNumber || '');
+  const [phoneSaved, setPhoneSaved] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const { currentLocation } = useLocationStore();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deliveryRation, setDeliveryRation] = React.useState<number>(1000);
+
+  // Save phone number when user stops typing (debounced auto-save)
+  const handlePhoneBlur = () => {
+    if (phoneNumber.trim()) {
+      savePhoneNumber(phoneNumber.trim());
+      setPhoneSaved(true);
+      setTimeout(() => setPhoneSaved(false), 2500);
+    }
+  };
 
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -80,7 +94,7 @@ export const CheckoutPage = () => {
   
   // Delivery fee is already baked into the total via useCartStore.
   const finalTotalWithDelivery = total;
-  const computedDeliveryFee = 0;
+  const computedDeliveryFee = deliveryFee;
 
   if (items.length === 0) {
     return (
@@ -250,15 +264,28 @@ export const CheckoutPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Recipient Mobile Number
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Recipient Mobile Number
+                  </Label>
+                  {savedPhoneNumber && !phoneSaved && (
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      ✓ Auto-filled
+                    </span>
+                  )}
+                  {phoneSaved && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in duration-200">
+                      ✓ Saved for next time
+                    </span>
+                  )}
+                </div>
                 <Input
                   id="phone"
                   required
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="+254 7XX XXX XXX"
+                  onBlur={handlePhoneBlur}
+                  placeholder="+255 7XX XXX XXX"
                   className="bg-card border-border"
                 />
               </div>
@@ -323,7 +350,17 @@ export const CheckoutPage = () => {
             </div>
 
             <div className="border-t border-border pt-4 space-y-3 mb-6">
-              <div className="flex justify-between items-center text-lg font-extrabold text-foreground">
+              <div className="flex justify-between text-muted-foreground font-semibold text-xs">
+                <span>Subtotal</span>
+                <span>{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
+              </div>
+              {deliveryFee > 0 && (
+                <div className="flex justify-between text-muted-foreground font-semibold text-xs">
+                  <span>Delivery Fee</span>
+                  <span>{deliveryFee.toLocaleString()} {APP_SETTINGS.currency}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-lg font-extrabold text-foreground border-t border-border/50 pt-3">
                 <span>Total to Pay</span>
                 <span className="text-primary">{finalTotalWithDelivery.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>

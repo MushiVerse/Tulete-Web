@@ -26,6 +26,7 @@ export interface Product extends BaseDocument {
   category: string;
   tags: string[]; // e.g. "Most Popular", "Super Saver"
   availability: boolean;
+  idadi?: number;
   location?: { lat: number; lng: number };
 }
 
@@ -70,6 +71,9 @@ class ProductService extends BaseFirestoreService<Product> {
     } else if (data.location && typeof data.location.lat === 'number' && typeof data.location.lng === 'number') {
       lat = data.location.lat;
       lng = data.location.lng;
+    } else if (data.location && typeof data.location.latitude === 'number' && typeof data.location.longitude === 'number') {
+      lat = data.location.latitude;
+      lng = data.location.longitude;
     }
 
     return {
@@ -86,6 +90,7 @@ class ProductService extends BaseFirestoreService<Product> {
       category: data.category || data.cat || '',
       tags: data.tags || [],
       availability: data.availability !== undefined ? !!data.availability : true,
+      idadi: data.idadi !== undefined ? (typeof data.idadi === 'number' ? data.idadi : parseInt(data.idadi, 10)) : undefined,
       location: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,

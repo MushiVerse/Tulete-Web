@@ -138,6 +138,10 @@ export const ProductCard = ({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (product.idadi !== undefined && cartItem.quantity >= product.idadi) {
+                          alert(`Cannot add more. Only ${product.idadi} items available in stock.`);
+                          return;
+                        }
                         updateQuantity(product.id, cartItem.quantity + 1);
                       }} 
                       className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
@@ -165,7 +169,8 @@ export const ProductCard = ({
                         storeName: product.store,
                         cat: product.category,
                         location: product.location,
-                        isLaundry: isLaundryCategory
+                        isLaundry: isLaundryCategory,
+                        idadi: product.idadi
                       });
                     }
                   }}

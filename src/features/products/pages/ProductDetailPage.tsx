@@ -17,6 +17,7 @@ import { useLocationStore } from '../../location/store/useLocationStore';
 import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 
 const PRODUCT_CATEGORIES = [
   { id: 'all', name: 'All Products', icon: '🛍️' },
@@ -31,7 +32,7 @@ export const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
-  const { items: cartItems, addToCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, getTotals } = useCartStore();
   
   // Subscribe to location store so price and cart total update instantly on location change
   const { currentLocation } = useLocationStore();
@@ -211,7 +212,9 @@ export const ProductDetailPage = () => {
                       imageUrl: displayProduct.imgUrl,
                       storeId: displayProduct.storeId,
                       storeName: displayProduct.store,
-                      isLaundry: isLaundryCategory
+                      isLaundry: isLaundryCategory,
+                      location: displayProduct.location,
+                      idadi: displayProduct.idadi
                     });
                   }}
                 >
@@ -284,14 +287,11 @@ export const ProductDetailPage = () => {
                 <>
                   <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
-                          {cartItem.quantity}x {cartItem.name}
-                        </span>
-                        <span className="font-extrabold text-foreground shrink-0 ml-3">
-                          {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
-                        </span>
-                      </div>
+                      <MiniCartRow 
+                        key={cartItem.productId} 
+                        cartItem={cartItem} 
+                        removeFromCart={removeFromCart} 
+                      />
                     ))}
                   </div>
                   <div className="pt-4 border-t border-border/50">

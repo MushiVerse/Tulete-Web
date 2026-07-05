@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react';
 import { useLocationStore } from '../store/useLocationStore';
 import { storeService } from '../../stores/services/storeService';
 
-export function useDynamicPrice(basePrice: number, storeId?: string, isLaundry?: boolean, productLocation?: { lat: number; lng: number }) {
+export function useDynamicPrice(
+  basePrice: number, 
+  storeId?: string, 
+  isLaundry?: boolean, 
+  productLocation?: { lat: number; lng: number },
+  isDeliverySelected?: boolean
+) {
   const { currentLocation } = useLocationStore();
   const [magicPrice, setMagicPrice] = useState(basePrice);
 
@@ -11,6 +17,14 @@ export function useDynamicPrice(basePrice: number, storeId?: string, isLaundry?:
       setMagicPrice(basePrice);
       return;
     }
+
+    console.log('[useDynamicPrice] inputs:', {
+      basePrice,
+      storeId,
+      productLocation,
+      currentLocation,
+      isDeliverySelected
+    });
 
     let targetLocation = productLocation;
 
@@ -23,6 +37,7 @@ export function useDynamicPrice(basePrice: number, storeId?: string, isLaundry?:
     }
 
     if (targetLocation) {
+      console.log('[useDynamicPrice] targetLocation found:', targetLocation);
       const R = 6371;
       const dLat = (targetLocation.lat - currentLocation.lat) * (Math.PI / 180);
       const dLon = (targetLocation.lng - currentLocation.lng) * (Math.PI / 180);
@@ -40,23 +55,28 @@ export function useDynamicPrice(basePrice: number, storeId?: string, isLaundry?:
 
       if (isLaundry) {
         let itemDeliveryFee = 0;
-        if (roundedFee <= 0) { itemDeliveryFee = 50; }
-        else if (roundedFee < 2000) { itemDeliveryFee = 0; }
-        else if (roundedFee <= 3000) { itemDeliveryFee = 200; }
-        else if (roundedFee <= 5000) { itemDeliveryFee = 300; }
-        else if (roundedFee <= 7000) { itemDeliveryFee = 400; }
-        else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
-        else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
-        else { itemDeliveryFee = 1200; }
+        if (isDeliverySelected !== false) {
+          if (roundedFee <= 0) { itemDeliveryFee = 50; }
+          else if (roundedFee < 2000) { itemDeliveryFee = 0; }
+          else if (roundedFee <= 3000) { itemDeliveryFee = 200; }
+          else if (roundedFee <= 5000) { itemDeliveryFee = 300; }
+          else if (roundedFee <= 7000) { itemDeliveryFee = 400; }
+          else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
+          else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
+          else { itemDeliveryFee = 1200; }
+        }
         
         setMagicPrice(Number(basePrice) + itemDeliveryFee);
       } else {
-        setMagicPrice(Number(basePrice) + roundedFee);
+        const distanceFee = isDeliverySelected === false ? 0 : roundedFee;
+        console.log('[useDynamicPrice] calculated dynamic price:', Number(basePrice) + distanceFee);
+        setMagicPrice(Number(basePrice) + distanceFee);
       }
     } else {
+      console.log('[useDynamicPrice] targetLocation NOT found, using base price:', basePrice);
       setMagicPrice(Number(basePrice));
     }
-  }, [basePrice, storeId, currentLocation, isLaundry, productLocation?.lat, productLocation?.lng]);
+  }, [basePrice, storeId, currentLocation, isLaundry, productLocation?.lat, productLocation?.lng, isDeliverySelected]);
 
   return Math.round(magicPrice);
 }

@@ -19,6 +19,7 @@ import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
+import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigate }: any) => {
@@ -63,7 +64,13 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
                     <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   </button>
                   <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
-                  <button onClick={() => updateQuantity(product.id, cartItem.quantity + 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                  <button onClick={() => {
+                    if (product.idadi !== undefined && cartItem.quantity >= product.idadi) {
+                      alert(`Cannot add more. Only ${product.idadi} items available in stock.`);
+                      return;
+                    }
+                    updateQuantity(product.id, cartItem.quantity + 1);
+                  }} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
                     <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   </button>
                 </div>
@@ -81,7 +88,8 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
                     storeName: product.store,
                     cat: 'Product',
                     location: product.location,
-                    isLaundry: isLaundryCategory
+                    isLaundry: isLaundryCategory,
+                    idadi: product.idadi
                   });
                 }}
                 className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
@@ -415,24 +423,11 @@ export const ProductsPage = () => {
                 <>
                   <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
-                        <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
-                          {cartItem.quantity}x {cartItem.name}
-                        </span>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <span className="font-extrabold text-foreground">
-                            {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
-                          </span>
-                          <button
-                            onClick={() => removeFromCart(cartItem.productId)}
-                            title="Remove item"
-                            aria-label={`Remove ${cartItem.name}`}
-                            className="focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-destructive hover:text-primary hover:bg-primary/10 transition-all ml-1"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
+                      <MiniCartRow
+                        key={cartItem.productId}
+                        cartItem={cartItem}
+                        removeFromCart={removeFromCart}
+                      />
                     ))}
                   </div>
                   <div className="pt-4 border-t border-border/50">

@@ -312,13 +312,17 @@ export const FavoritesPage = () => {
                               {fav.type !== 'store' && (
                                 <button
                                   onClick={() => {
+                                    const catalog = productService.getMockProducts('all');
+                                    const item = catalog.find((c) => c.id === fav.itemId);
                                     addToCart({
                                       productId: fav.itemId,
                                       name: fav.name,
                                       price: fav.price || 0,
                                       imageUrl: fav.imageUrl,
-                                      storeId: 's1', // fallback reference
-                                      storeName: 'Verified Partner',
+                                      storeId: item?.storeId || 's1', 
+                                      storeName: item?.store || 'Verified Partner',
+                                      location: item?.location,
+                                      idadi: item?.idadi
                                     });
                                     alert(`${fav.name} added to cart!`);
                                   }}
@@ -406,8 +410,10 @@ export const FavoritesPage = () => {
                                       name: item.name,
                                       price: item.price,
                                       imageUrl: item.imgUrl,
-                                      storeId: 's1',
-                                      storeName: 'Verified Partner',
+                                      storeId: item.storeId,
+                                      storeName: item.store,
+                                      location: item.location,
+                                      idadi: item.idadi
                                     });
                                     alert(`${item.name} added to cart!`);
                                   }}
@@ -489,8 +495,10 @@ export const FavoritesPage = () => {
                           name: rec.name,
                           price: rec.price,
                           imageUrl: rec.imgUrl,
-                          storeId: 's1',
-                          storeName: 'Verified Partner',
+                          storeId: rec.storeId,
+                          storeName: rec.store,
+                          location: rec.location,
+                          idadi: rec.idadi
                         });
                         alert(`${rec.name} added to cart!`);
                       }}

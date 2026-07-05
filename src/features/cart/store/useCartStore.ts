@@ -26,6 +26,7 @@ export interface CartItem {
   // App-specific category ("Food", "Nguo", "Product") used by backend schema
   cat?: string; 
   location?: { lat: number; lng: number };
+  idadi?: number;
 }
 
 export const calculateItemTotal = (item: CartItem): number => {
@@ -70,6 +71,7 @@ interface CartState {
     total: number;
     itemCount: number;
   };
+  getDynamicItemPrices: () => Record<string, number>; // productId -> dynamic row total
 }
 
 export const useCartStore = create<CartState>()(
@@ -106,6 +108,10 @@ export const useCartStore = create<CartState>()(
       addToCart: (item) => set((state) => {
         const existingItem = state.items.find((i) => i.productId === item.productId);
         if (existingItem) {
+          if (item.idadi !== undefined && existingItem.quantity >= item.idadi) {
+            alert(`Cannot add more. Only ${item.idadi} items available in stock.`);
+            return state;
+          }
           return {
             items: state.items.map((i) =>
               i.productId === item.productId
@@ -122,11 +128,18 @@ export const useCartStore = create<CartState>()(
       })),
 
       updateQuantity: (productId, quantity) => {
-        set((state) => ({
-          items: quantity <= 0 
-            ? state.items.filter(i => i.productId !== productId)
-            : state.items.map(i => i.productId === productId ? { ...i, quantity } : i)
-        }));
+        set((state) => {
+          const item = state.items.find(i => i.productId === productId);
+          if (item && item.idadi !== undefined && quantity > item.idadi) {
+            alert(`Cannot update quantity. Only ${item.idadi} items available in stock.`);
+            return state;
+          }
+          return {
+            items: quantity <= 0 
+              ? state.items.filter(i => i.productId !== productId)
+              : state.items.map(i => i.productId === productId ? { ...i, quantity } : i)
+          };
+        });
       },
 
       toggleDelivery: (productId, isDeliverySelected) => {
@@ -142,7 +155,6 @@ export const useCartStore = create<CartState>()(
         const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
         
         let subtotal = 0;
-        let deliveryFee = 0;
 
         // Get user location and stores for dynamic pricing
         let userLocation = null;
@@ -207,12 +219,75 @@ export const useCartStore = create<CartState>()(
           subtotal += itemTotal;
         });
 
-        // The fee is inside the prices, no separate service fee (matches Flutter)
         const serviceFee = 0;
-        let total = subtotal;
+        const total = subtotal;
 
-        // Delivery fee is forced to 0 for the UI since it is already baked into the subtotal/item costs
         return { subtotal: Math.round(subtotal), deliveryFee: 0, serviceFee, total: Math.round(total), itemCount };
+      },
+
+      getDynamicItemPrices: () => {
+        const items = get().items;
+        const result: Record<string, number> = {};
+
+        let userLocation = null;
+        let allStores: any[] = [];
+        try {
+          userLocation = useLocationStore.getState().currentLocation;
+          allStores = storeService.getMockStores();
+        } catch (e) {
+          console.warn('Could not load location/store for dynamic item prices');
+        }
+
+        items.forEach(item => {
+          let itemTotal = calculateItemTotal(item);
+
+          if (userLocation) {
+            let targetLocation = item.location;
+            if (!targetLocation && allStores.length > 0) {
+              const store = allStores.find(s => s.id === item.storeId);
+              if (store && store.location) {
+                targetLocation = store.location;
+              }
+            }
+
+            if (targetLocation) {
+              const R = 6371;
+              const dLat = (targetLocation.lat - userLocation.lat) * (Math.PI / 180);
+              const dLon = (targetLocation.lng - userLocation.lng) * (Math.PI / 180);
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(userLocation.lat * (Math.PI / 180)) *
+                Math.cos(targetLocation.lat * (Math.PI / 180)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const distanceKm = R * c;
+
+              let calculatedFee = distanceKm * 1000;
+              if (distanceKm > 150) calculatedFee = 15000;
+              const roundedFee = Math.round(calculatedFee);
+
+              if (item.isLaundry) {
+                let itemDeliveryFee = 0;
+                if (roundedFee <= 0) { itemDeliveryFee = 50; }
+                else if (roundedFee < 2000) { itemDeliveryFee = 0; }
+                else if (roundedFee <= 3000) { itemDeliveryFee = 200; }
+                else if (roundedFee <= 5000) { itemDeliveryFee = 300; }
+                else if (roundedFee <= 7000) { itemDeliveryFee = 400; }
+                else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
+                else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
+                else { itemDeliveryFee = 1200; }
+                itemTotal += itemDeliveryFee;
+              } else {
+                if (item.isDeliverySelected !== false) {
+                  itemTotal += roundedFee;
+                }
+              }
+            }
+          }
+
+          result[item.productId] = Math.round(itemTotal);
+        });
+
+        return result;
       },
     }),
     {

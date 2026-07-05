@@ -67,6 +67,9 @@ class StoreService extends BaseFirestoreService<Store> {
     } else if (data.location && typeof data.location.lat === 'number' && typeof data.location.lng === 'number') {
       lat = data.location.lat;
       lng = data.location.lng;
+    } else if (data.location && typeof data.location.latitude === 'number' && typeof data.location.longitude === 'number') {
+      lat = data.location.latitude;
+      lng = data.location.longitude;
     }
 
     // Determine category safely

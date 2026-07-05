@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore, calculateItemTotal } from '../store/useCartStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
-import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Switch } from '../../../shared/components/ui/Switch';
@@ -12,7 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 
 const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig }: any) => {
-  const dynamicPrice = useDynamicPrice(item.price, item.storeId, !!item.isLaundry);
+  // Subscribe to location so re-renders happen on location change
+  useLocationStore((state) => state.currentLocation);
+  const getDynamicItemPrices = useCartStore((state) => state.getDynamicItemPrices);
+  const dynamicPrices = getDynamicItemPrices();
+  const itemTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
   
   return (
     <Card className="p-3 sm:p-4 flex gap-3 sm:gap-4 items-start sm:items-center bg-card border border-border shadow-sm hover:shadow-md transition-all group/item">
@@ -31,7 +34,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         <div className="flex items-center justify-between flex-wrap gap-2">
           {/* Price */}
           <span className="font-bold text-foreground text-sm sm:text-base">
-            {dynamicPrice.toLocaleString()} {APP_SETTINGS.currency}
+            {itemTotal.toLocaleString()} {APP_SETTINGS.currency}
           </span>
 
           {/* Quantity controls */}
@@ -46,7 +49,13 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
               {item.quantity}
             </span>
             <button
-              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+              onClick={() => {
+                if (item.idadi !== undefined && item.quantity >= item.idadi) {
+                  alert(`Cannot add more. Only ${item.idadi} items available in stock.`);
+                  return;
+                }
+                updateQuantity(item.productId, item.quantity + 1);
+              }}
               className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-600 hover:text-primary dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
             >
               <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -300,10 +309,23 @@ export const CartPage = () => {
           <Card className="p-6 bg-muted border border-border shadow-md">
             <h2 className="text-xl font-bold text-foreground mb-4">Summary</h2>
             
+            <div className="space-y-3 text-sm mb-6 border-b border-border/50 pb-4">
+              <div className="flex justify-between text-muted-foreground font-semibold">
+                <span>Subtotal</span>
+                <span>{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
+              </div>
+              {deliveryFee > 0 && (
+                <div className="flex justify-between text-muted-foreground font-semibold">
+                  <span>Delivery Fee</span>
+                  <span>{deliveryFee.toLocaleString()} {APP_SETTINGS.currency}</span>
+                </div>
+              )}
+            </div>
+            
             <div className="space-y-3 text-sm mb-6">
               <div className="flex justify-between text-base font-extrabold text-foreground">
                 <span>Total to Pay</span>
-                <span>{total.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span className="text-primary font-black text-lg">{total.toLocaleString()} {APP_SETTINGS.currency}</span>
               </div>
             </div>
 

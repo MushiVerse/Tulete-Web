@@ -121,7 +121,9 @@ export const TopNav = () => {
           >
             <MapPin className="w-4 h-4 shrink-0 group-hover:animate-bounce" />
             <span className="text-xs font-bold truncate">
-              {currentLocation ? currentLocation.address.split(',')[0] : 'Set Location'}
+              {currentLocation && !currentLocation.address.includes('(Default)')
+                ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').split(',')[0]
+                : 'Set Location'}
             </span>
           </button>
 
@@ -261,7 +263,9 @@ export const TopNav = () => {
                   <div className="flex flex-col items-start truncate">
                     <span className="text-xs font-semibold text-primary/70">Delivering to</span>
                     <span className="text-sm font-bold truncate max-w-[200px]">
-                      {currentLocation ? currentLocation.address : 'Set Location'}
+                      {currentLocation && !currentLocation.address.includes('(Default)')
+                        ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '')
+                        : 'Set Location'}
                     </span>
                   </div>
                 </div>

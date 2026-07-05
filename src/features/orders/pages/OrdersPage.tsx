@@ -34,6 +34,7 @@ export const OrdersPage = () => {
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'cancelled'>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [supportOrder, setSupportOrder] = useState<Order | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const getOrderStatusGroup = (status: OrderStatus): 'active' | 'completed' | 'cancelled' => {
     switch (status) {
@@ -48,14 +49,16 @@ export const OrdersPage = () => {
   };
 
   const handleCancelOrder = async (orderId: string) => {
-    if (window.confirm('Are you sure you want to cancel this order?')) {
-      try {
-        await orderService.update(orderId, { status: 'Cancelled' });
-        // We also want to cancel the tracking document
-        // Our Firestore listener will automatically update the UI!
-      } catch (err) {
-        console.error('Failed to cancel order:', err);
-      }
+    if (!window.confirm('Are you sure you want to cancel this order?')) return;
+    setCancellingId(orderId);
+    try {
+      await orderService.cancelOrder(orderId);
+      // Firestore real-time listeners will automatically update the UI
+    } catch (err) {
+      console.error('Failed to cancel order:', err);
+      alert('Could not cancel the order. Please try again or contact support.');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -224,10 +227,11 @@ export const OrdersPage = () => {
                           <Button
                             variant="ghost"
                             onClick={() => handleCancelOrder(order.id)}
-                            className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs font-semibold"
+                            disabled={cancellingId === order.id}
+                            className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs font-semibold disabled:opacity-60"
                           >
                             <XCircle className="w-4 h-4 mr-1.5" />
-                            Cancel Request
+                            {cancellingId === order.id ? 'Cancelling…' : 'Cancel Request'}
                           </Button>
                         )}
                         <Button

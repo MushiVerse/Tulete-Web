@@ -75,6 +75,8 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName, c
       storeId: p.storeId,
       storeName: p.store,
       cat: categoryParam === 'product' ? 'Product' : 'Food',
+      location: p.location,
+      idadi: p.idadi
     });
   };
 

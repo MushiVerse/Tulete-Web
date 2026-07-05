@@ -20,6 +20,7 @@ import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/use
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 
 export const StoreDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -685,24 +686,11 @@ export const StoreDetailsPage = () => {
                 <>
                   <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
                     {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
-                        <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
-                          {cartItem.quantity}x {cartItem.name}
-                        </span>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <span className="font-extrabold text-foreground">
-                            {APP_SETTINGS.currency} {(cartItem.price * cartItem.quantity).toLocaleString()}
-                          </span>
-                          <button
-                            onClick={() => removeFromCart(cartItem.productId)}
-                            title="Remove item"
-                            aria-label={`Remove ${cartItem.name}`}
-                            className="focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-destructive hover:text-primary hover:bg-primary/10 transition-all ml-1"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
+                      <MiniCartRow 
+                        key={cartItem.productId} 
+                        cartItem={cartItem} 
+                        removeFromCart={removeFromCart} 
+                      />
                     ))}
                   </div>
                   <div className="pt-4 border-t border-border/50">
