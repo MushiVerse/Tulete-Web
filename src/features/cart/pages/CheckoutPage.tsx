@@ -48,7 +48,7 @@ const DEFAULT_CENTER = { lat: -1.2894, lng: 36.7909, address: 'Nairobi' };
 export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user, savedPhoneNumber, savePhoneNumber } = useAuthStore();
-  const { items, getTotals, clearCart, laundryPreferences } = useCartStore();
+  const { items, getTotals, clearCart, laundryPreferences, getDynamicItemPrices } = useCartStore();
   const { subtotal, total, deliveryFee } = getTotals();
 
   const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
@@ -131,18 +131,23 @@ export const CheckoutPage = () => {
       }
 
       // Dynamic delivery fee is already computed in the render scope
+      const dynamicPrices = getDynamicItemPrices();
       const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.id,
         email: user.email || '',
         uname: user.displayName || 'Web User',
-        items: items.map(item => ({
-          productId: item.productId,
-          name: item.name,
-          price: item.price, // TODO (Security): Price shouldn't be trusted from client, recalculate on backend via rules/functions.
-          quantity: item.quantity,
-          imageUrl: item.imageUrl,
-          cat: item.cat, // Pass category for Flutter Live Order routing
-        })),
+        items: items.map(item => {
+          const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
+          const unitPrice = item.quantity > 0 ? Math.round(rowTotal / item.quantity) : item.price;
+          return {
+            productId: item.productId,
+            name: item.name,
+            price: unitPrice,
+            quantity: item.quantity,
+            imageUrl: item.imageUrl,
+            cat: item.cat,
+          };
+        }),
         totalAmount: finalTotalWithDelivery, // Computed with global modifiers and dynamic distance delivery fee
         deliveryFee: computedDeliveryFee,
         status: 'Pending',

@@ -205,12 +205,12 @@ export const useCartStore = create<CartState>()(
                  else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
                  else { itemDeliveryFee = 1200; }
                  
-                 itemTotal += itemDeliveryFee; // Baked directly into the item cost
+                 itemTotal += itemDeliveryFee * item.quantity; // Baked directly into the item cost
                } else {
                  // For Food/Products, distance fee is baked into the price
                  // Unless the user chose Pick Up (isDeliverySelected === false)
                  if (item.isDeliverySelected !== false) {
-                   itemTotal += roundedFee;
+                   itemTotal += roundedFee * item.quantity;
                  }
                }
             }
@@ -275,10 +275,10 @@ export const useCartStore = create<CartState>()(
                 else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
                 else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
                 else { itemDeliveryFee = 1200; }
-                itemTotal += itemDeliveryFee;
+                itemTotal += itemDeliveryFee * item.quantity;
               } else {
                 if (item.isDeliverySelected !== false) {
-                  itemTotal += roundedFee;
+                  itemTotal += roundedFee * item.quantity;
                 }
               }
             }
