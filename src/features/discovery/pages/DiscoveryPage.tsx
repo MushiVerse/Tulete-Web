@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight } from 'lucide-react';
+import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { useFilterStore } from '../store/useFilterStore';
@@ -59,6 +59,8 @@ export const DiscoveryPage = () => {
   };
 
   const handleAddToCart = (product: any) => {
+    // Block out-of-stock items
+    if (product.availability === false) return;
     addToCart({
       productId: product.id,
       name: product.name,
@@ -66,7 +68,9 @@ export const DiscoveryPage = () => {
       imageUrl: product.imgUrl,
       storeId: product.storeId || 'unknown',
       storeName: product.store || 'Unknown Store',
-      cat: 'Product',
+      cat: product.category || 'Product',
+      location: product.location,
+      idadi: product.idadi,
     });
   };
 
@@ -388,36 +392,100 @@ export const DiscoveryPage = () => {
           </div>
         </div>
 
-        {/* Mobile Sticky Cart */}
+        {/* ── Premium Floating Cart Panel ── */}
         <AnimatePresence>
           {hasItems && (
             <motion.div
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              className="xl:hidden fixed bottom-20 left-4 right-4 z-50"
+              initial={{ y: 100, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 100, opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="fixed bottom-20 xl:bottom-6 left-3 right-3 xl:left-auto xl:right-6 xl:w-[400px] z-50"
             >
-              <div className="flex items-stretch gap-2">
-                <Button
-                  onClick={handleCheckout}
-                  className="flex-1 py-4 md:py-6 text-sm md:text-base font-extrabold shadow-2xl flex items-center justify-between px-4 md:px-6 rounded-3xl bg-primary text-primary-foreground"
-                >
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="bg-background/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs">
-                      {cartItems.length}
+              <div
+                className="relative overflow-hidden rounded-[2rem] shadow-2xl border border-white/10"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(249,115,22,0.97) 0%, rgba(234,88,12,0.97) 60%, rgba(251,146,60,0.97) 100%)',
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                }}
+              >
+                {/* Decorative top glow */}
+                <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-yellow-300/30 blur-2xl pointer-events-none" />
+                <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full bg-red-700/30 blur-2xl pointer-events-none" />
+
+                <div className="relative z-10 px-4 pt-4 pb-4">
+
+                  {/* Header row */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative">
+                        <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                          <ShoppingCart className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
+                        </div>
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white text-primary text-[10px] font-black flex items-center justify-center shadow-lg">
+                          {cartItems.reduce((a, i) => a + i.quantity, 0)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-white font-extrabold text-sm leading-none">Your Cart</p>
+                        <p className="text-white/70 text-[11px] font-medium mt-0.5">
+                          {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
+                        </p>
+                      </div>
                     </div>
-                    <span>Checkout</span>
+                    <button
+                      onClick={clearCart}
+                      title="Clear Cart"
+                      className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center transition-all active:scale-90"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
                   </div>
-                  <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
-                </Button>
-                
-                <button
-                  onClick={() => clearCart()}
-                  title="Clear Cart"
-                  className="w-14 shrink-0 bg-card border border-border shadow-2xl rounded-3xl flex items-center justify-center text-destructive hover:text-primary transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+
+                  {/* Item preview — up to 3 items */}
+                  <div className="space-y-1.5 mb-3">
+                    {cartItems.slice(0, 3).map((item) => (
+                      <div key={item.productId} className="flex items-center gap-2.5 bg-white/10 rounded-xl px-2.5 py-1.5 backdrop-blur-sm">
+                        <img
+                          src={item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=60'}
+                          alt={item.name}
+                          className="w-8 h-8 rounded-lg object-cover shrink-0 shadow-sm"
+                        />
+                        <span className="flex-1 text-white text-xs font-bold truncate">{item.name}</span>
+                        <span className="shrink-0 bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                          ×{item.quantity}
+                        </span>
+                      </div>
+                    ))}
+                    {cartItems.length > 3 && (
+                      <p className="text-white/60 text-[11px] font-semibold text-center">
+                        +{cartItems.length - 3} more item{cartItems.length - 3 > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-px bg-white/20 mb-3" />
+
+                  {/* Total + CTA */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Total</p>
+                      <p className="text-white font-black text-lg leading-tight">
+                        {APP_SETTINGS.currency} {cartTotal.toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCheckout}
+                      className="flex items-center gap-2 px-5 py-3 bg-white text-primary rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/90 active:scale-95 transition-all"
+                    >
+                      Checkout
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                </div>
               </div>
             </motion.div>
           )}
