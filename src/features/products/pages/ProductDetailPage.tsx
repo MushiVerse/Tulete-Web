@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ArrowRight } from 'lucide-react';
@@ -192,11 +193,11 @@ export const ProductDetailPage = () => {
 
                 <div className="flex items-end gap-3 mt-4">
                   <span className="text-3xl font-extrabold text-primary">
-                    TZS {magicPrice.toLocaleString()}
+                    TZS {formatPrice(magicPrice)}
                   </span>
                   {magicOldPrice && magicOldPrice > magicPrice && (
                     <span className="text-lg font-bold text-muted-foreground line-through mb-1">
-                      TZS {magicOldPrice.toLocaleString()}
+                      TZS {formatPrice(magicOldPrice)}
                     </span>
                   )}
                 </div>
@@ -297,7 +298,7 @@ export const ProductDetailPage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
                     </div>
                     <Button
                       onClick={handleCheckout}
@@ -360,7 +361,7 @@ export const ProductDetailPage = () => {
                   </div>
                   <span>Checkout</span>
                 </div>
-                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
             </motion.div>
           )}

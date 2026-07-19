@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrderListRealtime } from '../hooks/useOrderRealtime';
@@ -216,7 +217,7 @@ export const OrdersPage = () => {
                       </div>
 
                       <div className="font-bold text-foreground text-base">
-                        {order.totalAmount.toLocaleString()} {APP_SETTINGS.currency}
+                        {formatPrice(order.totalAmount)} {APP_SETTINGS.currency}
                       </div>
                     </div>
 

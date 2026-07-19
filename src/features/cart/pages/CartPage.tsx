@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore, calculateItemTotal } from '../store/useCartStore';
@@ -34,7 +35,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         <div className="flex items-center justify-between flex-wrap gap-2">
           {/* Price */}
           <span className="font-bold text-foreground text-sm sm:text-base">
-            {itemTotal.toLocaleString()} {APP_SETTINGS.currency}
+            {formatPrice(itemTotal)} {APP_SETTINGS.currency}
           </span>
 
           {/* Quantity controls */}
@@ -312,12 +313,12 @@ export const CartPage = () => {
             <div className="space-y-3 text-sm mb-6 border-b border-border/50 pb-4">
               <div className="flex justify-between text-muted-foreground font-semibold">
                 <span>Subtotal</span>
-                <span>{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
               </div>
               {deliveryFee > 0 && (
                 <div className="flex justify-between text-muted-foreground font-semibold">
                   <span>Delivery Fee</span>
-                  <span>{deliveryFee.toLocaleString()} {APP_SETTINGS.currency}</span>
+                  <span>{formatPrice(deliveryFee)} {APP_SETTINGS.currency}</span>
                 </div>
               )}
             </div>
@@ -325,7 +326,7 @@ export const CartPage = () => {
             <div className="space-y-3 text-sm mb-6">
               <div className="flex justify-between text-base font-extrabold text-foreground">
                 <span>Total to Pay</span>
-                <span className="text-primary font-black text-lg">{total.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span className="text-primary font-black text-lg">{formatPrice(total)} {APP_SETTINGS.currency}</span>
               </div>
             </div>
 

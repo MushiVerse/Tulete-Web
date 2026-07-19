@@ -1,3 +1,4 @@
+import { formatPrice } from '../../shared/utils/formatPrice';
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { useCartStore, CartItem } from '../../features/cart/store/useCartStore';
@@ -24,7 +25,7 @@ export const MiniCartRow: React.FC<MiniCartRowProps> = ({ cartItem, removeFromCa
       </span>
       <div className="flex items-center gap-1 shrink-0 ml-2">
         <span className="font-extrabold text-foreground">
-          {APP_SETTINGS.currency} {rowTotal.toLocaleString()}
+          {APP_SETTINGS.currency} {formatPrice(rowTotal)}
         </span>
         <button
           onClick={() => removeFromCart(cartItem.productId)}

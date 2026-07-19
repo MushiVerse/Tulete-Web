@@ -8,6 +8,8 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useDynamicPrice } from '../../../features/location/hooks/useDynamicPrice';
 import { useCartStore } from '../../../features/cart/store/useCartStore';
+import { formatPrice } from '../../utils/formatPrice';
+import { APP_SETTINGS } from '../../../core/config/settings';
 
 interface ProductCardProps {
   product: Product;
@@ -30,11 +32,7 @@ export const ProductCard = ({
   const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory, product.location) : undefined;
 
   // Format price
-  const formattedPrice = new Intl.NumberFormat('en-TZ', {
-    style: 'currency',
-    currency: 'TZS',
-    maximumFractionDigits: 0
-  }).format(magicPrice);
+  const formattedPrice = `${APP_SETTINGS.currency} ${formatPrice(magicPrice)}`;
 
   return (
     <motion.div
@@ -112,7 +110,7 @@ export const ProductCard = ({
               <div className="flex flex-col">
                 {magicOldPrice && magicOldPrice > magicPrice && (
                   <span className="text-[10px] font-bold text-muted-foreground line-through mb-0.5">
-                    {new Intl.NumberFormat('en-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(magicOldPrice)}
+                    {APP_SETTINGS.currency} {formatPrice(magicOldPrice)}
                   </span>
                 )}
                 <span className="font-extrabold text-sm sm:text-[15px] text-foreground">

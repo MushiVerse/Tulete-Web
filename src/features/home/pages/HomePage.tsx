@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../../shared/components/layout';
@@ -1016,7 +1017,7 @@ export const HomePage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
                     </div>
                     <Button
                       onClick={handleCheckout}
@@ -1155,7 +1156,7 @@ export const HomePage = () => {
                     </div>
                     <span>Checkout</span>
                   </div>
-                  <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                  <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
                 </Button>
                 
                 <button

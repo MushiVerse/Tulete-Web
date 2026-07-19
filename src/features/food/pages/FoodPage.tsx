@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -93,7 +94,7 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
           <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border">
             <div>
               <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
-              <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {dynamicPrice.toLocaleString()}</span>
+              <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(dynamicPrice)}</span>
             </div>
             
             {cartItem ? (
@@ -381,7 +382,7 @@ export const FoodPage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
                     </div>
                     <Button
                       onClick={handleCheckout}
@@ -451,7 +452,7 @@ export const FoodPage = () => {
                   </div>
                   <span>Checkout</span>
                 </div>
-                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
             </motion.div>
           )}

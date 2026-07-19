@@ -84,44 +84,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         ctx.stroke();
       }
 
-      // 2. Draw mock Nairobi street layout vectors for maximum realism
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // Ring Road street bypass
-      const ngongStreet = [
-        project(-1.3050, 36.7800),
-        project(-1.3000, 36.7900),
-        project(-1.2950, 36.8000),
-        project(-1.2900, 36.8100),
-      ];
-      ctx.beginPath();
-      ngongStreet.forEach((p, idx) => {
-        if (idx === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      });
-      ctx.stroke();
-
-      // Wood Avenue bypass
-      const woodStreet = [
-        project(-1.2950, 36.7850),
-        project(-1.2915, 36.7900),
-        project(-1.2850, 36.7950),
-      ];
-      ctx.strokeStyle = '#f8fafc';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      woodStreet.forEach((p, idx) => {
-        if (idx === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      });
-      ctx.stroke();
-
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      // Note: Removed mock Nairobi street layouts to support dynamic locations.
 
       // 3. Draw active vector route directions path if present
       if (routePath.length > 0) {
@@ -271,7 +234,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
       <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 border border-slate-100 dark:border-slate-850 px-3 py-1.5 rounded-lg shadow-sm text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 pointer-events-none">
         <MapPin className="w-3.5 h-3.5 text-primary" />
-        Nairobi Kilimani Hub Grid HUD
+        Location Grid HUD
       </div>
     </Card>
   );

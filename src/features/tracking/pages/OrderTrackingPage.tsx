@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOrderSingleRealtime, useOrderTrackingRealtime, useLiveFlutterOrderTracking } from '../../orders/hooks/useOrderRealtime';
@@ -430,7 +431,7 @@ export const OrderTrackingPage = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Price:</span>
-                <span className="font-extrabold text-slate-950 dark:text-white">{order.totalAmount.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span className="font-extrabold text-slate-950 dark:text-white">{formatPrice(order.totalAmount)} {APP_SETTINGS.currency}</span>
               </div>
             </div>
           </Card>

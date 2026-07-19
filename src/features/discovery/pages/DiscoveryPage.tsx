@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X } from 'lucide-react';
@@ -473,7 +474,7 @@ export const DiscoveryPage = () => {
                     <div>
                       <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Total</p>
                       <p className="text-white font-black text-lg leading-tight">
-                        {APP_SETTINGS.currency} {cartTotal.toLocaleString()}
+                        {APP_SETTINGS.currency} {formatPrice(cartTotal)}
                       </p>
                     </div>
                     <button

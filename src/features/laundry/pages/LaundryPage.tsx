@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -119,7 +120,7 @@ const LaundryItemCard = ({
             <div>
               <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
               <p className="text-xl font-extrabold text-foreground">
-                {APP_SETTINGS.currency} {Math.round(livePrice).toLocaleString()}
+                {APP_SETTINGS.currency} {formatPrice(livePrice)}
               </p>
             </div>
           </div>
@@ -493,7 +494,7 @@ export const LaundryPage = () => {
                         </span>
                         <div className="flex items-center gap-1 shrink-0 ml-2">
                           <span className="font-extrabold text-foreground">
-                            {APP_SETTINGS.currency} {calculateItemTotal(cartItem).toLocaleString()}
+                            {APP_SETTINGS.currency} {formatPrice(calculateItemTotal(cartItem))}
                           </span>
                           <button
                             onClick={() => removeFromCart(cartItem.productId)}
@@ -510,7 +511,7 @@ export const LaundryPage = () => {
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between items-center mb-5">
                       <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {cartTotal.toLocaleString()}</span>
+                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
                     </div>
                     <Button
                       onClick={() => navigate('/cart')}
@@ -575,7 +576,7 @@ export const LaundryPage = () => {
                   </div>
                   <span>Checkout</span>
                 </div>
-                <span>{APP_SETTINGS.currency} {cartTotal.toLocaleString()} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
             </motion.div>
           )}

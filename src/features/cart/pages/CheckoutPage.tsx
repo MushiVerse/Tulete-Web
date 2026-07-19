@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
@@ -32,7 +33,7 @@ const CheckoutItemRow = ({ item }: { item: any }) => {
         <p className="text-[10px] text-muted-foreground">Qty: {item.quantity}</p>
       </div>
       <span className="font-bold text-xs text-foreground">
-        {rowTotal.toLocaleString()} {APP_SETTINGS.currency}
+        {formatPrice(rowTotal)} {APP_SETTINGS.currency}
       </span>
     </div>
   );
@@ -357,17 +358,17 @@ export const CheckoutPage = () => {
             <div className="border-t border-border pt-4 space-y-3 mb-6">
               <div className="flex justify-between text-muted-foreground font-semibold text-xs">
                 <span>Subtotal</span>
-                <span>{subtotal.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
               </div>
               {deliveryFee > 0 && (
                 <div className="flex justify-between text-muted-foreground font-semibold text-xs">
                   <span>Delivery Fee</span>
-                  <span>{deliveryFee.toLocaleString()} {APP_SETTINGS.currency}</span>
+                  <span>{formatPrice(deliveryFee)} {APP_SETTINGS.currency}</span>
                 </div>
               )}
               <div className="flex justify-between items-center text-lg font-extrabold text-foreground border-t border-border/50 pt-3">
                 <span>Total to Pay</span>
-                <span className="text-primary">{finalTotalWithDelivery.toLocaleString()} {APP_SETTINGS.currency}</span>
+                <span className="text-primary">{formatPrice(finalTotalWithDelivery)} {APP_SETTINGS.currency}</span>
               </div>
             </div>
 

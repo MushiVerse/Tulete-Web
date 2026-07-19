@@ -1,3 +1,4 @@
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFavoritesStore } from '../hooks/useFavoritesStore';
@@ -290,7 +291,7 @@ export const FavoritesPage = () => {
                           <div className="flex justify-between items-center">
                             {fav.price ? (
                               <span className="font-extrabold text-xs text-foreground">
-                                {fav.price.toLocaleString()} {APP_SETTINGS.currency}
+                                {formatPrice(fav.price)} {APP_SETTINGS.currency}
                               </span>
                             ) : (
                               <span className="text-[10px] font-semibold text-emerald-500">
@@ -401,7 +402,7 @@ export const FavoritesPage = () => {
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-foreground shrink-0">{item.price.toLocaleString()} {APP_SETTINGS.currency}</span>
+                                <span className="font-extrabold text-foreground shrink-0">{formatPrice(item.price)} {APP_SETTINGS.currency}</span>
                                 
                                 <button
                                   onClick={() => {
@@ -467,7 +468,7 @@ export const FavoritesPage = () => {
                 </div>
 
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-border">
-                  <span className="font-extrabold text-xs text-foreground">{rec.price.toLocaleString()} {APP_SETTINGS.currency}</span>
+                  <span className="font-extrabold text-xs text-foreground">{formatPrice(rec.price)} {APP_SETTINGS.currency}</span>
                   
                   <div className="flex gap-1">
                     <button

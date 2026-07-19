@@ -10,6 +10,7 @@ import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
 import { Button } from '../../../shared/components/ui/Button';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { formatPrice } from '../../../shared/utils/formatPrice';
 import {
   User, Mail, Phone, MapPin, Edit2, Save, X,
   Shield, Star, Package, TrendingUp, CheckCircle,
@@ -242,7 +243,7 @@ export const ProfilePage = () => {
         <StatCard
           icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
           label={`${APP_SETTINGS.currency} Spent`}
-          value={(profile.totalSpent || 0).toLocaleString()}
+          value={formatPrice(profile.totalSpent || 0)}
           color="bg-emerald-50 dark:bg-emerald-950/30"
         />
         <StatCard
