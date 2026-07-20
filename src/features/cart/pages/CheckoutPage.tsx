@@ -55,23 +55,14 @@ export const CheckoutPage = () => {
   const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
   const { deliverytime, instructions: laundryInstructions } = laundryPreferences;
 
-  // Auto-fill phone from saved value — initialise immediately so input is pre-filled
+  // Phone state with UX for edit vs view
   const [phoneNumber, setPhoneNumber] = useState(savedPhoneNumber || '');
-  const [phoneSaved, setPhoneSaved] = useState(false);
+  const [isEditingPhone, setIsEditingPhone] = useState(!savedPhoneNumber);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const { currentLocation } = useLocationStore();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deliveryRation, setDeliveryRation] = React.useState<number>(1000);
-
-  // Save phone number when user stops typing (debounced auto-save)
-  const handlePhoneBlur = () => {
-    if (phoneNumber.trim()) {
-      savePhoneNumber(phoneNumber.trim());
-      setPhoneSaved(true);
-      setTimeout(() => setPhoneSaved(false), 2500);
-    }
-  };
 
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -270,30 +261,56 @@ export const CheckoutPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Recipient Mobile Number
-                  </Label>
-                  {savedPhoneNumber && !phoneSaved && (
-                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      ✓ Auto-filled
-                    </span>
-                  )}
-                  {phoneSaved && (
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in duration-200">
-                      ✓ Saved for next time
-                    </span>
-                  )}
-                </div>
-                <Input
-                  id="phone"
-                  required
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  onBlur={handlePhoneBlur}
-                  placeholder="+255 7XX XXX XXX"
-                  className="bg-card border-border"
-                />
+                <Label htmlFor="phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Recipient Mobile Number
+                </Label>
+                {isEditingPhone ? (
+                  <div className="flex gap-2">
+                    <Input
+                      id="phone"
+                      required
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="+255 7XX XXX XXX"
+                      className="bg-card border-border flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        if (phoneNumber.trim()) {
+                          savePhoneNumber(phoneNumber.trim());
+                          setIsEditingPhone(false);
+                        }
+                      }}
+                    >
+                      Save
+                    </Button>
+                    {savedPhoneNumber && (
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        onClick={() => {
+                          setPhoneNumber(savedPhoneNumber);
+                          setIsEditingPhone(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-sm text-foreground">{savedPhoneNumber}</span>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        ✓ Saved
+                      </span>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditingPhone(true)}>
+                      Change
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
