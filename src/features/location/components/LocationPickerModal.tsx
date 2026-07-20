@@ -188,27 +188,27 @@ export const LocationPickerModal = ({
         (error) => {
           console.error('Geolocation error:', error);
           setIsLocating(false);
+          const fallback = defaultCenter;
+          setMapCenter(fallback);
+          setSelectedPos(fallback);
+          setAddressText('Default location (Dar es Salaam)');
+          setValue('Dar es Salaam, Tanzania', false);
+          setCurrentLocation({
+            id: Date.now().toString(),
+            address: 'Dar es Salaam, Tanzania',
+            lat: fallback.lat,
+            lng: fallback.lng,
+            specificInstructions: '',
+            lastUsedAt: Date.now(),
+          });
+
           if (error.code === error.PERMISSION_DENIED) {
-            // Fallback to default location (Nairobi CBD) instead of just alerting
-            const fallback = defaultCenter;
-            setMapCenter(fallback);
-            setSelectedPos(fallback);
-            setAddressText('Default location (Dar es Salaam)');
-            setValue('Dar es Salaam, Tanzania', false);
-            setCurrentLocation({
-              id: Date.now().toString(),
-              address: 'Dar es Salaam, Tanzania',
-              lat: fallback.lat,
-              lng: fallback.lng,
-              specificInstructions: '',
-              lastUsedAt: Date.now(),
-            });
             alert('Location permission denied. Using default location. You can pick another location on the map.');
           } else {
-            alert('Unable to retrieve your location. Please try again or select a location manually.');
+            alert('Unable to retrieve your location. Using default location. You can pick another location on the map.');
           }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
       );
     } else {
       alert('Geolocation is not supported by your browser. Please select a location manually.');
