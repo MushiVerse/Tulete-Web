@@ -154,7 +154,7 @@ export const CartPage = () => {
               Looks like you haven't added anything to your cart yet. Let's find some amazing items for you!
             </p>
             <Button 
-              onClick={() => navigate('/discover')} 
+              onClick={() => navigate('/explore')} 
               size="lg"
               className="w-full sm:w-auto font-semibold px-8 shadow-lg hover:shadow-xl transition-all"
             >

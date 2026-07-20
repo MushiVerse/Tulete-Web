@@ -155,7 +155,7 @@ export const OrdersPage = () => {
           <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-6">
             We couldn't find any orders in the "{activeTab}" tab. Let's make your first request today!
           </p>
-          <Button onClick={() => navigate('/discover')}>Discover Stores</Button>
+          <Button onClick={() => navigate('/explore')}>Discover Stores</Button>
         </motion.div>
       ) : (
         /* Order Cards */

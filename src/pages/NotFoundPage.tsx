@@ -14,7 +14,7 @@ export const NotFoundPage = () => {
         <p className="text-muted-foreground mb-8 max-w-sm">
           Oops! The page you are looking for doesn't exist or has been moved.
         </p>
-        <Button onClick={() => navigate('/discover')} size="lg">
+        <Button onClick={() => navigate('/explore')} size="lg">
           Return to Discovery
         </Button>
       </ContentContainer>

@@ -89,7 +89,6 @@ export const router = createBrowserRouter([
           </AuthGuard>
         ),
         children: [
-          { path: 'discover', element: <Suspense fallback={<GridSkeleton />}><StoreListing /></Suspense> },
           { path: 'orders', element: withSuspense(Orders) },
           { path: 'cart', element: withSuspense(Cart) },
           { path: 'favorites', element: <Suspense fallback={<GridSkeleton />}><Favorites /></Suspense> },

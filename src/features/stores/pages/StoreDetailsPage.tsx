@@ -229,7 +229,7 @@ export const StoreDetailsPage = () => {
           <AlertTriangle className="w-14 h-14 text-destructive mb-4 animate-bounce" />
           <h2 className="text-2xl font-bold mb-1">Store Not Found</h2>
           <p className="text-muted-foreground mb-6 max-w-sm">We couldn't locate this service provider. It may have been disabled or deleted.</p>
-          <Button onClick={() => navigate('/discover')}>Discover Providers</Button>
+          <Button onClick={() => navigate('/explore')}>Discover Providers</Button>
         </div>
       </PageContainer>
     );
@@ -253,7 +253,7 @@ export const StoreDetailsPage = () => {
         {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
           <button 
-            onClick={() => navigate('/discover')} 
+            onClick={() => navigate('/explore')} 
             className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground mb-8"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Discovery
@@ -293,7 +293,7 @@ export const StoreDetailsPage = () => {
         <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
           {/* Mobile Back & Actions */}
           <div className="lg:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between py-3 mb-6">
-            <button onClick={() => navigate('/discover')} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
+            <button onClick={() => navigate('/explore')} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">

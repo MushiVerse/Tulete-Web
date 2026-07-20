@@ -44,7 +44,7 @@ export const SearchOverlay = () => {
     if (inputValue.trim()) {
       addSearchHistory(inputValue);
       closeSearch();
-      navigate(`/discover?q=${encodeURIComponent(inputValue.trim())}`);
+      navigate(`/explore?q=${encodeURIComponent(inputValue.trim())}`);
     }
   };
 
@@ -53,7 +53,7 @@ export const SearchOverlay = () => {
     setQuery(term);
     addSearchHistory(term);
     closeSearch();
-    navigate(`/discover?q=${encodeURIComponent(term)}`);
+    navigate(`/explore?q=${encodeURIComponent(term)}`);
   };
 
   return (

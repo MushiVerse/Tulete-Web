@@ -95,7 +95,7 @@ export const CheckoutPage = () => {
         <ContentContainer size="full" className="flex flex-col items-center justify-center min-h-[70vh]">
           <ShoppingCart className="w-16 h-16 text-slate-300 mb-4" />
           <h2 className="text-xl font-bold mb-2">No items in checkout</h2>
-          <Button onClick={() => navigate('/discover')}>Discover Items</Button>
+          <Button onClick={() => navigate('/explore')}>Discover Items</Button>
         </ContentContainer>
       </PageContainer>
     );
