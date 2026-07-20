@@ -16,13 +16,15 @@ interface ProductCardProps {
   onAddToCart?: (product: Product) => void;
   onToggleFavorite?: (product: Product) => void;
   isFavorite?: boolean;
+  onClick?: (product: Product) => void;
 }
 
 export const ProductCard = ({ 
   product, 
   onAddToCart, 
   onToggleFavorite,
-  isFavorite = false 
+  isFavorite = false,
+  onClick
 }: ProductCardProps) => {
   const { items: cartItems, updateQuantity, addToCart } = useCartStore();
   const cartItem = cartItems.find(i => i.productId === product.id);
@@ -34,13 +36,18 @@ export const ProductCard = ({
   // Format price
   const formattedPrice = `${APP_SETTINGS.currency} ${formatPrice(magicPrice)}`;
 
+  const Wrapper = onClick ? 'div' : Link;
+  const wrapperProps = onClick 
+    ? { onClick: () => onClick(product), className: "block h-full cursor-pointer" } 
+    : { to: `/product/${product.id}`, className: "block h-full" };
+
   return (
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
       className="h-full"
     >
-      <Link to={`/product/${product.id}`} className="block h-full">
+      <Wrapper {...wrapperProps as any}>
         <Card className="h-full overflow-hidden flex flex-col group relative bg-card border-border/40 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 rounded-3xl">
           {/* Badges Overlay (Styled exactly like Open Now) */}
           <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
@@ -185,7 +192,7 @@ export const ProductCard = ({
             </div>
           </CardContent>
         </Card>
-      </Link>
+      </Wrapper>
     </motion.div>
   );
 };

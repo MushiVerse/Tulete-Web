@@ -1,12 +1,13 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X } from 'lucide-react';
+import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map, Store, Heart } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { useFilterStore } from '../store/useFilterStore';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
+import { StoreCard } from '../../../shared/components/cards/StoreCard';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
@@ -15,6 +16,8 @@ import { APP_SETTINGS } from '../../../core/config/settings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../../shared/components/ui/Button';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { DiscoveryMap } from '../components/DiscoveryMap';
 
 // Trending quick-filter chips
 const TRENDING_FILTERS = [
@@ -38,6 +41,7 @@ export const DiscoveryPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
+  const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
 
   // Cart & Auth
   const { items: cartItems, addToCart, clearCart, getTotals } = useCartStore();
@@ -48,6 +52,10 @@ export const DiscoveryPage = () => {
 
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
+  
+  const currentLocation = useLocationStore((state) => state.currentLocation);
+  const [showMap, setShowMap] = useState(false);
+  const [activeTab, setActiveTab] = useState<'products' | 'stores'>('products');
 
   // Initialize favorites when user is logged in
   useEffect(() => {
@@ -104,10 +112,15 @@ export const DiscoveryPage = () => {
       setLoading(true);
 
       let filterStr: string | undefined = undefined;
-      if (category && category !== 'all') {
-        filterStr = `category:"${category}"`;
+      
+      if (activeTab === 'stores') {
+        filterStr = `recordType:store`;
       } else {
-        filterStr = `NOT recordType:brand`;
+        if (category && category !== 'all') {
+          filterStr = `category:"${category}" AND NOT recordType:store AND NOT recordType:brand`;
+        } else {
+          filterStr = `NOT recordType:store AND NOT recordType:brand`;
+        }
       }
 
       if (isAvailableOnly) {
@@ -139,7 +152,7 @@ export const DiscoveryPage = () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [localQuery, category, minPrice, maxPrice, isAvailableOnly]);
+  }, [localQuery, category, minPrice, maxPrice, isAvailableOnly, activeTab]);
 
   return (
     <PageWrapper className="min-h-screen bg-background">
@@ -152,6 +165,20 @@ export const DiscoveryPage = () => {
           
           <div className="w-full max-w-7xl flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar pb-24 px-4 sm:px-6 md:px-8 lg:px-12 pt-4 md:pt-6">
             
+            {/* ── Location Header ── */}
+            <div className="flex items-center justify-between mb-4">
+              <button 
+                onClick={() => navigate('/location')}
+                className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors bg-muted/50 px-3 py-1.5 rounded-full"
+              >
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="truncate max-w-[200px] sm:max-w-[300px]">
+                  {currentLocation ? `Exploring near: ${currentLocation.address}` : 'Set your location'}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+              </button>
+            </div>
+
             {/* ── Hero Banner ── */}
             <div className="mb-8">
               {/* Main orange gradient banner */}
@@ -248,6 +275,23 @@ export const DiscoveryPage = () => {
 
             {/* Sticky Search & Filter Bar */}
             <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md py-4 border-b border-border/50 mb-6 flex flex-col gap-4">
+              
+              {/* Tabs: Products vs Stores */}
+              <div className="flex items-center gap-2 p-1 bg-muted rounded-xl w-fit">
+                <button
+                  onClick={() => setActiveTab('products')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'products' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Products & Services
+                </button>
+                <button
+                  onClick={() => setActiveTab('stores')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'stores' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Stores
+                </button>
+              </div>
+
               <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14 gap-2">
                 <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-1" />
 
@@ -269,17 +313,26 @@ export const DiscoveryPage = () => {
                   <span className="hidden sm:inline">Filters</span>
                 </button>
 
+                {/* Map toggle */}
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-2 border border-border rounded-xl text-xs font-extrabold transition-colors ${showMap ? 'bg-primary text-white border-primary' : 'bg-muted hover:bg-primary/10 hover:text-primary'}`}
+                >
+                  <Map className="w-4 h-4" />
+                  <span className="hidden sm:inline">Map</span>
+                </button>
+
                 {/* Grid / List toggle */}
                 <div className="hidden sm:flex items-center p-1 bg-muted rounded-xl border border-border shrink-0">
                   <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => { setViewMode('grid'); setShowMap(false); }}
+                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' && !showMap ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <Grid className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => { setViewMode('list'); setShowMap(false); }}
+                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' && !showMap ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <ListIcon className="w-4 h-4" />
                   </button>
@@ -317,9 +370,13 @@ export const DiscoveryPage = () => {
               <span className="text-sm font-bold text-muted-foreground">{products.length} Items</span>
             </div>
 
-            {/* Results Grid/List */}
+            {/* Results Grid/List / Map */}
             <div>
-              {loading ? (
+              {showMap ? (
+                <div className="w-full mt-2 animate-in fade-in duration-300">
+                  <DiscoveryMap items={products} />
+                </div>
+              ) : loading ? (
                 <div className={`grid gap-4 sm:gap-5 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                     <Skeleton key={i} className={`rounded-3xl ${viewMode === 'grid' ? 'h-[300px]' : 'h-[140px]'} w-full`} />
@@ -328,12 +385,31 @@ export const DiscoveryPage = () => {
               ) : (
                 <div className={`grid gap-4 sm:gap-5 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
                   {products.length === 0 ? (
-                    <div className="col-span-full py-20 text-center bg-card border border-border border-dashed rounded-3xl">
-                      <p className="text-muted-foreground font-medium mb-2">No results found for your search.</p>
-                      <button onClick={clearAllFilters} className="text-primary font-extrabold hover:underline">Clear Filters</button>
+                    <div className="col-span-full py-24 flex flex-col items-center text-center bg-card border border-border border-dashed rounded-3xl mx-2">
+                      <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <Search className="w-10 h-10 text-muted-foreground/50" />
+                      </div>
+                      <h3 className="text-xl font-extrabold text-foreground mb-2">No results found</h3>
+                      <p className="text-muted-foreground font-medium mb-6 max-w-sm">
+                        We couldn't find any {activeTab === 'stores' ? 'stores' : 'items'} matching "{localQuery}". Try exploring our trending categories!
+                      </p>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => { setLocalQuery(''); clearAllFilters(); }} 
+                          className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm"
+                        >
+                          Explore All
+                        </button>
+                        <button 
+                          onClick={() => { setLocalQuery(''); setCategory('Food'); }} 
+                          className="px-6 py-2.5 bg-muted text-foreground rounded-xl font-bold hover:bg-muted/80 transition-colors"
+                        >
+                          Hot Meals 🔥
+                        </button>
+                      </div>
                     </div>
                   ) : products.map((item: any) => {
-                    // Normalize Algolia hit → ProductCard-compatible shape (mirrors productService.parse)
+                    // Shared normalization
                     let rating = 0;
                     let reviewCount = 0;
                     if (Array.isArray(item.rate) && item.rate.length > 0) {
@@ -344,12 +420,10 @@ export const DiscoveryPage = () => {
                       rating = Number(item.rating);
                       reviewCount = item.reviewCount ? Number(item.reviewCount) : 1;
                     }
-                    // Fallback deterministic rating so nothing shows 0.0
                     if (rating === 0 || reviewCount === 0) {
-                      rating = 4.5 + ((item.name?.length || 5) % 5) / 10;
+                      rating = 4.5 + ((item.name?.length || item.store?.length || 5) % 5) / 10;
                     }
-
-                    // Parse location string "lat,lng" → {lat, lng}
+                    
                     let location: { lat: number; lng: number } | undefined;
                     if (item.location && typeof item.location === 'string') {
                       const parts = item.location.split(',');
@@ -362,6 +436,25 @@ export const DiscoveryPage = () => {
                       location = { lat: item.location.lat, lng: item.location.lng };
                     }
 
+                    if (activeTab === 'stores') {
+                      const storeData = {
+                        ...item,
+                        id: item.objectID || item.id,
+                        store: item.store || item.name || 'Store',
+                        imgURL: item.imgUrl || item.imgURL || item.image || '',
+                        rating: Math.round(rating * 10) / 10,
+                        reviewCount,
+                        availability: item.availability !== undefined ? !!item.availability : true,
+                        location
+                      };
+                      return (
+                        <div key={storeData.id} className={viewMode === 'list' ? 'h-[150px]' : ''}>
+                          <StoreCard store={storeData as any} />
+                        </div>
+                      );
+                    }
+
+                    // Product path
                     const product = {
                       ...item,
                       id: item.objectID || item.id,
@@ -379,6 +472,7 @@ export const DiscoveryPage = () => {
                       availability: item.availability !== undefined ? !!item.availability : true,
                       location,
                     };
+                    
                     return (
                       <div key={product.id} className={viewMode === 'list' ? 'h-[150px]' : ''}>
                         <ProductCard 
@@ -386,6 +480,7 @@ export const DiscoveryPage = () => {
                           onAddToCart={handleAddToCart}
                           onToggleFavorite={handleToggleFavorite}
                           isFavorite={isFavorited(product.id)}
+                          onClick={setQuickViewProduct}
                         />
                       </div>
                     );
@@ -495,6 +590,85 @@ export const DiscoveryPage = () => {
           )}
         </AnimatePresence>
 
+        {/* ── Quick View Modal (Bottom Sheet on Mobile) ── */}
+        <AnimatePresence>
+          {quickViewProduct && (
+            <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setQuickViewProduct(null)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              />
+              
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="relative w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+              >
+                <div className="relative h-64 sm:h-72 bg-muted shrink-0">
+                   <img src={quickViewProduct.imgUrl} alt={quickViewProduct.name} className="w-full h-full object-cover" />
+                   <button onClick={() => setQuickViewProduct(null)} className="absolute top-4 right-4 bg-black/50 text-white hover:bg-black/70 transition-colors rounded-full p-2 backdrop-blur-md">
+                     <X className="w-5 h-5" />
+                   </button>
+                   
+                   <div className="absolute bottom-4 left-4 flex gap-2">
+                     {quickViewProduct.tags?.includes('Most TamTam') && (
+                       <span className="text-xs font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md bg-success/90 text-primary-foreground tracking-wide">
+                         HOT 🔥
+                       </span>
+                     )}
+                   </div>
+                </div>
+                
+                <div className="p-6 overflow-y-auto">
+                   <div className="flex justify-between items-start gap-4">
+                     <div>
+                       <h2 className="text-2xl font-extrabold text-foreground">{quickViewProduct.name}</h2>
+                       <p className="text-sm font-medium text-muted-foreground mt-1 flex items-center gap-1">
+                         <Store className="w-4 h-4" /> {quickViewProduct.store}
+                       </p>
+                     </div>
+                     <div className="text-right shrink-0">
+                       <p className="text-primary font-extrabold text-2xl">{APP_SETTINGS.currency} {formatPrice(quickViewProduct.price)}</p>
+                       {quickViewProduct.oldprice && quickViewProduct.oldprice > quickViewProduct.price && (
+                         <p className="text-muted-foreground line-through text-sm">{APP_SETTINGS.currency} {formatPrice(quickViewProduct.oldprice)}</p>
+                       )}
+                     </div>
+                   </div>
+
+                   {quickViewProduct.description && (
+                     <div className="mt-6">
+                       <h3 className="text-sm font-bold text-foreground mb-2">Description</h3>
+                       <p className="text-muted-foreground text-sm leading-relaxed">{quickViewProduct.description}</p>
+                     </div>
+                   )}
+                   
+                   <div className="mt-8 flex gap-3">
+                     <button 
+                       onClick={() => handleToggleFavorite(quickViewProduct)}
+                       className="p-4 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0"
+                     >
+                       <Heart className={`w-6 h-6 ${isFavorited(quickViewProduct.id) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+                     </button>
+                     <Button 
+                       onClick={() => { 
+                         handleAddToCart(quickViewProduct); 
+                         setQuickViewProduct(null); 
+                       }} 
+                       className="flex-1 py-6 text-lg font-bold rounded-2xl shadow-lg shadow-primary/25"
+                     >
+                       Add to Cart
+                     </Button>
+                   </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </PageWrapper>
   );

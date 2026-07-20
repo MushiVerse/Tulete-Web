@@ -6,6 +6,10 @@ import { MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
+interface DiscoveryMapProps {
+  items?: any[];
+}
+
 const containerStyle = {
   width: '100%',
   height: '100%',
@@ -18,7 +22,7 @@ const defaultCenter = {
   lng: 39.2083,
 };
 
-export const DiscoveryMap = () => {
+export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
   const { currentLocation } = useLocationStore();
   const navigate = useNavigate();
   const [selectedStore, setSelectedStore] = React.useState<any>(null);
@@ -30,7 +34,10 @@ export const DiscoveryMap = () => {
     return defaultCenter;
   }, [currentLocation]);
 
-  const stores = useMemo(() => storeService.getMockStores(), []);
+  const displayItems = useMemo(() => {
+    if (items && items.length > 0) return items;
+    return storeService.getMockStores();
+  }, [items]);
 
   return (
     <div className="relative w-full h-[300px] md:h-[500px] rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-border group">
@@ -68,16 +75,16 @@ export const DiscoveryMap = () => {
           />
         )}
 
-        {/* Store Pins */}
-        {stores.map((store) => (
-          store.location && (
+        {/* Store/Item Pins */}
+        {displayItems.map((item) => (
+          item.location && (
             <MarkerF
-              key={store.id}
-              position={store.location}
+              key={item.id || item.objectID}
+              position={item.location}
               icon={{
                 url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
               }}
-              onClick={() => setSelectedStore(store)}
+              onClick={() => setSelectedStore(item)}
             />
           )
         ))}
@@ -89,15 +96,15 @@ export const DiscoveryMap = () => {
           >
             <div className="p-1 max-w-[200px]">
               <div className="w-full h-24 rounded-lg overflow-hidden mb-2">
-                <img src={selectedStore.imageUrl} alt={selectedStore.name} className="w-full h-full object-cover" />
+                <img src={selectedStore.imgURL || selectedStore.imgUrl || selectedStore.image || selectedStore.imageUrl} alt={selectedStore.name || selectedStore.store} className="w-full h-full object-cover" />
               </div>
-              <h4 className="font-extrabold text-sm text-gray-900 leading-tight">{selectedStore.name}</h4>
-              <p className="text-xs text-gray-600 line-clamp-1 mb-2">{selectedStore.categories?.join(', ')}</p>
+              <h4 className="font-extrabold text-sm text-gray-900 leading-tight">{selectedStore.name || selectedStore.store}</h4>
+              <p className="text-xs text-gray-600 line-clamp-1 mb-2">{selectedStore.categories?.join(', ') || selectedStore.category}</p>
               <button 
-                onClick={() => navigate(`/store/${selectedStore.id}`)}
+                onClick={() => navigate(selectedStore.recordType === 'store' ? `/store/${selectedStore.id || selectedStore.objectID}` : `/product/${selectedStore.id || selectedStore.objectID}`)}
                 className="w-full py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors"
               >
-                Visit Store
+                View Details
               </button>
             </div>
           </InfoWindowF>
