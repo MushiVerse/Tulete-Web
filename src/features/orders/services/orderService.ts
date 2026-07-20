@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
+import { useCartStore } from '../../cart/store/useCartStore';
 import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 
@@ -352,11 +353,21 @@ class OrderService extends BaseFirestoreService<Order> {
         let lineTotal = item.price * item.quantity;
         
         // Apply per-item laundry modifiers to the item lineTotal
-        if (order.isLaundryOrder && (item as any).isLaundry !== false) {
-          if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * 0.95;
-          if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * 0.60;
-          if ((item as any).expressSelected) lineTotal += 1500; // Flat fee per item row
+        if (order.isLaundryOrder) {
+          const ratios = useCartStore.getState().laundryRatios;
+          if (ratios) {
+            if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * (ratios.iron - ratios.wash);
+            if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * (ratios.package - ratios.wash);
+            if ((item as any).vipSelected) lineTotal += (item.price * item.quantity) * (ratios.vip - ratios.wash);
+          } else {
+            // fallback
+            if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * 0.95;
+            if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * 2.9;
+            if ((item as any).vipSelected) lineTotal += (item.price * item.quantity) * 4.3;
+          }
         }
+        
+        const globalExpress = useCartStore.getState().laundryPreferences.globalExpressSelected;
 
         const deliveryFee = 0; // Handled per-item or globally depending on the business rule, mock 0 for now.
 
@@ -377,7 +388,7 @@ class OrderService extends BaseFirestoreService<Order> {
           total: Math.round(lineTotal || 0),
           irondelivery: order.irondelivery || false,
           packagepickup: order.packagepickup || false,
-          express: order.express || false,
+          express: globalExpress || false,
           cancel: false,
           show: true,
           paid: false,

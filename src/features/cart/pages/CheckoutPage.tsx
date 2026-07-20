@@ -14,6 +14,7 @@ import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck } from 'luc
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
 import { useLocationStore } from '../../location/store/useLocationStore';
+import { smsService } from '../../../services/smsService';
 
 const CheckoutItemRow = ({ item }: { item: any }) => {
   useLocationStore((state) => state.currentLocation);
@@ -168,6 +169,9 @@ export const CheckoutPage = () => {
 
       // Create orders in firestore (Live Flutter Format: 'newcomfirmedorders')
       await orderService.createLiveFlutterOrders(orderPayload, createdOrder.id);
+
+      // Send SMS notification to Admin via KilaKona
+      await smsService.sendAdminOrderNotification(orderPayload);
 
       // Removed background simulation to allow the Flutter Admin app to actually process the order in real-time.
       await orderService.initializeOrderTracking(createdOrder.id);

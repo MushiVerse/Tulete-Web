@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { storeService } from '../../stores/services/storeService';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 
 export interface CartItem {
   productId: string; // Composite ID for the cart (e.g., id-iron-pack)
@@ -18,7 +20,7 @@ export interface CartItem {
   washingSelected?: boolean;
   ironingSelected?: boolean;
   packagingSelected?: boolean;
-  expressSelected?: boolean;
+  vipSelected?: boolean;
   
   // Food & Product Configurations
   isDeliverySelected?: boolean; // True means Delivery, False means Pickup
@@ -29,15 +31,30 @@ export interface CartItem {
   idadi?: number;
 }
 
-export const calculateItemTotal = (item: CartItem): number => {
+export interface LaundryRatios {
+  iron: number;
+  package: number;
+  vip: number;
+  wash: number;
+  expressClient: number;
+}
+
+export const calculateItemTotal = (item: CartItem, ratios?: LaundryRatios): number => {
   const itemBaseSubtotal = item.price * item.quantity;
   let itemTotal = 0;
 
   if (item.isLaundry) {
     itemTotal = itemBaseSubtotal;
-    if (item.ironingSelected) itemTotal += itemBaseSubtotal * 0.95;
-    if (item.packagingSelected) itemTotal += itemBaseSubtotal * 0.60;
-    if (item.expressSelected) itemTotal += 1500; // Flat fee per line item, mirrors Flutter (deliveryFee * 2 + 1500) where deliveryFee=0
+    if (ratios) {
+      if (item.ironingSelected) itemTotal += itemBaseSubtotal * (ratios.iron - ratios.wash);
+      if (item.packagingSelected) itemTotal += itemBaseSubtotal * (ratios.package - ratios.wash);
+      if (item.vipSelected) itemTotal += itemBaseSubtotal * (ratios.vip - ratios.wash);
+    } else {
+      // Fallback logic based on the laudry_service values
+      if (item.ironingSelected) itemTotal += itemBaseSubtotal * (150 / 100); 
+      if (item.packagingSelected) itemTotal += itemBaseSubtotal * (300 / 100); 
+      if (item.vipSelected) itemTotal += itemBaseSubtotal * (400 / 100); 
+    }
   } else {
     // Food and Products: Base Price only
     itemTotal = itemBaseSubtotal;
@@ -48,16 +65,19 @@ export const calculateItemTotal = (item: CartItem): number => {
 };
 
 export interface LaundryPreferences {
-  deliverytime: string;
-  instructions: string;
+  deliverytime?: string;
+  instructions?: string;
+  globalExpressSelected?: boolean;
 }
 
 interface CartState {
   items: CartItem[];
   laundryPreferences: LaundryPreferences;
   setLaundryPreferences: (prefs: Partial<LaundryPreferences>) => void;
-  updateLaundryItemConfig: (productId: string, config: { ironingSelected?: boolean; packagingSelected?: boolean; expressSelected?: boolean }) => void;
-  applyLaundryServicesToAll: (config: { ironingSelected?: boolean; packagingSelected?: boolean; expressSelected?: boolean }) => void;
+  updateLaundryItemConfig: (productId: string, config: { ironingSelected?: boolean; packagingSelected?: boolean; vipSelected?: boolean }) => void;
+  applyLaundryServicesToAll: (config: { ironingSelected?: boolean; packagingSelected?: boolean; vipSelected?: boolean }) => void;
+  laundryRatios: LaundryRatios | null;
+  fetchLaundryRatios: () => Promise<void>;
   clearAllLaundryServices: () => void;
   addToCart: (item: Omit<CartItem, 'quantity'>) => void;
   removeFromCart: (productId: string) => void;
@@ -78,9 +98,50 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      laundryRatios: null,
       laundryPreferences: {
         deliverytime: '',
         instructions: '',
+        globalExpressSelected: false,
+      },
+
+      fetchLaundryRatios: async () => {
+        try {
+          // We assume the new document is in the ratios collection called 'laudry_service'
+          const docRef = doc(db, 'ratios', 'laudry_service');
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            set({
+              laundryRatios: {
+                iron: data.ironPercent ? (data.ironPercent / 100 + 1) : 2.5, // e.g., 150 -> 2.5 times total, so added modifier is 1.5
+                package: data.packagingPercent ? (data.packagingPercent / 100 + 1) : 4.0,
+                vip: data.vipPercent ? (data.vipPercent / 100 + 1) : 5.0,
+                wash: 1, // Base is always 1
+                expressClient: data.expressClient ?? 2000,
+              }
+            });
+          } else {
+            // Fallback to older ratios doc if the new one doesn't exist
+            const oldDocRef = doc(db, 'ratios', 'ratios');
+            const oldSnap = await getDoc(oldDocRef);
+            if (oldSnap.exists()) {
+              const data = oldSnap.data();
+              set({
+                laundryRatios: {
+                  iron: data.iron ?? 1.95,
+                  package: data.package ?? 3.9,
+                  vip: data.vip ?? 5.3,
+                  wash: data.wash ?? 1,
+                  expressClient: 2000,
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch laundry ratios:', e);
+        }
       },
 
       setLaundryPreferences: (prefs) => set((state) => ({
@@ -96,12 +157,12 @@ export const useCartStore = create<CartState>()(
       })),
 
       clearAllLaundryServices: () => set((state) => ({
-        laundryPreferences: { deliverytime: '', instructions: '' },
+        laundryPreferences: { deliverytime: '', instructions: '', globalExpressSelected: false },
         items: state.items.map(i => i.isLaundry ? { 
           ...i, 
           ironingSelected: false, 
           packagingSelected: false, 
-          expressSelected: false 
+          vipSelected: false 
         } : i)
       })),
 
@@ -155,6 +216,11 @@ export const useCartStore = create<CartState>()(
         const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
         
         let subtotal = 0;
+        let deliveryFee = 0;
+        let globalExpressFee = 0;
+        let serviceFee = 0;
+        let maxRoundedFee = 0;
+        let hasLaundry = false;
 
         // Get user location and stores for dynamic pricing
         let userLocation = null;
@@ -166,8 +232,12 @@ export const useCartStore = create<CartState>()(
            console.warn('Could not load location/store service for dynamic pricing');
         }
         
+        const ratios = get().laundryRatios;
         items.forEach(item => {
-          let itemTotal = calculateItemTotal(item);
+          const itemIsLaundry = item.isLaundry || item.storeId === 'laundry' || item.storeName?.toLowerCase().includes('laundry');
+          if (itemIsLaundry) hasLaundry = true;
+          
+          let itemTotal = calculateItemTotal(item, ratios || undefined);
           let itemDeliveryFee = 0;
 
           if (userLocation) {
@@ -194,7 +264,9 @@ export const useCartStore = create<CartState>()(
                }
                const roundedFee = Math.round(calculatedFee);
 
-               if (item.isLaundry) {
+               if (itemIsLaundry) {
+                 if (roundedFee > maxRoundedFee) maxRoundedFee = roundedFee;
+
                  // Tiered pickup fee for laundry (mirrors Flutter logic)
                  if (roundedFee <= 0) { itemDeliveryFee = 50; }
                  else if (roundedFee < 2000) { itemDeliveryFee = 0; }
@@ -219,8 +291,14 @@ export const useCartStore = create<CartState>()(
           subtotal += itemTotal;
         });
 
-        const serviceFee = 0;
-        const total = subtotal;
+        // Apply express fee once per order (if selected and there is a laundry item)
+        if (hasLaundry && get().laundryPreferences.globalExpressSelected) {
+          const expressClientFee = get().laundryRatios?.expressClient ?? 2000;
+          globalExpressFee = (maxRoundedFee * 2) + expressClientFee;
+        }
+
+        serviceFee = Math.round(subtotal * 0.05); // 5% service fee
+        const total = subtotal + deliveryFee + globalExpressFee + serviceFee;
 
         return { subtotal: Math.round(subtotal), deliveryFee: 0, serviceFee, total: Math.round(total), itemCount };
       },
@@ -238,8 +316,9 @@ export const useCartStore = create<CartState>()(
           console.warn('Could not load location/store for dynamic item prices');
         }
 
+        const ratios = get().laundryRatios;
         items.forEach(item => {
-          let itemTotal = calculateItemTotal(item);
+          let itemTotal = calculateItemTotal(item, ratios || undefined);
 
           if (userLocation) {
             let targetLocation = item.location;

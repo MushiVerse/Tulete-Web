@@ -70,7 +70,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
             {[
               { key: 'iron', label: 'Iron', prop: 'ironingSelected', icon: Flame },
               { key: 'pack', label: 'Package', prop: 'packagingSelected', icon: Package },
-              { key: 'exp', label: 'Express', prop: 'expressSelected', icon: Zap }
+              { key: 'vip', label: 'VIP', prop: 'vipSelected', icon: Sparkles }
             ].map(({ key, label, prop, icon: Icon }) => {
               const isSelected = item[prop as keyof typeof item];
               return (
@@ -128,10 +128,10 @@ export const CartPage = () => {
   const { currentLocation } = useLocationStore();
   const [totals, setTotals] = useState(getTotals());
 
-  // Recalculate totals whenever location or cart items change
+  // Recalculate totals whenever location, items, or express selection change
   useEffect(() => {
     setTotals(getTotals());
-  }, [currentLocation, items]);
+  }, [currentLocation, items, laundryPreferences.globalExpressSelected]);
   const { subtotal, deliveryFee, serviceFee, total, itemCount } = getTotals();
   
   const isLaundryOrder = items.some(i => i.isLaundry || i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry'));
@@ -248,7 +248,7 @@ export const CartPage = () => {
                     {[
                       { key: 'iron', label: 'Ironing', prop: 'ironingSelected', icon: Flame },
                       { key: 'pack', label: 'Packaging', prop: 'packagingSelected', icon: Package },
-                      { key: 'exp', label: 'Express (24h)', prop: 'expressSelected', icon: Zap },
+                      { key: 'vip', label: 'VIP', prop: 'vipSelected', icon: Sparkles },
                     ].map(({ key, label, prop, icon: Icon }) => {
                       return (
                         <button
@@ -296,6 +296,34 @@ export const CartPage = () => {
                       rows={1}
                       className="w-full min-h-[48px] rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm resize-none"
                     />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <button
+                      onClick={() => setLaundryPreferences({ globalExpressSelected: !laundryPreferences.globalExpressSelected })}
+                      className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all shadow-sm ${
+                        laundryPreferences.globalExpressSelected
+                          ? 'bg-primary/10 border-primary text-primary'
+                          : 'bg-card border-border hover:bg-muted text-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${laundryPreferences.globalExpressSelected ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
+                          <Zap className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-bold">Express</p>
+                          <p className={`text-xs ${laundryPreferences.globalExpressSelected ? 'text-primary/80' : 'text-muted-foreground'}`}>
+                            Fast track your entire order processing
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+                        laundryPreferences.globalExpressSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      }`}>
+                        {laundryPreferences.globalExpressSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                    </button>
                   </div>
                 </div>
               </div>
