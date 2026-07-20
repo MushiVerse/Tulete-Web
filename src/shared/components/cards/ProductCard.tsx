@@ -26,8 +26,14 @@ export const ProductCard = ({
   isFavorite = false,
   onClick
 }: ProductCardProps) => {
+  if (product.availability === false) {
+    return null;
+  }
+
   const { items: cartItems, updateQuantity, addToCart } = useCartStore();
   const cartItem = cartItems.find(i => i.productId === product.id);
+  
+  const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
   
   const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
   const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location);
@@ -85,10 +91,10 @@ export const ProductCard = ({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            {!product.availability && (
+            {isSoldOut && (
               <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
                 <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
-                  Out of Stock
+                  Sold Out
                 </span>
               </div>
             )}
@@ -143,8 +149,9 @@ export const ProductCard = ({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (product.idadi !== undefined && cartItem.quantity >= product.idadi) {
-                          alert(`Cannot add more. Only ${product.idadi} items available in stock.`);
+                        const stockLimit = product.quantity !== undefined ? product.quantity : product.idadi;
+                        if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                          alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
                           return;
                         }
                         updateQuantity(product.id, cartItem.quantity + 1);
@@ -157,7 +164,7 @@ export const ProductCard = ({
                 </div>
               ) : (
                 <button 
-                  disabled={!product.availability}
+                  disabled={isSoldOut}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -175,12 +182,12 @@ export const ProductCard = ({
                         cat: product.category,
                         location: product.location,
                         isLaundry: isLaundryCategory,
-                        idadi: product.idadi
+                        idadi: product.quantity !== undefined ? product.quantity : product.idadi
                       });
                     }
                   }}
                   className={`flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0 ${
-                    product.availability 
+                    !isSoldOut
                       ? 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground' 
                       : 'bg-muted text-muted-foreground cursor-not-allowed'
                   }`}

@@ -27,7 +27,9 @@ export interface Product extends BaseDocument {
   tags: string[]; // e.g. "Most Popular", "Super Saver"
   availability: boolean;
   idadi?: number;
+  quantity?: number;
   location?: { lat: number; lng: number };
+  time?: string;
 }
 
 class ProductService extends BaseFirestoreService<Product> {
@@ -44,6 +46,9 @@ class ProductService extends BaseFirestoreService<Product> {
       const rates = data.rate.map(Number).filter((n: number) => !isNaN(n));
       reviewCount = rates.length;
       rating = rates.reduce((sum: number, r: number) => sum + r, 0) / reviewCount;
+    } else if (typeof data.rate === 'number') {
+      rating = data.rate;
+      reviewCount = data.reviewCount !== undefined ? Number(data.reviewCount) : 1;
     } else if (data.rating !== undefined) {
       rating = Number(data.rating);
       reviewCount = data.reviewCount !== undefined ? Number(data.reviewCount) : 0;
@@ -82,16 +87,20 @@ class ProductService extends BaseFirestoreService<Product> {
       description: data.description || '',
       price: data.price !== undefined ? Number(data.price) : 0,
       oldprice: data.oldprice !== undefined ? Number(data.oldprice) : undefined,
-      imgUrl: data.imgUrl || data.imgURL || '',
+      imgUrl: Array.isArray(data.imgURL) && data.imgURL.length > 0 ? data.imgURL[0] : 
+              (Array.isArray(data.imgUrl) && data.imgUrl.length > 0 ? data.imgUrl[0] : 
+              (data.imgUrl || data.imgURL || '')),
       storeId: data.storeId || '',
       store: data.store || '',
       rating: Math.round(rating * 10) / 10, // round to 1 decimal
       reviewCount,
-      category: data.category || data.cat || '',
+      category: (data.category && data.category !== 'Product') ? data.category : (data.cat || data.category || ''),
       tags: data.tags || [],
       availability: data.availability !== undefined ? !!data.availability : true,
       idadi: data.idadi !== undefined ? (typeof data.idadi === 'number' ? data.idadi : parseInt(data.idadi, 10)) : undefined,
+      quantity: data.quantity !== undefined ? (typeof data.quantity === 'number' ? data.quantity : parseInt(data.quantity, 10)) : undefined,
       location: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
+      time: data.time,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };

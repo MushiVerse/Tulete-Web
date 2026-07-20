@@ -18,7 +18,7 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { productService, Product } from '../../products/services/productService';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
-import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+import { useDynamicPrice, getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 
 // --- Static Data ---
@@ -65,7 +65,12 @@ const PROMOS = [
 
 
 const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
+  if (meal.availability === false) {
+    return null;
+  }
+  
   const dynamicPrice = useDynamicPrice(meal.price, meal.storeId, false, meal.location);
+  const isSoldOut = (meal.quantity !== undefined && meal.quantity <= 0) || (meal.idadi !== undefined && meal.idadi <= 0);
 
   return (
     <div className="flex flex-col h-full">
@@ -82,6 +87,13 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
             <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
             <span className="text-xs font-extrabold">{meal.rating}</span>
           </div>
+          {isSoldOut && (
+            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
+              <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
+                Sold Out
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col flex-1">
@@ -105,8 +117,9 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
                   </button>
                   <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
                   <button onClick={() => {
-                    if (meal.idadi !== undefined && cartItem.quantity >= meal.idadi) {
-                      alert(`Cannot add more. Only ${meal.idadi} items available in stock.`);
+                    const stockLimit = meal.quantity !== undefined ? meal.quantity : meal.idadi;
+                    if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                      alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
                       return;
                     }
                     updateQuantity(meal.id, cartItem.quantity + 1);
@@ -117,18 +130,27 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
               </div>
             ) : (
               <button
-                onClick={() => addToCart({
-                  productId: meal.id,
-                  name: meal.name,
-                  price: meal.price,
-                  imageUrl: meal.imgUrl,
-                  storeId: meal.storeId,
-                  storeName: meal.store,
-                  cat: 'Food',
-                  location: meal.location,
-                  idadi: meal.idadi
-                })}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
+                disabled={isSoldOut}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addToCart({
+                    productId: meal.id,
+                    name: meal.name,
+                    price: meal.price,
+                    imageUrl: meal.imgUrl,
+                    storeId: meal.storeId,
+                    storeName: meal.store,
+                    cat: 'Food',
+                    location: meal.location,
+                    idadi: meal.quantity !== undefined ? meal.quantity : meal.idadi
+                  });
+                }}
+                className={`px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-extrabold flex items-center gap-1.5 ${
+                  !isSoldOut 
+                    ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95' 
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
               >
                 <Plus className="w-4 h-4" /> Add
               </button>
@@ -196,20 +218,44 @@ export const FoodPage = () => {
   const { data: foodsData, isLoading } = useFirestoreQuery(
     ['foods', 'page', activeCategory],
     productService,
-    { filters: queryFilters as any, limit: 20 }
+    { filters: queryFilters as any, limit: 100 }
   );
 
   const rawMeals = foodsData?.data || [];
 
+  const { currentLocation } = useLocationStore();
+
   const filteredMeals = rawMeals.filter(meal => {
+    // Prevent empty slots by filtering unavailable items here before they get wrapped in grid divs
+    if (meal.availability === false || (meal as any).availability === 'false') return false;
+
     const matchesSearch = meal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           meal.store.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    
+    // Filter by delivery fee <= 1600
+    const deliveryFee = getDeliveryFee(currentLocation, meal.location, meal.storeId, false, true);
+    const matchesFee = deliveryFee <= 1600;
+
+    return matchesSearch && matchesFee;
+  }).sort((a, b) => {
+    // Primary sort: rating (descending)
+    const ratingDiff = (b.rating || 0) - (a.rating || 0);
+    if (ratingDiff !== 0) return ratingDiff;
+    
+    // Secondary sort: time (descending - newest first)
+    if (a.time && b.time) {
+      return b.time.localeCompare(a.time);
+    } else if (b.time) {
+      return 1;
+    } else if (a.time) {
+      return -1;
+    }
+    
+    return 0;
   });
 
-  const { deliveryFee, total: cartTotal } = getTotals();
+  const { deliveryFee: globalDeliveryFee, total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
-  const { currentLocation } = useLocationStore();
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -326,7 +372,7 @@ export const FoodPage = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold flex items-center gap-2">
-                <Flame className="w-5 h-5 text-orange-500" /> Trending Meals
+                <Star className="w-5 h-5 text-orange-500 fill-orange-500" /> Top Rated Meals
               </h2>
             </div>
             
@@ -338,7 +384,7 @@ export const FoodPage = () => {
               </div>
             ) : filteredMeals.length === 0 ? (
               <div className="text-center py-16 bg-card border border-border border-dashed rounded-3xl">
-                <p className="text-muted-foreground font-medium">No meals found matching your search.</p>
+                <p className="text-muted-foreground font-medium">No meal near your area yet</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">

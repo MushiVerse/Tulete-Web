@@ -18,14 +18,19 @@ import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { productService, Product } from '../services/productService';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useLocationStore } from '../../location/store/useLocationStore';
-import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+import { useDynamicPrice, getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigate }: any) => {
+  if (product.availability === false) {
+    return null;
+  }
+
   const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
   const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location);
+  const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
 
   return (
     <div className="flex flex-col h-full">
@@ -43,6 +48,13 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
             <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
             <span className="text-xs font-extrabold">{product.rating}</span>
           </div>
+          {isSoldOut && (
+            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
+              <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
+                Sold Out
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col flex-1">
@@ -66,8 +78,9 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
                   </button>
                   <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
                   <button onClick={() => {
-                    if (product.idadi !== undefined && cartItem.quantity >= product.idadi) {
-                      alert(`Cannot add more. Only ${product.idadi} items available in stock.`);
+                    const stockLimit = product.quantity !== undefined ? product.quantity : product.idadi;
+                    if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                      alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
                       return;
                     }
                     updateQuantity(product.id, cartItem.quantity + 1);
@@ -78,6 +91,7 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
               </div>
             ) : (
               <button
+                disabled={isSoldOut}
                 onClick={(e) => {
                   e.stopPropagation();
                   addToCart({
@@ -90,10 +104,14 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
                     cat: 'Product',
                     location: product.location,
                     isLaundry: isLaundryCategory,
-                    idadi: product.idadi
+                    idadi: product.quantity !== undefined ? product.quantity : product.idadi
                   });
                 }}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all text-sm font-extrabold flex items-center gap-1.5"
+                className={`px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-extrabold flex items-center gap-1.5 ${
+                  !isSoldOut 
+                    ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95' 
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
               >
                 <Plus className="w-4 h-4" /> Add
               </button>
@@ -223,22 +241,46 @@ export const ProductsPage = () => {
   const { data: productsData, isLoading } = useFirestoreQuery(
     ['products', 'page', activeCategory],
     productService,
-    { filters: queryFilters as any, limit: 20 }
+    { filters: queryFilters as any, limit: 100 }
   );
 
   const rawProducts = productsData?.data || [];
   
+  const { currentLocation } = useLocationStore();
+
   const filteredProducts = rawProducts.filter(item => {
+    // Prevent empty slots by filtering unavailable items here before they get wrapped in grid divs
+    if (item.availability === false || (item as any).availability === 'false') return false;
+
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.store.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    
+    // Filter by delivery fee <= 10000
+    const deliveryFee = getDeliveryFee(currentLocation, item.location, item.storeId, false, true);
+    const matchesFee = deliveryFee <= 10000;
+
+    return matchesSearch && matchesFee;
+  }).sort((a, b) => {
+    // Primary sort: rating (descending)
+    const ratingDiff = (b.rating || 0) - (a.rating || 0);
+    if (ratingDiff !== 0) return ratingDiff;
+    
+    // Secondary sort: time (descending - newest first)
+    if (a.time && b.time) {
+      return b.time.localeCompare(a.time);
+    } else if (b.time) {
+      return 1;
+    } else if (a.time) {
+      return -1;
+    }
+    
+    return 0;
   });
 
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   
   // Subscribe to location store so that the page updates on location change
-  const { currentLocation } = useLocationStore();
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -371,7 +413,7 @@ export const ProductsPage = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold flex items-center gap-2">
-                <Tag className="w-5 h-5 text-primary" /> Top Products
+                <Star className="w-5 h-5 text-orange-500 fill-orange-500" /> Top Rated Products
               </h2>
             </div>
             
@@ -383,7 +425,7 @@ export const ProductsPage = () => {
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-16 bg-card border border-border border-dashed rounded-3xl">
-                <p className="text-muted-foreground font-medium">No products found matching your search.</p>
+                <p className="text-muted-foreground font-medium">No product near your area yet</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">

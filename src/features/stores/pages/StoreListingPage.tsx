@@ -214,9 +214,13 @@ const StoreListCard = ({
 };
 
 /* ─── Main StoreListingPage ────────────────────────────────── */
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
+
 export const StoreListingPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { currentLocation } = useLocationStore();
 
   const [activeHub, setActiveHub] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
@@ -227,8 +231,8 @@ export const StoreListingPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [onlyOpen, setOnlyOpen] = useState(searchParams.get('available') === 'true');
   const [onlyVerified, setOnlyVerified] = useState(false);
-  const [sortBy, setSortBy] = useState<'distance' | 'rating' | 'popular'>(
-    (searchParams.get('sort') as any) || 'distance'
+  const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'popular'>(
+    (searchParams.get('sort') as any) || 'rating'
   );
 
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -263,6 +267,15 @@ export const StoreListingPage = () => {
         : 99.9,
     }))
     .filter((s) => {
+      // Hard filter: hide completely unavailable stores
+      if (s.availability === false) return false;
+      
+      // Filter by delivery fee <= 10000 to ensure reasonable distance
+      if (currentLocation && s.location) {
+        const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
+        if (fee > 10000) return false;
+      }
+
       if (selectedCategory && s.category !== selectedCategory) return false;
       if (onlyOpen && !s.availability) return false;
       if (onlyVerified && !s.isVerified) return false;
@@ -278,7 +291,19 @@ export const StoreListingPage = () => {
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+      if (sortBy === 'rating') {
+        const ratingDiff = (b.rating || 0) - (a.rating || 0);
+        if (ratingDiff !== 0) return ratingDiff;
+        
+        // Secondary sort: time (descending)
+        const timeA = (a as any).time || (a as any).createdAt || '';
+        const timeB = (b as any).time || (b as any).createdAt || '';
+        if (timeA && timeB) return timeB.localeCompare(timeA);
+        if (timeB) return 1;
+        if (timeA) return -1;
+        
+        return 0;
+      }
       if (sortBy === 'popular') return (b.reviewCount || 0) - (a.reviewCount || 0);
       return a.distance - b.distance; // nearest
     });
@@ -290,7 +315,7 @@ export const StoreListingPage = () => {
     setSearchQuery('');
     setOnlyOpen(false);
     setOnlyVerified(false);
-    setSortBy('distance');
+    setSortBy('rating');
   };
 
   return (

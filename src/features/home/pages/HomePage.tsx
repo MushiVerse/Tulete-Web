@@ -26,6 +26,7 @@ import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
+import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 
 
 /*  Shared Configs  */
@@ -452,17 +453,93 @@ export const HomePage = () => {
     { limit: 12 }
   );
 
+  const processItems = (items: any[], type: 'food' | 'product') => {
+    return items
+      .filter(item => {
+        if (item.availability === false || item.availability === 'false') return false;
+
+        let location: { lat: number; lng: number } | undefined;
+        if (item.location && typeof item.location === 'string') {
+          const parts = item.location.split(',');
+          if (parts.length === 2) {
+            const lat = parseFloat(parts[0].trim());
+            const lng = parseFloat(parts[1].trim());
+            if (!isNaN(lat) && !isNaN(lng)) location = { lat, lng };
+          }
+        } else if (item.location?.lat) {
+          location = { lat: item.location.lat, lng: item.location.lng };
+        }
+
+        if (location && currentLocation) {
+          const fee = getDeliveryFee(currentLocation, location, item.storeId || item.id || '', false, true);
+          if (type === 'food' && fee > 1600) return false;
+          if (type === 'product' && fee > 10000) return false;
+        }
+        return true;
+      })
+      .sort((a: any, b: any) => {
+        const getRating = (it: any) => {
+          let rating = 0;
+          let reviewCount = 0;
+          if (Array.isArray(it.rate) && it.rate.length > 0) {
+            const rates = it.rate.map(Number).filter((n: number) => !isNaN(n));
+            reviewCount = rates.length;
+            rating = rates.reduce((s: number, r: number) => s + r, 0) / reviewCount;
+          } else if (it.rating !== undefined && Number(it.rating) > 0) {
+            rating = Number(it.rating);
+            reviewCount = it.reviewCount ? Number(it.reviewCount) : 1;
+          }
+          if (rating === 0 || reviewCount === 0) {
+            rating = 4.5 + ((it.name?.length || it.store?.length || 5) % 5) / 10;
+          }
+          return rating;
+        };
+
+        const ratingA = getRating(a);
+        const ratingB = getRating(b);
+        const ratingDiff = ratingB - ratingA;
+        if (ratingDiff !== 0) return ratingDiff;
+
+        const timeA = a.time || a.createdAt || '';
+        const timeB = b.time || b.createdAt || '';
+        if (timeA && timeB) return timeB.localeCompare(timeA);
+        if (timeB) return 1;
+        if (timeA) return -1;
+        return 0;
+      });
+  };
+
   const stores = storesData?.data || [];
-  const topStores = [...stores].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-  const openStores = topStores.filter(s => s.availability);
+  const processedStores = stores
+    .filter(s => {
+      if (s.availability === false) return false;
+      if (currentLocation && s.location) {
+        const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
+        if (fee > 10000) return false;
+      }
+      return true;
+    })
+    .sort((a: any, b: any) => {
+      const ratingDiff = (b.rating || 0) - (a.rating || 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      const timeA = a.time || a.createdAt || '';
+      const timeB = b.time || b.createdAt || '';
+      if (timeA && timeB) return timeB.localeCompare(timeA);
+      if (timeB) return 1;
+      if (timeA) return -1;
+      return 0;
+    });
+
+  const topStores = processedStores;
+  const openStores = processedStores;
 
   const { data: foodsData } = useFirestoreQuery(['foods', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'foods' }], limit: 8 });
   const { data: productsData } = useFirestoreQuery(['products', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'products' }], limit: 8 });
   const { data: clothsData } = useFirestoreQuery(['cloths', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'cloths' }], limit: 8 });
 
-  const foods = foodsData?.data || [];
-  const products = productsData?.data || [];
-  const cloths = clothsData?.data || [];
+  const foods = processItems(foodsData?.data || [], 'food');
+  const products = processItems(productsData?.data || [], 'product');
+  const cloths = processItems(clothsData?.data || [], 'product');
   
   // Create allItems without deduplicating incorrectly
   const allItems = [...foods, ...products, ...cloths];
@@ -995,8 +1072,8 @@ export const HomePage = () => {
         </div>
 
         {/*  RIGHT SIDEBAR (WIDGETS & CART)  */}
-        <div className="hidden xl:block flex-none w-[320px] shrink-0 border-l border-border h-full overflow-hidden px-6 pt-6 pb-8">
-          <div className="space-y-6">
+        <div className="hidden xl:block flex-none w-[320px] shrink-0 border-l border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
+          <div className="space-y-6 pb-20">
               
               {/* LIVE CART WIDGET */}
               {hasItems && (

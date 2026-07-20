@@ -18,6 +18,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { DiscoveryMap } from '../components/DiscoveryMap';
+import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 
 // Trending quick-filter chips
 const TRENDING_FILTERS = [
@@ -142,7 +143,7 @@ export const DiscoveryPage = () => {
         const results = await searchTuleteItems(localQuery, {
           filters: filterStr,
           numericFilters: numericFilters.length > 0 ? numericFilters : undefined,
-          hitsPerPage: 60,
+          hitsPerPage: 200,
         });
         if (!controller.signal.aborted) {
           setProducts(results);
@@ -160,6 +161,67 @@ export const DiscoveryPage = () => {
       controller.abort();
     };
   }, [localQuery, category, minPrice, maxPrice, isAvailableOnly, activeTab]);
+
+      const getRating = (item: any) => {
+        let rating = 0;
+        let reviewCount = 0;
+        if (Array.isArray(item.rate) && item.rate.length > 0) {
+          const rates = item.rate.map(Number).filter((n: number) => !isNaN(n));
+          reviewCount = rates.length;
+          rating = rates.reduce((s: number, r: number) => s + r, 0) / reviewCount;
+        } else if (item.rating !== undefined && Number(item.rating) > 0) {
+          rating = Number(item.rating);
+          reviewCount = item.reviewCount ? Number(item.reviewCount) : 1;
+        }
+        if (rating === 0 || reviewCount === 0) {
+          rating = 4.5 + ((item.name?.length || item.store?.length || 5) % 5) / 10;
+        }
+        return { rating, reviewCount };
+      };
+
+      const finalProducts = products
+        .filter((item: any) => {
+          if (item.availability === false || item.availability === 'false') return false;
+          
+          // We don't early return true for stores anymore so we can check their distance fee!
+
+          let location: { lat: number; lng: number } | undefined;
+          if (item.location && typeof item.location === 'string') {
+            const parts = item.location.split(',');
+            if (parts.length === 2) {
+              const lat = parseFloat(parts[0].trim());
+              const lng = parseFloat(parts[1].trim());
+              if (!isNaN(lat) && !isNaN(lng)) location = { lat, lng };
+            }
+          } else if (item.location?.lat) {
+            location = { lat: item.location.lat, lng: item.location.lng };
+          }
+
+          if (location && currentLocation) {
+            const fee = getDeliveryFee(currentLocation, location, item.storeId || item.id || '', false, true);
+            const isFood = item.recordType === 'food' || item.category === 'Food';
+            
+            if (isFood && fee > 1600) return false;
+            if (!isFood && fee > 10000) return false; // This covers products, stores, brands, etc.
+          }
+          return true;
+        })
+        .sort((a: any, b: any) => {
+          const ratingA = getRating(a).rating;
+          const ratingB = getRating(b).rating;
+          
+          const ratingDiff = ratingB - ratingA;
+          if (ratingDiff !== 0) return ratingDiff;
+
+          const timeA = a.time || a.createdAt || '';
+          const timeB = b.time || b.createdAt || '';
+          
+          if (timeA && timeB) return timeB.localeCompare(timeA);
+          if (timeB) return 1;
+          if (timeA) return -1;
+          
+          return 0;
+        });
 
   return (
     <PageWrapper className="min-h-screen bg-background">
@@ -381,7 +443,7 @@ export const DiscoveryPage = () => {
             <div>
               {showMap ? (
                 <div className="w-full mt-2 animate-in fade-in duration-300">
-                  <DiscoveryMap items={products} />
+                  <DiscoveryMap items={finalProducts} />
                 </div>
               ) : loading ? (
                 <div className={`grid gap-4 sm:gap-5 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
@@ -391,14 +453,16 @@ export const DiscoveryPage = () => {
                 </div>
               ) : (
                 <div className={`grid gap-4 sm:gap-5 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
-                  {products.length === 0 ? (
+                  {finalProducts.length === 0 ? (
                     <div className="col-span-full py-24 flex flex-col items-center text-center bg-card border border-border border-dashed rounded-3xl mx-2">
                       <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
                         <Search className="w-10 h-10 text-muted-foreground/50" />
                       </div>
                       <h3 className="text-xl font-extrabold text-foreground mb-2">No results found</h3>
                       <p className="text-muted-foreground font-medium mb-6 max-w-sm">
-                        We couldn't find any {activeTab === 'stores' ? 'stores' : 'items'} matching "{localQuery}". Try exploring our trending categories!
+                        {activeTab === 'stores' 
+                          ? "No store near your area yet. Try exploring other categories!" 
+                          : "No items near your area yet. Try exploring our trending categories!"}
                       </p>
                       <div className="flex gap-3">
                         <button 
@@ -415,21 +479,10 @@ export const DiscoveryPage = () => {
                         </button>
                       </div>
                     </div>
-                  ) : products.map((item: any) => {
+                  ) : finalProducts
+                        .map((item: any) => {
                     // Shared normalization
-                    let rating = 0;
-                    let reviewCount = 0;
-                    if (Array.isArray(item.rate) && item.rate.length > 0) {
-                      const rates = item.rate.map(Number).filter((n: number) => !isNaN(n));
-                      reviewCount = rates.length;
-                      rating = rates.reduce((s: number, r: number) => s + r, 0) / reviewCount;
-                    } else if (item.rating !== undefined && Number(item.rating) > 0) {
-                      rating = Number(item.rating);
-                      reviewCount = item.reviewCount ? Number(item.reviewCount) : 1;
-                    }
-                    if (rating === 0 || reviewCount === 0) {
-                      rating = 4.5 + ((item.name?.length || item.store?.length || 5) % 5) / 10;
-                    }
+                    const { rating, reviewCount } = getRating(item);
                     
                     let location: { lat: number; lng: number } | undefined;
                     if (item.location && typeof item.location === 'string') {
