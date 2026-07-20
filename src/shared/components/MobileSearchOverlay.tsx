@@ -32,16 +32,19 @@ export const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
   }, []);
 
   const handleAddToCart = (product: any) => {
+    const cat = product.category || product.recordType === 'cloth' ? 'Laundry' : '';
     addToCart({
-      productId: product.id,
+      productId: product.id || product.objectID,
+      baseProductId: product.id || product.objectID,
       name: product.name,
       price: product.price ?? 0,
       imageUrl: product.imgUrl || product.imgURL || product.image || '',
       storeId: product.storeId || 'unknown',
       storeName: product.store || 'Unknown Store',
-      cat: product.category || '',
+      cat,
       location: product.location,
-      idadi: product.idadi
+      idadi: product.idadi,
+      isLaundry: cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth' || product._collection === 'cloths'
     });
   };
 

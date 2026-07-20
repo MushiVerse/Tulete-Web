@@ -317,13 +317,16 @@ export const FavoritesPage = () => {
                                     const item = catalog.find((c) => c.id === fav.itemId);
                                     addToCart({
                                       productId: fav.itemId,
+                                      baseProductId: fav.itemId,
                                       name: fav.name,
                                       price: fav.price || 0,
                                       imageUrl: fav.imageUrl,
                                       storeId: item?.storeId || 's1', 
                                       storeName: item?.store || 'Verified Partner',
+                                      cat: item?.category || '',
                                       location: item?.location,
-                                      idadi: item?.idadi
+                                      idadi: item?.idadi,
+                                      isLaundry: item?.category === 'Laundry' || item?.category === 'Nguo' || item?.category?.toLowerCase().includes('cloth') || (item as any)?._collection === 'cloths'
                                     });
                                     alert(`${fav.name} added to cart!`);
                                   }}
@@ -408,13 +411,16 @@ export const FavoritesPage = () => {
                                   onClick={() => {
                                     addToCart({
                                       productId: item.id,
+                                      baseProductId: item.id,
                                       name: item.name,
                                       price: item.price,
                                       imageUrl: item.imgUrl,
                                       storeId: item.storeId,
                                       storeName: item.store,
+                                      cat: item.category || '',
                                       location: item.location,
-                                      idadi: item.idadi
+                                      idadi: item.idadi,
+                                      isLaundry: item.category === 'Laundry' || item.category === 'Nguo' || item.category?.toLowerCase().includes('cloth') || (item as any)._collection === 'cloths'
                                     });
                                     alert(`${item.name} added to cart!`);
                                   }}
@@ -493,13 +499,16 @@ export const FavoritesPage = () => {
                       onClick={() => {
                         addToCart({
                           productId: rec.id,
+                          baseProductId: rec.id,
                           name: rec.name,
                           price: rec.price,
                           imageUrl: rec.imgUrl,
                           storeId: rec.storeId,
                           storeName: rec.store,
+                          cat: rec.category || '',
                           location: rec.location,
-                          idadi: rec.idadi
+                          idadi: rec.idadi,
+                          isLaundry: rec.category === 'Laundry' || rec.category === 'Nguo' || rec.category?.toLowerCase().includes('cloth') || (rec as any)._collection === 'cloths'
                         });
                         alert(`${rec.name} added to cart!`);
                       }}

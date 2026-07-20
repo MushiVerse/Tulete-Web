@@ -62,16 +62,19 @@ export const DiscoveryPage = () => {
   const handleAddToCart = (product: any) => {
     // Block out-of-stock items
     if (product.availability === false) return;
+    const cat = product.category || product.recordType === 'cloth' ? 'Laundry' : 'Product';
     addToCart({
       productId: product.id,
+      baseProductId: product.id,
       name: product.name,
       price: product.price,
       imageUrl: product.imgUrl,
       storeId: product.storeId || 'unknown',
       storeName: product.store || 'Unknown Store',
-      cat: product.category || 'Product',
+      cat,
       location: product.location,
       idadi: product.idadi,
+      isLaundry: cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth' || product._collection === 'cloths'
     });
   };
 

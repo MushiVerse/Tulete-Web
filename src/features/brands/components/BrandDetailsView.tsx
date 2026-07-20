@@ -67,16 +67,19 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName, c
   };
 
   const handleAddToCart = (p: Product) => {
+    const cat = categoryParam === 'product' ? 'Product' : (categoryParam === 'laundry' ? 'Laundry' : 'Food');
     addToCart({
       productId: p.id,
+      baseProductId: p.id,
       name: p.name,
       price: p.price,
       imageUrl: p.imgUrl,
       storeId: p.storeId,
       storeName: p.store,
-      cat: categoryParam === 'product' ? 'Product' : 'Food',
+      cat,
       location: p.location,
-      idadi: p.idadi
+      idadi: p.idadi,
+      isLaundry: cat === 'Laundry' || p.category === 'Laundry' || p.category?.toLowerCase().includes('cloth') || (p as any)._collection === 'cloths'
     });
   };
 

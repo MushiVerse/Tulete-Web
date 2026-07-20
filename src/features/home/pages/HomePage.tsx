@@ -429,6 +429,7 @@ export const HomePage = () => {
     
     addToCart({
       productId: p.id,
+      baseProductId: p.id,
       name: p.name,
       price: p.price,
       imageUrl: p.imgUrl,
@@ -436,7 +437,8 @@ export const HomePage = () => {
       storeName: p.store,
       cat,
       location: p.location,
-      idadi: p.idadi
+      idadi: p.idadi,
+      isLaundry: cat === 'Laundry' || p.category === 'Laundry' || p.category?.toLowerCase().includes('cloth')
     });
   };
 
