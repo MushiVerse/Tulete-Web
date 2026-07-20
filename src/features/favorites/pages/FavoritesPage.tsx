@@ -11,7 +11,7 @@ import { PageContainer, ContentContainer } from '../../../shared/components/layo
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   Heart, HeartCrack, Search, FolderHeart, Plus, 
-  Trash2, ShoppingCart, Star, Eye, ExternalLink, Sparkles 
+  Trash2, ShoppingCart, Star, Eye, ExternalLink, Sparkles, X, Store as StoreIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
@@ -29,6 +29,7 @@ export const FavoritesPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newWishlistName, setNewWishlistName] = useState('');
   const [newWishlistDesc, setNewWishlistDesc] = useState('');
+  const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
 
   const { 
     favorites, 
@@ -248,7 +249,10 @@ export const FavoritesPage = () => {
                 <p className="text-muted-foreground text-xs max-w-sm mx-auto mb-6">
                   Items or service providers you bookmark will appear here for fast shortcuts.
                 </p>
-                <Button onClick={() => navigate('/discover')} size="sm">Explore Services</Button>
+                <div className="flex justify-center gap-3">
+                  <Button onClick={() => navigate('/explore')} size="sm">Explore Services</Button>
+                  <Button onClick={() => navigate('/explore?category=Food')} variant="outline" size="sm" className="bg-white">Hot Meals 🔥</Button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -302,7 +306,19 @@ export const FavoritesPage = () => {
                             <div className="flex gap-1.5">
                               {/* Quick navigation shortcut */}
                               <button
-                                onClick={() => navigate(fav.type === 'store' ? `/store/${fav.itemId}` : `/product/${fav.itemId}`)}
+                                onClick={() => {
+                                  if (fav.type === 'store') {
+                                    navigate(`/store/${fav.itemId}`);
+                                  } else {
+                                    const catalog = productService.getMockProducts('all');
+                                    const item = catalog.find((c) => c.id === fav.itemId);
+                                    if (item) {
+                                      setQuickViewProduct(item);
+                                    } else {
+                                      navigate(`/product/${fav.itemId}`);
+                                    }
+                                  }
+                                }}
                                 className="p-2 bg-muted dark:bg-slate-800 text-muted-foreground hover:text-primary rounded-full transition-colors"
                                 title="View details"
                               >
@@ -579,6 +595,92 @@ export const FavoritesPage = () => {
                   </Button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Quick View Modal (Bottom Sheet on Mobile) ── */}
+      <AnimatePresence>
+        {quickViewProduct && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setQuickViewProduct(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+            >
+              <div className="relative h-64 sm:h-72 bg-muted shrink-0">
+                 <img src={quickViewProduct.imgUrl} alt={quickViewProduct.name} className="w-full h-full object-cover" />
+                 <button onClick={() => setQuickViewProduct(null)} className="absolute top-4 right-4 bg-black/50 text-white hover:bg-black/70 transition-colors rounded-full p-2 backdrop-blur-md">
+                   <X className="w-5 h-5" />
+                 </button>
+                 
+                 <div className="absolute bottom-4 left-4 flex gap-2">
+                   {quickViewProduct.tags?.includes('Most TamTam') && (
+                     <span className="text-xs font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md bg-success/90 text-primary-foreground tracking-wide">
+                       HOT 🔥
+                     </span>
+                   )}
+                 </div>
+              </div>
+              
+              <div className="p-6 overflow-y-auto">
+                 <div className="flex justify-between items-start gap-4">
+                   <div>
+                     <h2 className="text-2xl font-extrabold text-foreground">{quickViewProduct.name}</h2>
+                     <p className="text-sm font-medium text-muted-foreground mt-1 flex items-center gap-1">
+                       <StoreIcon className="w-4 h-4" /> {quickViewProduct.store}
+                     </p>
+                   </div>
+                   <div className="text-right shrink-0">
+                     <p className="text-primary font-extrabold text-2xl">{APP_SETTINGS.currency} {formatPrice(quickViewProduct.price)}</p>
+                     {quickViewProduct.oldprice && quickViewProduct.oldprice > quickViewProduct.price && (
+                       <p className="text-muted-foreground line-through text-sm">{APP_SETTINGS.currency} {formatPrice(quickViewProduct.oldprice)}</p>
+                     )}
+                   </div>
+                 </div>
+
+                 {quickViewProduct.description && (
+                   <div className="mt-6">
+                     <h3 className="text-sm font-bold text-foreground mb-2">Description</h3>
+                     <p className="text-muted-foreground text-sm leading-relaxed">{quickViewProduct.description}</p>
+                   </div>
+                 )}
+                 
+                 <div className="mt-8 flex gap-3">
+                   <Button 
+                     onClick={() => { 
+                        addToCart({
+                          productId: quickViewProduct.id,
+                          baseProductId: quickViewProduct.id,
+                          name: quickViewProduct.name,
+                          price: quickViewProduct.price,
+                          imageUrl: quickViewProduct.imgUrl,
+                          storeId: quickViewProduct.storeId,
+                          storeName: quickViewProduct.store,
+                          cat: quickViewProduct.category || '',
+                          location: quickViewProduct.location,
+                          idadi: quickViewProduct.idadi,
+                          isLaundry: quickViewProduct.category === 'Laundry' || quickViewProduct.category === 'Nguo' || quickViewProduct.category?.toLowerCase().includes('cloth') || quickViewProduct._collection === 'cloths'
+                        });
+                       setQuickViewProduct(null); 
+                     }} 
+                     className="flex-1 py-6 text-lg font-bold rounded-2xl shadow-lg shadow-primary/25"
+                   >
+                     Add to Cart
+                   </Button>
+                 </div>
+              </div>
             </motion.div>
           </div>
         )}

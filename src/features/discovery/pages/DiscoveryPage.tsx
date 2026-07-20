@@ -62,6 +62,13 @@ export const DiscoveryPage = () => {
     if (user?.id) initFavs(user.id);
   }, [user?.id]);
 
+  useEffect(() => {
+    const urlTab = new URLSearchParams(window.location.search).get('tab');
+    if (urlTab === 'stores') {
+      setActiveTab('stores');
+    }
+  }, []);
+
   const handleCheckout = () => {
     if (!isAuthenticated) { openModal('login'); return; }
     navigate('/cart');

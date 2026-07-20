@@ -1068,7 +1068,7 @@ export const HomePage = () => {
                       emoji: '',
                       title: 'All Stores',
                       sub: 'Browse network',
-                      href: '/explore',
+                      href: '/explore?tab=stores',
                       gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
                     },
                   ].map(({ emoji, title, sub, href, gradient }) => (
