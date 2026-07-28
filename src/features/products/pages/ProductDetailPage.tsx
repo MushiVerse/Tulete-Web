@@ -514,6 +514,7 @@ export const ProductDetailPage = () => {
                           imageUrl: selectedImageUrl,
                           storeId: displayProduct.storeId,
                           storeName: displayProduct.store,
+                          cat: (displayProduct as any)?.cat || displayProduct.category || 'Product',
                           isLaundry: isLaundryCategory,
                           location: displayProduct.location,
                           idadi: displayProduct.idadi

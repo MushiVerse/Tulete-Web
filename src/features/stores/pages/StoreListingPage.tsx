@@ -6,7 +6,7 @@ import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
 import { PageContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
-import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { Skeleton, StoreCardSkeleton, StoreListCardSkeleton } from '../../../shared/components/ui/Skeleton';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import {
   Search, MapPin, Star, CheckCircle2, Heart,
@@ -23,6 +23,38 @@ const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; act
   Electrical: { emoji: '⚡', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', activeBg: 'bg-amber-500 text-white' },
   Beauty:     { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white' },
   Rides:      { emoji: '🚗', color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/20', activeBg: 'bg-indigo-500 text-white' },
+};
+
+const getCategoryConfig = (store: Store) => {
+  const docEmoji = (store as any).emoji || (store as any).icon || (store as any).categoryIcon;
+  const displayCat = (store as any).cat || store.category || '';
+  const rawCat = String(displayCat).toLowerCase().trim();
+
+  let matchedConfig = CAT_CONFIG.Food;
+
+  if (rawCat.includes('laund') || rawCat.includes('clean') || rawCat.includes('nguo') || rawCat.includes('wash')) {
+    matchedConfig = CAT_CONFIG.Laundry || { emoji: '🧺', color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', activeBg: 'bg-sky-500 text-white' };
+  } else if (rawCat.includes('elect') || rawCat.includes('gadget') || rawCat.includes('tech')) {
+    matchedConfig = CAT_CONFIG.Electrical || { emoji: '⚡', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', activeBg: 'bg-amber-500 text-white' };
+  } else if (rawCat.includes('beaut') || rawCat.includes('salon') || rawCat.includes('barber') || rawCat.includes('spa')) {
+    matchedConfig = CAT_CONFIG.Beauty || { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white' };
+  } else if (rawCat.includes('ride') || rawCat.includes('car') || rawCat.includes('taxi') || rawCat.includes('transport')) {
+    matchedConfig = CAT_CONFIG.Rides || { emoji: '🚗', color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/20', activeBg: 'bg-indigo-500 text-white' };
+  } else if (rawCat.includes('prod') || rawCat.includes('shop') || rawCat.includes('store') || rawCat.includes('groc') || rawCat.includes('market')) {
+    matchedConfig = { emoji: '🛍️', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', activeBg: 'bg-emerald-500 text-white' };
+  } else if (rawCat.includes('pharm') || rawCat.includes('health') || rawCat.includes('med')) {
+    matchedConfig = { emoji: '💊', color: 'text-red-500', bg: 'bg-red-500/10 border-red-500/20', activeBg: 'bg-red-500 text-white' };
+  } else if (CAT_CONFIG[displayCat]) {
+    matchedConfig = CAT_CONFIG[displayCat];
+  } else if (CAT_CONFIG[store.category]) {
+    matchedConfig = CAT_CONFIG[store.category];
+  }
+
+  if (docEmoji && typeof docEmoji === 'string') {
+    return { ...matchedConfig, emoji: docEmoji };
+  }
+
+  return matchedConfig;
 };
 
 const CATEGORIES = ['Food', 'Laundry', 'Electrical', 'Beauty', 'Rides'];
@@ -50,7 +82,8 @@ const StoreGridCard = ({
   onFav: (e: React.MouseEvent) => void;
   onClick: () => void;
 }) => {
-  const cfg = CAT_CONFIG[store.category] || CAT_CONFIG.Food;
+  const displayCat = (store as any).cat || store.category;
+  const cfg = getCategoryConfig(store);
   return (
     <motion.div
       layout
@@ -90,12 +123,12 @@ const StoreGridCard = ({
           </div>
 
           {/* Bottom Row on Image */}
-          <div className="absolute bottom-3 inset-x-3 flex justify-between items-end">
-            <div className={`flex items-center gap-1.5 ${cfg.bg} border px-2.5 py-1.5 rounded-full bg-background/95 backdrop-blur shadow-sm`}>
-              <span className="text-sm">{cfg.emoji}</span>
-              <span className={`text-[11px] font-extrabold uppercase tracking-widest ${cfg.color}`}>{store.category}</span>
+          <div className="absolute bottom-3 inset-x-3 flex justify-between items-end gap-2">
+            <div className={`flex items-center gap-1 ${cfg.bg} border px-2 py-1 rounded-full bg-background/95 backdrop-blur shadow-sm max-w-[120px] shrink min-w-0`}>
+              <span className="text-xs shrink-0">{cfg.emoji}</span>
+              <span className={`text-[9px] font-extrabold uppercase tracking-wider ${cfg.color} truncate whitespace-nowrap`}>{displayCat}</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
+            <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm shrink-0">
               <Star className="w-4 h-4 fill-warning stroke-warning" />
               <span className="text-white text-sm font-extrabold">{store.rating || '—'}</span>
             </div>
@@ -141,7 +174,8 @@ const StoreListCard = ({
   onFav: (e: React.MouseEvent) => void;
   onClick: () => void;
 }) => {
-  const cfg = CAT_CONFIG[store.category] || CAT_CONFIG.Food;
+  const displayCat = (store as any).cat || store.category;
+  const cfg = getCategoryConfig(store);
   return (
     <motion.div
       layout
@@ -174,10 +208,10 @@ const StoreListCard = ({
           </div>
 
           <div className="flex items-center gap-2 mb-1.5">
-            <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.bg} border ${cfg.color}`}>
-              {cfg.emoji} {store.category}
+            <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.bg} border ${cfg.color} max-w-[110px] truncate whitespace-nowrap inline-block align-middle`}>
+              {cfg.emoji} {displayCat}
             </span>
-            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${store.availability ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 ${store.availability ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
               {store.availability ? 'Open' : 'Closed'}
             </span>
           </div>
@@ -499,14 +533,14 @@ export const StoreListingPage = () => {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(isActive ? null : cat)}
-                  className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-extrabold border transition-all ${
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all max-w-[130px] whitespace-nowrap ${
                     isActive
                       ? `${cfg.activeBg} border-transparent shadow-md`
                       : `bg-card border-border ${cfg.color} hover:border-primary/30`
                   }`}
                 >
-                  <span>{cfg.emoji}</span>
-                  {cat}
+                  <span className="shrink-0">{cfg.emoji}</span>
+                  <span className="truncate">{cat}</span>
                 </button>
               );
             })}
@@ -602,7 +636,11 @@ export const StoreListingPage = () => {
           {isLoading ? (
             <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4' : 'space-y-3'}>
               {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className={`w-full rounded-2xl ${viewMode === 'grid' ? 'h-72' : 'h-24'}`} />
+                viewMode === 'grid' ? (
+                  <StoreCardSkeleton key={i} />
+                ) : (
+                  <StoreListCardSkeleton key={i} />
+                )
               ))}
             </div>
           ) : processedStores.length === 0 ? (

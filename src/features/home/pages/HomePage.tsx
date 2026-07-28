@@ -23,6 +23,7 @@ import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { BrandsView } from '../../brands/components/BrandsView';
 import { StoreCard } from '../../../shared/components/cards/StoreCard';
 import { BrandDetailsView } from '../../brands/components/BrandDetailsView';
+import { Skeleton, ProductCardSkeleton, StoreCardSkeleton } from '../../../shared/components/ui/Skeleton';
 import { useLanguageStore } from '../../../core/i18n/useLanguageStore';
 import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
@@ -375,7 +376,7 @@ export const HomePage = () => {
   const greeting = hour < 12 ? 'Good morning ' : hour < 17 ? 'Good afternoon ' : 'Good evening ';
   const firstName = user?.displayName?.split(' ')[0] || 'there';
 
-  const { data: storesData } = useFirestoreQuery(
+  const { data: storesData, isLoading: isStoresLoading } = useFirestoreQuery(
     ['stores', 'home'],
     storeService,
     { limit: 12 }
@@ -470,9 +471,9 @@ export const HomePage = () => {
   const topStores = processedStores;
   const openStores = processedStores;
 
-  const { data: foodsData } = useFirestoreQuery(['foods', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'foods' }], limit: 8 });
-  const { data: productsData } = useFirestoreQuery(['products', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'products' }], limit: 8 });
-  const { data: clothsData } = useFirestoreQuery(['cloths', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'cloths' }], limit: 8 });
+  const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(['foods', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'foods' }], limit: 8 });
+  const { data: productsData, isLoading: isProductsLoading } = useFirestoreQuery(['products', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'products' }], limit: 8 });
+  const { data: clothsData, isLoading: isClothsLoading } = useFirestoreQuery(['cloths', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'cloths' }], limit: 8 });
 
   const foods = processItems(foodsData?.data || [], 'food');
   const products = processItems(productsData?.data || [], 'product');
@@ -819,7 +820,15 @@ export const HomePage = () => {
 
 
             {/* 1. Recommended for you (Products) */}
-            {recommendedProducts.length > 0 && (
+            {isProductsLoading || isFoodsLoading ? (
+              <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={`rec-skel-${i}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCardSkeleton />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            ) : recommendedProducts.length > 0 && (
               <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products" autoScrollSpeed={0.3}>
                 {recommendedProducts.slice(0, 8).map(product => (
                   <div key={`rec-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
@@ -835,14 +844,21 @@ export const HomePage = () => {
             )}
 
             {/* 3. Stores near me (Stores) */}
-            {filterValue !== 'food' && openStores
+            {isStoresLoading ? (
+              <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={`store-skel-${i}`} className="w-[280px] sm:w-[320px] shrink-0">
+                    <StoreCardSkeleton />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            ) : filterValue !== 'food' && openStores
               .filter((store) => {
                 const getStoreCategoryGroup = (store: any) => {
                   const text = `${store.store} ${store.name || ''} ${store.description || ''}`.toLowerCase();
                   if (text.match(/laundry|cloth|suit|wash|bedding|dryclean|iron|fashion|fits|boutique|wear|shoes|apparel/)) return 'laundry';
                   if (text.match(/food|meal|platter|restaurant|bakery|meat|pizza|burger|kitchen|cafe|dine/)) return 'food';
                   
-                  // If it doesn't match descriptions, fallback to whatever the database says just in case it's actually correct and missing keywords
                   if (store.category === 'Food') return 'food';
                   if (store.category === 'Laundry') return 'laundry';
                   

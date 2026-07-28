@@ -179,21 +179,20 @@ export const ProductCard = ({
                         imageUrl: product.imgUrl,
                         storeId: product.storeId,
                         storeName: product.store,
-                        cat: product.category,
+                        cat: (product as any)?.cat || product.category || 'Product',
                         location: product.location,
                         isLaundry: isLaundryCategory,
                         idadi: product.quantity !== undefined ? product.quantity : product.idadi
                       });
                     }
                   }}
-                  className={`flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0 ${
-                    !isSoldOut
-                      ? 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground' 
+                  className={`px-3.5 py-1.5 rounded-xl shadow-sm transition-all text-xs sm:text-sm font-extrabold flex items-center gap-1.5 shrink-0 ${
+                    !isSoldOut 
+                      ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95' 
                       : 'bg-muted text-muted-foreground cursor-not-allowed'
                   }`}
                 >
-                  <Plus className="w-3.5 h-3.5 mr-0.5" strokeWidth={3} />
-                  Add
+                  <Plus className="w-3.5 h-3.5" /> Add
                 </button>
               )}
             </div>

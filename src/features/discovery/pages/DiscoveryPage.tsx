@@ -8,7 +8,7 @@ import { useFilterStore } from '../store/useFilterStore';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { StoreCard } from '../../../shared/components/cards/StoreCard';
-import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { Skeleton, ProductCardSkeleton, StoreCardSkeleton, StoreListCardSkeleton } from '../../../shared/components/ui/Skeleton';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
@@ -448,7 +448,11 @@ export const DiscoveryPage = () => {
               ) : loading ? (
                 <div className={`grid gap-4 sm:gap-5 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                    <Skeleton key={i} className={`rounded-3xl ${viewMode === 'grid' ? 'h-[300px]' : 'h-[140px]'} w-full`} />
+                    activeTab === 'stores' ? (
+                      viewMode === 'grid' ? <StoreCardSkeleton key={i} /> : <StoreListCardSkeleton key={i} />
+                    ) : (
+                      <ProductCardSkeleton key={i} />
+                    )
                   ))}
                 </div>
               ) : (

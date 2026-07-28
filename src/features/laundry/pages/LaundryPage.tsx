@@ -6,7 +6,7 @@ import { PageContainer } from '../../../shared/components/layout';
 import { Button } from '../../../shared/components/ui/Button';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Input } from '../../../shared/components/ui/Input';
-import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { Skeleton, LaundryCardSkeleton } from '../../../shared/components/ui/Skeleton';
 import { Switch } from '../../../shared/components/ui/Switch';
 import { laundryService, LaundryItem } from '../services/laundryService';
 import { useCartStore, calculateItemTotal } from '../../cart/store/useCartStore';
@@ -132,52 +132,51 @@ const LaundryItemCard = ({
           </div>
         </div>
       </div>
-
       {/* ── Add to Cart Actions ── */}
       <div 
         className="mt-auto pt-4 border-t border-border flex items-center justify-end gap-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
-          {cartQty === 0 ? (
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              disabled={!isAvailable}
-              onClick={handleConfirmAdd}
-              className={`h-9 sm:h-10 px-4 sm:px-6 rounded-xl flex items-center gap-1 sm:gap-1.5 transition-all shadow-sm text-xs sm:text-sm font-extrabold ${
-                isAvailable
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              }`}
-            >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              Add to Cart
-            </motion.button>
-          ) : (
-            <>
-              <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-9 sm:h-10">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDecrement(id);
-                  }}
-                  className="w-8 sm:w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
-                >
-                  <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <span className="w-6 sm:w-8 text-center font-extrabold text-xs sm:text-sm text-foreground">
-                  {cartQty}
-                </span>
-                <button
-                  onClick={handleConfirmAdd}
-                  className="w-8 sm:w-10 h-full flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        {cartQty > 0 ? (
+          <div 
+            className="flex items-center gap-1.5 sm:gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDecrement(id);
+                }} 
+                className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm hover:bg-background/80"
+              >
+                <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              </button>
+              <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartQty}</span>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmAdd(e);
+                }} 
+                className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
+                <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            disabled={!isAvailable}
+            onClick={handleConfirmAdd}
+            className={`px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-extrabold flex items-center gap-1.5 ${
+              isAvailable 
+                ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95' 
+                : 'bg-muted text-muted-foreground cursor-not-allowed'
+            }`}
+          >
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -444,9 +443,9 @@ export const LaundryPage = () => {
 
           {/* Items List */}
           {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-32 w-full rounded-3xl" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <LaundryCardSkeleton key={i} />
               ))}
             </div>
           ) : filteredItems.length === 0 ? (

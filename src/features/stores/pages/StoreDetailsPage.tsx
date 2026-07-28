@@ -12,7 +12,7 @@ import { PageContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   ArrowLeft, Star, Clock, MapPin, Phone, 
-  MessageSquare, Share2, Heart, Search, Plus, 
+  MessageSquare, Share2, Heart, Search, Plus, Minus,
   CheckCircle2, Compass, Percent, Image, AlertTriangle,
   ShoppingBag, ArrowRight, Trash2, ExternalLink, Navigation, Loader2
 } from 'lucide-react';
@@ -47,7 +47,7 @@ export const StoreDetailsPage = () => {
     return list.includes(id || '');
   });
 
-  const { items: cartItems, addToCart, removeFromCart, clearCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   const { currentLocation } = useLocationStore();
@@ -618,24 +618,73 @@ export const StoreDetailsPage = () => {
                           )}
                         </div>
 
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart({
-                              productId: prod.id,
-                              name: prod.name,
-                              price: prod.price,
-                              imageUrl: prod.imgUrl,
-                              storeId: store.id,
-                              storeName: store.store,
-                            });
-                          }}
-                          size="sm"
-                          className="h-8 px-2 font-extrabold text-xs shadow-md"
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" />
-                          Add
-                        </Button>
+                        {(() => {
+                          const cartItem = cartItems.find((ci) => ci.productId === prod.id);
+                          const isSoldOut = prod.availability === false;
+
+                          if (cartItem && cartItem.quantity > 0) {
+                            return (
+                              <div 
+                                className="flex items-center gap-1.5 sm:gap-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateQuantity(prod.id, cartItem.quantity - 1);
+                                    }} 
+                                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm hover:bg-background/80"
+                                  >
+                                    <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                  </button>
+                                  <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const stockLimit = prod.quantity !== undefined ? prod.quantity : (prod as any).idadi;
+                                      if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                                        alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
+                                        return;
+                                      }
+                                      updateQuantity(prod.id, cartItem.quantity + 1);
+                                    }} 
+                                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                                  >
+                                    <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              disabled={isSoldOut}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addToCart({
+                                  productId: prod.id,
+                                  name: prod.name,
+                                  price: prod.price,
+                                  imageUrl: prod.imgUrl,
+                                  storeId: store.id,
+                                  storeName: store.store,
+                                  cat: (prod as any)?.cat || prod.category || store.category || 'Product',
+                                  location: prod.location,
+                                  idadi: prod.quantity !== undefined ? prod.quantity : (prod as any).idadi
+                                });
+                              }}
+                              className={`px-3 py-1.5 rounded-xl shadow-sm transition-all text-xs font-extrabold flex items-center gap-1 shrink-0 ${
+                                !isSoldOut
+                                  ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95'
+                                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+                              }`}
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Add
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   </Card>

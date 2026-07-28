@@ -13,11 +13,11 @@ import { Button } from '../../../shared/components/ui/Button';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { ProductCardSkeleton } from '../../../shared/components/ui/Skeleton';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { productService, Product } from '../../products/services/productService';
-import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useDynamicPrice, getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 
@@ -395,7 +395,7 @@ export const FoodPage = () => {
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">
                 {[1, 2, 3, 4, 5, 6].map(i => (
-                  <Skeleton key={i} className="h-[300px] w-full rounded-3xl" />
+                  <ProductCardSkeleton key={i} />
                 ))}
               </div>
             ) : filteredMeals.length === 0 ? (
