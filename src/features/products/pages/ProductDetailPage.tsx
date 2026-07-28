@@ -526,10 +526,10 @@ export const ProductDetailPage = () => {
             }
 
             // 2. NON-LAUNDRY & BOTH subSubCat AND subCat EXIST:
-            // i. Related (filtered using subSubCat, HORIZONTAL SCROLL)
+            // i. Related (filtered using subSubCat, HORIZONTAL SCROLL) - ONLY shown if >= 1 other real item exists
             // ii. More of [subCat] (filtered using subCat, ENDLESS VERTICAL SCROLL, NO DUPLICATE DATA)
             if (subSubVal || subCatVal) {
-              // Section 1: "Related" matches subSubCat
+              // Section 1: "Related" matches subSubCat (only real items, no dummy fallbacks)
               let subSubMatches = subSubVal ? collectionPool.filter((p) => {
                 const pSubSub = p.subSubCat || p.speccat || p.subsubcat || p.subSubCategory;
                 return pSubSub && String(pSubSub).trim().toLowerCase() === String(subSubVal).trim().toLowerCase();
@@ -539,12 +539,8 @@ export const ProductDetailPage = () => {
                 subSubMatches = subSubCatProducts.data.filter((p: any) => p && p.id !== displayProduct.id);
               }
 
-              const finalSubSubList = subSubMatches.length > 0 ? subSubMatches : (subSubVal ? Array.from({ length: 6 }).map((_, i) => ({
-                ...displayProduct,
-                id: `subsub-item-${i + 1}`,
-                name: `${subSubVal} Item ${i + 1}`,
-                price: Math.max(5000, displayProduct.price - (i * 5000)),
-              })) : []);
+              // Do NOT duplicate or create dummy items; if 0 other items exist, finalSubSubList is empty
+              const finalSubSubList = subSubMatches;
 
               const relatedIds = new Set(finalSubSubList.map((p) => p.id));
 
@@ -559,12 +555,7 @@ export const ProductDetailPage = () => {
                 subCatMatches = collectionPool.filter((p) => !relatedIds.has(p.id));
               }
 
-              const finalSubCatList = subCatMatches.length > 0 ? subCatMatches : Array.from({ length: 20 }).map((_, i) => ({
-                ...displayProduct,
-                id: `subcat-item-${i + 1}`,
-                name: `${subCatVal || 'Collection'} Item ${i + 1}`,
-                price: displayProduct.price + ((i + 1) * 8000),
-              })).filter((p) => !relatedIds.has(p.id));
+              const finalSubCatList = subCatMatches;
 
               const mainCatLabel = subCatVal || displayProduct.category || (activeCollection === 'products' ? 'Products' : 'Foods');
 
