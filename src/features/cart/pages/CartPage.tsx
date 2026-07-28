@@ -128,13 +128,13 @@ export const CartPage = () => {
   const { currentLocation } = useLocationStore();
   const [totals, setTotals] = useState(getTotals());
 
-  // Recalculate totals whenever location, items, or express selection change
+  // Recalculate totals whenever location, items, express selection, or delivery time change
   useEffect(() => {
     setTotals(getTotals());
-  }, [currentLocation, items, laundryPreferences.globalExpressSelected]);
-  const { subtotal, deliveryFee, serviceFee, total, itemCount } = getTotals();
+  }, [currentLocation, items, laundryPreferences?.globalExpressSelected, laundryPreferences?.deliverytime]);
+  const { subtotal, deliveryFee, expressFee, pickupFee, serviceFee, total, itemCount } = getTotals();
   
-  const isLaundryOrder = items.some(i => i.isLaundry || i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry'));
+  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo' || i.isLaundry || i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry'));
 
   if (items.length === 0) {
     return (
@@ -268,22 +268,24 @@ export const CartPage = () => {
 
                 {/* Inputs */}
                 <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 ${isLaundryOrder ? 'pt-5 border-t border-border/50' : ''}`}>
-                  <div className="space-y-2">
-                    <label htmlFor="deliverytime" className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">
-                      <Clock className="w-4 h-4 text-primary" />
-                      Preferred Pickup Time
-                    </label>
-                    <input
-                      id="deliverytime"
-                      type="datetime-local"
-                      value={laundryPreferences.deliverytime}
-                      onChange={(e) => setLaundryPreferences({ deliverytime: e.target.value })}
-                      min={new Date().toISOString().slice(0, 16)}
-                      className="w-full h-12 rounded-xl border border-border bg-card px-4 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm"
-                    />
-                  </div>
+                  {isLaundryOrder && (
+                    <div className="space-y-2">
+                      <label htmlFor="deliverytime" className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">
+                        <Clock className="w-4 h-4 text-primary" />
+                        Preferred Pickup Time
+                      </label>
+                      <input
+                        id="deliverytime"
+                        type="datetime-local"
+                        value={laundryPreferences.deliverytime}
+                        onChange={(e) => setLaundryPreferences({ deliverytime: e.target.value })}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className="w-full h-12 rounded-xl border border-border bg-card px-4 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm"
+                      />
+                    </div>
+                  )}
 
-                  <div className="space-y-2">
+                  <div className={`space-y-2 ${!isLaundryOrder ? 'md:col-span-2' : ''}`}>
                     <label htmlFor="laundry-instructions" className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">
                       <FileText className="w-4 h-4 text-primary" />
                       Special Instructions
@@ -298,33 +300,35 @@ export const CartPage = () => {
                     />
                   </div>
 
-                  <div className="space-y-2 md:col-span-2">
-                    <button
-                      onClick={() => setLaundryPreferences({ globalExpressSelected: !laundryPreferences.globalExpressSelected })}
-                      className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all shadow-sm ${
-                        laundryPreferences.globalExpressSelected
-                          ? 'bg-primary/10 border-primary text-primary'
-                          : 'bg-card border-border hover:bg-muted text-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${laundryPreferences.globalExpressSelected ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
-                          <Zap className="w-5 h-5" />
+                  {isLaundryOrder && (
+                    <div className="space-y-2 md:col-span-2">
+                      <button
+                        onClick={() => setLaundryPreferences({ globalExpressSelected: !laundryPreferences.globalExpressSelected })}
+                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all shadow-sm ${
+                          laundryPreferences.globalExpressSelected
+                            ? 'bg-primary/10 border-primary text-primary'
+                            : 'bg-card border-border hover:bg-muted text-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${laundryPreferences.globalExpressSelected ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
+                            <Zap className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-bold">Express</p>
+                            <p className={`text-xs ${laundryPreferences.globalExpressSelected ? 'text-primary/80' : 'text-muted-foreground'}`}>
+                              Fast track your entire order processing
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-left">
-                          <p className="text-sm font-bold">Express</p>
-                          <p className={`text-xs ${laundryPreferences.globalExpressSelected ? 'text-primary/80' : 'text-muted-foreground'}`}>
-                            Fast track your entire order processing
-                          </p>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+                          laundryPreferences.globalExpressSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                        }`}>
+                          {laundryPreferences.globalExpressSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
-                      </div>
-                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
-                        laundryPreferences.globalExpressSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
-                      }`}>
-                        {laundryPreferences.globalExpressSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                      </div>
-                    </button>
-                  </div>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -343,10 +347,23 @@ export const CartPage = () => {
                 <span>Subtotal</span>
                 <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
               </div>
-              {deliveryFee > 0 && (
+              {/* Delivery Fee hidden per request, total calculation remains identical */}
+              {expressFee > 0 && (
+                <div className="flex justify-between text-primary font-bold">
+                  <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-primary fill-primary/20" /> Express Charges</span>
+                  <span>+{formatPrice(expressFee)} {APP_SETTINGS.currency}</span>
+                </div>
+              )}
+              {pickupFee > 0 && (
+                <div className="flex justify-between text-primary font-bold">
+                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-primary" /> Pickup Charge (2x Delivery)</span>
+                  <span>+{formatPrice(pickupFee)} {APP_SETTINGS.currency}</span>
+                </div>
+              )}
+              {serviceFee > 0 && (
                 <div className="flex justify-between text-muted-foreground font-semibold">
-                  <span>Delivery Fee</span>
-                  <span>{formatPrice(deliveryFee)} {APP_SETTINGS.currency}</span>
+                  <span>Service Fee (5%)</span>
+                  <span>{formatPrice(serviceFee)} {APP_SETTINGS.currency}</span>
                 </div>
               )}
             </div>

@@ -1,8 +1,8 @@
 // KilaKona SMS API Configuration
 // IMPORTANT: In a real-world scenario, you should NOT expose your API Key/Secret in the frontend.
 // It is recommended to create a backend endpoint (e.g. Firebase Cloud Function) that handles the SMS sending.
-const KILAKONA_API_KEY = import.meta.env.VITE_KILAKONA_API_KEY || 'YOUR_KILAKONA_API_KEY';
-const KILAKONA_API_SECRET = import.meta.env.VITE_KILAKONA_API_SECRET || 'YOUR_KILAKONA_API_SECRET';
+const KILAKONA_API_KEY = import.meta.env.VITE_KILAKONA_API_KEY || 'mushi';
+const KILAKONA_API_SECRET = import.meta.env.VITE_KILAKONA_API_SECRET || 'jytUxmm6S9MdcJ47zcsK';
 const KILAKONA_SENDER_ID = import.meta.env.VITE_KILAKONA_SENDER_ID || 'TULETE';
 
 // Admin phone numbers to receive the SMS

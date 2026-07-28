@@ -87,6 +87,8 @@ interface CartState {
   getTotals: () => {
     subtotal: number;
     deliveryFee: number;
+    expressFee: number;
+    pickupFee: number;
     serviceFee: number;
     total: number;
     itemCount: number;
@@ -218,6 +220,7 @@ export const useCartStore = create<CartState>()(
         let subtotal = 0;
         let deliveryFee = 0;
         let globalExpressFee = 0;
+        let pickupFee = 0;
         let serviceFee = 0;
         let maxRoundedFee = 0;
         let hasLaundry = false;
@@ -229,16 +232,16 @@ export const useCartStore = create<CartState>()(
           userLocation = useLocationStore.getState().currentLocation;
           allStores = storeService.getMockStores();
         } catch (e) {
-           console.warn('Could not load location/store service for dynamic pricing');
+          console.warn('Could not load location/store service for dynamic pricing');
         }
         
         const ratios = get().laundryRatios;
         items.forEach(item => {
-          const itemIsLaundry = item.isLaundry || item.storeId === 'laundry' || item.storeName?.toLowerCase().includes('laundry');
+          const itemIsLaundry = item.isLaundry || (item as any).cat === 'Nguo' || item.storeId === 'laundry' || item.storeName?.toLowerCase().includes('laundry');
           if (itemIsLaundry) hasLaundry = true;
           
           let itemTotal = calculateItemTotal(item, ratios || undefined);
-          let itemDeliveryFee = 0;
+          subtotal += itemTotal;
 
           if (userLocation) {
             let targetLocation = item.location;
@@ -250,57 +253,68 @@ export const useCartStore = create<CartState>()(
             }
 
             if (targetLocation) {
-               // Using Haversine formula from storeService
-               const R = 6371;
-               const dLat = (targetLocation.lat - userLocation.lat) * (Math.PI / 180);
-               const dLon = (targetLocation.lng - userLocation.lng) * (Math.PI / 180);
-               const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLocation.lat * (Math.PI / 180)) * Math.cos(targetLocation.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-               const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-               const distanceKm = R * c;
+              // Using Haversine formula from storeService
+              const R = 6371;
+              const dLat = (targetLocation.lat - userLocation.lat) * (Math.PI / 180);
+              const dLon = (targetLocation.lng - userLocation.lng) * (Math.PI / 180);
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLocation.lat * (Math.PI / 180)) * Math.cos(targetLocation.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const distanceKm = R * c;
 
-               let calculatedFee = distanceKm * 1000;
-               if (distanceKm > 150) {
-                 calculatedFee = 15000;
-               }
-               const roundedFee = Math.round(calculatedFee);
+              let calculatedFee = distanceKm * 1000;
+              if (distanceKm > 150) {
+                calculatedFee = 15000;
+              }
+              const roundedFee = Math.round(calculatedFee);
 
-               if (itemIsLaundry) {
-                 if (roundedFee > maxRoundedFee) maxRoundedFee = roundedFee;
+              if (itemIsLaundry) {
+                if (roundedFee > maxRoundedFee) maxRoundedFee = roundedFee;
 
-                 // Tiered pickup fee for laundry (mirrors Flutter logic)
-                 if (roundedFee <= 0) { itemDeliveryFee = 50; }
-                 else if (roundedFee < 2000) { itemDeliveryFee = 0; }
-                 else if (roundedFee <= 3000) { itemDeliveryFee = 200; }
-                 else if (roundedFee <= 5000) { itemDeliveryFee = 300; }
-                 else if (roundedFee <= 7000) { itemDeliveryFee = 400; }
-                 else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
-                 else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
-                 else { itemDeliveryFee = 1200; }
-                 
-                 itemTotal += itemDeliveryFee * item.quantity; // Baked directly into the item cost
-               } else {
-                 // For Food/Products, distance fee is baked into the price
-                 // Unless the user chose Pick Up (isDeliverySelected === false)
-                 if (item.isDeliverySelected !== false) {
-                   itemTotal += roundedFee * item.quantity;
-                 }
-               }
+                let itemDeliveryFee = 0;
+                if (roundedFee <= 0) { itemDeliveryFee = 50; }
+                else if (roundedFee < 2000) { itemDeliveryFee = 0; }
+                else if (roundedFee <= 3000) { itemDeliveryFee = 200; }
+                else if (roundedFee <= 5000) { itemDeliveryFee = 300; }
+                else if (roundedFee <= 7000) { itemDeliveryFee = 400; }
+                else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
+                else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
+                else { itemDeliveryFee = 1200; }
+                
+                deliveryFee += itemDeliveryFee * item.quantity;
+              } else {
+                if (item.isDeliverySelected !== false) {
+                  deliveryFee += roundedFee * item.quantity;
+                }
+              }
             }
           }
-
-          subtotal += itemTotal;
         });
 
-        // Apply express fee once per order (if selected and there is a laundry item)
+        // 1. Express Charges (when Express is selected)
         if (hasLaundry && get().laundryPreferences.globalExpressSelected) {
           const expressClientFee = get().laundryRatios?.expressClient ?? 2000;
-          globalExpressFee = (maxRoundedFee * 2) + expressClientFee;
+          globalExpressFee = ((maxRoundedFee > 0 ? maxRoundedFee : 1500) * 2) + expressClientFee;
         }
 
-        serviceFee = Math.round(subtotal * 0.05); // 5% service fee
-        const total = subtotal + deliveryFee + globalExpressFee + serviceFee;
+        // 2. Preferred Pickup Charges (normal delivery fee * 2 when pickup time is selected; 0 when cleared)
+        const deliveryTimeStr = get().laundryPreferences.deliverytime ? String(get().laundryPreferences.deliverytime).trim() : '';
+        if (hasLaundry && deliveryTimeStr.length > 0) {
+          const baseFeeForPickup = deliveryFee > 0 ? deliveryFee : (maxRoundedFee > 0 ? maxRoundedFee : 2000);
+          pickupFee = baseFeeForPickup * 2;
+        }
 
-        return { subtotal: Math.round(subtotal), deliveryFee: 0, serviceFee, total: Math.round(total), itemCount };
+        serviceFee = Math.round((subtotal + deliveryFee + globalExpressFee + pickupFee) * 0.05); // 5% service fee
+        const total = subtotal + deliveryFee + globalExpressFee + pickupFee + serviceFee;
+
+        return {
+          subtotal: Math.round(subtotal),
+          deliveryFee: Math.round(deliveryFee),
+          expressFee: Math.round(globalExpressFee),
+          pickupFee: Math.round(pickupFee),
+          serviceFee: Math.round(serviceFee),
+          total: Math.round(total),
+          itemCount
+        };
       },
 
       getDynamicItemPrices: () => {
@@ -354,6 +368,11 @@ export const useCartStore = create<CartState>()(
                 else if (roundedFee <= 9000) { itemDeliveryFee = 500; }
                 else if (roundedFee <= 15000) { itemDeliveryFee = 700; }
                 else { itemDeliveryFee = 1200; }
+
+                const delTime = get().laundryPreferences?.deliverytime;
+                const pickupMultiplier = (delTime && String(delTime).trim().length > 0) ? 2 : 1;
+                itemDeliveryFee = itemDeliveryFee * pickupMultiplier;
+
                 itemTotal += itemDeliveryFee * item.quantity;
               } else {
                 if (item.isDeliverySelected !== false) {

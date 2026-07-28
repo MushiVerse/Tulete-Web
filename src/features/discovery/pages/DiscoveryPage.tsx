@@ -509,7 +509,10 @@ export const DiscoveryPage = () => {
                       };
                       return (
                         <div key={storeData.id} className={viewMode === 'list' ? 'h-[150px]' : ''}>
-                          <StoreCard store={storeData as any} />
+                          <StoreCard 
+                            store={storeData as any} 
+                            onClick={() => navigate(`/store/${storeData.id}`, { state: { storeData } })}
+                          />
                         </div>
                       );
                     }

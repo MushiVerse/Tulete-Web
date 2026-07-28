@@ -54,7 +54,7 @@ export const CheckoutPage = () => {
   const { subtotal, total, deliveryFee } = getTotals();
 
   const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
-  const { deliverytime, instructions: laundryInstructions } = laundryPreferences;
+  const { deliverytime, instructions: laundryInstructions } = laundryPreferences || {};
 
   // Phone state with UX for edit vs view
   const [phoneNumber, setPhoneNumber] = useState(savedPhoneNumber || '');
@@ -112,6 +112,13 @@ export const CheckoutPage = () => {
       return;
     }
 
+    // Auto-save phone number if customer entered text without explicitly clicking "Save"
+    const activePhone = phoneNumber && phoneNumber.trim() ? phoneNumber.trim() : (savedPhoneNumber || '');
+    if (phoneNumber && phoneNumber.trim()) {
+      savePhoneNumber(phoneNumber.trim());
+      setIsEditingPhone(false);
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -153,10 +160,10 @@ export const CheckoutPage = () => {
         },
         paymentMethod: 'Cash',
         paymentStatus: 'Pending',
-        contactPhone: phoneNumber,
+        contactPhone: activePhone,
         notes: deliverytime ? `${notes}\n[Preferred Time: ${new Date(deliverytime).toLocaleString()}]` : notes,
         deliverytime: isLaundryOrder ? 'Pickup' : 'ASAP',
-        no: phoneNumber, // Legacy backward compatibility for Flutter/Admin apps
+        no: activePhone, // Legacy backward compatibility for Flutter/Admin apps
         // Laundry-specific fields
         ...(isLaundryOrder && {
           isLaundryOrder: true,
@@ -327,7 +334,7 @@ export const CheckoutPage = () => {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g. Leave package with the gate attendant."
                   rows={1}
-                  className="bg-card border-border min-h-[42px]"
+                  className="bg-card border-border min-h-[42px] resize-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 />
               </div>
             </div>
@@ -370,7 +377,7 @@ export const CheckoutPage = () => {
           <Card className="p-6 border border-border bg-muted shadow-md">
             <h2 className="text-xl font-bold text-foreground mb-4">Your Order</h2>
             
-            <div className="max-h-[220px] overflow-y-auto space-y-3 mb-6 pr-1">
+            <div className="max-h-[220px] overflow-y-auto space-y-3 mb-6 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scrollbar-none">
               {items.map((item) => (
                 <CheckoutItemRow key={item.productId} item={item} />
               ))}
@@ -381,12 +388,7 @@ export const CheckoutPage = () => {
                 <span>Subtotal</span>
                 <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
               </div>
-              {deliveryFee > 0 && (
-                <div className="flex justify-between text-muted-foreground font-semibold text-xs">
-                  <span>Delivery Fee</span>
-                  <span>{formatPrice(deliveryFee)} {APP_SETTINGS.currency}</span>
-                </div>
-              )}
+              {/* Delivery Fee hidden per request, sum remains identical */}
               <div className="flex justify-between items-center text-lg font-extrabold text-foreground border-t border-border/50 pt-3">
                 <span>Total to Pay</span>
                 <span className="text-primary">{formatPrice(finalTotalWithDelivery)} {APP_SETTINGS.currency}</span>

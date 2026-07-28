@@ -8,9 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/Avatar';
 interface StoreCardProps {
   store: Store;
   distanceKm?: number;
+  onClick?: () => void;
 }
 
-export const StoreCard = ({ store, distanceKm }: StoreCardProps) => {
+export const StoreCard = ({ store, distanceKm, onClick }: StoreCardProps) => {
   // Category from document field "cat", falling back to "category"
   const displayCategory = (store as any).cat || store.category || 'Store';
 
@@ -29,6 +30,7 @@ export const StoreCard = ({ store, distanceKm }: StoreCardProps) => {
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
       className="h-full"
+      onClick={onClick}
     >
       <Card className="h-full overflow-hidden flex flex-col group cursor-pointer">
         {/* Banner */}

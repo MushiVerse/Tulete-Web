@@ -246,7 +246,7 @@ export const LaundryPage = () => {
     return () => unsub();
   }, []);
 
-  // Filter items by search
+  // Filter and sort items by time (descending)
   const filteredItems = items.filter(item => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -254,14 +254,20 @@ export const LaundryPage = () => {
           !item.brand?.toLowerCase().includes(q) &&
           !item.store?.toLowerCase().includes(q)) return false;
     }
-    // Very basic category matching (mocking categorization based on text)
-    if (selectedCategory !== 'All Services') {
-      const isMatch = item.name?.toLowerCase().includes(selectedCategory.toLowerCase().split(' ')[0]) || 
-                      item.description?.toLowerCase().includes(selectedCategory.toLowerCase().split(' ')[0]);
-      // If we are strictly filtering but the mock data doesn't have categories, we might accidentally filter everything.
-      // We will skip strict category filtering here unless backend has it, but this adds the UI element.
-    }
     return true;
+  }).sort((a, b) => {
+    // Primary sort: time (descending - newest first)
+    const timeA = (a as any).time || (a as any).createdAt || '';
+    const timeB = (b as any).time || (b as any).createdAt || '';
+    if (timeA && timeB) {
+      const timeDiff = String(timeB).localeCompare(String(timeA));
+      if (timeDiff !== 0) return timeDiff;
+    } else if (timeB) {
+      return 1;
+    } else if (timeA) {
+      return -1;
+    }
+    return (b.rating || 0) - (a.rating || 0);
   });
 
   const getCartQuantity = (productId: string) => {

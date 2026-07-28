@@ -280,7 +280,7 @@ export const HomePage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
-  const { items: cartItems, getTotals, addToCart, removeFromCart, clearCart } = useCartStore();
+  const { items: cartItems, getTotals, clearCart, addToCart, removeFromCart } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   const { currentLocation } = useLocationStore();
@@ -403,6 +403,19 @@ export const HomePage = () => {
         return true;
       })
       .sort((a: any, b: any) => {
+        // Primary sort: time (descending - newest first)
+        const timeA = a.time || a.createdAt || '';
+        const timeB = b.time || b.createdAt || '';
+        if (timeA && timeB) {
+          const timeDiff = String(timeB).localeCompare(String(timeA));
+          if (timeDiff !== 0) return timeDiff;
+        } else if (timeB) {
+          return 1;
+        } else if (timeA) {
+          return -1;
+        }
+
+        // Secondary sort: rating (descending)
         const getRating = (it: any) => {
           let rating = 0;
           let reviewCount = 0;
@@ -422,15 +435,7 @@ export const HomePage = () => {
 
         const ratingA = getRating(a);
         const ratingB = getRating(b);
-        const ratingDiff = ratingB - ratingA;
-        if (ratingDiff !== 0) return ratingDiff;
-
-        const timeA = a.time || a.createdAt || '';
-        const timeB = b.time || b.createdAt || '';
-        if (timeA && timeB) return timeB.localeCompare(timeA);
-        if (timeB) return 1;
-        if (timeA) return -1;
-        return 0;
+        return ratingB - ratingA;
       });
   };
 
@@ -445,14 +450,18 @@ export const HomePage = () => {
       return true;
     })
     .sort((a: any, b: any) => {
-      const ratingDiff = (b.rating || 0) - (a.rating || 0);
-      if (ratingDiff !== 0) return ratingDiff;
+      // Primary sort: time (descending)
       const timeA = a.time || a.createdAt || '';
       const timeB = b.time || b.createdAt || '';
-      if (timeA && timeB) return timeB.localeCompare(timeA);
-      if (timeB) return 1;
-      if (timeA) return -1;
-      return 0;
+      if (timeA && timeB) {
+        const timeDiff = String(timeB).localeCompare(String(timeA));
+        if (timeDiff !== 0) return timeDiff;
+      } else if (timeB) {
+        return 1;
+      } else if (timeA) {
+        return -1;
+      }
+      return (b.rating || 0) - (a.rating || 0);
     });
 
   const topStores = processedStores;

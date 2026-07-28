@@ -1,6 +1,6 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { storeService, Store } from '../services/storeService';
 import { productService, Product } from '../../products/services/productService';
 import { useLocationStore } from '../../location/store/useLocationStore';
@@ -26,6 +26,8 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 export const StoreDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeStoreData = location.state?.storeData as Store | undefined;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // States
@@ -71,7 +73,7 @@ export const StoreDetailsPage = () => {
     }
   );
 
-  const store = dbStore || storeService.getMockStores().find((s) => s.id === id);
+  const store = routeStoreData || dbStore || storeService.getMockStores().find((s) => s.id === id);
   const dbProducts = productsData?.data || [];
   let products = dbProducts.length > 0 ? dbProducts : productService.getMockProducts(id);
 

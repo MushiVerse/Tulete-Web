@@ -261,20 +261,20 @@ export const ProductsPage = () => {
 
     return matchesSearch && matchesFee;
   }).sort((a, b) => {
-    // Primary sort: rating (descending)
-    const ratingDiff = (b.rating || 0) - (a.rating || 0);
-    if (ratingDiff !== 0) return ratingDiff;
-    
-    // Secondary sort: time (descending - newest first)
-    if (a.time && b.time) {
-      return b.time.localeCompare(a.time);
-    } else if (b.time) {
+    // Primary sort: time (descending - newest first)
+    const timeA = (a as any).time || (a as any).createdAt || '';
+    const timeB = (b as any).time || (b as any).createdAt || '';
+    if (timeA && timeB) {
+      const timeDiff = String(timeB).localeCompare(String(timeA));
+      if (timeDiff !== 0) return timeDiff;
+    } else if (timeB) {
       return 1;
-    } else if (a.time) {
+    } else if (timeA) {
       return -1;
     }
     
-    return 0;
+    // Secondary sort: rating (descending)
+    return (b.rating || 0) - (a.rating || 0);
   });
 
   const { total: cartTotal } = getTotals();

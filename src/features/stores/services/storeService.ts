@@ -53,8 +53,23 @@ class StoreService extends BaseFirestoreService<Store> {
   }
 
   protected override parse(data: any): Store {
-    let lat = -1.2894;
-    let lng = 36.7909;
+    if (!data) {
+      return {
+        id: '',
+        store: '',
+        description: '',
+        imgURL: '',
+        ownerId: '',
+        rating: 0,
+        reviewCount: 0,
+        category: 'Food',
+        availability: true,
+        address: '',
+      };
+    }
+
+    let lat = -6.1630;
+    let lng = 35.7516;
     
     if (data.location && typeof data.location === 'string') {
       const parts = data.location.split(',');
@@ -78,7 +93,7 @@ class StoreService extends BaseFirestoreService<Store> {
     let category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides' = 'Food';
     const storeCat = data.cat || data.category || '';
     const rawCat = String(storeCat).toLowerCase();
-    if (rawCat.includes('laund') || rawCat.includes('clean')) {
+    if (rawCat.includes('laund') || rawCat.includes('clean') || rawCat.includes('nguo')) {
       category = 'Laundry';
     } else if (rawCat.includes('elect')) {
       category = 'Electrical';
@@ -86,25 +101,35 @@ class StoreService extends BaseFirestoreService<Store> {
       category = 'Beauty';
     } else if (rawCat.includes('ride') || rawCat.includes('deliver')) {
       category = 'Rides';
+    } else if (rawCat.includes('food') || rawCat.includes('restaurant')) {
+      category = 'Food';
     }
 
-    // Calculate ratings from rates array field if present
-    const ratesList = Array.isArray(data.rates)
-      ? data.rates.map((r: any) => Number(r)).filter((n: number) => !isNaN(n))
-      : [];
+    // Calculate ratings safely from rates field (array or map)
+    let ratesList: number[] = [];
+    if (Array.isArray(data.rates)) {
+      ratesList = data.rates.map((r: any) => Number(r)).filter((n: number) => !isNaN(n));
+    } else if (data.rates && typeof data.rates === 'object') {
+      ratesList = Object.values(data.rates).map((r: any) => Number(r)).filter((n: number) => !isNaN(n));
+    }
+
     const ratesCount = ratesList.length;
-    const computedRating = ratesCount > 0
-      ? (ratesList.reduce((a, b) => a + b, 0) / ratesCount)
-      : (data.rating !== undefined ? Number(data.rating) : 0);
+    let computedRating = 0;
+    if (ratesCount > 0) {
+      computedRating = ratesList.reduce((a, b) => a + b, 0) / ratesCount;
+    } else if (data.rating !== undefined && data.rating !== null) {
+      computedRating = parseFloat(String(data.rating)) || 0;
+    }
+
     const finalReviewCount = ratesCount > 0
       ? ratesCount
-      : (data.reviewCount !== undefined ? Number(data.reviewCount) : 0);
+      : (data.reviewCount !== undefined && data.reviewCount !== null ? Number(data.reviewCount) || 0 : 0);
 
     return {
-      id: data.id,
-      store: data.store || data.name || '',
+      id: data.id || '',
+      store: data.store || data.name || 'Store',
       description: data.description || '',
-      imgURL: data.imgURL || '',
+      imgURL: data.imgURL || data.imgUrl || data.image || '',
       ownerId: data.ownerId || '',
       rating: Math.round(computedRating * 10) / 10,
       reviewCount: finalReviewCount,
@@ -116,11 +141,11 @@ class StoreService extends BaseFirestoreService<Store> {
       phone: data.phone,
       whatsapp: data.whatsapp,
       isVerified: data.isVerified !== undefined ? !!data.isVerified : true,
-      gallery: data.gallery || [],
-      promotions: data.promotions || [],
-      hours: data.hours || [],
+      gallery: Array.isArray(data.gallery) ? data.gallery : [],
+      promotions: Array.isArray(data.promotions) ? data.promotions : [],
+      hours: Array.isArray(data.hours) ? data.hours : [],
       location: { lat, lng },
-      reviews: data.reviews || [],
+      reviews: Array.isArray(data.reviews) ? data.reviews : [],
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };
