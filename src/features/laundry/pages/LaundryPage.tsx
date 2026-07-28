@@ -53,6 +53,7 @@ const LaundryItemCard = ({
   onRemoveAll: (id: string) => void;
   hasAnyInCart: boolean;
 }) => {
+  const navigate = useNavigate();
   const isAvailable = item.quantity > 0;
   const livePrice = useDynamicPrice(item.price, item.brand || 'laundry', true, undefined);
   const id = item.id;
@@ -60,7 +61,11 @@ const LaundryItemCard = ({
   const cartQty = getCartQuantity(id);
 
   /** Confirm: add to cart immediately */
-  const handleConfirmAdd = () => {
+  const handleConfirmAdd = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     onAddToCart(item);
   };
 
@@ -70,7 +75,8 @@ const LaundryItemCard = ({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className={`group rounded-3xl border p-3 sm:p-4 shadow-sm hover:shadow-md transition-all flex flex-col bg-card border-border h-full`}
+      onClick={() => navigate(`/product/${encodeURIComponent(item.id)}`)}
+      className={`group rounded-3xl border p-3 sm:p-4 shadow-sm hover:shadow-md transition-all flex flex-col bg-card border-border h-full cursor-pointer`}
     >
       <div className="flex flex-col gap-4 flex-1">
         {/* Image */}
@@ -128,7 +134,10 @@ const LaundryItemCard = ({
       </div>
 
       {/* ── Add to Cart Actions ── */}
-      <div className="mt-auto pt-4 border-t border-border flex items-center justify-end gap-2">
+      <div 
+        className="mt-auto pt-4 border-t border-border flex items-center justify-end gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
           {cartQty === 0 ? (
             <motion.button
@@ -148,7 +157,10 @@ const LaundryItemCard = ({
             <>
               <div className="flex items-center bg-muted border border-border rounded-xl overflow-hidden shadow-sm h-9 sm:h-10">
                 <button
-                  onClick={() => onDecrement(id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDecrement(id);
+                  }}
                   className="w-8 sm:w-10 h-full flex items-center justify-center text-foreground hover:bg-card transition-colors"
                 >
                   <Minus className="w-3 h-3 sm:w-4 sm:h-4" />

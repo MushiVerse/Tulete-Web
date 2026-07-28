@@ -23,8 +23,10 @@ import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { locationService } from '../../location/services/locationService';
+import { useThemeStore } from '../../../core/theme/useThemeStore';
 
 export const StoreDetailsPage = () => {
+  const { isDark } = useThemeStore();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,7 +87,30 @@ export const StoreDetailsPage = () => {
 
   const isProductsLoading = isFoodsLoading || isProductsDataLoading || isClothsLoading;
 
-  const store = routeStoreData || dbStore || storeService.getMockStores().find((s) => s.id === id);
+  const decodedId = id ? decodeURIComponent(id) : '';
+
+  const mockMatch = storeService.getMockStores().find((s) => 
+    s.id === id || s.id === decodedId || 
+    s.store?.toLowerCase() === id?.toLowerCase() || 
+    s.store?.toLowerCase() === decodedId.toLowerCase()
+  );
+
+  const fallbackStore: Store = {
+    id: decodedId || 's1',
+    store: decodedId && decodedId !== 's1' && decodedId !== 'undefined' ? decodedId : 'Tulete Partner Store',
+    description: 'Welcome to our store! We provide high quality items with fast delivery.',
+    imgURL: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+    ownerId: 'owner-1',
+    rating: 4.8,
+    reviewCount: 156,
+    category: 'Food',
+    availability: true,
+    address: 'Dodoma, Tanzania',
+    location: { lat: -6.1630, lng: 35.7516 },
+    isVerified: true
+  };
+
+  const store = routeStoreData || dbStore || mockMatch || fallbackStore;
   const targetStoreName = (store?.name || store?.store || '').toLowerCase().trim();
   const targetStoreId = (id || store?.id || '').toLowerCase().trim();
 
@@ -557,16 +582,20 @@ export const StoreDetailsPage = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredProducts.map((prod) => (
-                  <Card key={prod.id} className="p-4 border border-border bg-card hover:shadow-md transition-all flex gap-4 items-center">
+                  <Card 
+                    key={prod.id} 
+                    onClick={() => navigate(`/product/${encodeURIComponent(prod.id)}`)}
+                    className="p-4 border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all flex gap-4 items-center cursor-pointer group"
+                  >
                     <img 
                       src={prod.imgUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
                       alt={prod.name} 
-                      className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0"
+                      className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0 group-hover:scale-105 transition-transform"
                     />
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary">{prod.category}</span>
+                        {/* <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary">{prod.category}</span> */}
                         {prod.tags.map((tag, i) => (
                           <Badge key={i} className="bg-amber-400/20 text-amber-800 border-0 text-[8px] font-bold py-0 px-1 rounded-sm">
                             {tag}
@@ -574,7 +603,7 @@ export const StoreDetailsPage = () => {
                         ))}
                       </div>
                       
-                      <h4 className="font-extrabold text-sm text-foreground truncate mb-1">{prod.name}</h4>
+                      <h4 className="font-extrabold text-sm text-foreground truncate mb-1 group-hover:text-primary transition-colors">{prod.name}</h4>
                       <p className="text-xs text-slate-550 dark:text-slate-400 line-clamp-1 mb-2 leading-relaxed">{prod.description}</p>
                       
                       <div className="flex justify-between items-center">
@@ -590,7 +619,8 @@ export const StoreDetailsPage = () => {
                         </div>
 
                         <Button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             addToCart({
                               productId: prod.id,
                               name: prod.name,
@@ -627,11 +657,14 @@ export const StoreDetailsPage = () => {
                   title={`Google Map - ${store.store}`}
                   width="100%"
                   height="100%"
-                  style={{ border: 0 }}
+                  style={{ 
+                    border: 0,
+                    filter: isDark ? 'invert(90%) hue-rotate(180deg) contrast(120%)' : 'none'
+                  }}
                   loading="lazy"
                   allowFullScreen
                   src={`https://maps.google.com/maps?q=${storeLat},${storeLng}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                  className="w-full h-full border-0 rounded-2xl dark:invert dark:contrast-125 dark:hue-rotate-180 dark:brightness-90 transition-all duration-300"
+                  className="w-full h-full border-0 rounded-2xl transition-all duration-300"
                 />
 
                 {/* Google Maps Overlay Header Pill */}

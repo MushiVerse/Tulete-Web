@@ -65,6 +65,7 @@ const PROMOS = [
 
 
 const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
+  const navigate = useNavigate();
   if (meal.availability === false) {
     return null;
   }
@@ -79,7 +80,8 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group bg-card border-border"
+        onClick={() => navigate(`/product/${encodeURIComponent(meal.id)}`)}
+        className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group bg-card border-border cursor-pointer"
       >
         <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
           <img src={meal.imgUrl} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -110,20 +112,33 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
             </div>
             
             {cartItem ? (
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div 
+                className="flex items-center gap-1.5 sm:gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
-                  <button onClick={() => updateQuantity(meal.id, cartItem.quantity - 1)} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateQuantity(meal.id, cartItem.quantity - 1);
+                    }} 
+                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm"
+                  >
                     <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   </button>
                   <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
-                  <button onClick={() => {
-                    const stockLimit = meal.quantity !== undefined ? meal.quantity : meal.idadi;
-                    if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
-                      alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
-                      return;
-                    }
-                    updateQuantity(meal.id, cartItem.quantity + 1);
-                  }} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const stockLimit = meal.quantity !== undefined ? meal.quantity : meal.idadi;
+                      if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                        alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
+                        return;
+                      }
+                      updateQuantity(meal.id, cartItem.quantity + 1);
+                    }} 
+                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm"
+                  >
                     <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   </button>
                 </div>
@@ -263,7 +278,7 @@ export const FoodPage = () => {
       openModal('login');
       return;
     }
-    navigate('/checkout');
+    navigate('/cart');
   };
 
   return (

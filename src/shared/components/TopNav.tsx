@@ -83,6 +83,8 @@ export const TopNav = () => {
             <Link to="/food" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/food') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('food')}</Link>
             <Link to="/laundry" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/laundry') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('laundry')}</Link>
             <Link to="/products" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/products') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('products')}</Link>
+            <Link to="/stores" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/stores') ? 'text-foreground' : 'text-muted-foreground'}`}>Providers</Link>
+            <Link to="/orders" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/orders') ? 'text-foreground' : 'text-muted-foreground'}`}>My Orders</Link>
           </nav>
         </div>
 
@@ -150,87 +152,104 @@ export const TopNav = () => {
             {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
 
+          {/* Favorites */}
+          <Link
+            to="/favorites"
+            className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors hidden sm:block"
+            title="Favorites"
+          >
+            <Heart className="size-5" />
+          </Link>
+
+          {/* Cart Icon / Counter */}
+          <Link
+            to="/cart"
+            className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+            title="Cart"
+          >
+            <ShoppingBag className="size-5" />
+          </Link>
+
+          {/* User Menu / Sign In */}
           {isAuthenticated ? (
-            <>
-
-
-              <button className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors">
-                <Bell className="size-5" />
-                <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-destructive border-2 border-card" />
-              </button>
-
-              {/* User Avatar Dropdown */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center justify-center size-9 rounded-full bg-primary/10 border border-primary/20 hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
-                >
-                  <span className="text-primary text-sm font-extrabold uppercase">
-                    {user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                  </span>
-                </button>
-
-                <AnimatePresence>
-                  {isDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-3 w-56 rounded-2xl bg-card border border-border shadow-xl overflow-hidden py-2 z-50"
-                    >
-                      <div className="px-4 py-3 border-b border-border/50 mb-2">
-                        <p className="text-sm font-extrabold text-foreground truncate">{user?.displayName || 'User'}</p>
-                        <p className="text-xs font-semibold text-muted-foreground truncate">{user?.email}</p>
-                      </div>
-                      <div className="flex flex-col">
-                        <Link onClick={() => setIsDropdownOpen(false)} to="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                          <User className="w-4 h-4" /> Profile
-                        </Link>
-                        <Link onClick={() => setIsDropdownOpen(false)} to="/orders" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                          <ShoppingBag className="w-4 h-4" /> My Orders
-                        </Link>
-                        <Link onClick={() => setIsDropdownOpen(false)} to="/favorites" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                          <Heart className="w-4 h-4" /> Favorites
-                        </Link>
-                        <Link onClick={() => setIsDropdownOpen(false)} to="/settings" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                          <Settings className="w-4 h-4" /> Settings
-                        </Link>
-                        <div className="h-px bg-border/50 my-2 mx-4" />
-                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10 transition-colors text-left">
-                          <LogOut className="w-4 h-4" /> Sign Out
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </>
-          ) : (
-            <div className="hidden md:flex items-center gap-2 sm:gap-4">
+            <div className="relative" ref={dropdownRef}>
               <button
-                onClick={() => openModal('login')}
-                className="text-xs sm:text-sm font-extrabold hover:underline underline-offset-4 bg-transparent border-none p-0 cursor-pointer text-foreground"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 p-1.5 rounded-full hover:bg-muted transition-colors border border-border cursor-pointer"
               >
-                Sign In
+                <div className="size-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold text-sm">
+                  {user?.displayName ? user.displayName.charAt(0).toUpperCase() : <User className="size-4" />}
+                </div>
               </button>
-              <button
-                onClick={() => openModal('register')}
-                className="text-xs sm:text-sm font-extrabold bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl transition-all shadow-sm cursor-pointer border-none"
-              >
-                Get Started
-              </button>
+
+              <AnimatePresence>
+                {isDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-56 rounded-2xl bg-card border border-border shadow-xl py-2 z-50 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-extrabold text-foreground truncate">{user?.displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </div>
+
+                    <div className="py-1">
+                      <Link
+                        to="/profile"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <User className="size-4" /> Profile
+                      </Link>
+                      <Link
+                        to="/orders"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <ShoppingBag className="size-4" /> My Orders
+                      </Link>
+                      <Link
+                        to="/settings"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Settings className="size-4" /> Settings
+                      </Link>
+                    </div>
+
+                    <div className="border-t border-border pt-1">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-destructive hover:bg-destructive/10 transition-colors text-left cursor-pointer"
+                      >
+                        <LogOut className="size-4" /> Sign Out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
+          ) : (
+            <button
+              onClick={() => openModal('login')}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-extrabold shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
+            >
+              Sign In
+            </button>
           )}
 
-          {/* Mobile Menu toggle */}
+          {/* Mobile Menu Button */}
           <button
             id="mobile-menu-button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors cursor-pointer"
+            className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-muted transition-colors cursor-pointer"
           >
-            <Menu className="size-5" />
+            <Menu className="size-6" />
           </button>
+
         </div>
       </div>
 
@@ -250,6 +269,8 @@ export const TopNav = () => {
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/food" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/food') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Food</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/laundry" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/laundry') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Laundry</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/products" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/products') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Products</Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/stores" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/stores') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Providers</Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/orders" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/orders') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>My Orders</Link>
 
               {!isAuthenticated && (
                 <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-border">

@@ -19,6 +19,8 @@ import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
+import { useThemeStore } from '../../../core/theme/useThemeStore';
+import { locationService } from '../../location/services/locationService';
 
 /* Endless Vertical Grid Section for "More of ..." */
 const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] }) => {
@@ -128,6 +130,7 @@ const PRODUCT_CATEGORIES = [
 ];
 
 export const ProductDetailPage = () => {
+  const { isDark } = useThemeStore();
   const { id } = useParams();
   const decodedId = id ? decodeURIComponent(id) : '';
   const navigate = useNavigate();
@@ -241,12 +244,93 @@ export const ProductDetailPage = () => {
   if (isLoading) {
     return (
       <PageContainer>
-        <div className="max-w-4xl mx-auto p-4 md:p-6 lg:py-8 space-y-8">
-          <Skeleton className="w-full aspect-square md:h-[400px] rounded-2xl" />
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-4 w-1/4" />
-            <Skeleton className="h-12 w-full" />
+        <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
+          {/* Left Sidebar Skeleton (Desktop) */}
+          <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full px-6 pt-6 pb-28 space-y-6">
+            <Skeleton className="h-6 w-20 rounded-xl" />
+            <div className="space-y-3 pt-4">
+              <Skeleton className="h-4 w-28 rounded-lg mb-4" />
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <Skeleton key={n} className="h-11 w-full rounded-2xl" />
+              ))}
+            </div>
+          </div>
+
+          {/* Center / Main Column Skeleton */}
+          <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
+            {/* Top Bar Breadcrumb & Actions */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-20 rounded-md" />
+                <Skeleton className="h-4 w-4 rounded-full" />
+                <Skeleton className="h-4 w-44 rounded-md" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <Skeleton className="h-9 w-9 rounded-full" />
+              </div>
+            </div>
+
+            {/* Product Grid */}
+            <div className="md:px-0 lg:py-2 lg:grid lg:grid-cols-2 lg:gap-12 space-y-6 lg:space-y-0">
+              {/* Image Gallery Skeleton */}
+              <div className="space-y-4">
+                <Skeleton className="w-full aspect-square rounded-3xl border border-border/40 shadow-sm" />
+                <div className="flex gap-3">
+                  {[1, 2, 3, 4].map((t) => (
+                    <Skeleton key={t} className="w-20 h-20 rounded-2xl shrink-0" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Product Info Side Skeleton */}
+              <div className="py-2 md:px-0 flex flex-col gap-6">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-11/12 rounded-xl" />
+                  <Skeleton className="h-8 w-2/3 rounded-xl" />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-24 rounded-lg" />
+                  <Skeleton className="h-5 w-32 rounded-lg" />
+                </div>
+
+                <div className="flex items-baseline gap-3 pt-2">
+                  <Skeleton className="h-10 w-44 rounded-xl" />
+                  <Skeleton className="h-6 w-28 rounded-lg" />
+                </div>
+
+                <Skeleton className="h-12 w-full md:w-56 rounded-2xl" />
+
+                <div className="w-full h-px bg-border/40 my-1" />
+
+                {/* Store Card Skeleton */}
+                <div className="p-4 rounded-2xl border border-border bg-card shadow-sm flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32 rounded-md" />
+                      <Skeleton className="h-3.5 w-24 rounded-md" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-9 w-24 rounded-xl shrink-0" />
+                </div>
+
+                {/* Store Location Map Skeleton */}
+                <div className="space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <Skeleton className="h-4 w-36 rounded-md" />
+                    <Skeleton className="h-4 w-28 rounded-md" />
+                  </div>
+                  <Skeleton className="h-44 w-full rounded-2xl border border-border" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </PageContainer>
@@ -445,62 +529,104 @@ export const ProductDetailPage = () => {
               <div className="w-full h-px bg-border/50" />
 
               {/* Store Info */}
-              <div className="flex items-center justify-between p-4 rounded-2xl border border-border bg-card shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                    <StoreIcon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-sm">{displayProduct.store}</h3>
-                    <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mt-0.5">
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> 2.4 km</span>
-                      <span className="flex items-center gap-1 text-emerald-600"><ShieldCheck className="w-3 h-3" /> Verified</span>
-                    </div>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="rounded-xl font-bold"
-                  onClick={() => navigate(`/stores/${displayProduct.storeId}`)}
-                >
-                  Visit Store
-                </Button>
-              </div>
-
-              {/* Theme-Aware Store Location Map */}
               {(() => {
-                const prodLat = (displayProduct as any)?.location?.lat ?? (displayProduct as any)?.lat ?? (displayProduct as any)?.latitude ?? -6.1630;
-                const prodLng = (displayProduct as any)?.location?.lng ?? (displayProduct as any)?.lng ?? (displayProduct as any)?.longitude ?? 35.7516;
-                
+                const rawStoreId = displayProduct.storeId || (displayProduct as any).brand || (displayProduct as any).pbrand || (displayProduct as any).FBrand || (displayProduct as any).store;
+                const storeTargetId = rawStoreId && rawStoreId !== 'unknown' ? rawStoreId : 's1';
+
+                let rawLat = (displayProduct as any)?.location?.lat ?? (displayProduct as any)?.lat ?? (displayProduct as any)?.latitude;
+                let rawLng = (displayProduct as any)?.location?.lng ?? (displayProduct as any)?.lng ?? (displayProduct as any)?.longitude;
+
+                if (typeof rawLat === 'string') rawLat = parseFloat(rawLat);
+                if (typeof rawLng === 'string') rawLng = parseFloat(rawLng);
+
+                const prodLat = typeof rawLat === 'number' && !isNaN(rawLat) ? rawLat : -6.1630;
+                const prodLng = typeof rawLng === 'number' && !isNaN(rawLng) ? rawLng : 35.7516;
+
+                const computedDistance = (() => {
+                  if (currentLocation && typeof rawLat === 'number' && typeof rawLng === 'number' && !isNaN(rawLat) && !isNaN(rawLng)) {
+                    const dist = locationService.calculateDistance(
+                      { lat: currentLocation.lat, lng: currentLocation.lng },
+                      { lat: rawLat, lng: rawLng }
+                    );
+                    return `${dist} km`;
+                  }
+                  return '2.4 km';
+                })();
+
+                const handleVisitStore = () => {
+                  const targetId = storeTargetId;
+                  const storeData = {
+                    id: targetId,
+                    store: displayProduct.store || targetId,
+                    category: displayProduct.category || 'Food',
+                    imgURL: displayProduct.imgUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+                    address: 'Dodoma, Tanzania',
+                    location: { lat: prodLat, lng: prodLng },
+                    rating: displayProduct.rating || 4.8,
+                    reviewCount: displayProduct.reviewCount || 120,
+                    availability: true,
+                    isVerified: true
+                  };
+                  navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData } });
+                };
+
                 return (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-extrabold text-sm flex items-center gap-1.5 text-foreground">
-                        <MapPin className="w-4 h-4 text-emerald-500" />
-                        Store Location Map
-                      </h3>
-                      <button
-                        onClick={() => navigate(`/stores/${displayProduct.storeId}`)}
-                        className="text-xs font-bold text-primary hover:underline"
+                  <>
+                    <div className="flex items-center justify-between p-4 rounded-2xl border border-border bg-card shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                          <StoreIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-extrabold text-sm">{displayProduct.store}</h3>
+                          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mt-0.5">
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-emerald-500" /> {computedDistance}</span>
+                            <span className="flex items-center gap-1 text-emerald-600"><ShieldCheck className="w-3 h-3" /> Verified</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-xl font-bold cursor-pointer hover:bg-primary hover:text-white transition-all"
+                        onClick={handleVisitStore}
                       >
-                        View Store Details
-                      </button>
+                        Visit Store
+                      </Button>
                     </div>
 
-                    <div className="h-44 relative overflow-hidden border border-border bg-card shadow-sm rounded-2xl">
-                      <iframe
-                        title={`Map - ${displayProduct.store}`}
-                        width="100%"
-                        height="100%"
-                        style={{ border: 0 }}
-                        loading="lazy"
-                        allowFullScreen
-                        src={`https://maps.google.com/maps?q=${prodLat},${prodLng}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                        className="w-full h-full border-0 rounded-2xl dark:invert dark:contrast-125 dark:hue-rotate-180 dark:brightness-90 transition-all duration-300"
-                      />
+                    {/* Theme-Aware Store Location Map */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-extrabold text-sm flex items-center gap-1.5 text-foreground">
+                          <MapPin className="w-4 h-4 text-emerald-500" />
+                          Store Location Map
+                        </h3>
+                        <button
+                          onClick={handleVisitStore}
+                          className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                        >
+                          View Store Details
+                        </button>
+                      </div>
+
+                      <div className="h-44 relative overflow-hidden border border-border bg-card shadow-sm rounded-2xl">
+                        <iframe
+                          title={`Map - ${displayProduct.store}`}
+                          width="100%"
+                          height="100%"
+                          style={{ 
+                            border: 0,
+                            filter: isDark ? 'invert(90%) hue-rotate(180deg) contrast(120%)' : 'none'
+                          }}
+                          loading="lazy"
+                          allowFullScreen
+                          src={`https://maps.google.com/maps?q=${prodLat},${prodLng}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                          className="w-full h-full border-0 rounded-2xl transition-all duration-300"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  </>
                 );
               })()}
 

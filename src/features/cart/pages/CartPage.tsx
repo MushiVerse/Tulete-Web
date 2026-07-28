@@ -102,27 +102,13 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         )}
 
         {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
-        {!item.isLaundry && (
+        {!item.isLaundry && item.cat !== 'Product' && (item as any).category !== 'Product' && (
           <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
             {/* Food Specific Delivery Slots (where cat != "Nguo" and cat != "Product") */}
             {item.cat !== 'Nguo' && item.cat !== 'Product' && (() => {
               const hour = new Date().getHours();
-              const docRef = fetchedDoc || item;
-              const bVal = String(
-                docRef?.brand ||
-                (docRef as any)?.pbrand ||
-                (docRef as any)?.FBrand ||
-                (docRef as any)?.LBrand ||
-                ''
-              ).toLowerCase().trim();
-              const rawIsBrandNow = (docRef as any)?.isBrandNow;
-              const isBrandNow =
-                rawIsBrandNow === true ||
-                String(rawIsBrandNow).toLowerCase().trim() === 'true' ||
-                String(rawIsBrandNow).toLowerCase().trim() === 'now' ||
-                bVal === 'now' ||
-                bVal === 'true';
-
+              const bVal = String(item.brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
+              const isBrandNow = bVal === 'now';
               const updateFoodItemSlot = useCartStore.getState().updateFoodItemSlot;
               const currentSlot = item.deliverySlot || (isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner'));
 
