@@ -11,18 +11,18 @@ import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import {
   Search, MapPin, Star, CheckCircle2, Heart,
   Filter, X, Grid3X3, List, SlidersHorizontal,
-  Utensils, Shirt, Zap, Sparkles, Car, Store as StoreIcon,
+  Utensils, Shirt, Zap, Sparkles, Car, Store as StoreIcon, ShoppingBag,
   Navigation, Clock, TrendingUp, Tag, ChevronDown, Phone, ArrowRight, Bell, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
-const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string }> = {
-  Food:       { emoji: '🍽️', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
-  Laundry:    { emoji: '🧺', color: 'text-secondary-foreground', bg: 'bg-secondary/20 border-secondary/30' },
-  Electrical: { emoji: '⚡', color: 'text-warning', bg: 'bg-warning/10 border-warning/20' },
-  Beauty:     { emoji: '💅', color: 'text-primary', bg: 'bg-primary/5 border-primary/10' },
-  Rides:      { emoji: '🚗', color: 'text-success', bg: 'bg-success/10 border-success/20' },
+const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; activeBg: string }> = {
+  Food:       { emoji: '🍽️', color: 'text-orange-500', bg: 'bg-orange-500/10 border-orange-500/20', activeBg: 'bg-orange-500 text-white' },
+  Laundry:    { emoji: '🧺', color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', activeBg: 'bg-sky-500 text-white' },
+  Electrical: { emoji: '⚡', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', activeBg: 'bg-amber-500 text-white' },
+  Beauty:     { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white' },
+  Rides:      { emoji: '🚗', color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/20', activeBg: 'bg-indigo-500 text-white' },
 };
 
 const CATEGORIES = ['Food', 'Laundry', 'Electrical', 'Beauty', 'Rides'];
@@ -109,7 +109,7 @@ const StoreGridCard = ({
               {store.store}
             </h3>
             {store.isVerified && (
-              <CheckCircle2 className="w-5 h-5 text-secondary shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-sky-500 shrink-0" />
             )}
           </div>
 
@@ -170,7 +170,7 @@ const StoreListCard = ({
             <h3 className="font-extrabold text-sm text-foreground line-clamp-1 group-hover:text-primary transition-colors">
               {store.store}
             </h3>
-            {store.isVerified && <CheckCircle2 className="w-3.5 h-3.5 text-secondary shrink-0" />}
+            {store.isVerified && <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />}
           </div>
 
           <div className="flex items-center gap-2 mb-1.5">
@@ -351,8 +351,10 @@ export const StoreListingPage = () => {
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(isActive ? null : cat)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${
-                        isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border ${
+                        isActive
+                          ? `${cfg.activeBg} border-transparent shadow-sm`
+                          : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
                       }`}
                     >
                       <span className="w-6 text-center">{cfg.emoji}</span>
@@ -499,7 +501,7 @@ export const StoreListingPage = () => {
                   onClick={() => setSelectedCategory(isActive ? null : cat)}
                   className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-extrabold border transition-all ${
                     isActive
-                      ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                      ? `${cfg.activeBg} border-transparent shadow-md`
                       : `bg-card border-border ${cfg.color} hover:border-primary/30`
                   }`}
                 >
@@ -665,24 +667,42 @@ export const StoreListingPage = () => {
               <h2 className="text-sm font-extrabold text-foreground mb-4 uppercase tracking-wider">Quick Actions</h2>
               <div className="grid grid-cols-1 gap-3">
                 {[
-                  { emoji: '🧺', title: 'Book Laundry', sub: 'Express pickup', href: '/laundry', gradient: 'from-secondary to-secondary/80 text-secondary-foreground' },
-                  { emoji: '📦', title: 'My Orders', sub: 'Track deliveries', href: '/orders', gradient: 'from-secondary to-secondary/80 text-secondary-foreground' },
-                  { emoji: '❤️', title: 'Favourites', sub: 'Saved items', href: '/favorites', gradient: 'from-warning/90 to-warning/70 text-warning-foreground' },
-                ].map(({ emoji, title, sub, href, gradient }) => (
+                  {
+                    icon: Sparkles,
+                    iconBg: 'bg-sky-500/10 text-sky-500',
+                    title: 'Book Laundry',
+                    sub: 'Express pickup',
+                    href: '/laundry',
+                  },
+                  {
+                    icon: ShoppingBag,
+                    iconBg: 'bg-emerald-500/10 text-emerald-500',
+                    title: 'My Orders',
+                    sub: 'Track deliveries',
+                    href: '/orders',
+                  },
+                  {
+                    icon: Heart,
+                    iconBg: 'bg-rose-500/10 text-rose-500',
+                    title: 'Favourites',
+                    sub: 'Saved items',
+                    href: '/favorites',
+                  },
+                ].map(({ icon: Icon, iconBg, title, sub, href }) => (
                   <motion.button
                     key={title}
                     whileTap={{ scale: 0.96 }}
                     onClick={() => navigate(href)}
-                    className={`bg-gradient-to-br ${gradient} rounded-xl p-3 flex items-center gap-3 text-left shadow-sm hover:shadow-md transition-all border border-black/5 group`}
+                    className="bg-card hover:bg-muted text-foreground rounded-2xl p-3 flex items-center gap-3 text-left shadow-sm hover:shadow-md transition-all border border-border group cursor-pointer"
                   >
-                    <div className="w-9 h-9 rounded-lg bg-background/20 flex items-center justify-center shrink-0 shadow-sm">
-                      <span className="text-lg">{emoji}</span>
+                    <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105`}>
+                      <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-extrabold text-xs leading-tight">{title}</p>
-                      <p className="opacity-80 text-[10px] mt-0.5">{sub}</p>
+                      <p className="font-extrabold text-xs leading-tight text-foreground">{title}</p>
+                      <p className="text-muted-foreground text-[10px] mt-0.5">{sub}</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                   </motion.button>
                 ))}
               </div>

@@ -31,6 +31,7 @@ const PRODUCT_CATEGORIES = [
 
 export const ProductDetailPage = () => {
   const { id } = useParams();
+  const decodedId = id ? decodeURIComponent(id) : '';
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const { items: cartItems, addToCart, removeFromCart, getTotals } = useCartStore();
@@ -44,16 +45,8 @@ export const ProductDetailPage = () => {
   const { isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
 
-  const handleCheckout = () => {
-    if (!isAuthenticated) {
-      openModal('login');
-      return;
-    }
-    navigate('/cart');
-  };
-
-  // Fetch specific product
-  const { data: product, isLoading, error } = useFirestoreDocument(['product', id || ''], productService, id || '');
+  // Fetch specific product using decoded ID
+  const { data: product, isLoading, error } = useFirestoreDocument(['product', decodedId || id || ''], productService, decodedId || id || '');
 
   // Fetch related products (same category)
   const { data: relatedProducts, isLoading: loadingRelated } = useFirestoreQuery(
@@ -65,6 +58,38 @@ export const ProductDetailPage = () => {
     },
     { enabled: !!product?.category }
   );
+
+  // Compute display product (or fallback) unconditionally
+  const displayProduct = product || {
+    id: decodedId || id || 'dummy-1',
+    name: decodedId && decodedId.trim().length > 2 ? decodedId : 'Premium Leather Smart Watch - Series 9',
+    description: 'Experience the ultimate quality with fast delivery straight to your door.',
+    price: 350000,
+    oldprice: 420000,
+    imgUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80',
+    storeId: 's1',
+    store: 'Tulete Partner Store',
+    rating: 4.8,
+    reviewCount: 124,
+    category: 'Products',
+    tags: ['Super Saving', 'Most TamTam'],
+    availability: true,
+  };
+
+  const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(displayProduct.category);
+  
+  // Execute ALL hooks unconditionally BEFORE any early return
+  const magicPrice = useDynamicPrice(displayProduct.price || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location);
+  const calcOldPrice = useDynamicPrice(displayProduct.oldprice || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location);
+  const magicOldPrice = displayProduct.oldprice ? calcOldPrice : undefined;
+
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      openModal('login');
+      return;
+    }
+    navigate('/cart');
+  };
 
   if (isLoading) {
     return (
@@ -81,32 +106,11 @@ export const ProductDetailPage = () => {
     );
   }
 
-  // Use dummy data if product not found (since DB is empty)
-  const displayProduct = product || {
-    id: id || 'dummy-1',
-    name: 'Premium Leather Smart Watch - Series 9',
-    description: 'Experience the ultimate smart watch with our premium leather band. Features advanced health tracking, always-on retina display, and up to 36 hours of battery life. Water resistant up to 50 meters.',
-    price: 350000,
-    oldprice: 420000,
-    imgUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80',
-    storeId: 's1',
-    store: 'Tech Hub Premium',
-    rating: 4.8,
-    reviewCount: 124,
-    category: 'Tech',
-    tags: ['Super Saving', 'Most TamTam'],
-    availability: true,
-  };
-
   const images = [
     displayProduct.imgUrl,
     'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=800&q=80',
     'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
   ];
-
-  const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(displayProduct.category);
-  const magicPrice = useDynamicPrice(displayProduct.price, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location);
-  const magicOldPrice = displayProduct.oldprice ? useDynamicPrice(displayProduct.oldprice, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location) : undefined;
 
   return (
     <PageContainer>
@@ -317,9 +321,9 @@ export const ProductDetailPage = () => {
               )}
             </div>
             
-            {/* TRUST STATS BAND */}
-            <div className="bg-secondary rounded-3xl p-5 shadow-sm text-secondary-foreground">
-              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider opacity-90">Service Stats</h2>
+            {/* SERVICE STATS BAND */}
+            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
+              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[
                   { value: '50k+', label: 'Products', icon: Tag },
@@ -327,12 +331,12 @@ export const ProductDetailPage = () => {
                   { value: 'Verified', label: 'Merchants', icon: ShieldCheck },
                 ].map(({ value, label, icon: Icon }) => (
                   <div key={label} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-background/20 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="block text-lg font-extrabold leading-tight">{value}</span>
-                      <span className="block text-[10px] opacity-70 font-semibold uppercase">{label}</span>
+                      <span className="block text-lg font-extrabold leading-tight text-foreground">{value}</span>
+                      <span className="block text-[10px] text-muted-foreground font-semibold uppercase">{label}</span>
                     </div>
                   </div>
                 ))}

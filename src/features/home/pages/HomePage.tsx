@@ -30,13 +30,13 @@ import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 
 
 /*  Shared Configs  */
-const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string }> = {
-  Food:       { emoji: '🍔', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
-  Laundry:    { emoji: '👔', color: 'text-secondary', bg: 'bg-secondary/10 border-secondary/20' },
-  Products:   { emoji: '🛍️', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  Electrical: { emoji: '⚡', color: 'text-warning', bg: 'bg-warning/10 border-warning/20' },
-  Beauty:     { emoji: '💅', color: 'text-primary', bg: 'bg-primary/5 border-primary/10' },
-  Rides:      { emoji: '🚗', color: 'text-success', bg: 'bg-success/10 border-success/20' },
+const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; activeBg: string }> = {
+  Food:       { emoji: '🍔', color: 'text-orange-500', bg: 'bg-orange-500/10 border-orange-500/20', activeBg: 'bg-orange-500 text-white border-orange-500' },
+  Laundry:    { emoji: '👔', color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', activeBg: 'bg-sky-500 text-white border-sky-500' },
+  Products:   { emoji: '🛍️', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', activeBg: 'bg-emerald-500 text-white border-emerald-500' },
+  Electrical: { emoji: '⚡', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', activeBg: 'bg-amber-500 text-white border-amber-500' },
+  Beauty:     { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white border-pink-500' },
+  Rides:      { emoji: '🚗', color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/20', activeBg: 'bg-indigo-500 text-white border-indigo-500' },
 };
 
 /*  Static Data */
@@ -49,7 +49,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?q=80&w=800&auto=format&fit=crop',
     cta: 'Order Now',
     href: '/laundry',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-sky-700/90 via-sky-600/80 to-blue-800/90 text-white',
     category: 'laundry'
   },
   {
@@ -60,7 +60,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?q=80&w=800&auto=format&fit=crop',
     cta: 'Book Express',
     href: '/laundry',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-sky-700/90 via-blue-600/80 to-sky-900/90 text-white',
     category: 'laundry'
   },
   {
@@ -71,7 +71,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=800&auto=format&fit=crop',
     cta: 'View Services',
     href: '/laundry',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-sky-700/90 via-indigo-600/80 to-sky-900/90 text-white',
     category: 'laundry'
   },
   {
@@ -82,7 +82,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?q=80&w=800&auto=format&fit=crop',
     cta: 'Clean Bedding',
     href: '/laundry',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-sky-700/90 via-sky-600/80 to-blue-900/90 text-white',
     category: 'laundry'
   },
   {
@@ -93,7 +93,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=800&auto=format&fit=crop',
     cta: 'Clean Shoes',
     href: '/laundry',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-sky-700/90 via-blue-600/80 to-sky-900/90 text-white',
     category: 'laundry'
   },
   {
@@ -104,7 +104,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop',
     cta: 'Book Curtains',
     href: '/laundry',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-sky-700/90 via-indigo-600/80 to-sky-900/90 text-white',
     category: 'laundry'
   },
 
@@ -117,7 +117,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop',
     cta: 'Order Food',
     href: '/food',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-orange-600/90 via-amber-500/80 to-red-700/90 text-white',
     category: 'food'
   },
   {
@@ -128,7 +128,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop',
     cta: 'Explore Menu',
     href: '/food',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-orange-600/90 via-orange-500/80 to-amber-700/90 text-white',
     category: 'food'
   },
   {
@@ -139,7 +139,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?q=80&w=800&auto=format&fit=crop',
     cta: 'Get Combo',
     href: '/food',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-amber-600/90 via-orange-500/80 to-red-700/90 text-white',
     category: 'food'
   },
   {
@@ -150,7 +150,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop',
     cta: 'Eat Healthy',
     href: '/food',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-emerald-600/90 via-teal-500/80 to-emerald-700/90 text-white',
     category: 'food'
   },
   {
@@ -161,7 +161,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop',
     cta: 'Order Pizza',
     href: '/food',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-orange-600/90 via-amber-500/80 to-red-700/90 text-white',
     category: 'food'
   },
   {
@@ -172,7 +172,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?q=80&w=800&auto=format&fit=crop',
     cta: 'Satisfy Cravings',
     href: '/food',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-pink-600/90 via-purple-500/80 to-pink-700/90 text-white',
     category: 'food'
   },
 
@@ -185,7 +185,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=800&auto=format&fit=crop',
     cta: 'Shop Now',
     href: '/products',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-emerald-600/90 via-teal-500/80 to-emerald-800/90 text-white',
     category: 'product'
   },
   {
@@ -196,7 +196,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop',
     cta: 'Book Fundi',
     href: '/explore?category=Electrical',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-amber-600/90 via-yellow-500/80 to-amber-700/90 text-white',
     category: 'product'
   },
   {
@@ -207,7 +207,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?q=80&w=800&auto=format&fit=crop',
     cta: 'Shop Beauty',
     href: '/products',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-pink-600/90 via-rose-500/80 to-pink-700/90 text-white',
     category: 'product'
   },
   {
@@ -218,7 +218,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop',
     cta: 'View Phones',
     href: '/products',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-indigo-600/90 via-blue-500/80 to-indigo-700/90 text-white',
     category: 'product'
   },
   {
@@ -229,7 +229,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1558002038-1055907df827?q=80&w=800&auto=format&fit=crop',
     cta: 'Shop Smart Home',
     href: '/products',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-teal-600/90 via-emerald-500/80 to-teal-700/90 text-white',
     category: 'product'
   },
   {
@@ -240,7 +240,7 @@ const PROMOS = [
     image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=800&auto=format&fit=crop',
     cta: 'Shop Fashion',
     href: '/products',
-    gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
+    gradient: 'from-purple-600/90 via-violet-500/80 to-purple-700/90 text-white',
     category: 'product'
   }
 ];
@@ -323,7 +323,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
               {store.store}
             </h3>
             {store.isVerified && (
-              <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0" />
             )}
           </div>
 
@@ -665,8 +665,8 @@ export const HomePage = () => {
               <span className="font-bold text-sm">All</span>
             </button>
             
-            <button onClick={() => { setFilterValue(filterValue === 'food' ? null : 'food'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'food' ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-card text-foreground border-border hover:border-primary/50 hover:bg-muted'}`}>
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0"><Utensils className="w-4 h-4"/></div>
+            <button onClick={() => { setFilterValue(filterValue === 'food' ? null : 'food'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'food' ? 'bg-orange-500 text-white border-orange-500 shadow-md' : 'bg-card text-foreground border-border hover:border-orange-500/50 hover:bg-muted'}`}>
+              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:scale-105 transition-transform shrink-0"><Utensils className="w-4 h-4"/></div>
               <span className="font-bold text-sm">Foods</span>
             </button>
             
@@ -675,13 +675,13 @@ export const HomePage = () => {
               <span className="font-bold text-sm">Shopping</span>
             </button>
 
-            <button onClick={() => { setFilterValue(filterValue === 'laundry' ? null : 'laundry'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'laundry' ? 'bg-secondary text-secondary-foreground border-secondary shadow-md' : 'bg-card text-foreground border-border hover:border-secondary/50 hover:bg-muted'}`}>
-              <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-105 transition-transform shrink-0"><Sparkles className="w-4 h-4"/></div>
+            <button onClick={() => { setFilterValue(filterValue === 'laundry' ? null : 'laundry'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'laundry' ? 'bg-sky-500 text-white border-sky-500 shadow-md' : 'bg-card text-foreground border-border hover:border-sky-500/50 hover:bg-muted'}`}>
+              <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-500 group-hover:scale-105 transition-transform shrink-0"><Sparkles className="w-4 h-4"/></div>
               <span className="font-bold text-sm">Laundry</span>
             </button>
 
-            <button onClick={() => { setFilterValue(filterValue === 'brands' ? null : 'brands'); setSelectedBrand(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'brands' ? 'bg-muted text-foreground border-border shadow-md scale-105' : 'bg-card text-foreground border-border hover:border-muted-foreground/50 hover:bg-muted'}`}>
-              <div className="w-8 h-8 rounded-lg bg-muted-foreground/10 flex items-center justify-center text-muted-foreground group-hover:scale-105 transition-transform shrink-0"><Tag className="w-4 h-4"/></div>
+            <button onClick={() => { setFilterValue(filterValue === 'brands' ? null : 'brands'); setSelectedBrand(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'brands' ? 'bg-purple-500 text-white border-purple-500 shadow-md scale-105' : 'bg-card text-foreground border-border hover:border-purple-500/50 hover:bg-muted'}`}>
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:scale-105 transition-transform shrink-0"><Tag className="w-4 h-4"/></div>
               <span className="font-bold text-sm">Brands</span>
             </button>
           </div>
@@ -762,8 +762,8 @@ export const HomePage = () => {
               }}
               className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
                 filterValue === 'food'
-                  ? 'bg-primary text-primary-foreground border-primary scale-105'
-                  : 'bg-card text-foreground border-border hover:border-primary/30'
+                  ? 'bg-orange-500 text-white border-orange-500 scale-105'
+                  : 'bg-card text-foreground border-border hover:border-orange-500/30'
               }`}
             >
               <Utensils className="w-4 h-4 opacity-70" />
@@ -788,8 +788,8 @@ export const HomePage = () => {
               }}
               className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
                 filterValue === 'laundry'
-                  ? 'bg-secondary text-secondary-foreground border-secondary scale-105'
-                  : 'bg-card text-foreground border-border hover:border-secondary/30'
+                  ? 'bg-sky-500 text-white border-sky-500 scale-105'
+                  : 'bg-card text-foreground border-border hover:border-sky-500/30'
               }`}
             >
               <Sparkles className="w-4 h-4 opacity-70" />
@@ -799,8 +799,8 @@ export const HomePage = () => {
               onClick={() => { setFilterValue(filterValue === 'brands' ? null : 'brands'); setSelectedBrand(null); }}
               className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
                 filterValue === 'brands'
-                  ? 'bg-muted text-foreground border-border scale-105'
-                  : 'bg-card text-foreground border-border hover:border-muted-foreground/30'
+                  ? 'bg-purple-500 text-white border-purple-500 scale-105'
+                  : 'bg-card text-foreground border-border hover:border-purple-500/30'
               }`}
             >
               <Tag className="w-4 h-4 opacity-70" />
@@ -858,15 +858,15 @@ export const HomePage = () => {
                         alt={promo.title}
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
-                      <div className={`absolute inset-0 bg-gradient-to-br ${promo.gradient} opacity-45`} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${promo.gradient} opacity-85 group-hover:opacity-95 transition-opacity`} />
                       <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                        <span className="self-start bg-background/20 backdrop-blur text-primary-foreground text-xs font-extrabold px-3.5 py-1.5 rounded-full">
+                        <span className="self-start bg-black/30 backdrop-blur-md text-white text-xs font-extrabold px-3.5 py-1.5 rounded-full border border-white/20 shadow-sm">
                           {promo.badge}
                         </span>
-                        <div className="text-secondary-foreground">
+                        <div className="text-white">
                           <h3 className="font-extrabold text-2xl leading-tight mb-1.5 drop-shadow-md">{promo.title}</h3>
-                          <p className="opacity-90 text-sm font-medium mb-4">{promo.subtitle}</p>
-                          <span className="inline-flex items-center gap-2 bg-background text-foreground text-xs font-extrabold px-5 py-2.5 rounded-full hover:scale-105 transition-transform shadow-sm">
+                          <p className="opacity-95 text-sm font-medium mb-4 drop-shadow">{promo.subtitle}</p>
+                          <span className="inline-flex items-center gap-2 bg-white text-slate-950 text-xs font-extrabold px-5 py-2.5 rounded-full hover:scale-105 transition-transform shadow-md">
                             {promo.cta} <ArrowRight className="w-4 h-4" />
                           </span>
                         </div>
@@ -1118,55 +1118,55 @@ export const HomePage = () => {
               {!hasItems && (
                 <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
                   <h2 className="text-sm font-extrabold text-foreground mb-4 uppercase tracking-wider">Quick Actions</h2>
-                <div className="grid grid-cols-1 gap-3">
-                  {[
-                    {
-                      emoji: '',
-                      title: 'Book Laundry',
-                      sub: 'Express pickup',
-                      href: '/laundry',
-                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
-                    },
-                    {
-                      emoji: '',
-                      title: 'My Orders',
-                      sub: 'Track deliveries',
-                      href: '/orders',
-                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
-                    },
-                    {
-                      emoji: '',
-                      title: 'Favourites',
-                      sub: 'Saved items',
-                      href: '/favorites',
-                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
-                    },
-                    {
-                      emoji: '',
-                      title: 'All Stores',
-                      sub: 'Browse network',
-                      href: '/explore?tab=stores',
-                      gradient: 'from-secondary via-secondary/80 to-secondary/60 text-secondary-foreground',
-                    },
-                  ].map(({ emoji, title, sub, href, gradient }) => (
-                    <motion.button
-                      key={title}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => navigate(href)}
-                      className={`bg-gradient-to-br ${gradient} rounded-xl p-3 flex items-center gap-3 text-left shadow-sm hover:shadow-md transition-all border border-black/5 group`}
-                    >
-                      <div className="w-9 h-9 rounded-lg bg-background/20 flex items-center justify-center shrink-0 shadow-sm">
-                        <span className="text-lg">{emoji}</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-extrabold text-xs leading-tight">{title}</p>
-                        <p className="opacity-80 text-[10px] mt-0.5">{sub}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    </motion.button>
-                  ))}
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      {
+                        icon: Sparkles,
+                        iconBg: 'bg-sky-500/10 text-sky-500',
+                        title: 'Book Laundry',
+                        sub: 'Express pickup',
+                        href: '/laundry',
+                      },
+                      {
+                        icon: ShoppingBag,
+                        iconBg: 'bg-emerald-500/10 text-emerald-500',
+                        title: 'My Orders',
+                        sub: 'Track deliveries',
+                        href: '/orders',
+                      },
+                      {
+                        icon: Heart,
+                        iconBg: 'bg-rose-500/10 text-rose-500',
+                        title: 'Favourites',
+                        sub: 'Saved items',
+                        href: '/favorites',
+                      },
+                      {
+                        icon: StoreIcon,
+                        iconBg: 'bg-amber-500/10 text-amber-500',
+                        title: 'All Stores',
+                        sub: 'Browse network',
+                        href: '/explore?tab=stores',
+                      },
+                    ].map(({ icon: Icon, iconBg, title, sub, href }) => (
+                      <motion.button
+                        key={title}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => navigate(href)}
+                        className="bg-card hover:bg-muted text-foreground rounded-2xl p-3 flex items-center gap-3 text-left shadow-sm hover:shadow-md transition-all border border-border group cursor-pointer"
+                      >
+                        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-extrabold text-xs leading-tight text-foreground">{title}</p>
+                          <p className="text-muted-foreground text-[10px] mt-0.5">{sub}</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
-              </div>
               )}
 
               {/* TRUST STATS BAND */}

@@ -349,8 +349,12 @@ export const LocationPickerModal = ({
                         <MapPin className="w-3.5 h-3.5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-foreground truncate">{loc.address}</p>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{loc.specificInstructions || 'No landmark'}</p>
+                        <p className="font-bold text-sm text-foreground truncate">
+                          {loc.specificInstructions?.trim() || loc.address}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {loc.specificInstructions?.trim() ? loc.address : 'No landmark'}
+                        </p>
                       </div>
                     </div>
                   </button>

@@ -29,7 +29,7 @@ export const BottomNav = () => {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-6 left-4 right-4 h-16 bg-secondary/95 backdrop-blur-xl border border-white/10 rounded-3xl flex items-center justify-around z-50 shadow-2xl shadow-secondary/30 px-2">
+    <div className="md:hidden fixed bottom-6 left-4 right-4 h-16 bg-card/95 backdrop-blur-xl border border-border rounded-3xl flex items-center justify-around z-50 shadow-2xl shadow-black/10 dark:shadow-black/50 px-2">
       {mobileNavigation
         .filter((item) => item.show)
         .map((item) => (
@@ -40,7 +40,7 @@ export const BottomNav = () => {
             className={({ isActive }) => {
               const isItemActive = isActive && item.to !== '#';
               return `flex flex-col items-center justify-center w-14 h-14 rounded-2xl gap-1 transition-all duration-300 ${
-                isItemActive ? 'text-primary bg-white/5 scale-105' : 'text-secondary-foreground/60 hover:text-white hover:bg-white/5'
+                isItemActive ? 'text-primary bg-primary/10 scale-105' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`;
             }}
           >
@@ -49,7 +49,7 @@ export const BottomNav = () => {
               return (
               <>
                 <div className="relative">
-                  <item.icon className={`size-5 transition-all duration-300 ${isItemActive ? 'drop-shadow-[0_0_8px_rgba(249,148,32,0.5)]' : ''}`} strokeWidth={isItemActive ? 2.5 : 2} />
+                  <item.icon className={`size-5 transition-all duration-300 ${isItemActive ? 'drop-shadow-[0_0_8px_rgba(249,148,32,0.4)]' : ''}`} strokeWidth={isItemActive ? 2.5 : 2} />
                   {item.name === 'Cart' && cartItemCount > 0 && (
                     <span className="absolute -top-1.5 -right-2.5 bg-primary text-primary-foreground text-[9px] font-extrabold w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-md animate-in zoom-in duration-300">
                       {cartItemCount > 99 ? '99+' : cartItemCount}

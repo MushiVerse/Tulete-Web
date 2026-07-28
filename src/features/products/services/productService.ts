@@ -13,6 +13,8 @@ import { db } from '../../../core/firebase/config';
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument, QueryParams } from '../../../core/services/types';
 
+import { searchTuleteItems } from '../../../core/services/algoliaService';
+
 export interface Product extends BaseDocument {
   name: string;
   description: string;
@@ -107,28 +109,78 @@ class ProductService extends BaseFirestoreService<Product> {
   }
 
   override async getById(id: string): Promise<Product | null> {
-    // Try foods collection first
-    let docRef = doc(db, 'foods', id);
-    let docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return this.parse({ id: docSnap.id, ...docSnap.data() });
-    }
+    if (!id) return null;
+    const decodedId = decodeURIComponent(id);
 
-    // Try products collection
-    docRef = doc(db, 'products', id);
-    docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return this.parse({ id: docSnap.id, ...docSnap.data() });
-    }
+    try {
+      // 1. Try exact doc ID match in foods, products, cloths collections
+      const collectionsToTry = ['foods', 'products', 'cloths'];
+      for (const colName of collectionsToTry) {
+        try {
+          const docRef = doc(db, colName, decodedId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            return this.parse({ id: docSnap.id, _collection: colName, ...docSnap.data() });
+          }
+        } catch (_) {}
+      }
 
-    // Try cloths collection
-    docRef = doc(db, 'cloths', id);
-    docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return this.parse({ id: docSnap.id, ...docSnap.data() });
-    }
+      // If raw id is different from decodedId, try raw id as well
+      if (id !== decodedId) {
+        for (const colName of collectionsToTry) {
+          try {
+            const docRef = doc(db, colName, id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              return this.parse({ id: docSnap.id, _collection: colName, ...docSnap.data() });
+            }
+          } catch (_) {}
+        }
+      }
 
-    return null;
+      // 2. Try querying by 'name' field in foods, products, cloths
+      for (const colName of collectionsToTry) {
+        try {
+          const q = query(collection(db, colName), where('name', '==', decodedId), limit(1));
+          const querySnap = await getDocs(q);
+          if (!querySnap.empty) {
+            const docVal = querySnap.docs[0];
+            return this.parse({ id: docVal.id, _collection: colName, ...docVal.data() });
+          }
+        } catch (_) {}
+      }
+
+      // 3. Try Algolia search for matching item
+      try {
+        const hits = await searchTuleteItems(decodedId, { hitsPerPage: 1 });
+        if (hits && hits.length > 0) {
+          const item = hits[0];
+          return this.parse({
+            id: item.objectID || item.id || decodedId,
+            name: item.name || decodedId,
+            description: item.description || '',
+            price: item.price || 0,
+            oldprice: item.oldprice,
+            imgURL: item.imgURL || item.image || item.imgUrl,
+            storeId: item.storeId || '',
+            store: item.store || '',
+            rating: item.rating || 4.5,
+            reviewCount: item.reviewCount || 10,
+            category: item.category || 'Product',
+            availability: true
+          });
+        }
+      } catch (_) {}
+
+      // 4. Fallback to mock products list
+      const mock = this.getMockProducts().find(p => p.id === id || p.id === decodedId);
+      if (mock) return mock;
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching product by ID:', error);
+      return null;
+    }
   }
 
   override async getMany(params?: QueryParams): Promise<{ data: Product[]; lastDoc: any }> {

@@ -117,12 +117,15 @@ export const TopNav = () => {
           <button
             onClick={() => setPickerOpen(true)}
             className="hidden md:flex items-center gap-2 max-w-[200px] px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer group"
-            title={currentLocation ? currentLocation.address : 'Set Location'}
+            title={currentLocation ? (currentLocation.specificInstructions?.trim() || currentLocation.address) : 'Set Location'}
           >
             <MapPin className="w-4 h-4 shrink-0 group-hover:animate-bounce" />
             <span className="text-xs font-bold truncate">
-              {currentLocation && !currentLocation.address.includes('(Default)')
-                ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').split(',')[0]
+              {currentLocation
+                ? (currentLocation.specificInstructions?.trim() ||
+                    (!currentLocation.address.includes('(Default)')
+                      ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').split(',')[0]
+                      : 'Set Location'))
                 : 'Set Location'}
             </span>
           </button>
@@ -263,8 +266,11 @@ export const TopNav = () => {
                   <div className="flex flex-col items-start truncate">
                     <span className="text-xs font-semibold text-primary/70">Delivering to</span>
                     <span className="text-sm font-bold truncate max-w-[200px]">
-                      {currentLocation && !currentLocation.address.includes('(Default)')
-                        ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '')
+                      {currentLocation
+                        ? (currentLocation.specificInstructions?.trim() ||
+                            (!currentLocation.address.includes('(Default)')
+                              ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '')
+                              : 'Set Location'))
                         : 'Set Location'}
                     </span>
                   </div>
