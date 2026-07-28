@@ -68,9 +68,9 @@ export const ReviewsPage = () => {
       {/* Back button */}
       <button 
         onClick={() => navigate('/orders')}
-        className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mb-6 self-start"
+        className="flex items-center gap-1.5 text-xs font-bold text-foreground hover:text-primary transition-colors mb-6 self-start cursor-pointer group"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Orders
       </button>
 

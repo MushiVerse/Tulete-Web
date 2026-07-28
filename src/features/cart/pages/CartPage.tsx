@@ -13,6 +13,7 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { useLanguageStore } from '../../../core/i18n/useLanguageStore';
 import { useFirestoreDocument } from '../../../core/hooks/useFirestoreQuery';
 import { productService } from '../../products/services/productService';
+import { useThemeStore } from '../../../core/theme/useThemeStore';
 
 const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig }: any) => {
   // Subscribe to location so re-renders happen on location change
@@ -49,14 +50,15 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
           </span>
 
           {/* Quantity controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 border border-neutral-200/80 dark:border-zinc-800 rounded-xl p-0.5 sm:p-1 bg-neutral-100 dark:bg-zinc-900">
+          <div className="flex items-center gap-1.5 sm:gap-2 border border-border/80 dark:border-border rounded-xl p-1 bg-muted/80 dark:bg-muted/50 shadow-inner">
             <button
               onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-neutral-700 hover:text-primary dark:text-zinc-200 hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-foreground hover:text-primary hover:bg-background rounded-lg transition-all shadow-sm active:scale-95 border border-border/40"
+              title="Decrease quantity"
             >
               <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
-            <span className="w-5 sm:w-6 text-center text-xs sm:text-sm font-bold text-foreground">
+            <span className="w-5 sm:w-6 text-center text-xs sm:text-sm font-extrabold text-foreground">
               {item.quantity}
             </span>
             <button
@@ -67,7 +69,8 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                 }
                 updateQuantity(item.productId, item.quantity + 1);
               }}
-              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-neutral-700 hover:text-primary dark:text-zinc-200 hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-foreground hover:text-primary hover:bg-background rounded-lg transition-all shadow-sm active:scale-95 border border-border/40"
+              title="Increase quantity"
             >
               <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
@@ -138,7 +141,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                       </button>
                     )}
 
-                    {/* Lunch Option (if time is before 15:00) */}
+                    {/* Lunch Option (visible before 15:00) */}
                     {hour < 15 && (
                       <button
                         type="button"
@@ -154,21 +157,19 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                       </button>
                     )}
 
-                    {/* Dinner Option (if time is After 15:00) */}
-                    {hour >= 15 && (
-                      <button
-                        type="button"
-                        onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Dinner' ? '' : 'Dinner')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
-                          currentSlot === 'Dinner'
-                            ? 'bg-indigo-500 border-indigo-500 text-white scale-105 shadow-indigo-500/20'
-                            : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                        }`}
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        Dinner
-                      </button>
-                    )}
+                    {/* Dinner Option (visible both before and after 15:00) */}
+                    <button
+                      type="button"
+                      onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Dinner' ? '' : 'Dinner')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                        currentSlot === 'Dinner'
+                          ? 'bg-indigo-500 border-indigo-500 text-white scale-105 shadow-indigo-500/20'
+                          : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      Dinner
+                    </button>
                   </div>
                 );
               })()}
@@ -206,6 +207,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
 
 export const CartPage = () => {
   const navigate = useNavigate();
+  const { isDark } = useThemeStore();
   const t = useLanguageStore((state) => state.t);
   const { items, updateQuantity, removeFromCart, clearCart, getTotals, toggleDelivery, laundryPreferences, setLaundryPreferences, updateLaundryItemConfig, applyLaundryServicesToAll, clearAllLaundryServices } = useCartStore();
   const { currentLocation } = useLocationStore();
@@ -256,7 +258,7 @@ export const CartPage = () => {
         {/* Left Column Wrapper */}
         <div className="flex-1 w-full flex flex-col gap-4 lg:pr-2 min-w-0 min-h-0">
           <div className="flex items-center justify-between shrink-0">
-            <h1 className="text-2xl font-bold text-slate-950 dark:text-white">Shopping Cart</h1>
+            <h1 className="text-2xl font-extrabold text-foreground">Shopping Cart</h1>
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">
                 {itemCount} {itemCount === 1 ? 'item' : 'items'}
@@ -357,14 +359,27 @@ export const CartPage = () => {
                         <Clock className="w-4 h-4 text-primary" />
                         Preferred Pickup Time
                       </label>
-                      <input
-                        id="deliverytime"
-                        type="datetime-local"
-                        value={laundryPreferences.deliverytime}
-                        onChange={(e) => setLaundryPreferences({ deliverytime: e.target.value })}
-                        min={new Date().toISOString().slice(0, 16)}
-                        className="w-full h-12 rounded-xl border border-border bg-card px-4 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm"
-                      />
+                      <div className="relative flex items-center">
+                        <input
+                          id="deliverytime"
+                          type="datetime-local"
+                          value={laundryPreferences.deliverytime}
+                          onChange={(e) => setLaundryPreferences({ deliverytime: e.target.value })}
+                          min={new Date().toISOString().slice(0, 16)}
+                          style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                          className="w-full h-12 rounded-xl border border-border bg-card px-4 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm"
+                        />
+                        {laundryPreferences.deliverytime && (
+                          <button
+                            type="button"
+                            onClick={() => setLaundryPreferences({ deliverytime: '' })}
+                            title="Clear preferred pickup time"
+                            className="absolute right-3 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -379,7 +394,7 @@ export const CartPage = () => {
                       onChange={(e) => setLaundryPreferences({ instructions: e.target.value })}
                       placeholder="e.g. Separate whites from colours..."
                       rows={1}
-                      className="w-full min-h-[48px] rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm resize-none"
+                      className="w-full min-h-[48px] rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm resize-none overflow-hidden scrollbar-none"
                     />
                   </div>
 

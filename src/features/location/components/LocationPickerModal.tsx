@@ -369,7 +369,6 @@ export const LocationPickerModal = ({
             <Input
               value={searchValue}
               onChange={(e) => setValue(e.target.value)}
-              disabled={!ready}
               placeholder="Search for area, street name..."
               className="pl-10 bg-muted/50 border-border focus:bg-card transition-colors"
             />

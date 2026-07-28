@@ -24,9 +24,9 @@ const CheckoutItemRow = ({ item }: { item: any }) => {
 
   return (
     <div className="flex gap-3 items-center">
-      <img 
-        src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100"} 
-        alt={item.name} 
+      <img
+        src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100"}
+        alt={item.name}
         className="w-10 h-10 rounded object-cover bg-slate-100 flex-shrink-0"
       />
       <div className="flex-1 min-w-0">
@@ -84,7 +84,7 @@ export const CheckoutPage = () => {
 
   // Standard mock store coordinate in Westlands
   const storeLocation = { lat: -1.2635, lng: 36.8049 };
-  
+
   // Delivery fee is already baked into the total via useCartStore.
   const finalTotalWithDelivery = total;
   const computedDeliveryFee = deliveryFee;
@@ -198,220 +198,220 @@ export const CheckoutPage = () => {
   return (
     <PageContainer>
       <ContentContainer size="lg">
-      <button 
-        onClick={() => navigate('/cart')}
-        className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-primary dark:text-slate-400 dark:hover:text-white transition-colors mb-6"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        Back to Cart
-      </button>
+        <button
+          onClick={() => navigate('/cart')}
+          className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-primary transition-colors mb-6 cursor-pointer group"
+        >
+          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Back to Cart
+        </button>
 
-      <h1 className="text-3xl font-extrabold text-foreground mb-8">Checkout</h1>
+        <h1 className="text-3xl font-extrabold text-foreground mb-8">Checkout</h1>
 
-      <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-8">
-        <div className="flex-1 space-y-6">
-          {/* Delivery Location Section */}
-          <Card className="p-6 border border-border shadow-sm">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
-              <MapPin className="w-5 h-5 text-primary" />
-              Delivery Location
-            </h2>
-            
-            {currentLocation ? (
-              <div className="border border-primary bg-primary/5 p-4 rounded-xl mb-4 relative overflow-hidden">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 pr-4">
-                    <p className="font-extrabold text-sm text-foreground mb-1">Selected Destination</p>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentLocation.address}</p>
-                    {currentLocation.specificInstructions && (
-                      <p className="text-xs text-slate-500 mt-1 italic font-medium bg-white/50 dark:bg-black/20 p-2 rounded-md">
-                        Note: {currentLocation.specificInstructions}
-                      </p>
-                    )}
-                  </div>
-                  <Button 
-                    type="button" 
-                    size="sm" 
-                    onClick={() => setIsLocationModalOpen(true)}
-                    className="font-bold shadow-sm whitespace-nowrap"
-                  >
-                    Change
-                  </Button>
-                </div>
-                
-                {/* Visual Map Preview */}
-                <MiniMapPreview isLoaded={isMapLoaded} lat={currentLocation.lat} lng={currentLocation.lng} />
-              </div>
-            ) : (
-              <div className="bg-muted p-6 rounded-xl text-center border border-dashed border-border mb-4">
-                <MapPin className="w-8 h-8 mx-auto text-muted-foreground mb-3 opacity-50" />
-                <p className="text-sm text-foreground font-medium mb-4">No delivery location set</p>
-                <Button 
-                  type="button" 
-                  onClick={() => setIsLocationModalOpen(true)}
-                  className="font-bold shadow-md"
-                >
-                  Set Delivery Location
-                </Button>
-              </div>
-            )}
-            
-            {!currentLocation && (
-              <p className="text-xs text-destructive font-semibold flex justify-center">
-                * A delivery location is required
-              </p>
-            )}
-          </Card>
+        <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-8">
+          <div className="flex-1 space-y-6">
+            {/* Delivery Location Section */}
+            <Card className="p-6 border border-border shadow-sm">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
+                <MapPin className="w-5 h-5 text-primary" />
+                Delivery Location
+              </h2>
 
-          {/* Contact Details */}
-          <Card className="p-6 border border-border shadow-sm">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
-              <Phone className="w-5 h-5 text-primary" />
-              Contact Details
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Recipient Mobile Number
-                </Label>
-                {isEditingPhone ? (
-                  <div className="flex gap-2">
-                    <Input
-                      id="phone"
-                      required
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="+255 7XX XXX XXX"
-                      className="bg-card border-border flex-1"
-                    />
-                    <Button 
-                      type="button" 
-                      onClick={() => {
-                        if (phoneNumber.trim()) {
-                          savePhoneNumber(phoneNumber.trim());
-                          setIsEditingPhone(false);
-                        }
-                      }}
-                    >
-                      Save
-                    </Button>
-                    {savedPhoneNumber && (
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        onClick={() => {
-                          setPhoneNumber(savedPhoneNumber);
-                          setIsEditingPhone(false);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border gap-2 flex-wrap sm:flex-nowrap min-w-0">
-                    <div className="flex items-center gap-2.5 min-w-0 truncate">
-                      <span className="font-bold text-sm text-foreground truncate">{savedPhoneNumber}</span>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
-                        ✓ Saved
-                      </span>
+              {currentLocation ? (
+                <div className="border border-primary bg-primary/5 p-4 rounded-xl mb-4 relative overflow-hidden">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-4">
+                      <p className="font-extrabold text-sm text-foreground mb-1">Selected Destination</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentLocation.address}</p>
+                      {currentLocation.specificInstructions && (
+                        <p className="text-xs text-slate-500 mt-1 italic font-medium bg-white/50 dark:bg-black/20 p-2 rounded-md">
+                          Note: {currentLocation.specificInstructions}
+                        </p>
+                      )}
                     </div>
-                    <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={() => setIsEditingPhone(true)}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setIsLocationModalOpen(true)}
+                      className="font-bold shadow-sm whitespace-nowrap"
+                    >
                       Change
                     </Button>
                   </div>
-                )}
+
+                  {/* Visual Map Preview */}
+                  <MiniMapPreview isLoaded={isMapLoaded} lat={currentLocation.lat} lng={currentLocation.lng} />
+                </div>
+              ) : (
+                <div className="bg-muted p-6 rounded-xl text-center border border-dashed border-border mb-4">
+                  <MapPin className="w-8 h-8 mx-auto text-muted-foreground mb-3 opacity-50" />
+                  <p className="text-sm text-foreground font-medium mb-4">No delivery location set</p>
+                  <Button
+                    type="button"
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="font-bold shadow-md"
+                  >
+                    Set Delivery Location
+                  </Button>
+                </div>
+              )}
+
+              {!currentLocation && (
+                <p className="text-xs text-destructive font-semibold flex justify-center">
+                  * A delivery location is required
+                </p>
+              )}
+            </Card>
+
+            {/* Contact Details */}
+            <Card className="p-6 border border-border shadow-sm">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
+                <Phone className="w-5 h-5 text-primary" />
+                Contact Details
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Recipient Mobile Number
+                  </Label>
+                  {isEditingPhone ? (
+                    <div className="flex gap-2">
+                      <Input
+                        id="phone"
+                        required
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="+255 7XX XXX XXX"
+                        className="bg-card border-border flex-1"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (phoneNumber.trim()) {
+                            savePhoneNumber(phoneNumber.trim());
+                            setIsEditingPhone(false);
+                          }
+                        }}
+                      >
+                        Save
+                      </Button>
+                      {savedPhoneNumber && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setPhoneNumber(savedPhoneNumber);
+                            setIsEditingPhone(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border gap-2 flex-wrap sm:flex-nowrap min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0 truncate">
+                        <span className="font-bold text-sm text-foreground truncate">{savedPhoneNumber}</span>
+                        <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-300/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap shadow-xs">
+                          ✓ Saved
+                        </span>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" className="shrink-0 cursor-pointer hover:bg-muted-foreground/10" onClick={() => setIsEditingPhone(true)}>
+                        Change
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Delivery Notes (Optional)
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="e.g. Leave package with the gate attendant."
+                    rows={1}
+                    className="bg-card border-border min-h-[42px] resize-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  />
+                </div>
               </div>
+            </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Delivery Notes (Optional)
-                </Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Leave package with the gate attendant."
-                  rows={1}
-                  className="bg-card border-border min-h-[42px] resize-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                />
-              </div>
-            </div>
-          </Card>
+            {/* Contact Details */}
+            <Card className="p-6 border border-border shadow-sm">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
+                <CreditCard className="w-5 h-5 text-primary" />
+                Payment Method
+              </h2>
 
-          {/* Contact Details */}
-          <Card className="p-6 border border-border shadow-sm">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
-              <CreditCard className="w-5 h-5 text-primary" />
-              Payment Method
-            </h2>
-
-            <div className="flex flex-col gap-3">
-              <div 
-                className="flex-1 border border-primary bg-primary/5 p-4 rounded-xl flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-slate-800 dark:bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-extrabold">POD</div>
-                  <div>
-                    <span className="font-bold text-foreground text-sm block">Pay on Delivery</span>
-                    <span className="text-xs text-muted-foreground">Pay via Cash or M-Pesa when your order arrives.</span>
+              <div className="flex flex-col gap-3">
+                <div
+                  className="flex-1 border border-primary bg-primary/5 p-4 rounded-xl flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-slate-800 dark:bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-extrabold">POD</div>
+                    <div>
+                      <span className="font-bold text-foreground text-sm block">Pay on Delivery</span>
+                      <span className="text-xs text-muted-foreground">Pay via Cash or M-Pesa when your order arrives.</span>
+                    </div>
+                  </div>
+                  <div className="w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center bg-primary">
+                    <div className="w-2 h-2 rounded-full bg-white" />
                   </div>
                 </div>
-                <div className="w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center bg-primary">
-                  <div className="w-2 h-2 rounded-full bg-white" />
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-border">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    <span className="font-bold text-primary">Note:</span> Online payment integrations (M-Pesa Express & Card) are currently in development and will be available in a future update!
+                  </p>
                 </div>
               </div>
-              
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-border">
-                <p className="text-xs text-muted-foreground font-medium">
-                  <span className="font-bold text-primary">Note:</span> Online payment integrations (M-Pesa Express & Card) are currently in development and will be available in a future update!
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
 
-        {/* Order Info Sidebar */}
-        <div className="w-full lg:w-[350px]">
-          <Card className="p-6 border border-border bg-muted shadow-md">
-            <h2 className="text-xl font-bold text-foreground mb-4">Your Order</h2>
-            
-            <div className="max-h-[220px] overflow-y-auto space-y-3 mb-6 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scrollbar-none">
-              {items.map((item) => (
-                <CheckoutItemRow key={item.productId} item={item} />
-              ))}
-            </div>
+          {/* Order Info Sidebar */}
+          <div className="w-full lg:w-[350px]">
+            <Card className="p-6 border border-border bg-muted shadow-md">
+              <h2 className="text-xl font-bold text-foreground mb-4">Your Order</h2>
 
-            <div className="border-t border-border pt-4 space-y-3 mb-6">
-              <div className="flex justify-between text-muted-foreground font-semibold text-xs">
-                <span>Subtotal</span>
-                <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
+              <div className="max-h-[220px] overflow-y-auto space-y-3 mb-6 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scrollbar-none">
+                {items.map((item) => (
+                  <CheckoutItemRow key={item.productId} item={item} />
+                ))}
               </div>
-              {/* Delivery Fee hidden per request, sum remains identical */}
-              <div className="flex justify-between items-center text-lg font-extrabold text-foreground border-t border-border/50 pt-3">
-                <span>Total to Pay</span>
-                <span className="text-primary">{formatPrice(finalTotalWithDelivery)} {APP_SETTINGS.currency}</span>
-              </div>
-            </div>
 
-            <Button
-              type="submit"
-              isLoading={isSubmitting}
-              disabled={isSubmitting || items.length === 0}
-              className="w-full py-6 text-base font-bold shadow-lg flex items-center justify-center gap-2"
-            >
-              <Truck className="w-5 h-5 animate-pulse" />
-              Place Order & Track Live
-            </Button>
-          </Card>
-        </div>
-      </form>
-      <LocationPickerModal 
-        isOpen={isLocationModalOpen} 
-        onClose={() => setIsLocationModalOpen(false)} 
-        isLoaded={isMapLoaded}
-      />
+              <div className="border-t border-border pt-4 space-y-3 mb-6">
+                <div className="flex justify-between text-muted-foreground font-semibold text-xs">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
+                </div>
+                {/* Delivery Fee hidden per request, sum remains identical */}
+                <div className="flex justify-between items-center text-lg font-extrabold text-foreground border-t border-border/50 pt-3">
+                  <span>Total to Pay</span>
+                  <span className="text-primary">{formatPrice(finalTotalWithDelivery)} {APP_SETTINGS.currency}</span>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                isLoading={isSubmitting}
+                disabled={isSubmitting || items.length === 0}
+                className="w-full py-6 text-base font-bold shadow-lg flex items-center justify-center gap-2"
+              >
+                <Truck className="w-5 h-5 animate-pulse" />
+                Place Order & Track Live
+              </Button>
+            </Card>
+          </div>
+        </form>
+        <LocationPickerModal
+          isOpen={isLocationModalOpen}
+          onClose={() => setIsLocationModalOpen(false)}
+          isLoaded={isMapLoaded}
+        />
       </ContentContainer>
     </PageContainer>
   );

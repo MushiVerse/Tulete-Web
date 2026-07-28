@@ -390,73 +390,26 @@ export const ProductsPage = () => {
               All Products
             </button>
 
-            {/* Dynamic ecommerceCategory & ecommerceSubCategory items */}
+            {/* Dynamic main product categories */}
             {hierarchicalDepartments.map((cat) => {
               const isMainActive = activeCategory === cat.name;
-              const isExpanded = expandedDepartments[cat.name] || isMainActive;
 
               return (
-                <div key={cat.id} className="space-y-1">
-                  <div
-                    onClick={() => {
-                      setActiveCategory(isMainActive && !activeSubCategory ? 'all' : cat.name);
-                      setActiveSubCategory(null);
-                      toggleDepartmentExpand(cat.name);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm cursor-pointer ${
-                      isMainActive && !activeSubCategory
-                        ? 'bg-primary text-primary-foreground shadow-md scale-105' 
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                  >
-                    <span className="text-xl">{cat.icon}</span>
-                    <span className="flex-1 truncate">{cat.name}</span>
-                    {cat.subCategories.length > 0 && (
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleDepartmentExpand(cat.name);
-                        }}
-                        className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-all"
-                      >
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Expanded ecommerceSubCategory list */}
-                  <AnimatePresence>
-                    {isExpanded && cat.subCategories.length > 0 && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="pl-6 space-y-1 overflow-hidden"
-                      >
-                        {cat.subCategories.map((sub) => {
-                          const isSubActive = activeSubCategory === sub.name;
-                          return (
-                            <button
-                              key={sub.id}
-                              onClick={() => {
-                                setActiveCategory(cat.name);
-                                setActiveSubCategory(isSubActive ? null : sub.name);
-                              }}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left ${
-                                isSubActive
-                                  ? 'bg-primary/10 border border-primary text-primary'
-                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                              }`}
-                            >
-                              <span className="text-sm shrink-0">{sub.emoji}</span>
-                              <span className="truncate">{sub.name}</span>
-                            </button>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setActiveCategory(isMainActive ? 'all' : cat.name);
+                    setActiveSubCategory(null);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm cursor-pointer ${
+                    isMainActive
+                      ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  <span className="text-xl">{cat.icon}</span>
+                  <span className="flex-1 truncate text-left">{cat.name}</span>
+                </button>
               );
             })}
           </div>

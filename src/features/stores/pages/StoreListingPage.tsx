@@ -455,70 +455,23 @@ export const StoreListingPage = () => {
                 </button>
                 {categoryHierarchy.map((item) => {
                   const isMainActive = selectedMainCategory === item.mainCategory;
-                  const isExpanded = expandedMainCategories[item.mainCategory] || isMainActive;
                   const cfg = getCategoryBadgeConfig(item.mainCategory);
 
                   return (
-                    <div key={item.mainCategory} className="space-y-1">
-                      <div
-                        onClick={() => {
-                          setSelectedMainCategory(isMainActive && !selectedSubCategory ? null : item.mainCategory);
-                          setSelectedSubCategory(null);
-                          toggleExpandMain(item.mainCategory);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border cursor-pointer ${isMainActive && !selectedSubCategory
-                            ? `${cfg.activeBg} border-transparent shadow-sm`
-                            : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
-                          }`}
-                      >
-                        <span className="text-base w-6 text-center shrink-0">{cfg.emoji || '🏪'}</span>
-                        <span className="flex-1 truncate">{item.mainCategory}</span>
-                        {item.subCategories.length > 0 && (
-                          <span
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleExpandMain(item.mainCategory);
-                            }}
-                            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-all"
-                          >
-                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Sub-categories ("cat") list */}
-                      <AnimatePresence>
-                        {isExpanded && item.subCategories.length > 0 && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="pl-6 space-y-1 overflow-hidden"
-                          >
-                            {item.subCategories.map((subCat) => {
-                              const isSubActive = selectedSubCategory === subCat;
-                              return (
-                                <button
-                                  key={subCat}
-                                  onClick={() => {
-                                    setSelectedMainCategory(item.mainCategory);
-                                    setSelectedSubCategory(isSubActive ? null : subCat);
-                                  }}
-                                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-left border ${isSubActive
-                                      ? 'bg-primary/10 border-primary text-primary font-bold'
-                                      : 'text-muted-foreground border-transparent hover:bg-muted hover:text-foreground'
-                                    }`}
-                                >
-                                  <span className="text-sm shrink-0">{getCategoryEmoji(subCat, '🏷️')}</span>
-                                  <span className="truncate">{subCat}</span>
-                                  {isSubActive && <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-primary shrink-0" />}
-                                </button>
-                              );
-                            })}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                    <button
+                      key={item.mainCategory}
+                      onClick={() => {
+                        setSelectedMainCategory(isMainActive ? null : item.mainCategory);
+                        setSelectedSubCategory(null);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border cursor-pointer ${isMainActive
+                          ? `${cfg.activeBg} border-transparent shadow-sm`
+                          : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
+                        }`}
+                    >
+                      <span className="text-base w-6 text-center shrink-0">{cfg.emoji || '🏪'}</span>
+                      <span className="flex-1 truncate">{item.mainCategory}</span>
+                    </button>
                   );
                 })}
               </div>

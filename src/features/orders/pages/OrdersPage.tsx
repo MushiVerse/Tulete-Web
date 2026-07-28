@@ -264,7 +264,10 @@ export const OrdersPage = () => {
                 ? new Date(order.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
-              const isLaundry = order.isLaundryOrder && order.items.some(i => (i as any).cat === 'Nguo');
+              const catName = (order as any).cat || (order.items && order.items[0]?.cat) || '';
+              const isLaundry = catName === 'Nguo' || (order.isLaundryOrder && (catName === 'Nguo' || (order.items || []).some((i: any) => i.cat === 'Nguo')));
+              const isFood = !isLaundry && (catName === 'Food' || (order.items || []).some((i: any) => i.cat === 'Food'));
+              const isProduct = !isLaundry && !isFood;
               const isExpanded = !!expandedOrders[order.id];
 
               // Parse laundry items if this is a laundry order pack
@@ -289,6 +292,16 @@ export const OrdersPage = () => {
                           {isLaundry && (
                             <Badge className="bg-sky-500/10 text-sky-500 border-sky-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
                               <Sparkles className="w-3 h-3" /> Laundry Pack
+                            </Badge>
+                          )}
+                          {isFood && (
+                            <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
+                              🍕 Food Order
+                            </Badge>
+                          )}
+                          {isProduct && (
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
+                              🛍️ Product Order
                             </Badge>
                           )}
                           {isExpress && (
@@ -323,7 +336,7 @@ export const OrdersPage = () => {
                       </div>
                     )}
 
-                    {/* LAUNDRY ITEM BREAKDOWN LIST (For Laundry Orders) */}
+                    {/* LAUNDRY ITEM BREAKDOWN LIST (Only for Laundry Orders cat === "Nguo") */}
                     {isLaundry && laundryBreakdown.length > 0 ? (
                       <div className="bg-muted/50 border border-border/70 rounded-2xl p-4 mb-4 space-y-3">
                         <div className="flex items-center justify-between">
@@ -362,14 +375,24 @@ export const OrdersPage = () => {
                         </div>
                       </div>
                     ) : (
-                      /* Non-laundry item summary */
-                      <div className="bg-muted/40 rounded-xl p-3 mb-4 space-y-2">
-                        {(order.items || []).map((i, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-xs">
-                            <span className="font-semibold text-foreground">{i.name} <span className="text-muted-foreground">× {i.quantity}</span></span>
-                            <span className="font-bold text-foreground">{formatPrice(i.price * i.quantity)} {APP_SETTINGS.currency}</span>
-                          </div>
-                        ))}
+                      /* Non-laundry item summary: Food and Product items treated independently */
+                      <div className="bg-muted/40 border border-border/50 rounded-2xl p-3.5 mb-4 space-y-2">
+                        {(order.items || []).map((i, idx) => {
+                          const itemCat = i.cat || (i as any).category || (isFood ? 'Food' : 'Product');
+                          const itemEmoji = itemCat === 'Food' ? '🍕 Food Item' : '🛍️ Product Item';
+
+                          return (
+                            <div key={idx} className="flex items-center justify-between text-xs bg-card border border-border/40 p-2.5 rounded-xl shadow-2xs">
+                              <div className="flex flex-col min-w-0 pr-2">
+                                <span className="font-bold text-foreground truncate">{i.name}</span>
+                                <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                                  {itemEmoji} • Qty: {i.quantity}
+                                </span>
+                              </div>
+                              <span className="font-extrabold text-foreground shrink-0">{formatPrice(i.price * i.quantity)} {APP_SETTINGS.currency}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 

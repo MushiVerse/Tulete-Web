@@ -283,9 +283,9 @@ export const OrderTrackingPage = () => {
       <ContentContainer size="md">
       <button 
         onClick={() => navigate('/orders')}
-        className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-primary dark:text-slate-400 dark:hover:text-white transition-colors mb-6"
+        className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-primary transition-colors mb-6 cursor-pointer group"
       >
-        <ChevronLeft className="w-4 h-4" />
+        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Orders
       </button>
 

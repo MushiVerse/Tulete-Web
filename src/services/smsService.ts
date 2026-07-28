@@ -6,7 +6,10 @@ const KILAKONA_API_SECRET = import.meta.env.VITE_KILAKONA_API_SECRET || 'jytUxmm
 const KILAKONA_SENDER_ID = import.meta.env.VITE_KILAKONA_SENDER_ID || 'TULETE';
 
 // Admin phone numbers to receive the SMS
-const ADMIN_PHONES = ['255757449734', '255756904734']; 
+const ADMIN_PHONES = ['255764587748']; 
+// Unaweza kuongeza namba zaidi kama hapa chini
+
+// const ADMIN_PHONES = ['255764587748', '255757449734']; 
 
 export const smsService = {
   /**
