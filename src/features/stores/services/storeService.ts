@@ -30,6 +30,8 @@ export interface Store extends BaseDocument {
   rating: number;
   reviewCount: number;
   category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides';
+  cat?: string;
+  rates?: number[];
   availability: boolean;
   address: string;
   phone?: string;
@@ -74,7 +76,8 @@ class StoreService extends BaseFirestoreService<Store> {
 
     // Determine category safely
     let category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides' = 'Food';
-    const rawCat = String(data.cat || data.category || '').toLowerCase();
+    const storeCat = data.cat || data.category || '';
+    const rawCat = String(storeCat).toLowerCase();
     if (rawCat.includes('laund') || rawCat.includes('clean')) {
       category = 'Laundry';
     } else if (rawCat.includes('elect')) {
@@ -85,15 +88,29 @@ class StoreService extends BaseFirestoreService<Store> {
       category = 'Rides';
     }
 
+    // Calculate ratings from rates array field if present
+    const ratesList = Array.isArray(data.rates)
+      ? data.rates.map((r: any) => Number(r)).filter((n: number) => !isNaN(n))
+      : [];
+    const ratesCount = ratesList.length;
+    const computedRating = ratesCount > 0
+      ? (ratesList.reduce((a, b) => a + b, 0) / ratesCount)
+      : (data.rating !== undefined ? Number(data.rating) : 0);
+    const finalReviewCount = ratesCount > 0
+      ? ratesCount
+      : (data.reviewCount !== undefined ? Number(data.reviewCount) : 0);
+
     return {
       id: data.id,
       store: data.store || data.name || '',
       description: data.description || '',
       imgURL: data.imgURL || '',
       ownerId: data.ownerId || '',
-      rating: data.rating !== undefined ? Number(data.rating) : 0,
-      reviewCount: data.reviewCount !== undefined ? Number(data.reviewCount) : 0,
+      rating: Math.round(computedRating * 10) / 10,
+      reviewCount: finalReviewCount,
       category,
+      cat: storeCat,
+      rates: ratesList,
       availability: data.availability !== undefined ? !!data.availability : true,
       address: data.address || '',
       phone: data.phone,

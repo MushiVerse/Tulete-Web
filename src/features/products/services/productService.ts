@@ -21,11 +21,18 @@ export interface Product extends BaseDocument {
   price: number;
   oldprice?: number; // For "Super Saving" strike-through
   imgUrl: string;
+  imgURL?: string[] | string;
+  images?: string[];
   storeId: string;
   store: string;
   rating: number;
   reviewCount: number;
   category: string;
+  cat?: string;
+  subCat?: string;
+  subSubCat?: string;
+  speccat?: string;
+  _collection?: string;
   tags: string[]; // e.g. "Most Popular", "Super Saver"
   availability: boolean;
   idadi?: number;
@@ -83,20 +90,37 @@ class ProductService extends BaseFirestoreService<Product> {
       lng = data.location.longitude;
     }
 
+    const rawImages = data.imgURL || data.imgUrl || data.images;
+    let imagesList: string[] = [];
+    if (Array.isArray(rawImages)) {
+      imagesList = rawImages.filter(s => typeof s === 'string' && s.trim().length > 0);
+    } else if (typeof rawImages === 'string' && rawImages.trim().length > 0) {
+      imagesList = [rawImages.trim()];
+    }
+
+    const mainImgUrl = imagesList.length > 0 ? imagesList[0] : 
+                      (typeof data.imgUrl === 'string' && data.imgUrl.trim().length > 0 ? data.imgUrl.trim() : 
+                      (typeof data.imgURL === 'string' && data.imgURL.trim().length > 0 ? data.imgURL.trim() : ''));
+
     return {
       id: data.id,
       name: data.name || '',
       description: data.description || '',
       price: data.price !== undefined ? Number(data.price) : 0,
       oldprice: data.oldprice !== undefined ? Number(data.oldprice) : undefined,
-      imgUrl: Array.isArray(data.imgURL) && data.imgURL.length > 0 ? data.imgURL[0] : 
-              (Array.isArray(data.imgUrl) && data.imgUrl.length > 0 ? data.imgUrl[0] : 
-              (data.imgUrl || data.imgURL || '')),
+      imgUrl: mainImgUrl,
+      imgURL: data.imgURL || data.imgUrl || data.images || mainImgUrl,
+      images: imagesList.length > 0 ? imagesList : (mainImgUrl ? [mainImgUrl] : []),
       storeId: data.storeId || '',
       store: data.store || '',
       rating: Math.round(rating * 10) / 10, // round to 1 decimal
       reviewCount,
       category: (data.category && data.category !== 'Product') ? data.category : (data.cat || data.category || ''),
+      cat: data.cat || data.category,
+      subCat: data.subCat || data.subcat || data.subCategory || data.scat,
+      subSubCat: data.subSubCat || data.subsubcat || data.subSubCategory || data.speccat,
+      speccat: data.speccat || data.subSubCat,
+      _collection: data._collection,
       tags: data.tags || [],
       availability: data.availability !== undefined ? !!data.availability : true,
       idadi: data.idadi !== undefined ? (typeof data.idadi === 'number' ? data.idadi : parseInt(data.idadi, 10)) : undefined,

@@ -8,6 +8,7 @@ import { SearchOverlay } from '../features/search/components/SearchOverlay';
 import { useLocationStore } from '../features/location/store/useLocationStore';
 import { LocationPickerModal, GOOGLE_MAPS_LIBRARIES } from '../features/location/components/LocationPickerModal';
 import { useJsApiLoader } from '@react-google-maps/api';
+import { InstallPwaPrompt } from '../shared/components/InstallPwaPrompt';
 
 export const MainLayout = () => {
   const location = useRouterLocation();
@@ -118,6 +119,9 @@ export const MainLayout = () => {
         onClose={() => setPickerOpen(false)}
         isLoaded={isMapLoaded}
       />
+
+      {/* Floating Install Tulete PWA Prompt */}
+      <InstallPwaPrompt />
     </div>
   );
 };

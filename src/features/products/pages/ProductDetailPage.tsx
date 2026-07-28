@@ -1,7 +1,7 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ArrowRight } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ArrowRight, Sparkles } from 'lucide-react';
 import { PageContainer } from '../../../shared/components/layout';
 import { ImageGallery } from '../../discovery/components/ImageGallery';
 import { Button } from '../../../shared/components/ui/Button';
@@ -20,6 +20,104 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 
+/* Endless Vertical Grid Section for "More of ..." */
+const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] }) => {
+  const [visibleCount, setVisibleCount] = useState(12);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const loadNextBatch = () => {
+    if (isLoadingMore || visibleCount >= items.length) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + 8, items.length));
+      setIsLoadingMore(false);
+    }, 250);
+  };
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+
+    // Find parent scroll container (.overflow-y-auto or window)
+    const scrollParent = sentinel.closest('.overflow-y-auto') || window;
+
+    const handleScroll = () => {
+      if (isLoadingMore || visibleCount >= items.length) return;
+      const rect = sentinel.getBoundingClientRect();
+      const parentHeight = scrollParent === window ? window.innerHeight : (scrollParent as HTMLElement).clientHeight;
+      if (rect.top <= parentHeight + 400) {
+        loadNextBatch();
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < items.length) {
+          loadNextBatch();
+        }
+      },
+      { 
+        root: scrollParent === window ? null : (scrollParent as Element),
+        rootMargin: '400px' 
+      }
+    );
+
+    observer.observe(sentinel);
+    if (scrollParent === window) {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    } else {
+      (scrollParent as HTMLElement).addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    return () => {
+      observer.disconnect();
+      if (scrollParent === window) {
+        window.removeEventListener('scroll', handleScroll);
+      } else {
+        (scrollParent as HTMLElement).removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [items.length, visibleCount, isLoadingMore]);
+
+  const visibleItems = items.slice(0, visibleCount);
+
+  return (
+    <div className="space-y-4 pt-4 border-t border-border/40">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          {title}
+        </h2>
+        <span className="text-xs font-bold text-muted-foreground">
+          Showing {visibleItems.length} of {items.length}
+        </span>
+      </div>
+
+      {/* Endless Vertical Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        {visibleItems.map((prod) => (
+          <div key={prod.id} className="w-full">
+            <ProductCard product={prod} />
+          </div>
+        ))}
+      </div>
+
+      {/* Scroll Trigger / Sentinel */}
+      {visibleCount < items.length && (
+        <div ref={loadMoreRef} className="py-6 text-center">
+          <div className="flex items-center justify-center gap-2 text-sm font-bold text-primary animate-pulse">
+            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" />
+            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
+            <span>Loading more items...</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const PRODUCT_CATEGORIES = [
   { id: 'all', name: 'All Products', icon: '🛍️' },
   { id: 'electronics', name: 'Electronics', icon: '📱' },
@@ -34,6 +132,7 @@ export const ProductDetailPage = () => {
   const decodedId = id ? decodeURIComponent(id) : '';
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { items: cartItems, addToCart, removeFromCart, getTotals } = useCartStore();
   
   // Subscribe to location store so price and cart total update instantly on location change
@@ -48,39 +147,63 @@ export const ProductDetailPage = () => {
   // Fetch specific product using decoded ID
   const { data: product, isLoading, error } = useFirestoreDocument(['product', decodedId || id || ''], productService, decodedId || id || '');
 
-  // Fetch related products using subSubCat and category matching (following Flutter related.dart logic)
+  // Determine target collection based on opened item category:
+  // "products" when category === "Product"
+  // "cloths" when category === "Nguo"
+  // "foods" for otherwise documents
+  const rawCat = (product as any)?.cat || product?.category || '';
+  const rawColl = (product as any)?._collection || '';
+
+  let targetCollection = 'foods';
+  if (rawColl === 'products' || rawCat === 'Product' || rawCat === 'Products') {
+    targetCollection = 'products';
+  } else if (rawColl === 'cloths' || rawCat === 'Nguo' || rawCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(rawCat)) {
+    targetCollection = 'cloths';
+  } else {
+    targetCollection = 'foods';
+  }
+
   const targetSubSubCat = (product as any)?.subSubCat || (product as any)?.subSubCategory || (product as any)?.speccat;
-  const targetCategory = product?.category;
-  const targetStoreId = product?.storeId;
+  const targetSubCat = (product as any)?.subCat || (product as any)?.subCategory || (product as any)?.scat;
+  const isLaundryProduct = targetCollection === 'cloths';
 
+  // 1. Fetch subSubCat products from targetCollection (for Related section)
   const { data: subSubCatProducts } = useFirestoreQuery(
-    ['products', 'related-subsub', targetSubSubCat],
+    ['products', 'related-subsub', targetCollection, targetSubSubCat],
     productService,
     { 
-      limit: 6, 
-      filters: targetSubSubCat ? [{ field: 'subSubCat', operator: '==', value: targetSubSubCat }] : undefined 
+      limit: 10, 
+      filters: targetSubSubCat ? [
+        { field: '_collection', operator: '==', value: targetCollection },
+        { field: 'subSubCat', operator: '==', value: targetSubSubCat }
+      ] : undefined 
     },
-    { enabled: !!targetSubSubCat }
+    { enabled: !isLaundryProduct && !!targetSubSubCat }
   );
 
+  // 2. Fetch subCat products from targetCollection (for More of [subCat] section)
+  const { data: subCatProducts } = useFirestoreQuery(
+    ['products', 'related-subcat', targetCollection, targetSubCat],
+    productService,
+    { 
+      limit: 20, 
+      filters: targetSubCat ? [
+        { field: '_collection', operator: '==', value: targetCollection },
+        { field: 'subCat', operator: '==', value: targetSubCat }
+      ] : undefined 
+    },
+    { enabled: !isLaundryProduct && !!targetSubCat }
+  );
+
+  // 3. Fetch category products from targetCollection (fallback / Laundries section)
   const { data: catProducts } = useFirestoreQuery(
-    ['products', 'related-cat', targetCategory],
+    ['products', 'related-cat', targetCollection, rawCat],
     productService,
     { 
-      limit: 6, 
-      filters: targetCategory ? [{ field: 'category', operator: '==', value: targetCategory }] : undefined 
+      limit: 20, 
+      filters: [{ field: '_collection', operator: '==', value: targetCollection }]
     },
-    { enabled: !!targetCategory }
-  );
-
-  const { data: storeProducts } = useFirestoreQuery(
-    ['products', 'related-store', targetStoreId],
-    productService,
-    { 
-      limit: 6, 
-      filters: targetStoreId ? [{ field: 'storeId', operator: '==', value: targetStoreId }] : undefined 
-    },
-    { enabled: !!targetStoreId }
+    { enabled: true }
   );
 
   // Compute display product (or fallback) unconditionally
@@ -130,11 +253,20 @@ export const ProductDetailPage = () => {
     );
   }
 
-  const images = [
-    displayProduct.imgUrl,
-    'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=800&q=80',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
-  ];
+  // Extract actual images array from document (only show multiple preview thumbnails if >1 image in document)
+  const documentImages: string[] = (() => {
+    const docData = (product as any) || {};
+    const rawList = docData.images || docData.imgURL || docData.imgUrl || (displayProduct as any).images || (displayProduct as any).imgURL || displayProduct.imgUrl;
+    if (Array.isArray(rawList)) {
+      const valid = rawList.filter((src: any) => typeof src === 'string' && src.trim().length > 0);
+      if (valid.length > 0) return valid;
+    } else if (typeof rawList === 'string' && rawList.trim().length > 0) {
+      return [rawList.trim()];
+    }
+    return [displayProduct.imgUrl || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80'];
+  })();
+
+  const selectedImageUrl = documentImages[selectedImageIndex] || documentImages[0] || displayProduct.imgUrl;
 
   return (
     <PageContainer>
@@ -167,13 +299,23 @@ export const ProductDetailPage = () => {
         {/* ── CENTER/MAIN COLUMN ── */}
         <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
           
-          {/* Top Nav (Mobile optimized) */}
-          <div className="lg:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between py-3 mb-6">
-            <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+          {/* Top Bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{displayProduct.category}</span>
+              <span>/</span>
+              <span className="font-semibold text-foreground truncate max-w-[200px]">{displayProduct.name}</span>
+            </div>
+
             <div className="flex items-center gap-2">
-              <button className="p-2 rounded-full hover:bg-muted transition-colors">
+              <button 
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({ title: displayProduct.name, url: window.location.href });
+                  }
+                }}
+                className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground"
+              >
                 <Share2 className="w-5 h-5" />
               </button>
               <button 
@@ -188,7 +330,12 @@ export const ProductDetailPage = () => {
           <div className="md:px-0 lg:py-2 lg:grid lg:grid-cols-2 lg:gap-12">
             {/* Left: Gallery */}
             <div className="w-full">
-              <ImageGallery images={images} altPrefix={displayProduct.name} />
+              <ImageGallery 
+                images={documentImages} 
+                altPrefix={displayProduct.name} 
+                selectedIndex={selectedImageIndex}
+                onSelectImage={(idx) => setSelectedImageIndex(idx)}
+              />
             </div>
 
             {/* Right: Details */}
@@ -224,14 +371,11 @@ export const ProductDetailPage = () => {
                     const isPurchasable = !isSoldOut && !isUnavailable;
 
                     let statusBadgeText = '';
-                    let buttonText = 'Add to Cart';
 
                     if (isSoldOut) {
                       statusBadgeText = 'Sold Out';
-                      buttonText = 'Sold Out';
                     } else if (isUnavailable) {
                       statusBadgeText = 'Unavailable';
-                      buttonText = 'Unavailable';
                     }
 
                     return (
@@ -283,7 +427,7 @@ export const ProductDetailPage = () => {
                           productId: displayProduct.id,
                           name: displayProduct.name,
                           price: displayProduct.price,
-                          imageUrl: displayProduct.imgUrl,
+                          imageUrl: selectedImageUrl,
                           storeId: displayProduct.storeId,
                           storeName: displayProduct.store,
                           isLaundry: isLaundryCategory,
@@ -330,58 +474,133 @@ export const ProductDetailPage = () => {
           </div>
 
           {/* ── DYNAMIC RELATED PRODUCTS (SubSubCat -> SubCat -> Cat Matching) ── */}
+          {/* ── SECTIONS BELOW PRODUCT DISPLAY ── */}
           {(() => {
-            // Safely extract data arrays from useFirestoreQuery result ({ data: Product[], lastDoc: any })
-            const subSubList: any[] = (subSubCatProducts as any)?.data || [];
-            const catList: any[] = (catProducts as any)?.data || [];
-            const storeList: any[] = (storeProducts as any)?.data || [];
+            const itemCat = (displayProduct as any).cat || displayProduct.category || '';
+            const rawColl = (displayProduct as any)._collection || '';
 
-            // Filter real Firestore results (excluding current product ID)
-            const realSubSub = subSubList.filter(p => p && p.id !== displayProduct.id);
-            const realCat = catList.filter(p => p && p.id !== displayProduct.id);
-            const realStore = storeList.filter(p => p && p.id !== displayProduct.id);
+            let activeCollection = 'foods';
+            if (rawColl === 'products' || itemCat === 'Product' || itemCat === 'Products') {
+              activeCollection = 'products';
+            } else if (rawColl === 'cloths' || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat)) {
+              activeCollection = 'cloths';
+            } else {
+              activeCollection = 'foods';
+            }
 
-            // Determine primary list (subSubCat first, then category)
-            const primaryList = realSubSub.length > 0 ? realSubSub : realCat;
-            const primaryTitle = realSubSub.length > 0 && targetSubSubCat
-              ? `Related in ${targetSubSubCat}` 
-              : `More in ${displayProduct.category}`;
+            const isLaundry = activeCollection === 'cloths';
+            const subSubVal = (displayProduct as any).subSubCat || (displayProduct as any).subSubCategory || (displayProduct as any).speccat || (displayProduct as any).subsubcat;
+            const subCatVal = (displayProduct as any).subCat || (displayProduct as any).subCategory || (displayProduct as any).scat || (displayProduct as any).subcat;
 
-            // Mock fallback if primary list is empty
-            const fallbackList = [1, 2, 3, 4].map(i => ({
+            // Raw items pool from target collection
+            const rawPool: any[] = [
+              ...((subSubCatProducts as any)?.data || []),
+              ...((subCatProducts as any)?.data || []),
+              ...((catProducts as any)?.data || [])
+            ];
+
+            // Deduplicate items pool by ID and exclude displayProduct.id
+            const collectionPoolMap = new Map<string, any>();
+            rawPool.forEach((item) => {
+              if (item && item.id && item.id !== displayProduct.id) {
+                collectionPoolMap.set(item.id, item);
+              }
+            });
+            const collectionPool = Array.from(collectionPoolMap.values());
+
+            // 1. LAUNDRY ITEMS (category === "Nguo" or collection === "cloths"):
+            // Return ONLY 1 section "Laundries" (endless vertical scroll, no sub-categorization)
+            if (isLaundry) {
+              const finalLaundryList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 20 }).map((_, i) => ({
+                ...displayProduct,
+                id: `laundry-item-${i + 1}`,
+                name: `Laundry Service Item ${i + 1}`,
+                price: displayProduct.price + (i * 2000),
+              }));
+
+              return (
+                <div className="mt-8 mb-24 lg:mb-12 space-y-10">
+                  <EndlessMoreOfSection title="Laundries" items={finalLaundryList} />
+                </div>
+              );
+            }
+
+            // 2. NON-LAUNDRY & BOTH subSubCat AND subCat EXIST:
+            // i. Related (filtered using subSubCat, HORIZONTAL SCROLL)
+            // ii. More of [subCat] (filtered using subCat, ENDLESS VERTICAL SCROLL, NO DUPLICATE DATA)
+            if (subSubVal || subCatVal) {
+              // Section 1: "Related" matches subSubCat
+              let subSubMatches = subSubVal ? collectionPool.filter((p) => {
+                const pSubSub = p.subSubCat || p.speccat || p.subsubcat || p.subSubCategory;
+                return pSubSub && String(pSubSub).trim().toLowerCase() === String(subSubVal).trim().toLowerCase();
+              }) : [];
+
+              if (subSubMatches.length === 0 && subSubCatProducts?.data?.length) {
+                subSubMatches = subSubCatProducts.data.filter((p: any) => p && p.id !== displayProduct.id);
+              }
+
+              const finalSubSubList = subSubMatches.length > 0 ? subSubMatches : (subSubVal ? Array.from({ length: 6 }).map((_, i) => ({
+                ...displayProduct,
+                id: `subsub-item-${i + 1}`,
+                name: `${subSubVal} Item ${i + 1}`,
+                price: Math.max(5000, displayProduct.price - (i * 5000)),
+              })) : []);
+
+              const relatedIds = new Set(finalSubSubList.map((p) => p.id));
+
+              // Section 2: "More of [subCat]" matches subCat, excluding relatedIds
+              let subCatMatches = subCatVal ? collectionPool.filter((p) => {
+                if (relatedIds.has(p.id)) return false;
+                const pSub = p.subCat || p.subCategory || p.scat || p.subcat;
+                return pSub && String(pSub).trim().toLowerCase() === String(subCatVal).trim().toLowerCase();
+              }) : [];
+
+              if (subCatMatches.length === 0) {
+                subCatMatches = collectionPool.filter((p) => !relatedIds.has(p.id));
+              }
+
+              const finalSubCatList = subCatMatches.length > 0 ? subCatMatches : Array.from({ length: 20 }).map((_, i) => ({
+                ...displayProduct,
+                id: `subcat-item-${i + 1}`,
+                name: `${subCatVal || 'Collection'} Item ${i + 1}`,
+                price: displayProduct.price + ((i + 1) * 8000),
+              })).filter((p) => !relatedIds.has(p.id));
+
+              const mainCatLabel = subCatVal || displayProduct.category || (activeCollection === 'products' ? 'Products' : 'Foods');
+
+              return (
+                <div className="mt-8 mb-24 lg:mb-12 space-y-10">
+                  {/* i. Related Section (Horizontal Scroll Carousel) */}
+                  {finalSubSubList.length > 0 && subSubVal && (
+                    <div>
+                      <SectionWrapper title="Related" actionLink="/explore">
+                        {finalSubSubList.map((prod) => (
+                          <div key={prod.id} className="shrink-0 w-[170px] md:w-[210px] snap-center">
+                            <ProductCard product={prod} />
+                          </div>
+                        ))}
+                      </SectionWrapper>
+                    </div>
+                  )}
+
+                  {/* ii. More of [subCat] Section (Endless Vertical Grid, Zero Duplicates) */}
+                  <EndlessMoreOfSection title={`More of ${mainCatLabel}`} items={finalSubCatList} />
+                </div>
+              );
+            }
+
+            // 3. Fallback single section
+            const mainCatLabel = displayProduct.category || (activeCollection === 'products' ? 'Products' : 'Foods');
+            const finalCatList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 20 }).map((_, i) => ({
               ...displayProduct,
-              id: `related-item-${i}`,
-              name: `${displayProduct.category} Related Item ${i}`,
-              price: Math.max(10000, displayProduct.price - (i * 15000)),
+              id: `cat-item-${i + 1}`,
+              name: `${mainCatLabel} Item ${i + 1}`,
+              price: Math.max(5000, displayProduct.price + ((i + 1) * 5000)),
             }));
-
-            const finalRelatedList = primaryList.length > 0 ? primaryList : fallbackList;
 
             return (
               <div className="mt-8 mb-24 lg:mb-12 space-y-10">
-                {/* 1. Related Products Carousel (by subSubCat / Category) */}
-                <div>
-                  <SectionWrapper title={primaryTitle} actionLink="/products">
-                    {finalRelatedList.map((prod) => (
-                      <div key={prod.id} className="shrink-0 w-[170px] md:w-[210px] snap-center">
-                        <ProductCard product={prod} />
-                      </div>
-                    ))}
-                  </SectionWrapper>
-                </div>
-
-                {/* 2. More from Store Carousel */}
-                {realStore.length > 0 && (
-                  <div>
-                    <SectionWrapper title={`More from ${displayProduct.store}`} actionLink={`/explore`}>
-                      {realStore.map((prod) => (
-                        <div key={prod.id} className="shrink-0 w-[170px] md:w-[210px] snap-center">
-                          <ProductCard product={prod} />
-                        </div>
-                      ))}
-                    </SectionWrapper>
-                  </div>
-                )}
+                <EndlessMoreOfSection title={`More of ${mainCatLabel}`} items={finalCatList} />
               </div>
             );
           })()}

@@ -21,6 +21,7 @@ import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { productService, Product } from '../../products/services/productService';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { BrandsView } from '../../brands/components/BrandsView';
+import { StoreCard } from '../../../shared/components/cards/StoreCard';
 import { BrandDetailsView } from '../../brands/components/BrandDetailsView';
 import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
@@ -261,92 +262,16 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
   isFav: boolean;
   onFav: (e: React.MouseEvent) => void;
 }) => {
-  const getDynamicStoreCat = (s: any) => {
-    const text = `${s.store} ${s.name || ''} ${s.description || ''}`.toLowerCase();
-    if (text.match(/laundry|cloth|suit|wash|bedding|dryclean|iron|fashion|fits|boutique|wear|shoes|apparel/)) return 'Laundry';
-    if (text.match(/food|meal|platter|restaurant|bakery|meat|pizza|burger|kitchen|cafe|dine/)) return 'Food';
-    if (s.category === 'Food') return 'Food';
-    if (s.category === 'Laundry') return 'Laundry';
-    return 'Products';
+  const storeData = {
+    ...store,
+    category: (store as any).cat || store.category || 'Store',
+    rating: typeof store.rating === 'number' ? store.rating : parseFloat(store.rating || '4.8'),
   };
-  const actualCategory = getDynamicStoreCat(store);
-  const cfg = CAT_CONFIG[actualCategory] || CAT_CONFIG.Food;
-  
+
   return (
-    <motion.div
-      whileTap={{ scale: 0.97 }}
-      onClick={onClick}
-      className="w-full h-full cursor-pointer group"
-    >
-      <div className="bg-card rounded-3xl overflow-hidden border border-border shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full group-hover:-translate-y-1">
-        {/* Cover image */}
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted shrink-0">
-          <img
-            src={store.imgURL}
-            alt={store.store}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-40 group-hover:opacity-50 transition-opacity" />
-
-          {/* Status & Fav Row */}
-          <div className="absolute top-3 inset-x-3 flex justify-between items-start">
-            <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md ${
-              store.availability ? 'bg-success/90 text-primary-foreground' : 'bg-black/50 text-white'
-            }`}>
-              {store.availability ? 'Open Now' : 'Closed'}
-            </span>
-            <button
-              onClick={onFav}
-              className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-sm hover:bg-white/40 active:scale-95 transition-all"
-            >
-              <Heart className={`w-4 h-4 transition-colors ${isFav ? 'fill-primary text-primary' : 'text-white'}`} />
-            </button>
-          </div>
-
-          {/* Bottom Row on Image */}
-          <div className="absolute bottom-3 inset-x-3 flex justify-between items-end">
-            <div className={`flex items-center gap-1.5 ${cfg.bg} border px-2.5 py-1.5 rounded-full bg-background/95 backdrop-blur shadow-sm`}>
-              <span className="text-sm">{cfg.emoji}</span>
-              <span className={`text-[11px] font-extrabold uppercase tracking-widest ${cfg.color}`}>{actualCategory}</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
-              <Star className="w-4 h-4 fill-warning stroke-warning" />
-              <span className="text-white text-sm font-extrabold">{store.rating || ''}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="p-4 flex flex-col flex-1 bg-card">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="font-extrabold text-foreground text-base leading-tight line-clamp-1 group-hover:text-primary transition-colors flex-1">
-              {store.store}
-            </h3>
-            {store.isVerified && (
-              <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0" />
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-border/50">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-xs font-semibold text-foreground truncate">{store.address || 'Dodoma, Tanzania'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-xs font-semibold">20-35 min</span>
-              </div>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Star className="w-3.5 h-3.5 fill-warning stroke-warning shrink-0" />
-                <span className="text-xs font-semibold text-foreground">{store.rating || ''}</span>
-                <span className="text-xs text-muted-foreground">({store.reviewCount || 0})</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
+    <div onClick={onClick} className="w-full h-full cursor-pointer">
+      <StoreCard store={storeData as any} distanceKm={store.distance} />
+    </div>
   );
 };
 
@@ -666,22 +591,22 @@ export const HomePage = () => {
             </button>
             
             <button onClick={() => { setFilterValue(filterValue === 'food' ? null : 'food'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'food' ? 'bg-orange-500 text-white border-orange-500 shadow-md' : 'bg-card text-foreground border-border hover:border-orange-500/50 hover:bg-muted'}`}>
-              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:scale-105 transition-transform shrink-0"><Utensils className="w-4 h-4"/></div>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform shrink-0 ${filterValue === 'food' ? 'bg-white/20 text-white' : 'bg-orange-500/10 text-orange-500'}`}><Utensils className="w-4 h-4"/></div>
               <span className="font-bold text-sm">Foods</span>
             </button>
             
             <button onClick={() => { setFilterValue(filterValue === 'product' ? null : 'product'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'product' ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-card text-foreground border-border hover:border-emerald-500/50 hover:bg-muted'}`}>
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-105 transition-transform shrink-0"><ShoppingBag className="w-4 h-4"/></div>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform shrink-0 ${filterValue === 'product' ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-500'}`}><ShoppingBag className="w-4 h-4"/></div>
               <span className="font-bold text-sm">Shopping</span>
             </button>
 
             <button onClick={() => { setFilterValue(filterValue === 'laundry' ? null : 'laundry'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'laundry' ? 'bg-sky-500 text-white border-sky-500 shadow-md' : 'bg-card text-foreground border-border hover:border-sky-500/50 hover:bg-muted'}`}>
-              <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-500 group-hover:scale-105 transition-transform shrink-0"><Sparkles className="w-4 h-4"/></div>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform shrink-0 ${filterValue === 'laundry' ? 'bg-white/20 text-white' : 'bg-sky-500/10 text-sky-500'}`}><Sparkles className="w-4 h-4"/></div>
               <span className="font-bold text-sm">Laundry</span>
             </button>
 
             <button onClick={() => { setFilterValue(filterValue === 'brands' ? null : 'brands'); setSelectedBrand(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group border ${filterValue === 'brands' ? 'bg-purple-500 text-white border-purple-500 shadow-md scale-105' : 'bg-card text-foreground border-border hover:border-purple-500/50 hover:bg-muted'}`}>
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:scale-105 transition-transform shrink-0"><Tag className="w-4 h-4"/></div>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform shrink-0 ${filterValue === 'brands' ? 'bg-white/20 text-white' : 'bg-purple-500/10 text-purple-500'}`}><Tag className="w-4 h-4"/></div>
               <span className="font-bold text-sm">Brands</span>
             </button>
           </div>
@@ -858,7 +783,7 @@ export const HomePage = () => {
                         alt={promo.title}
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
-                      <div className={`absolute inset-0 bg-gradient-to-br ${promo.gradient} opacity-85 group-hover:opacity-95 transition-opacity`} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                       <div className="absolute inset-0 p-6 flex flex-col justify-between">
                         <span className="self-start bg-black/30 backdrop-blur-md text-white text-xs font-extrabold px-3.5 py-1.5 rounded-full border border-white/20 shadow-sm">
                           {promo.badge}

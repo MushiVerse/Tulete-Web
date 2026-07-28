@@ -51,7 +51,7 @@ export const SectionWrapper = ({
         Padding matches the header px-4 to ensure cards start aligned but bleed off screen.
       */}
       <div className="relative w-full">
-        <div className="flex overflow-x-auto gap-4 px-4 md:px-6 pb-4 pt-1 snap-x snap-mandatory hide-scrollbar">
+        <div className="flex overflow-x-auto gap-4 px-4 md:px-6 pb-4 pt-1 snap-x snap-mandatory scrollbar-none hide-scrollbar [ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {children}
         </div>
       </div>
