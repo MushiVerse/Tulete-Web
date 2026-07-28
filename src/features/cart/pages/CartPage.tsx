@@ -10,6 +10,7 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, P
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { useLanguageStore } from '../../../core/i18n/useLanguageStore';
 
 const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig }: any) => {
   // Subscribe to location so re-renders happen on location change
@@ -91,10 +92,75 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
           </div>
         )}
 
-        {/* Per-Item Non-Laundry Customization (Pick Up Toggle) */}
+        {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
         {!item.isLaundry && (
           <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
+            {/* Food Specific Delivery Slots (where cat != "Nguo" and cat != "Product") */}
+            {item.cat !== 'Nguo' && item.cat !== 'Product' && (() => {
+              const hour = new Date().getHours();
+              const bVal = String(item.brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
+              const isBrandNow = bVal === 'now';
+              const updateFoodItemSlot = useCartStore.getState().updateFoodItemSlot;
+              const currentSlot = item.deliverySlot || (isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner'));
+
+              return (
+                <div className="flex items-center flex-wrap gap-2">
+                  <span className="text-xs font-bold text-muted-foreground mr-1">Delivery Time:</span>
+                  
+                  {/* ASAP Option (Show when brand === "now") */}
+                  {isBrandNow && (
+                    <button
+                      type="button"
+                      onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'ASAP' ? '' : 'ASAP')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                        currentSlot === 'ASAP'
+                          ? 'bg-amber-500 border-amber-500 text-white scale-105 shadow-amber-500/20'
+                          : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      ASAP
+                    </button>
+                  )}
+
+                  {/* Lunch Option (if time is before 15:00) */}
+                  {hour < 15 && (
+                    <button
+                      type="button"
+                      onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Lunch' ? '' : 'Lunch')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                        currentSlot === 'Lunch'
+                          ? 'bg-orange-500 border-orange-500 text-white scale-105 shadow-orange-500/20'
+                          : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      Lunch
+                    </button>
+                  )}
+
+                  {/* Dinner Option (if time is After 15:00) */}
+                  {hour >= 15 && (
+                    <button
+                      type="button"
+                      onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Dinner' ? '' : 'Dinner')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                        currentSlot === 'Dinner'
+                          ? 'bg-indigo-500 border-indigo-500 text-white scale-105 shadow-indigo-500/20'
+                          : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      Dinner
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Pick Up Toggle */}
             <button
+              type="button"
               onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
                 item.isDeliverySelected === false 
@@ -124,6 +190,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
 
 export const CartPage = () => {
   const navigate = useNavigate();
+  const t = useLanguageStore((state) => state.t);
   const { items, updateQuantity, removeFromCart, clearCart, getTotals, toggleDelivery, laundryPreferences, setLaundryPreferences, updateLaundryItemConfig, applyLaundryServicesToAll, clearAllLaundryServices } = useCartStore();
   const { currentLocation } = useLocationStore();
   const [totals, setTotals] = useState(getTotals());

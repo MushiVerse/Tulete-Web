@@ -23,6 +23,7 @@ import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { BrandsView } from '../../brands/components/BrandsView';
 import { StoreCard } from '../../../shared/components/cards/StoreCard';
 import { BrandDetailsView } from '../../brands/components/BrandDetailsView';
+import { useLanguageStore } from '../../../core/i18n/useLanguageStore';
 import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
@@ -278,6 +279,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
 /*  Main HomePage  */
 export const HomePage = () => {
   const navigate = useNavigate();
+  const t = useLanguageStore((state) => state.t);
   const { user, isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
   const { items: cartItems, getTotals, clearCart, addToCart, removeFromCart } = useCartStore();
@@ -361,6 +363,7 @@ export const HomePage = () => {
       imageUrl: p.imgUrl,
       storeId: p.storeId,
       storeName: p.store,
+      brand: (p as any).brand || (p as any).pbrand || p.storeId || '',
       cat,
       location: p.location,
       idadi: p.idadi,
@@ -632,7 +635,7 @@ export const HomePage = () => {
               <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
                 Hi, <span className="text-primary">{firstName}</span>!
               </h1>
-              <p className="text-base text-muted-foreground mt-1">What can we get for you today?</p>
+              <p className="text-base text-muted-foreground mt-1">{t('greetingSub')}</p>
             </div>
             <button
               onClick={() => navigate('/notifications')}
@@ -656,7 +659,7 @@ export const HomePage = () => {
                 // On mobile (window width < 1024px) open full-screen overlay
                 if (window.innerWidth < 1024) setIsMobileSearchOpen(true);
               }}
-              placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry...'}
+              placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : t('searchPlaceholder')}
               className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
             />
 

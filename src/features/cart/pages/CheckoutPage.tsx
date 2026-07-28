@@ -310,14 +310,14 @@ export const CheckoutPage = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-sm text-foreground">{savedPhoneNumber}</span>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border gap-2 flex-wrap sm:flex-nowrap min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 truncate">
+                      <span className="font-bold text-sm text-foreground truncate">{savedPhoneNumber}</span>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
                         ✓ Saved
                       </span>
                     </div>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditingPhone(true)}>
+                    <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={() => setIsEditingPhone(true)}>
                       Change
                     </Button>
                   </div>

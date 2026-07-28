@@ -24,6 +24,7 @@ export interface StoreHours {
 
 export interface Store extends BaseDocument {
   store: string;
+  name?: string;
   description: string;
   imgURL: string;
   ownerId: string;
@@ -128,6 +129,7 @@ class StoreService extends BaseFirestoreService<Store> {
     return {
       id: data.id || '',
       store: data.store || data.name || 'Store',
+      name: data.name || data.store || 'Store',
       description: data.description || '',
       imgURL: data.imgURL || data.imgUrl || data.image || '',
       ownerId: data.ownerId || '',

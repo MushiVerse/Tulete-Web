@@ -63,22 +63,50 @@ export const StoreDetailsPage = () => {
     id || ''
   );
   
-  const { data: productsData, isLoading: isProductsLoading } = useFirestoreQuery(
-    ['products', 'store', id || ''],
+  // Fetch items from 'foods', 'products', and 'cloths' collections
+  const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(
+    ['store_foods', id || ''],
     productService,
-    {
-      filters: [
-        { field: 'storeId', operator: '==', value: id || '' }
-      ]
-    }
+    { filters: [{ field: '_collection', operator: '==', value: 'foods' }] }
+  );
+  const { data: productsData, isLoading: isProductsDataLoading } = useFirestoreQuery(
+    ['store_products', id || ''],
+    productService,
+    { filters: [{ field: '_collection', operator: '==', value: 'products' }] }
+  );
+  const { data: clothsData, isLoading: isClothsLoading } = useFirestoreQuery(
+    ['store_cloths', id || ''],
+    productService,
+    { filters: [{ field: '_collection', operator: '==', value: 'cloths' }] }
   );
 
+  const isProductsLoading = isFoodsLoading || isProductsDataLoading || isClothsLoading;
+
   const store = routeStoreData || dbStore || storeService.getMockStores().find((s) => s.id === id);
-  const dbProducts = productsData?.data || [];
-  let products = dbProducts.length > 0 ? dbProducts : productService.getMockProducts(id);
+  const targetStoreName = (store?.name || store?.store || '').toLowerCase().trim();
+  const targetStoreId = (id || store?.id || '').toLowerCase().trim();
+
+  // Combine items from foods, products, cloths collections where store === opened store
+  const allCollectionDocs = [
+    ...(foodsData?.data || []),
+    ...(productsData?.data || []),
+    ...(clothsData?.data || [])
+  ];
+
+  const matchedStoreProducts = allCollectionDocs.filter(item => {
+    const itemStore = String(item.store || (item as any).storeName || '').toLowerCase().trim();
+    const itemStoreId = String(item.storeId || '').toLowerCase().trim();
+    return (
+      (targetStoreName && itemStore === targetStoreName) ||
+      (targetStoreId && (itemStore === targetStoreId || itemStoreId === targetStoreId)) ||
+      (targetStoreName && itemStore.includes(targetStoreName))
+    );
+  });
+
+  let products = matchedStoreProducts.length > 0 ? matchedStoreProducts : productService.getMockProducts(id);
 
   if (products.length === 0 && store) {
-    const categoryLower = store.category.toLowerCase();
+    const categoryLower = (store.category || '').toLowerCase();
     products = productService.getMockProducts().filter(p => {
       const storeNameLower = (p.store || '').toLowerCase();
       const pCat = (p.category || '').toLowerCase();

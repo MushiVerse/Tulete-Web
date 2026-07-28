@@ -24,6 +24,8 @@ export interface CartItem {
   
   // Food & Product Configurations
   isDeliverySelected?: boolean; // True means Delivery, False means Pickup
+  deliverySlot?: 'Lunch' | 'Dinner' | 'ASAP' | string;
+  brand?: string;
   
   // App-specific category ("Food", "Nguo", "Product") used by backend schema
   cat?: string; 
@@ -83,6 +85,7 @@ interface CartState {
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   toggleDelivery: (productId: string, isDelivery: boolean) => void;
+  updateFoodItemSlot: (productId: string, slot: string) => void;
   clearCart: () => void;
   getTotals: () => {
     subtotal: number;
@@ -208,6 +211,12 @@ export const useCartStore = create<CartState>()(
       toggleDelivery: (productId, isDeliverySelected) => {
         set((state) => ({
           items: state.items.map(i => i.productId === productId ? { ...i, isDeliverySelected } : i)
+        }));
+      },
+
+      updateFoodItemSlot: (productId, deliverySlot) => {
+        set((state) => ({
+          items: state.items.map(i => i.productId === productId ? { ...i, deliverySlot } : i)
         }));
       },
 

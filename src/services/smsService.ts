@@ -53,11 +53,15 @@ export const smsService = {
    */
   async sendAdminOrderNotification(order: any): Promise<void> {
     try {
-      const { items, totalAmount, deliveryLocation, storeName, uname } = order;
+      const { items = [], totalAmount = 0, deliveryLocation = { address: 'N/A' }, storeName = '', uname = 'Customer' } = order || {};
+      const itemsList = Array.isArray(items) ? items.map((i: any) => `${i.quantity || 1} x ${i.name || 'Item'}`).join(', ') : '';
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateTimeStr = `${dateStr} ${timeStr}`;
       
-      const itemsList = items.map((i: any) => `${i.quantity} x ${i.name}`).join(', ');
-      
-      const message = `New Tulete Order!\nFrom: ${uname}\nItems: ${itemsList}\nTotal: ${totalAmount}/=\nLoc: ${deliveryLocation.address}\nStore: ${storeName || 'N/A'}`;
+      const message = `New Tulete Order!\nDate: ${dateTimeStr}\nFrom: ${uname}\nItems: ${itemsList}\nTotal: ${totalAmount}/=\nLoc: ${deliveryLocation.address || 'N/A'}\nStore: ${storeName || 'N/A'}`;
       
       await this.sendBulkSMSKilaKona(message, ADMIN_PHONES);
     } catch (e) {

@@ -141,6 +141,7 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
                     imageUrl: meal.imgUrl,
                     storeId: meal.storeId,
                     storeName: meal.store,
+                    brand: (meal as any).brand || (meal as any).pbrand || meal.storeId || '',
                     cat: 'Food',
                     location: meal.location,
                     idadi: meal.quantity !== undefined ? meal.quantity : meal.idadi

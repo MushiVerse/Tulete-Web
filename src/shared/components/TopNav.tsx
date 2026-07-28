@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Menu, User, ShoppingBag, Heart, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import { Bell, Menu, User, ShoppingBag, Heart, Settings, LogOut, Sun, Moon, Globe } from 'lucide-react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../features/auth/store/useAuthModalStore';
 import { authService } from '../../features/auth/services/authService';
 import { useThemeStore } from '../../core/theme/useThemeStore';
+import { useLanguageStore } from '../../core/i18n/useLanguageStore';
 import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 import { APP_SETTINGS } from '../../core/config/settings';
 import { useDeviceOS } from '../../core/hooks/useDeviceOS';
@@ -34,6 +35,7 @@ export const TopNav = () => {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   const { isDark, toggleTheme } = useThemeStore();
+  const { language, toggleLanguage, t } = useLanguageStore();
   const { showPlayBadge } = useDeviceOS();
   const { currentLocation, setPickerOpen } = useLocationStore();
 
@@ -76,11 +78,11 @@ export const TopNav = () => {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname === '/' ? 'text-foreground' : 'text-muted-foreground'}`}>Home</Link>
-            <Link to="/explore" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/explore') ? 'text-foreground' : 'text-muted-foreground'}`}>Explore</Link>
-            <Link to="/food" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/food') ? 'text-foreground' : 'text-muted-foreground'}`}>Food</Link>
-            <Link to="/laundry" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/laundry') ? 'text-foreground' : 'text-muted-foreground'}`}>Laundry</Link>
-            <Link to="/products" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/products') ? 'text-foreground' : 'text-muted-foreground'}`}>Products</Link>
+            <Link to="/" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname === '/' ? 'text-foreground' : 'text-muted-foreground'}`}>{t('home')}</Link>
+            <Link to="/explore" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/explore') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('explore')}</Link>
+            <Link to="/food" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/food') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('food')}</Link>
+            <Link to="/laundry" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/laundry') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('laundry')}</Link>
+            <Link to="/products" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/products') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('products')}</Link>
           </nav>
         </div>
 
@@ -128,6 +130,16 @@ export const TopNav = () => {
                       : 'Set Location'))
                 : 'Set Location'}
             </span>
+          </button>
+
+          {/* Language toggle */}
+          <button
+            onClick={toggleLanguage}
+            className="relative px-2.5 py-1 text-xs font-extrabold text-muted-foreground hover:text-foreground rounded-full border border-border bg-muted/50 hover:bg-muted transition-all flex items-center gap-1 cursor-pointer"
+            title={language === 'en' ? 'Switch to Swahili' : 'Badili kwenda Kiingereza'}
+          >
+            <Globe className="w-3.5 h-3.5 text-primary" />
+            <span className="uppercase">{language === 'en' ? 'SW' : 'EN'}</span>
           </button>
 
           {/* Theme toggle */}
