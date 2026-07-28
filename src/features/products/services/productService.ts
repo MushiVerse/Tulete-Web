@@ -33,6 +33,11 @@ export interface Product extends BaseDocument {
   subSubCat?: string;
   speccat?: string;
   _collection?: string;
+  brand?: string;
+  pbrand?: string;
+  FBrand?: string;
+  LBrand?: string;
+  isBrandNow?: boolean | string;
   tags: string[]; // e.g. "Most Popular", "Super Saver"
   availability: boolean;
   idadi?: number;
@@ -121,6 +126,11 @@ class ProductService extends BaseFirestoreService<Product> {
       subSubCat: data.subSubCat || data.subsubcat || data.subSubCategory || data.speccat,
       speccat: data.speccat || data.subSubCat,
       _collection: data._collection,
+      brand: data.brand || data.pbrand || data.FBrand || data.LBrand,
+      pbrand: data.pbrand,
+      FBrand: data.FBrand,
+      LBrand: data.LBrand,
+      isBrandNow: data.isBrandNow,
       tags: data.tags || [],
       availability: data.availability !== undefined ? !!data.availability : true,
       idadi: data.idadi !== undefined ? (typeof data.idadi === 'number' ? data.idadi : parseInt(data.idadi, 10)) : undefined,

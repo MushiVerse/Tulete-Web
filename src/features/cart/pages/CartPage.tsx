@@ -11,6 +11,8 @@ import { PageContainer, ContentContainer } from '../../../shared/components/layo
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { useLanguageStore } from '../../../core/i18n/useLanguageStore';
+import { useFirestoreDocument } from '../../../core/hooks/useFirestoreQuery';
+import { productService } from '../../products/services/productService';
 
 const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig }: any) => {
   // Subscribe to location so re-renders happen on location change
@@ -18,6 +20,13 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
   const getDynamicItemPrices = useCartStore((state) => state.getDynamicItemPrices);
   const dynamicPrices = getDynamicItemPrices();
   const itemTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
+
+  const targetId = item.baseProductId || item.productId || item.id || '';
+  const { data: fetchedDoc } = useFirestoreDocument(
+    ['cart_item_firestore', targetId],
+    productService,
+    targetId
+  );
   
   return (
     <Card className="p-3 sm:p-4 flex gap-3 sm:gap-4 items-start sm:items-center bg-card border border-border shadow-sm hover:shadow-md transition-all group/item">
@@ -98,8 +107,22 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
             {/* Food Specific Delivery Slots (where cat != "Nguo" and cat != "Product") */}
             {item.cat !== 'Nguo' && item.cat !== 'Product' && (() => {
               const hour = new Date().getHours();
-              const bVal = String(item.brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
-              const isBrandNow = bVal === 'now';
+              const docRef = fetchedDoc || item;
+              const bVal = String(
+                docRef?.brand ||
+                (docRef as any)?.pbrand ||
+                (docRef as any)?.FBrand ||
+                (docRef as any)?.LBrand ||
+                ''
+              ).toLowerCase().trim();
+              const rawIsBrandNow = (docRef as any)?.isBrandNow;
+              const isBrandNow =
+                rawIsBrandNow === true ||
+                String(rawIsBrandNow).toLowerCase().trim() === 'true' ||
+                String(rawIsBrandNow).toLowerCase().trim() === 'now' ||
+                bVal === 'now' ||
+                bVal === 'true';
+
               const updateFoodItemSlot = useCartStore.getState().updateFoodItemSlot;
               const currentSlot = item.deliverySlot || (isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner'));
 

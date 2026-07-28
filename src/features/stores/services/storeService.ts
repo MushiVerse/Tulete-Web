@@ -139,7 +139,19 @@ class StoreService extends BaseFirestoreService<Store> {
       cat: storeCat,
       rates: ratesList,
       availability: data.availability !== undefined ? !!data.availability : true,
-      address: data.address || '',
+      address: (typeof data.address === 'string' && data.address.trim())
+        ? data.address.trim()
+        : (typeof data.location === 'string' && data.location.trim())
+        ? data.location.trim()
+        : (typeof data.locationName === 'string' && data.locationName.trim())
+        ? data.locationName.trim()
+        : (typeof data.loc === 'string' && data.loc.trim())
+        ? data.loc.trim()
+        : (typeof data.addressLoc === 'string' && data.addressLoc.trim())
+        ? data.addressLoc.trim()
+        : (typeof data.specificaddress === 'string' && data.specificaddress.trim())
+        ? data.specificaddress.trim()
+        : '',
       phone: data.phone,
       whatsapp: data.whatsapp,
       isVerified: data.isVerified !== undefined ? !!data.isVerified : true,

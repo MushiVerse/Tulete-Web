@@ -200,17 +200,77 @@ export const StoreDetailsPage = () => {
     };
   }, [activeTab, store]);
 
-  // Loading state skeleton
+  // Loading state skeleton that closely resembles the page content layout
   if (isStoreLoading || isProductsLoading) {
     return (
       <PageContainer>
-        <div className="max-w-4xl mx-auto space-y-6 p-6">
-          <div className="h-60 rounded-3xl bg-muted animate-pulse" />
-          <div className="h-12 bg-muted rounded-2xl animate-pulse" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-28 rounded-xl bg-muted animate-pulse" />
-            ))}
+        <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
+          {/* Left Sidebar Skeleton (Desktop) */}
+          <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full p-6 space-y-4">
+            <div className="h-4 w-32 bg-muted rounded-md animate-pulse mb-6" />
+            <div className="h-3 w-24 bg-muted rounded-md animate-pulse uppercase" />
+            <div className="space-y-2 pt-2">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="h-10 w-full bg-muted/60 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          </div>
+
+          {/* Center Column Skeleton */}
+          <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-6">
+            {/* Hero Banner Skeleton */}
+            <div className="relative h-60 md:h-72 rounded-3xl overflow-hidden shadow-md border border-border bg-muted/70 animate-pulse">
+              <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-muted-foreground/20 shrink-0" />
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="h-4 w-20 bg-muted-foreground/20 rounded-full" />
+                      <div className="h-4 w-14 bg-muted-foreground/20 rounded-full" />
+                    </div>
+                    <div className="h-6 w-48 bg-muted-foreground/30 rounded-md" />
+                    <div className="h-3.5 w-36 bg-muted-foreground/20 rounded-md" />
+                  </div>
+                </div>
+                <div className="h-8 w-28 bg-muted-foreground/20 rounded-full self-start md:self-auto" />
+              </div>
+            </div>
+
+            {/* HUD Bar Skeleton */}
+            <div className="grid grid-cols-2 gap-2 bg-muted border border-border p-2 rounded-2xl">
+              <div className="h-12 bg-card rounded-xl animate-pulse" />
+              <div className="h-12 bg-card rounded-xl animate-pulse" />
+            </div>
+
+            {/* Tab Bar Skeleton */}
+            <div className="flex border-b border-border gap-6 pb-3">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-5 w-24 bg-muted rounded-md animate-pulse" />
+              ))}
+            </div>
+
+            {/* Search Bar Skeleton */}
+            <div className="h-11 w-full bg-muted rounded-2xl animate-pulse" />
+
+            {/* Product Cards Grid Skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="p-4 bg-card border border-border rounded-2xl flex gap-4 animate-pulse">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-muted shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2 flex flex-col justify-between py-1">
+                    <div className="space-y-1.5">
+                      <div className="h-3 w-16 bg-muted rounded" />
+                      <div className="h-4 w-3/4 bg-muted rounded" />
+                      <div className="h-3 w-full bg-muted rounded" />
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-5 w-20 bg-muted rounded" />
+                      <div className="h-8 w-16 bg-muted rounded-lg" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </PageContainer>
@@ -228,13 +288,6 @@ export const StoreDetailsPage = () => {
     }
     localStorage.setItem('tulete_favorite_stores', JSON.stringify(list));
     setIsFavorite(!isFavorite);
-  };
-
-  // WhatsApp helper
-  const triggerWhatsApp = () => {
-    if (!store || !store.whatsapp) return;
-    const text = encodeURIComponent(`Hello ${store.store}, I found your store on Tulete and would like to inquire about your services.`);
-    window.open(`https://wa.me/${store.whatsapp.replace('+', '')}?text=${text}`, '_blank');
   };
 
   // Share helper
@@ -359,7 +412,7 @@ export const StoreDetailsPage = () => {
             <div>
               <div className="flex items-center gap-1.5 mb-1">
                 <Badge className="bg-primary/20 text-primary border-0 text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">
-                  {store.category}
+                  {store.cat || store.category}
                 </Badge>
                 {store.isVerified && <CheckCircle2 className="w-4 h-4 text-blue-400 fill-blue-400/20" />}
                 <Badge className={`${store.availability ? 'bg-emerald-500' : 'bg-rose-500'} text-white border-0 text-[9px] font-bold px-2 rounded-full`}>
@@ -367,10 +420,12 @@ export const StoreDetailsPage = () => {
                 </Badge>
               </div>
               <h1 className="text-xl md:text-2xl font-extrabold text-white">{store.store}</h1>
-              <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                {store.address}
-              </p>
+              {(store.address || (store as any).location || (store as any).locationName || (store as any).loc || (store as any).addressLoc || (store as any).specificaddress) && (
+                <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>{store.address || (store as any).location || (store as any).locationName || (store as any).loc || (store as any).addressLoc || (store as any).specificaddress}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -383,21 +438,7 @@ export const StoreDetailsPage = () => {
       </div>
 
       {/* Trust contact HUD bar */}
-      <div className="grid grid-cols-4 gap-2 mb-8 bg-muted border border-border p-2 rounded-2xl">
-        <button 
-          onClick={triggerWhatsApp}
-          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-emerald-600 dark:text-emerald-550 transition-all cursor-pointer font-bold text-xs"
-        >
-          <MessageSquare className="w-5 h-5 mb-1" />
-          WhatsApp
-        </button>
-        <a 
-          href={`tel:${store.phone}`}
-          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-indigo-600 dark:text-indigo-550 transition-all cursor-pointer font-bold text-xs"
-        >
-          <Phone className="w-5 h-5 mb-1" />
-          Call Phone
-        </a>
+      <div className="grid grid-cols-2 gap-2 mb-8 bg-muted border border-border p-2 rounded-2xl">
         <button 
           onClick={handleShare}
           className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-accent text-slate-655 dark:text-slate-300 transition-all cursor-pointer font-bold text-xs"
