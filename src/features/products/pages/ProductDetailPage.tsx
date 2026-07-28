@@ -458,8 +458,51 @@ export const ProductDetailPage = () => {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="rounded-xl font-bold">Visit Store</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="rounded-xl font-bold"
+                  onClick={() => navigate(`/stores/${displayProduct.storeId}`)}
+                >
+                  Visit Store
+                </Button>
               </div>
+
+              {/* Theme-Aware Store Location Map */}
+              {(() => {
+                const prodLat = (displayProduct as any)?.location?.lat ?? (displayProduct as any)?.lat ?? (displayProduct as any)?.latitude ?? -6.1630;
+                const prodLng = (displayProduct as any)?.location?.lng ?? (displayProduct as any)?.lng ?? (displayProduct as any)?.longitude ?? 35.7516;
+                
+                return (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-extrabold text-sm flex items-center gap-1.5 text-foreground">
+                        <MapPin className="w-4 h-4 text-emerald-500" />
+                        Store Location Map
+                      </h3>
+                      <button
+                        onClick={() => navigate(`/stores/${displayProduct.storeId}`)}
+                        className="text-xs font-bold text-primary hover:underline"
+                      >
+                        View Store Details
+                      </button>
+                    </div>
+
+                    <div className="h-44 relative overflow-hidden border border-border bg-card shadow-sm rounded-2xl">
+                      <iframe
+                        title={`Map - ${displayProduct.store}`}
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        allowFullScreen
+                        src={`https://maps.google.com/maps?q=${prodLat},${prodLng}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                        className="w-full h-full border-0 rounded-2xl dark:invert dark:contrast-125 dark:hue-rotate-180 dark:brightness-90 transition-all duration-300"
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="w-full h-px bg-border/50" />
 

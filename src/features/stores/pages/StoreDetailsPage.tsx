@@ -14,7 +14,7 @@ import {
   ArrowLeft, Star, Clock, MapPin, Phone, 
   MessageSquare, Share2, Heart, Search, Plus, 
   CheckCircle2, Compass, Percent, Image, AlertTriangle,
-  ShoppingBag, ArrowRight, Trash2
+  ShoppingBag, ArrowRight, Trash2, ExternalLink, Navigation, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
@@ -22,6 +22,7 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
+import { locationService } from '../../location/services/locationService';
 
 export const StoreDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +35,8 @@ export const StoreDetailsPage = () => {
   const [activeTab, setActiveTab] = useState<'menu' | 'hours' | 'reviews' | 'gallery'>('menu');
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductCategory, setSelectedProductCategory] = useState<string | null>(null);
+  const [geocodedAddress, setGeocodedAddress] = useState<string | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   
   // Local persistence for favorites
   const [isFavorite, setIsFavorite] = useState(() => {
@@ -85,6 +88,32 @@ export const StoreDetailsPage = () => {
   const store = routeStoreData || dbStore || storeService.getMockStores().find((s) => s.id === id);
   const targetStoreName = (store?.name || store?.store || '').toLowerCase().trim();
   const targetStoreId = (id || store?.id || '').toLowerCase().trim();
+
+  const storeLat = store?.location?.lat ?? (store as any)?.lat ?? (store as any)?.latitude ?? -6.1630;
+  const storeLng = store?.location?.lng ?? (store as any)?.lng ?? (store as any)?.longitude ?? 35.7516;
+
+  // Reverse geocode store coordinates to get official street address from Google / Geocoding provider
+  useEffect(() => {
+    if (!store || !storeLat || !storeLng) return;
+    let isMounted = true;
+    setIsGeocoding(true);
+
+    locationService.reverseGeocode(storeLat, storeLng)
+      .then((resAddress) => {
+        if (isMounted) {
+          setGeocodedAddress(resAddress);
+          setIsGeocoding(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Reverse geocoding error:', err);
+        if (isMounted) setIsGeocoding(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [storeLat, storeLng, store?.id]);
 
   // Combine items from foods, products, cloths collections where store === opened store
   const allCollectionDocs = [
@@ -139,7 +168,7 @@ export const StoreDetailsPage = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Grid System
-      ctx.strokeStyle = '#f8fafc';
+      ctx.strokeStyle = '#f1f5f9';
       ctx.lineWidth = 1;
       const gridSize = 30;
       for (let x = 0; x < canvas.width; x += gridSize) {
@@ -156,8 +185,8 @@ export const StoreDetailsPage = () => {
       }
 
       // Streets vectors
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 12;
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 10;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(0, canvas.height / 2);
@@ -166,27 +195,30 @@ export const StoreDetailsPage = () => {
       ctx.lineTo(canvas.width / 2, canvas.height);
       ctx.stroke();
 
-      // Pulsing Pin
+      // Pulsing Pin Beacon
       angle += 0.05;
       const center = { x: canvas.width / 2, y: canvas.height / 2 };
-      const pulseRad = 15 + Math.sin(angle) * 5;
+      const pulseRad = 16 + Math.sin(angle) * 6;
 
       ctx.beginPath();
       ctx.arc(center.x, center.y, pulseRad, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(79, 70, 229, 0.15)';
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(center.x, center.y, 8, 0, Math.PI * 2);
-      ctx.fillStyle = '#4f46e5';
+      ctx.arc(center.x, center.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#10b981';
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillStyle = '#1e293b';
-      ctx.fillText(store.store, center.x - 45, center.y - 18);
+      // Marker Tooltip Box
+      const storeName = store.store || 'Store Location';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.fillText(`📍 ${storeName}`, center.x, center.y - 20);
 
       animationId = requestAnimationFrame(drawSingleMap);
     };
@@ -420,12 +452,6 @@ export const StoreDetailsPage = () => {
                 </Badge>
               </div>
               <h1 className="text-xl md:text-2xl font-extrabold text-white">{store.store}</h1>
-              {(store.address || (store as any).location || (store as any).locationName || (store as any).loc || (store as any).addressLoc || (store as any).specificaddress) && (
-                <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>{store.address || (store as any).location || (store as any).locationName || (store as any).loc || (store as any).addressLoc || (store as any).specificaddress}</span>
-                </p>
-              )}
             </div>
           </div>
 
@@ -438,19 +464,19 @@ export const StoreDetailsPage = () => {
       </div>
 
       {/* Trust contact HUD bar */}
-      <div className="grid grid-cols-2 gap-2 mb-8 bg-muted border border-border p-2 rounded-2xl">
+      <div className="grid grid-cols-2 gap-2 mb-8 bg-muted/60 border border-border p-2 rounded-2xl">
         <button 
           onClick={handleShare}
-          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-accent text-slate-655 dark:text-slate-300 transition-all cursor-pointer font-bold text-xs"
+          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-card text-foreground transition-all cursor-pointer font-bold text-xs shadow-xs"
         >
-          <Share2 className="w-5 h-5 mb-1" />
+          <Share2 className="w-5 h-5 mb-1 text-primary" />
           Share Shop
         </button>
         <button 
           onClick={handleToggleFavorite}
-          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-red-655 dark:text-red-500 transition-all cursor-pointer font-bold text-xs"
+          className="flex flex-col items-center justify-center py-2.5 rounded-xl hover:bg-card text-foreground transition-all cursor-pointer font-bold text-xs shadow-xs"
         >
-          <Heart className={`w-5 h-5 mb-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+          <Heart className={`w-5 h-5 mb-1 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground'}`} />
           Favorite
         </button>
       </div>
@@ -464,7 +490,7 @@ export const StoreDetailsPage = () => {
             className={`pb-3 font-semibold text-sm capitalize whitespace-nowrap relative transition-all ${
               activeTab === tab 
                 ? 'text-primary' 
-                : 'text-muted-foreground hover:text-slate-850 dark:text-slate-400'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {tab === 'menu' ? 'Services & items' : tab === 'hours' ? 'About & Map' : tab}
@@ -590,44 +616,110 @@ export const StoreDetailsPage = () => {
         )}
 
         {/* Hours & Operational Map tab */}
-        {activeTab === 'hours' && (
-          <div className="space-y-6">
-            <Card className="h-60 relative overflow-hidden border border-border bg-card shadow-md rounded-2xl flex">
-              <canvas ref={canvasRef} className="flex-1 w-full" />
-            </Card>
+        {activeTab === 'hours' && (() => {
+          const displayAddress = store.address || (store as any).location || (store as any).locationName || (store as any).loc || (store as any).addressLoc || (store as any).specificaddress || 'Dodoma, Tanzania';
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-5 border border-border shadow-sm bg-card">
-                <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
-                  <Clock className="w-4 h-4 text-primary" />
-                  Opening Hours
-                </h3>
-                <div className="space-y-2 text-xs">
-                  {(store.hours || []).map((h, i) => (
-                    <div key={i} className="flex justify-between">
-                      <span className="text-muted-foreground">{h.days}</span>
-                      <span className="font-semibold text-foreground">{h.hours}</span>
-                    </div>
-                  ))}
+          return (
+            <div className="space-y-6">
+              {/* Actual Google Map with Theme Matching (Light & Dark modes) */}
+              <Card className="h-72 relative overflow-hidden border border-border bg-card shadow-md rounded-2xl flex flex-col justify-between group">
+                <iframe
+                  title={`Google Map - ${store.store}`}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  src={`https://maps.google.com/maps?q=${storeLat},${storeLng}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  className="w-full h-full border-0 rounded-2xl dark:invert dark:contrast-125 dark:hue-rotate-180 dark:brightness-90 transition-all duration-300"
+                />
+
+                {/* Google Maps Overlay Header Pill */}
+                <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap justify-between items-center gap-2 pointer-events-none">
+                  <div className="bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-border shadow-sm flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-emerald-500 shrink-0 animate-bounce" />
+                    <span className="text-xs font-bold text-foreground truncate max-w-[200px] sm:max-w-xs">
+                      {store.store}
+                    </span>
+                  </div>
+
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${storeLat},${storeLng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pointer-events-auto bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 text-xs font-extrabold transition-all scale-100 hover:scale-105"
+                  >
+                    <span>Open in Google Maps</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
                 </div>
               </Card>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Location Card */}
+                <Card className="p-5 border border-border shadow-sm bg-card space-y-4">
+                  <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider border-b border-border pb-2">
+                    <MapPin className="w-4 h-4 text-emerald-500" />
+                    Store Location
+                  </h3>
+                  
+                  <div className="space-y-3.5 text-xs">
+                    {/* Reverse Geocoded Street Address from Google / Geocoding */}
+                    <div>
+                      <span className="text-primary block text-[10px] font-extrabold uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <Navigation className="w-3 h-3" />
+                        Street Address (Google Geocoded)
+                      </span>
+                      <div className="font-bold text-foreground text-sm flex items-center gap-2 bg-muted/50 p-3.5 rounded-xl border border-border">
+                        {isGeocoding ? (
+                          <span className="text-muted-foreground animate-pulse flex items-center gap-2 text-xs font-normal">
+                            <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                            Fetching street address from Google...
+                          </span>
+                        ) : (
+                          <>
+                            <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span>{geocodedAddress || displayAddress}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Opening Hours Card */}
+                <Card className="p-5 border border-border shadow-sm bg-card">
+                  <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">
+                    <Clock className="w-4 h-4 text-primary" />
+                    Opening Hours
+                  </h3>
+                  <div className="space-y-2 text-xs">
+                    {(store.hours && store.hours.length > 0 ? store.hours : [
+                      { days: 'Monday - Friday', hours: '8:00 AM - 8:00 PM' },
+                      { days: 'Saturday - Sunday', hours: '9:00 AM - 6:00 PM' }
+                    ]).map((h, i) => (
+                      <div key={i} className="flex justify-between border-b border-border/40 pb-1.5 last:border-0">
+                        <span className="text-muted-foreground font-medium">{h.days}</span>
+                        <span className="font-bold text-foreground">{h.hours}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Store Description Card */}
               <Card className="p-5 border border-border shadow-sm bg-card">
-                <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
-                  <Compass className="w-4 h-4 text-primary animate-pulse" />
+                <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-3 border-b border-border pb-2">
+                  <Compass className="w-4 h-4 text-primary" />
                   Store Description
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {store.description}
+                  {store.description || 'Welcome to our store. We offer top quality products and fast delivery services.'}
                 </p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <MapPin className="w-4 h-4 text-emerald-500" />
-                  <span>{store.address}</span>
-                </div>
               </Card>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Reviews tab */}
         {activeTab === 'reviews' && (

@@ -52,28 +52,40 @@ class LocationService {
    */
   async reverseGeocode(lat: number, lng: number): Promise<string> {
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
-        headers: {
-          'Accept-Language': 'en'
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'en'
+          }
         }
-      });
+      );
       
       if (!response.ok) throw new Error('Geocoding failed');
       
       const data = await response.json();
       
+      if (data && data.address) {
+        const addr = data.address;
+        const road = addr.road || addr.street || addr.pedestrian || addr.residential || addr.suburb || addr.neighbourhood || addr.building;
+        const city = addr.city || addr.town || addr.municipality || addr.county || addr.state;
+        const country = addr.country || 'Tanzania';
+
+        if (road && city) {
+          return `${road}, ${city}, ${country}`;
+        }
+      }
+
       if (data && data.display_name) {
-        // Return a slightly simplified version of the address if possible
         const addressParts = data.display_name.split(', ');
         if (addressParts.length > 3) {
-           return addressParts.slice(0, 3).join(', ');
+          return addressParts.slice(0, 3).join(', ');
         }
         return data.display_name;
       }
       return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     } catch (error) {
       console.error('Reverse geocoding error:', error);
-      // Fallback if API fails
       return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     }
   }
