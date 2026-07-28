@@ -18,12 +18,29 @@ export const useOrderListRealtime = () => {
     }
 
     setIsLoading(true);
-    const unsubscribe = orderService.subscribeToUserOrders(user.id, (fetchedOrders) => {
-      setOrders(fetchedOrders);
+    // Safety fallback timer so loading state never hangs indefinitely
+    const timer = setTimeout(() => {
       setIsLoading(false);
-    });
+    }, 4000);
 
-    return () => unsubscribe();
+    const unsubscribe = orderService.subscribeToUserOrders(
+      user.id,
+      (fetchedOrders) => {
+        clearTimeout(timer);
+        setOrders(fetchedOrders);
+        setIsLoading(false);
+      },
+      (err) => {
+        clearTimeout(timer);
+        setError(err);
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, [user?.id]);
 
   return { orders, isLoading, error };

@@ -18,11 +18,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
 const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; activeBg: string }> = {
-  Food:       { emoji: '🍽️', color: 'text-orange-500', bg: 'bg-orange-500/10 border-orange-500/20', activeBg: 'bg-orange-500 text-white' },
-  Laundry:    { emoji: '🧺', color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', activeBg: 'bg-sky-500 text-white' },
+  Food: { emoji: '🍽️', color: 'text-orange-500', bg: 'bg-orange-500/10 border-orange-500/20', activeBg: 'bg-orange-500 text-white' },
+  Laundry: { emoji: '🧺', color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', activeBg: 'bg-sky-500 text-white' },
   Electrical: { emoji: '⚡', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', activeBg: 'bg-amber-500 text-white' },
-  Beauty:     { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white' },
-  Rides:      { emoji: '🚗', color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/20', activeBg: 'bg-indigo-500 text-white' },
+  Beauty: { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white' },
 };
 
 const getCategoryConfig = (store: Store) => {
@@ -38,8 +37,6 @@ const getCategoryConfig = (store: Store) => {
     matchedConfig = CAT_CONFIG.Electrical || { emoji: '⚡', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', activeBg: 'bg-amber-500 text-white' };
   } else if (rawCat.includes('beaut') || rawCat.includes('salon') || rawCat.includes('barber') || rawCat.includes('spa')) {
     matchedConfig = CAT_CONFIG.Beauty || { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white' };
-  } else if (rawCat.includes('ride') || rawCat.includes('car') || rawCat.includes('taxi') || rawCat.includes('transport')) {
-    matchedConfig = CAT_CONFIG.Rides || { emoji: '🚗', color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/20', activeBg: 'bg-indigo-500 text-white' };
   } else if (rawCat.includes('prod') || rawCat.includes('shop') || rawCat.includes('store') || rawCat.includes('groc') || rawCat.includes('market')) {
     matchedConfig = { emoji: '🛍️', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', activeBg: 'bg-emerald-500 text-white' };
   } else if (rawCat.includes('pharm') || rawCat.includes('health') || rawCat.includes('med')) {
@@ -57,7 +54,31 @@ const getCategoryConfig = (store: Store) => {
   return matchedConfig;
 };
 
-const CATEGORIES = ['Food', 'Laundry', 'Electrical', 'Beauty', 'Rides'];
+const getCategoryBadgeConfig = (catName: string) => {
+  if (CAT_CONFIG[catName]) return { ...CAT_CONFIG[catName], Icon: StoreIcon };
+  const rawCat = catName.toLowerCase().trim();
+  if (rawCat.includes('laund') || rawCat.includes('clean') || rawCat.includes('nguo') || rawCat.includes('wash')) {
+    return { emoji: '🧺', color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', activeBg: 'bg-sky-500 text-white', Icon: Shirt };
+  }
+  if (rawCat.includes('elect') || rawCat.includes('gadget') || rawCat.includes('tech')) {
+    return { emoji: '⚡', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', activeBg: 'bg-amber-500 text-white', Icon: Zap };
+  }
+  if (rawCat.includes('beaut') || rawCat.includes('salon') || rawCat.includes('barber') || rawCat.includes('spa')) {
+    return { emoji: '💅', color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', activeBg: 'bg-pink-500 text-white', Icon: Sparkles };
+  }
+  if (rawCat.includes('prod') || rawCat.includes('shop') || rawCat.includes('store') || rawCat.includes('groc') || rawCat.includes('market')) {
+    return { emoji: '🛍️', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', activeBg: 'bg-emerald-500 text-white', Icon: ShoppingBag };
+  }
+  if (rawCat.includes('pharm') || rawCat.includes('health') || rawCat.includes('med')) {
+    return { emoji: '💊', color: 'text-red-500', bg: 'bg-red-500/10 border-red-500/20', activeBg: 'bg-red-500 text-white', Icon: StoreIcon };
+  }
+  if (rawCat.includes('food') || rawCat.includes('restaur')) {
+    return { emoji: '🍽️', color: 'text-orange-500', bg: 'bg-orange-500/10 border-orange-500/20', activeBg: 'bg-orange-500 text-white', Icon: Utensils };
+  }
+  return { emoji: '🏪', color: 'text-primary', bg: 'bg-primary/10 border-primary/20', activeBg: 'bg-primary text-white', Icon: StoreIcon };
+};
+
+const CATEGORIES = ['Food', 'Laundry', 'Electrical', 'Beauty'];
 
 const HUBS = [
   { label: 'Kisasa', lat: -6.1630, lng: 35.7516 },
@@ -109,9 +130,8 @@ const StoreGridCard = ({
 
           {/* Status & Fav Row */}
           <div className="absolute top-3 inset-x-3 flex justify-between items-start">
-            <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md ${
-              store.availability ? 'bg-success/90 text-primary-foreground' : 'bg-black/50 text-white'
-            }`}>
+            <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md ${store.availability ? 'bg-success/90 text-primary-foreground' : 'bg-black/50 text-white'
+              }`}>
               {store.availability ? 'Open Now' : 'Closed'}
             </span>
             <button
@@ -125,7 +145,7 @@ const StoreGridCard = ({
           {/* Bottom Row on Image */}
           <div className="absolute bottom-3 inset-x-3 flex justify-between items-end gap-2">
             <div className={`flex items-center gap-1 ${cfg.bg} border px-2 py-1 rounded-full bg-background/95 backdrop-blur shadow-sm max-w-[120px] shrink min-w-0`}>
-              <span className="text-xs shrink-0">{cfg.emoji}</span>
+              {/* <span className="text-xs shrink-0">{cfg.emoji}</span> */}
               <span className={`text-[9px] font-extrabold uppercase tracking-wider ${cfg.color} truncate whitespace-nowrap`}>{displayCat}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm shrink-0">
@@ -293,6 +313,24 @@ export const StoreListingPage = () => {
 
   const allStores = storesData?.data || [];
 
+  // Extract dynamic categories from foodStores documents based on "cat" (and category) field
+  const dynamicCategories = React.useMemo(() => {
+    const catsSet = new Set<string>();
+    allStores.forEach((s) => {
+      const docCat = (s as any).cat || s.category;
+      if (docCat && typeof docCat === 'string' && docCat.trim()) {
+        const trimmed = docCat.trim();
+        if (trimmed.toLowerCase() !== 'nguo') {
+          catsSet.add(trimmed);
+        }
+      }
+    });
+    if (catsSet.size === 0) {
+      CATEGORIES.filter(c => c.toLowerCase() !== 'nguo').forEach(c => catsSet.add(c));
+    }
+    return Array.from(catsSet);
+  }, [allStores]);
+
   const processedStores = allStores
     .map((s) => ({
       ...s,
@@ -303,23 +341,28 @@ export const StoreListingPage = () => {
     .filter((s) => {
       // Hard filter: hide completely unavailable stores
       if (s.availability === false) return false;
-      
+
       // Filter by delivery fee <= 10000 to ensure reasonable distance
       if (currentLocation && s.location) {
         const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
         if (fee > 10000) return false;
       }
 
-      if (selectedCategory && s.category !== selectedCategory) return false;
+      if (selectedCategory) {
+        const storeCat = ((s as any).cat || s.category || '').toLowerCase().trim();
+        const selectedCatLower = selectedCategory.toLowerCase().trim();
+        if (storeCat !== selectedCatLower) return false;
+      }
       if (onlyOpen && !s.availability) return false;
       if (onlyVerified && !s.isVerified) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
+        const storeCat = ((s as any).cat || s.category || '').toLowerCase();
         return (
           s.store.toLowerCase().includes(q) ||
           s.description.toLowerCase().includes(q) ||
           s.address.toLowerCase().includes(q) ||
-          s.category.toLowerCase().includes(q)
+          storeCat.includes(q)
         );
       }
       return true;
@@ -328,14 +371,14 @@ export const StoreListingPage = () => {
       if (sortBy === 'rating') {
         const ratingDiff = (b.rating || 0) - (a.rating || 0);
         if (ratingDiff !== 0) return ratingDiff;
-        
+
         // Secondary sort: time (descending)
         const timeA = (a as any).time || (a as any).createdAt || '';
         const timeB = (b as any).time || (b as any).createdAt || '';
         if (timeA && timeB) return timeB.localeCompare(timeA);
         if (timeB) return 1;
         if (timeA) return -1;
-        
+
         return 0;
       }
       if (sortBy === 'popular') return (b.reviewCount || 0) - (a.reviewCount || 0);
@@ -359,7 +402,7 @@ export const StoreListingPage = () => {
         {/* ── LEFT SIDEBAR (FILTERS & NAVIGATION) ── */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
           <div className="space-y-8">
-            
+
             {/* Category Navigation */}
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -371,29 +414,27 @@ export const StoreListingPage = () => {
               <div className="space-y-1.5">
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${
-                    !selectedCategory ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${!selectedCategory ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
                 >
-                  <span className="w-6 text-center">🏪</span>
+                  <span className="text-base w-6 text-center shrink-0">🏪</span>
                   All Providers
                 </button>
-                {CATEGORIES.map((cat) => {
+                {dynamicCategories.map((cat) => {
                   const isActive = selectedCategory === cat;
-                  const cfg = CAT_CONFIG[cat];
+                  const cfg = getCategoryBadgeConfig(cat);
                   return (
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(isActive ? null : cat)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border ${
-                        isActive
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border ${isActive
                           ? `${cfg.activeBg} border-transparent shadow-sm`
                           : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
-                      }`}
+                        }`}
                     >
-                      <span className="w-6 text-center">{cfg.emoji}</span>
+                      <span className="text-base w-6 text-center shrink-0">{cfg.emoji || '🏪'}</span>
                       {cat}
-                      {isActive && <CheckCircle2 className="w-4 h-4 ml-auto" />}
+                      {isActive && <CheckCircle2 className="w-4 h-4 ml-auto shrink-0" />}
                     </button>
                   );
                 })}
@@ -408,9 +449,8 @@ export const StoreListingPage = () => {
                   <button
                     key={h.label}
                     onClick={() => setActiveHub(i)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${
-                      activeHub === i ? 'bg-success text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${activeHub === i ? 'bg-success text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
                   >
                     <Navigation className="w-4 h-4" />
                     {h.label}
@@ -482,11 +522,10 @@ export const StoreListingPage = () => {
             {/* Mobile Filter button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`lg:hidden relative flex items-center gap-1.5 px-4 py-3 rounded-xl border font-bold text-xs transition-all ${
-                showFilters || activeFiltersCount > 0
+              className={`lg:hidden relative flex items-center gap-1.5 px-4 py-3 rounded-xl border font-bold text-xs transition-all ${showFilters || activeFiltersCount > 0
                   ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                   : 'bg-card border-border text-foreground hover:border-primary/30 shadow-sm'
-              }`}
+                }`}
             >
               <SlidersHorizontal className="w-4 h-4" />
               Filters
@@ -518,28 +557,27 @@ export const StoreListingPage = () => {
           <div className="lg:hidden flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`shrink-0 px-4 py-2 rounded-full text-[11px] font-extrabold border transition-all ${
-                !selectedCategory
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all ${!selectedCategory
                   ? 'bg-primary text-primary-foreground border-primary shadow-md'
                   : 'bg-card border-border text-muted-foreground hover:border-primary/30'
-              }`}
+                }`}
             >
-              🏪 All
+              <span className="text-xs shrink-0">🏪</span>
+              All
             </button>
-            {CATEGORIES.map((cat) => {
-              const cfg = CAT_CONFIG[cat];
+            {dynamicCategories.map((cat) => {
+              const cfg = getCategoryBadgeConfig(cat);
               const isActive = selectedCategory === cat;
               return (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(isActive ? null : cat)}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all max-w-[130px] whitespace-nowrap ${
-                    isActive
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all max-w-[130px] whitespace-nowrap ${isActive
                       ? `${cfg.activeBg} border-transparent shadow-md`
                       : `bg-card border-border ${cfg.color} hover:border-primary/30`
-                  }`}
+                    }`}
                 >
-                  <span className="shrink-0">{cfg.emoji}</span>
+                  <span className="text-xs shrink-0">{cfg.emoji || '🏪'}</span>
                   <span className="truncate">{cat}</span>
                 </button>
               );
@@ -558,11 +596,10 @@ export const StoreListingPage = () => {
                 <button
                   key={value}
                   onClick={() => setSortBy(value as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shadow-sm ${
-                    sortBy === value
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shadow-sm ${sortBy === value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-card border-border text-muted-foreground hover:border-primary/30'
-                  }`}
+                    }`}
                 >
                   {label}
                 </button>
@@ -589,7 +626,7 @@ export const StoreListingPage = () => {
                       </button>
                     )}
                   </div>
-                  
+
                   {/* Toggles */}
                   <div className="flex flex-wrap gap-3">
                     {[
@@ -616,11 +653,10 @@ export const StoreListingPage = () => {
                         <button
                           key={h.label}
                           onClick={() => setActiveHub(i)}
-                          className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold border transition-all ${
-                            activeHub === i
+                          className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold border transition-all ${activeHub === i
                               ? 'bg-success text-primary-foreground border-success'
                               : 'bg-muted border-border text-muted-foreground'
-                          }`}
+                            }`}
                         >
                           {h.label}
                         </button>
@@ -699,7 +735,7 @@ export const StoreListingPage = () => {
         {/* ── RIGHT SIDEBAR (WIDGETS) ── */}
         <div className="hidden xl:block flex-none w-[320px] shrink-0 border-l border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
           <div className="space-y-6">
-            
+
             {/* QUICK ACTION CARDS */}
             <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
               <h2 className="text-sm font-extrabold text-foreground mb-4 uppercase tracking-wider">Quick Actions</h2>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { ImageViewerModal } from './ImageViewerModal';
 
 interface ImageGalleryProps {
   images: string[];
@@ -17,6 +18,7 @@ export const ImageGallery = ({
 }: ImageGalleryProps) => {
   const [internalIndex, setInternalIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const currentIndex = selectedIndex !== undefined ? selectedIndex : internalIndex;
 
@@ -69,7 +71,10 @@ export const ImageGallery = ({
   return (
     <div className="relative w-full flex flex-col gap-4">
       {/* Main Image Slider */}
-      <div className="relative w-full aspect-square overflow-hidden bg-muted md:rounded-2xl shadow-sm border border-border/50 group">
+      <div 
+        onClick={() => setIsViewerOpen(true)}
+        className="relative w-full aspect-square overflow-hidden bg-muted md:rounded-2xl shadow-sm border border-border/50 group cursor-pointer"
+      >
         
         {/* Image Counter Overlay Badge (e.g. 3/4, 1/19) */}
         {images.length > 0 && (
@@ -77,6 +82,18 @@ export const ImageGallery = ({
             {currentIndex + 1}/{images.length}
           </div>
         )}
+
+        {/* Fullscreen Expand Icon Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsViewerOpen(true);
+          }}
+          className="absolute bottom-3 right-3 z-10 p-2.5 rounded-full bg-black/60 backdrop-blur-md text-white shadow-md hover:bg-black/80 hover:scale-110 active:scale-95 transition-all opacity-80 group-hover:opacity-100 border border-white/20 cursor-pointer"
+          title="Open Fullscreen Viewer"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </button>
 
         <AnimatePresence initial={false} custom={direction}>
           <motion.img
@@ -112,7 +129,7 @@ export const ImageGallery = ({
         {images.length > 1 && (
           <>
             <button
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/90 dark:bg-black/80 backdrop-blur-md text-foreground shadow-md hover:scale-110 active:scale-95 transition-all opacity-80 group-hover:opacity-100"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/90 dark:bg-black/80 backdrop-blur-md text-foreground shadow-md hover:scale-110 active:scale-95 transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -123,7 +140,7 @@ export const ImageGallery = ({
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/90 dark:bg-black/80 backdrop-blur-md text-foreground shadow-md hover:scale-110 active:scale-95 transition-all opacity-80 group-hover:opacity-100"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/90 dark:bg-black/80 backdrop-blur-md text-foreground shadow-md hover:scale-110 active:scale-95 transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -144,7 +161,7 @@ export const ImageGallery = ({
             <button
               key={idx}
               onClick={() => handleSelect(idx)}
-              className={`relative shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 transition-all shadow-sm ${
+              className={`relative shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 transition-all shadow-sm cursor-pointer ${
                 currentIndex === idx 
                   ? 'border-primary ring-2 ring-primary/40 scale-105 opacity-100' 
                   : 'border-transparent opacity-60 hover:opacity-100 hover:border-border'
@@ -155,6 +172,15 @@ export const ImageGallery = ({
           ))}
         </div>
       )}
+
+      {/* Fullscreen Image Viewer Modal */}
+      <ImageViewerModal
+        isOpen={isViewerOpen}
+        images={images}
+        initialIndex={currentIndex}
+        onClose={() => setIsViewerOpen(false)}
+        title={altPrefix}
+      />
     </div>
   );
 };

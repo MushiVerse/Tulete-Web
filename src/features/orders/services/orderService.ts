@@ -118,22 +118,53 @@ class OrderService extends BaseFirestoreService<Order> {
   /**
    * Subscribe to real-time updates for user orders list
    */
-  subscribeToUserOrders(userId: string, callback: (orders: Order[]) => void): () => void {
+  subscribeToUserOrders(
+    userId: string,
+    callback: (orders: Order[]) => void,
+    onError?: (error: Error) => void
+  ): () => void {
     const q = query(
       collection(db, 'orders'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
 
-    return onSnapshot(q, (snapshot) => {
+    let unsubFallback: (() => void) | null = null;
+
+    const unsubscribePrimary = onSnapshot(q, (snapshot) => {
       const orders = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
       })) as Order[];
       callback(orders);
     }, (error) => {
-      console.error(`Error subscribing to user orders for ${userId}:`, error);
+      console.warn(`Primary subscription to user orders failed, trying fallback without orderBy:`, error);
+      const fallbackQuery = query(
+        collection(db, 'orders'),
+        where('userId', '==', userId)
+      );
+      unsubFallback = onSnapshot(fallbackQuery, (snapshot) => {
+        const orders = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        })) as Order[];
+        orders.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        callback(orders);
+      }, (fallbackError) => {
+        console.error(`Fallback error subscribing to user orders:`, fallbackError);
+        if (onError) onError(fallbackError);
+        else callback([]);
+      });
     });
+
+    return () => {
+      unsubscribePrimary();
+      if (unsubFallback) unsubFallback();
+    };
   }
 
   /**

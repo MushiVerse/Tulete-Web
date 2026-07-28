@@ -220,21 +220,39 @@ export const OrdersPage = () => {
             </Card>
           ))}
         </div>
-      ) : filteredOrders.length === 0 ? (
-        /* Empty State */
+      ) : orders.length === 0 ? (
+        /* No Order yet component */
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center py-16 px-4 bg-muted rounded-2xl border border-border"
+          className="text-center py-20 px-6 bg-card rounded-3xl border border-border shadow-sm my-4"
+        >
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5 text-primary">
+            <ShoppingBag className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-foreground mb-2">No Order yet</h2>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8 leading-relaxed">
+            You haven't placed any orders yet. Discover top local stores and services around you and get started today!
+          </p>
+          <Button onClick={() => navigate('/stores')} size="lg" className="rounded-full px-8 font-extrabold shadow-md hover:shadow-lg">
+            Discover Stores <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </motion.div>
+      ) : filteredOrders.length === 0 ? (
+        /* Empty Tab / Search State */
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-16 px-4 bg-muted/50 rounded-2xl border border-border"
         >
           <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShoppingBag className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="text-lg font-bold text-foreground mb-1">No Orders Found</h3>
           <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-6">
-            We couldn't find any orders in the "{activeTab}" tab. Let's make your first request today!
+            We couldn't find any orders in the "{activeTab}" tab.
           </p>
-          <Button onClick={() => navigate('/explore')}>Discover Stores</Button>
+          <Button onClick={() => navigate('/stores')}>Discover Stores</Button>
         </motion.div>
       ) : (
         /* Order Cards */
