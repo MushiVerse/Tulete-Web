@@ -202,7 +202,7 @@ export const SettingsPage = () => {
             icon={<Globe className="w-3.5 h-3.5 text-muted-foreground" />}
             label="Currency Display"
             value={prefs.currencyDisplay}
-            options={[{ label: `${APP_SETTINGS.currency} (Kenyan Shilling)`, value: '${APP_SETTINGS.currency}' }, { label: 'USD (US Dollar)', value: 'USD' }]}
+            options={[{ label: `${APP_SETTINGS.currency} (Tanzanian Shilling)`, value: '${APP_SETTINGS.currency}' }, { label: 'USD (US Dollar)', value: 'USD' }]}
             onChange={(v) => setVal('currencyDisplay', v)}
           />
           <SelectRow
@@ -266,7 +266,7 @@ export const SettingsPage = () => {
 
         {/* App version footer */}
         <div className="text-center text-[9px] text-muted-foreground font-bold py-2 uppercase tracking-widest">
-          Tulete App v2.0.0 — Nairobi, Kenya 🇰🇪
+          Tulete App v2.0.0 — Dodoma, Tanzania 🇹🇿
         </div>
       </div>
 

@@ -38,7 +38,7 @@ class FavoriteService extends BaseFirestoreService<FavoriteItem> {
         type: 'store',
         itemId: 's1',
         name: 'Mama Safi Laundry',
-        description: 'Professional laundry, dry cleaning, and fabric care services in Nairobi.',
+        description: 'Professional laundry, dry cleaning, and fabric care services in Dodoma, Tanzania.',
         imageUrl: 'https://images.unsplash.com/photo-1545173168-9f1947eebd01?w=300',
         rating: 4.8,
         reviewCount: 120,

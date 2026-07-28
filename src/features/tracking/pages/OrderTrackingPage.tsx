@@ -310,7 +310,7 @@ export const OrderTrackingPage = () => {
           <Card className="h-[360px] relative overflow-hidden border border-border bg-card shadow-md rounded-2xl flex flex-col">
             <div className="absolute top-4 left-4 z-10 bg-white/95 dark:bg-slate-950/95 shadow-lg border border-border px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-850 dark:text-white">
               <Map className="w-4 h-4 text-primary animate-pulse" />
-              Nairobi Delivery Coordinates Grid
+              Dodoma Delivery Coordinates Grid
             </div>
 
             <canvas ref={canvasRef} className="flex-1 w-full bg-muted cursor-crosshair" />

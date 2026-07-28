@@ -22,8 +22,8 @@ export const LocationPage = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [formTitle, setFormTitle] = useState('');
   const [formAddress, setFormAddress] = useState('');
-  const [formCity, setFormCity] = useState('Nairobi');
-  const [formCoords, setFormCoords] = useState<GeoLocation>({ lat: -1.2915, lng: 36.7900 });
+  const [formCity, setFormCity] = useState('Dodoma');
+  const [formCoords, setFormCoords] = useState<GeoLocation>({ lat: -6.1630, lng: 35.7516 });
   const [formIsDefault, setFormIsDefault] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
 
@@ -52,7 +52,7 @@ export const LocationPage = () => {
 
   // Active address coordinates
   const activeAddress = addressList.find((a) => a.id === selectedAddressId);
-  const activeCenter = activeAddress ? activeAddress.location : (currentLocation || { lat: -1.2915, lng: 36.7900 });
+  const activeCenter = activeAddress ? activeAddress.location : (currentLocation || { lat: -6.1630, lng: 35.7516 });
 
   // Map markers mapping
   const mapMarkers = addressList.map((addr) => ({
@@ -102,7 +102,7 @@ export const LocationPage = () => {
       saveAddress('user_current', {
         title: 'Map Selection Pin',
         addressLine: addrStr,
-        city: 'Nairobi',
+        city: 'Dodoma',
         location: coords,
         isDefault: false
       });
@@ -131,8 +131,8 @@ export const LocationPage = () => {
   // Handle Live Driver Dispatch Simulation Tracker
   const handleStartTrackingDemo = () => {
     if (!activeAddress) return;
-    // Dispatch driver from Kibanda Delight (Nairobi center: -1.2990, 36.8120) to customer's home address!
-    const storeOriginCoords = { lat: -1.3033, lng: 36.7900 }; // Mama Safi / ngong road base
+    // Dispatch driver from Dodoma center to customer's address!
+    const storeOriginCoords = { lat: -6.1700, lng: 35.7400 };
     startDriverSimulation(storeOriginCoords, activeAddress.location);
   };
 
@@ -182,7 +182,7 @@ export const LocationPage = () => {
               </h3>
               
               <span className="text-[10px] text-slate-450 font-bold">
-                {showAddForm ? '🎯 Click map to drop pin coordinates' : '📍 Visualizing Nairobi Saved Hubs'}
+                {showAddForm ? '🎯 Click map to drop pin coordinates' : '📍 Visualizing Dodoma Saved Hubs'}
               </span>
             </div>
 
@@ -278,11 +278,11 @@ export const LocationPage = () => {
 
                   <form onSubmit={handleSubmitAddress} className="space-y-4">
                     <div>
-                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Title (e.g. Office, Safaricom)</label>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Title (e.g. Office, Tulete)</label>
                       <Input
                         value={formTitle}
                         onChange={(e) => setFormTitle(e.target.value)}
-                        placeholder="e.g. Safaricom Office"
+                        placeholder="e.g. Tulete Office"
                         className="text-xs"
                         required
                       />
@@ -293,7 +293,7 @@ export const LocationPage = () => {
                       <Input
                         value={formAddress}
                         onChange={(e) => setFormAddress(e.target.value)}
-                        placeholder="e.g. Suite 4B, Wood Avenue Plaza"
+                        placeholder="e.g. Kisasa Housing Estate, Block B"
                         className="text-xs"
                         required
                       />

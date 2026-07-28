@@ -56,12 +56,12 @@ export const MainLayout = () => {
           },
           (error) => {
             console.error('Auto-location error:', error);
-            // Fallback silently to default location (Nairobi CBD)
+            // Fallback silently to default location (Dodoma, Tanzania)
             setCurrentLocation({
               id: Date.now().toString(),
-              address: 'Nairobi, Kenya (Default)',
-              lat: -1.286389,
-              lng: 36.817223,
+              address: 'Dodoma, Tanzania (Default)',
+              lat: -6.1630,
+              lng: 35.7516,
               specificInstructions: '',
               lastUsedAt: Date.now(),
             });
@@ -72,9 +72,9 @@ export const MainLayout = () => {
         // Fallback for unsupported browsers
         setCurrentLocation({
           id: Date.now().toString(),
-          address: 'Nairobi, Kenya (Default)',
-          lat: -1.286389,
-          lng: 36.817223,
+          address: 'Dodoma, Tanzania (Default)',
+          lat: -6.1630,
+          lng: 35.7516,
           specificInstructions: '',
           lastUsedAt: Date.now(),
         });

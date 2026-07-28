@@ -299,7 +299,7 @@ export const FavoritesPage = () => {
                               </span>
                             ) : (
                               <span className="text-[10px] font-semibold text-emerald-500">
-                                Nairobi Hub Verified
+                                Dodoma Hub Verified
                               </span>
                             )}
 

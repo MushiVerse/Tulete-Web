@@ -45,7 +45,7 @@ import { MiniMapPreview } from '../../location/components/MiniMapPreview';
 import { useJsApiLoader } from '@react-google-maps/api';
 
 // Default mock center if no location is selected
-const DEFAULT_CENTER = { lat: -1.2894, lng: 36.7909, address: 'Nairobi' };
+const DEFAULT_CENTER = { lat: -6.1630, lng: 35.7516, address: 'Dodoma, Tanzania' };
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();

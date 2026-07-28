@@ -48,15 +48,39 @@ export const ProductDetailPage = () => {
   // Fetch specific product using decoded ID
   const { data: product, isLoading, error } = useFirestoreDocument(['product', decodedId || id || ''], productService, decodedId || id || '');
 
-  // Fetch related products (same category)
-  const { data: relatedProducts, isLoading: loadingRelated } = useFirestoreQuery(
-    ['products', 'related', product?.category],
+  // Fetch related products using subSubCat and category matching (following Flutter related.dart logic)
+  const targetSubSubCat = (product as any)?.subSubCat || (product as any)?.subSubCategory || (product as any)?.speccat;
+  const targetCategory = product?.category;
+  const targetStoreId = product?.storeId;
+
+  const { data: subSubCatProducts } = useFirestoreQuery(
+    ['products', 'related-subsub', targetSubSubCat],
     productService,
     { 
-      limit: 4, 
-      filters: product?.category ? [{ field: 'category', operator: '==', value: product.category }] : undefined 
+      limit: 6, 
+      filters: targetSubSubCat ? [{ field: 'subSubCat', operator: '==', value: targetSubSubCat }] : undefined 
     },
-    { enabled: !!product?.category }
+    { enabled: !!targetSubSubCat }
+  );
+
+  const { data: catProducts } = useFirestoreQuery(
+    ['products', 'related-cat', targetCategory],
+    productService,
+    { 
+      limit: 6, 
+      filters: targetCategory ? [{ field: 'category', operator: '==', value: targetCategory }] : undefined 
+    },
+    { enabled: !!targetCategory }
+  );
+
+  const { data: storeProducts } = useFirestoreQuery(
+    ['products', 'related-store', targetStoreId],
+    productService,
+    { 
+      limit: 6, 
+      filters: targetStoreId ? [{ field: 'storeId', operator: '==', value: targetStoreId }] : undefined 
+    },
+    { enabled: !!targetStoreId }
   );
 
   // Compute display product (or fallback) unconditionally
@@ -190,9 +214,36 @@ export const ProductDetailPage = () => {
                     <span>{(displayProduct.rating ?? 0).toFixed(1)}</span>
                     <span className="text-muted-foreground text-xs ml-1">({displayProduct.reviewCount} reviews)</span>
                   </div>
-                  {!displayProduct.availability && (
-                    <Badge variant="destructive" className="font-bold">Out of Stock</Badge>
-                  )}
+                  {(() => {
+                    const qty = typeof (displayProduct as any).quantity === 'number' 
+                      ? (displayProduct as any).quantity 
+                      : (typeof (displayProduct as any).idadi === 'number' ? (displayProduct as any).idadi : undefined);
+
+                    const isSoldOut = qty !== undefined && qty <= 0;
+                    const isUnavailable = displayProduct.availability === false;
+                    const isPurchasable = !isSoldOut && !isUnavailable;
+
+                    let statusBadgeText = '';
+                    let buttonText = 'Add to Cart';
+
+                    if (isSoldOut) {
+                      statusBadgeText = 'Sold Out';
+                      buttonText = 'Sold Out';
+                    } else if (isUnavailable) {
+                      statusBadgeText = 'Unavailable';
+                      buttonText = 'Unavailable';
+                    }
+
+                    return (
+                      <>
+                        {statusBadgeText && (
+                          <Badge variant="destructive" className="font-bold">
+                            {statusBadgeText}
+                          </Badge>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex items-end gap-3 mt-4">
@@ -206,25 +257,45 @@ export const ProductDetailPage = () => {
                   )}
                 </div>
 
-                <Button 
-                  className="w-full md:w-auto mt-6 h-12 px-8 text-base font-extrabold shadow-md rounded-2xl"
-                  disabled={!displayProduct.availability}
-                  onClick={() => {
-                    addToCart({
-                      productId: displayProduct.id,
-                      name: displayProduct.name,
-                      price: displayProduct.price,
-                      imageUrl: displayProduct.imgUrl,
-                      storeId: displayProduct.storeId,
-                      storeName: displayProduct.store,
-                      isLaundry: isLaundryCategory,
-                      location: displayProduct.location,
-                      idadi: displayProduct.idadi
-                    });
-                  }}
-                >
-                  {displayProduct.availability ? 'Add to Cart' : 'Out of Stock'}
-                </Button>
+                {(() => {
+                  const qty = typeof (displayProduct as any).quantity === 'number' 
+                    ? (displayProduct as any).quantity 
+                    : (typeof (displayProduct as any).idadi === 'number' ? (displayProduct as any).idadi : undefined);
+
+                  const isSoldOut = qty !== undefined && qty <= 0;
+                  const isUnavailable = displayProduct.availability === false;
+                  const isPurchasable = !isSoldOut && !isUnavailable;
+
+                  let buttonText = 'Add to Cart';
+                  if (isSoldOut) {
+                    buttonText = 'Sold Out';
+                  } else if (isUnavailable) {
+                    buttonText = 'Unavailable';
+                  }
+
+                  return (
+                    <Button 
+                      className="w-full md:w-auto mt-6 h-12 px-8 text-base font-extrabold shadow-md rounded-2xl disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={!isPurchasable}
+                      onClick={() => {
+                        if (!isPurchasable) return;
+                        addToCart({
+                          productId: displayProduct.id,
+                          name: displayProduct.name,
+                          price: displayProduct.price,
+                          imageUrl: displayProduct.imgUrl,
+                          storeId: displayProduct.storeId,
+                          storeName: displayProduct.store,
+                          isLaundry: isLaundryCategory,
+                          location: displayProduct.location,
+                          idadi: displayProduct.idadi
+                        });
+                      }}
+                    >
+                      {buttonText}
+                    </Button>
+                  );
+                })()}
               </div>
 
               <div className="w-full h-px bg-border/50" />
@@ -258,23 +329,62 @@ export const ProductDetailPage = () => {
             </div>
           </div>
 
-          {/* Related Products */}
-          <div className="mt-8 mb-24 lg:mb-12">
-            <SectionWrapper title="You might also like" actionLink={`/products`}>
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="shrink-0 w-[160px] md:w-[200px] snap-center">
-                  <ProductCard 
-                    product={{
-                      ...displayProduct,
-                      id: `related-${i}`,
-                      name: `Related Product ${i}`,
-                      price: displayProduct.price - (i * 10000)
-                    }} 
-                  />
+          {/* ── DYNAMIC RELATED PRODUCTS (SubSubCat -> SubCat -> Cat Matching) ── */}
+          {(() => {
+            // Safely extract data arrays from useFirestoreQuery result ({ data: Product[], lastDoc: any })
+            const subSubList: any[] = (subSubCatProducts as any)?.data || [];
+            const catList: any[] = (catProducts as any)?.data || [];
+            const storeList: any[] = (storeProducts as any)?.data || [];
+
+            // Filter real Firestore results (excluding current product ID)
+            const realSubSub = subSubList.filter(p => p && p.id !== displayProduct.id);
+            const realCat = catList.filter(p => p && p.id !== displayProduct.id);
+            const realStore = storeList.filter(p => p && p.id !== displayProduct.id);
+
+            // Determine primary list (subSubCat first, then category)
+            const primaryList = realSubSub.length > 0 ? realSubSub : realCat;
+            const primaryTitle = realSubSub.length > 0 && targetSubSubCat
+              ? `Related in ${targetSubSubCat}` 
+              : `More in ${displayProduct.category}`;
+
+            // Mock fallback if primary list is empty
+            const fallbackList = [1, 2, 3, 4].map(i => ({
+              ...displayProduct,
+              id: `related-item-${i}`,
+              name: `${displayProduct.category} Related Item ${i}`,
+              price: Math.max(10000, displayProduct.price - (i * 15000)),
+            }));
+
+            const finalRelatedList = primaryList.length > 0 ? primaryList : fallbackList;
+
+            return (
+              <div className="mt-8 mb-24 lg:mb-12 space-y-10">
+                {/* 1. Related Products Carousel (by subSubCat / Category) */}
+                <div>
+                  <SectionWrapper title={primaryTitle} actionLink="/products">
+                    {finalRelatedList.map((prod) => (
+                      <div key={prod.id} className="shrink-0 w-[170px] md:w-[210px] snap-center">
+                        <ProductCard product={prod} />
+                      </div>
+                    ))}
+                  </SectionWrapper>
                 </div>
-              ))}
-            </SectionWrapper>
-          </div>
+
+                {/* 2. More from Store Carousel */}
+                {realStore.length > 0 && (
+                  <div>
+                    <SectionWrapper title={`More from ${displayProduct.store}`} actionLink={`/explore`}>
+                      {realStore.map((prod) => (
+                        <div key={prod.id} className="shrink-0 w-[170px] md:w-[210px] snap-center">
+                          <ProductCard product={prod} />
+                        </div>
+                      ))}
+                    </SectionWrapper>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── RIGHT SIDEBAR (LIVE CART) ── */}

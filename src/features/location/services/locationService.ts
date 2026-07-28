@@ -103,8 +103,8 @@ class LocationService {
       throw new Error('Address not found');
     } catch (error) {
       console.error('Forward geocoding error:', error);
-      // Fallback to center of Nairobi/Kilimani hub if API fails or address not found
-      return { lat: -1.2920, lng: 36.7910 };
+      // Fallback to center of Dodoma hub if API fails or address not found
+      return { lat: -6.1630, lng: 35.7516 };
     }
   }
 
@@ -132,7 +132,7 @@ class LocationService {
    */
   getTravelDirections(start: GeoLocation, end: GeoLocation): TravelDetails {
     const distanceKm = this.calculateDistance(start, end);
-    // Assume average transit speed of 30km/h in Nairobi traffic
+    // Assume average transit speed of 30km/h in traffic
     const durationMins = Math.round((distanceKm / 30) * 60) + 5; // transit mins + dispatch buffer
 
     // Generate interpolative vector coordinates representing intermediate street turns
@@ -164,19 +164,19 @@ class LocationService {
       {
         id: 'addr_home',
         userId,
-        title: 'Home (Apartment)',
-        addressLine: 'Suite 4B, Wood Avenue Plaza, Wood Avenue',
-        city: 'Kilimani, Nairobi',
-        location: { lat: -1.2915, lng: 36.7900 },
+        title: 'Home (Kisasa)',
+        addressLine: 'Kisasa Housing Estate, Block B',
+        city: 'Dodoma, Tanzania',
+        location: { lat: -6.1630, lng: 35.7516 },
         isDefault: true,
       },
       {
         id: 'addr_office',
         userId,
-        title: 'Safaricom House',
-        addressLine: 'HQ2, Waiyaki Way, Westlands',
-        city: 'Nairobi',
-        location: { lat: -1.2644, lng: 36.8044 },
+        title: 'Central Office',
+        addressLine: 'Central Dodoma Business Plaza',
+        city: 'Dodoma, Tanzania',
+        location: { lat: -6.1700, lng: 35.7400 },
         isDefault: false,
       }
     ];

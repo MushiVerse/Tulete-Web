@@ -30,8 +30,8 @@ interface LocationStore {
 export const useLocationStore = create<LocationStore>()(
   persist(
     (set, get) => ({
-      currentLocation: { lat: -1.2915, lng: 36.7900 }, // Nairobi Kilimani hub default
-      currentAddressString: 'Wood Avenue, Kilimani, Nairobi, Kenya',
+      currentLocation: { lat: -6.1630, lng: 35.7516 }, // Dodoma Tanzania default hub
+      currentAddressString: 'Central Dodoma, Tanzania',
       addressList: [],
       selectedAddressId: null,
       
@@ -41,15 +41,28 @@ export const useLocationStore = create<LocationStore>()(
       isSimulating: false,
 
       initialize: (userId) => {
-        if (get().addressList.length > 0) return;
+        const currentList = get().addressList;
+        const currentAddrStr = get().currentAddressString || '';
+        const hasOldCachedData = currentList.some((a) => 
+          a.city?.toLowerCase().includes('nairobi') || 
+          a.addressLine?.toLowerCase().includes('nairobi') ||
+          a.addressLine?.toLowerCase().includes('kilimani') ||
+          a.addressLine?.toLowerCase().includes('waiyaki') ||
+          a.addressLine?.toLowerCase().includes('wood avenue') ||
+          a.city?.toLowerCase().includes('dar es salaam')
+        ) || currentAddrStr.toLowerCase().includes('nairobi') || currentAddrStr.toLowerCase().includes('kilimani') || currentAddrStr.toLowerCase().includes('dar es salaam');
 
-        const mockAddrs = locationService.getMockAddresses(userId);
-        const defaultAddr = mockAddrs.find((a) => a.isDefault);
-        
-        set({
-          addressList: mockAddrs,
-          selectedAddressId: defaultAddr ? defaultAddr.id : (mockAddrs[0]?.id || null),
-        });
+        if (currentList.length === 0 || hasOldCachedData) {
+          const mockAddrs = locationService.getMockAddresses(userId);
+          const defaultAddr = mockAddrs.find((a) => a.isDefault);
+          
+          set({
+            addressList: mockAddrs,
+            selectedAddressId: defaultAddr ? defaultAddr.id : (mockAddrs[0]?.id || null),
+            currentLocation: { lat: -6.1630, lng: 35.7516 },
+            currentAddressString: 'Central Dodoma, Tanzania',
+          });
+        }
       },
 
       detectCurrentLocation: async () => {
@@ -64,10 +77,10 @@ export const useLocationStore = create<LocationStore>()(
           return pos;
         } catch (error) {
           // Fallback to defaults on blocking permissions
-          const fallbackPos = { lat: -1.2915, lng: 36.7900 };
+          const fallbackPos = { lat: -6.1630, lng: 35.7516 };
           set({
             currentLocation: fallbackPos,
-            currentAddressString: 'Wood Avenue, Kilimani, Nairobi (Default GPS)',
+            currentAddressString: 'Dodoma, Tanzania (Default GPS)',
           });
           return fallbackPos;
         }

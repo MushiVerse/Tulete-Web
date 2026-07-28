@@ -22,7 +22,7 @@ class ReviewService extends BaseFirestoreService<Review> {
   }
 
   /**
-   * Return initial high-fidelity reviews for Nairobi stores & products
+   * Return initial high-fidelity reviews for Dodoma stores & products
    */
   getMockReviews(): Review[] {
     return [
@@ -47,7 +47,7 @@ class ReviewService extends BaseFirestoreService<Review> {
         userName: 'Wanjiku Mwangi',
         userAvatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=WM',
         rating: 4,
-        comment: 'Warm and delicious Chapati combo! Order arrived within 25 minutes near Kilimani. Driver was very polite.',
+        comment: 'Warm and delicious Chapati combo! Order arrived within 25 minutes near Kisasa. Driver was very polite.',
         targetId: 's2', // Kibanda Delight
         targetType: 'store',
         orderId: 'order_1002',

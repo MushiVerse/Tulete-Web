@@ -48,9 +48,9 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     const width = rect.width;
     const height = rect.height;
 
-    // Geographical coordinates bounds centered around Nairobi Kilimani
-    // lat bounds: approx -1.31 to -1.27
-    // lng bounds: approx 36.77 to 36.83
+    // Geographical coordinates bounds centered around Dodoma, Tanzania
+    // lat bounds: approx -6.20 to -6.10
+    // lng bounds: approx 35.70 to 35.80
     const latCenter = center.lat;
     const lngCenter = center.lng;
     const zoomScale = 12000; // pixels per degree
@@ -84,7 +84,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         ctx.stroke();
       }
 
-      // Note: Removed mock Nairobi street layouts to support dynamic locations.
+      // Note: Street layouts dynamically rendered for active location.
 
       // 3. Draw active vector route directions path if present
       if (routePath.length > 0) {

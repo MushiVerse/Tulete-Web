@@ -16,10 +16,10 @@ const containerStyle = {
   borderRadius: '1.5rem',
 };
 
-// Default map center (Dar es Salaam) if no location
+// Default map center (Dodoma, Tanzania) if no location
 const defaultCenter = {
-  lat: -6.7924,
-  lng: 39.2083,
+  lat: -6.1630,
+  lng: 35.7516,
 };
 
 export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {

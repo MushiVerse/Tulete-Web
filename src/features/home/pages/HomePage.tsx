@@ -330,7 +330,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
           <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-border/50">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-xs font-semibold text-foreground truncate">{store.address || 'Nairobi'}</span>
+              <span className="text-xs font-semibold text-foreground truncate">{store.address || 'Dodoma, Tanzania'}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-muted-foreground">

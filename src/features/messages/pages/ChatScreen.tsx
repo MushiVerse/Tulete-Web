@@ -94,7 +94,7 @@ export const ChatScreen = () => {
     } else if (type === 'location') {
       sendMessage(id, 'user_current', 'Sent location details', {
         type: 'location',
-        location: { lat: -1.2915, lng: 36.7900, address: 'Wood Avenue, Kilimani, Nairobi' }
+        location: { lat: -6.1630, lng: 35.7516, address: 'Kisasa, Dodoma, Tanzania' }
       });
     } else if (type === 'order_reference') {
       sendMessage(id, 'user_current', 'Referenced order #TL-40398', {

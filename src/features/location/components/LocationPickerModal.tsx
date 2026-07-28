@@ -23,10 +23,10 @@ const containerStyle = {
   borderRadius: '0.75rem',
 };
 
-// Default map center (Dar es Salaam)
+// Default map center (Dodoma, Tanzania)
 const defaultCenter = {
-  lat: -6.7924,
-  lng: 39.2083,
+  lat: -6.1630,
+  lng: 35.7516,
 };
 
 // We load the script globally — must be defined outside the component to prevent re-renders
@@ -191,11 +191,11 @@ export const LocationPickerModal = ({
           const fallback = defaultCenter;
           setMapCenter(fallback);
           setSelectedPos(fallback);
-          setAddressText('Default location (Dar es Salaam)');
-          setValue('Dar es Salaam, Tanzania', false);
+          setAddressText('Default location (Dodoma, Tanzania)');
+          setValue('Dodoma, Tanzania', false);
           setCurrentLocation({
             id: Date.now().toString(),
-            address: 'Dar es Salaam, Tanzania',
+            address: 'Dodoma, Tanzania',
             lat: fallback.lat,
             lng: fallback.lng,
             specificInstructions: '',

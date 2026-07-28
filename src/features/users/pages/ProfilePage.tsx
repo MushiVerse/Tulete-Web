@@ -183,11 +183,11 @@ export const ProfilePage = () => {
                 </div>
                 <div>
                   <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Phone Number</label>
-                  <Input {...register('phone')} className="text-xs" placeholder="+254 7XX XXX XXX" />
+                  <Input {...register('phone')} className="text-xs" placeholder="+255 7XX XXX XXX" />
                 </div>
                 <div>
                   <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block mb-1">City</label>
-                  <Input {...register('city')} className="text-xs" placeholder="Nairobi" />
+                  <Input {...register('city')} className="text-xs" placeholder="Dodoma" />
                 </div>
               </div>
               <div>

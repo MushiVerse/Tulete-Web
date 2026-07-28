@@ -21,7 +21,7 @@ export const DashboardHeader = () => {
           <h1 className="text-sm font-medium text-muted-foreground">Hello, {firstName} 👋</h1>
           <div className="flex items-center gap-1 text-sm font-bold text-foreground">
             <MapPin className="w-3.5 h-3.5 text-primary" />
-            <span className="truncate max-w-[150px]">Dar es Salaam, TZ</span>
+            <span className="truncate max-w-[150px]">Dodoma, TZ</span>
           </div>
         </div>
       </div>

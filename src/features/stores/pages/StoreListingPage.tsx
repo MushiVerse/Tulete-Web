@@ -28,10 +28,10 @@ const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; act
 const CATEGORIES = ['Food', 'Laundry', 'Electrical', 'Beauty', 'Rides'];
 
 const HUBS = [
-  { label: 'Kilimani', lat: -1.2894, lng: 36.7909 },
-  { label: 'Westlands', lat: -1.2635, lng: 36.8049 },
-  { label: 'CBD', lat: -1.2821, lng: 36.8185 },
-  { label: 'Hurlingham', lat: -1.2941, lng: 36.7981 },
+  { label: 'Kisasa', lat: -6.1630, lng: 35.7516 },
+  { label: 'Central Dodoma', lat: -6.1700, lng: 35.7400 },
+  { label: 'Makulu', lat: -6.1800, lng: 35.7600 },
+  { label: 'Area D', lat: -6.1550, lng: 35.7450 },
 ];
 
 const STATS = [

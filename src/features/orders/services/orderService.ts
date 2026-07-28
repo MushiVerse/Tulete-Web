@@ -331,61 +331,93 @@ class OrderService extends BaseFirestoreService<Order> {
   /**
    * Translates the unified web app order into individual Flutter-compliant documents
    * and saves them to `newcomfirmedorders` (Global) and `userOrderId/{uid}/newcomfirmedorders`.
-   * This bridges the gap between the Web App's unified cart UX and Flutter's item-based checkout.
+   * Only laundry items (cat == "Nguo") are merged into a single laundry pack.
+   * All other items remain strictly separated.
+   * imgURL is ensured to be a single image string.
    */
   async createLiveFlutterOrders(order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>, webOrderId: string) {
     try {
       const uids = order.userId;
-      
-      for (const item of order.items) {
-        // Map category properly if not provided
-        const cat = (item as any).cat || (order.isLaundryOrder ? 'Nguo' : 'Food');
-        
-        // Flutter uses deliverytime to determine the UI badge (e.g. #Laundry Order, #Product Order)
-        let finalDeliveryTime = 'ASAP';
-        if (order.isLaundryOrder || cat === 'Nguo') {
-          finalDeliveryTime = 'Pickup';
-        } else if (cat === 'Product') {
-          finalDeliveryTime = 'Product';
+
+      // Helper to ensure imgURL is a single string (picking first image if array)
+      const toSingleImageUrl = (img: any): string => {
+        if (!img) return 'https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media';
+        if (typeof img === 'string') return img;
+        if (Array.isArray(img) && img.length > 0) {
+          return typeof img[0] === 'string' ? img[0] : String(img[0]);
         }
-        
-        // Flutter expects the total for the single item line
-        let lineTotal = item.price * item.quantity;
-        
-        // Apply per-item laundry modifiers to the item lineTotal
-        if (order.isLaundryOrder) {
-          const ratios = useCartStore.getState().laundryRatios;
+        return String(img);
+      };
+
+      // Helper to strictly identify laundry items
+      const isLaundryItem = (item: any): boolean => {
+        const cat = item.cat || item.category || '';
+        if (cat === 'Nguo') return true;
+        if (item.isLaundry === true) return true;
+        if (['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(cat)) return true;
+        return false;
+      };
+      
+      const laundryItems = order.items.filter(item => isLaundryItem(item));
+      const otherItems = order.items.filter(item => !isLaundryItem(item));
+
+      const globalExpress = useCartStore.getState().laundryPreferences.globalExpressSelected;
+      const ratios = useCartStore.getState().laundryRatios;
+
+      // 1. COMBINE ONLY LAUNDRY ITEMS (cat == "Nguo") INTO A SINGLE LAUNDRY ORDER PACK
+      if (laundryItems.length > 0) {
+        const formattedItems = laundryItems.map(item => {
+          const services: string[] = [];
+          if ((item as any).ironingSelected) services.push('Iron');
+          if ((item as any).packagingSelected) services.push('Package');
+          if ((item as any).vipSelected) services.push('VIP');
+          if (services.length === 0) services.push('Wash');
+          
+          const serviceStr = services.length > 0 ? ` (${services.join(', ')})` : '';
+          return `${item.name}${serviceStr} x${item.quantity}`;
+        });
+
+        let combinedName = formattedItems.join(', ');
+        if (globalExpress) {
+          combinedName += ' [EXPRESS SERVICE]';
+        }
+
+        let totalLaundryPrice = 0;
+        let totalLaundryCount = 0;
+
+        for (const item of laundryItems) {
+          let lineTotal = item.price * item.quantity;
           if (ratios) {
             if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * (ratios.iron - ratios.wash);
             if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * (ratios.package - ratios.wash);
             if ((item as any).vipSelected) lineTotal += (item.price * item.quantity) * (ratios.vip - ratios.wash);
           } else {
-            // fallback
             if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * 0.95;
             if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * 2.9;
             if ((item as any).vipSelected) lineTotal += (item.price * item.quantity) * 4.3;
           }
+          totalLaundryPrice += lineTotal;
+          totalLaundryCount += item.quantity;
         }
-        
-        const globalExpress = useCartStore.getState().laundryPreferences.globalExpressSelected;
 
-        const deliveryFee = 0; // Handled per-item or globally depending on the business rule, mock 0 for now.
+        const firstItem = laundryItems[0];
+        const laundryDocId = `laundry_${webOrderId}`;
 
-        const flutterPayload = {
+        const laundryPayload = {
           uid: uids || 'unknown_uid',
-          foodId: item.productId || 'unknown_product',
+          foodId: laundryDocId,
           uname: order.uname || 'Web User',
           no: order.contactPhone || '0000000000',
-          name: item.name || 'Unknown Item',
-          price: Math.round(item.price || 0),
-          deliveryfee: Math.round(deliveryFee || 0),
-          imgURL: item.imageUrl || 'https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media',
+          name: combinedName,
+          price: Math.round(totalLaundryPrice),
+          deliveryfee: 0,
+          imgURL: toSingleImageUrl(firstItem.imageUrl),
           chose: true,
           quantity: 100,
           location: order.deliveryLocation?.address || 'Unknown Location',
-          count: Math.round(item.quantity || 1),
-          store: order.storeName || 'Tulete Store',
-          total: Math.round(lineTotal || 0),
+          count: totalLaundryCount,
+          store: order.storeName || 'Tulete Laundry',
+          total: Math.round(totalLaundryPrice),
           irondelivery: order.irondelivery || false,
           packagepickup: order.packagepickup || false,
           express: globalExpress || false,
@@ -398,24 +430,88 @@ class OrderService extends BaseFirestoreService<Order> {
           amaountpaid: 0,
           email: order.email || 'web@tulete.net',
           tokOnesignal: '',
-          deliverytime: finalDeliveryTime,
-          cat: cat || 'Product',
+          deliverytime: 'Pickup',
+          cat: 'Nguo',
           showtrackbtn: false,
           deliveryDone: false,
           status: 'Order Placed',
           latlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
           ProductLatlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
           time: getFlutterTime(),
-          webOrderId: webOrderId, // Used to link live flutter orders back to the web app's tracking page
+          webOrderId: webOrderId,
         };
 
-        // 1. Add to global `newcomfirmedorders` (Admin/Driver feed)
+        // A. Add to global `newcomfirmedorders` (Admin/Driver feed) - paid remains false
         const globalRef = collection(db, 'newcomfirmedorders');
-        await setDoc(doc(globalRef), flutterPayload);
+        await setDoc(doc(globalRef, laundryDocId), laundryPayload);
 
-        // 2. Add to user's personal `userOrderId/{uid}/newcomfirmedorders` (User feed)
-        const userOrdersRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', item.productId);
-        await setDoc(userOrdersRef, flutterPayload);
+        // B. Add to user's personal `userOrderId/{uid}/newcomfirmedorders` - paid remains false
+        if (uids) {
+          const userNewConfirmedRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', laundryDocId);
+          await setDoc(userNewConfirmedRef, laundryPayload);
+
+          // C. Add to user's personal `userOrderId/{uid}/orders` (Flutter orders collection)
+          // For Laundry or Laundry Packs: set paid to true in the "orders" document and not in "newcomfirmedorders"
+          const userOrdersRef = doc(db, 'userOrderId', uids, 'orders', laundryDocId);
+          await setDoc(userOrdersRef, { ...laundryPayload, paid: true });
+        }
+      }
+
+      // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY
+      for (const item of otherItems) {
+        const cat = (item as any).cat || (item as any).category || 'Product';
+        let finalDeliveryTime = cat === 'Product' ? 'Product' : 'ASAP';
+        const lineTotal = item.price * item.quantity;
+        const itemDocId = `${item.productId || 'item'}_${webOrderId}`;
+
+        const itemPayload = {
+          uid: uids || 'unknown_uid',
+          foodId: item.productId || 'unknown_product',
+          uname: order.uname || 'Web User',
+          no: order.contactPhone || '0000000000',
+          name: item.name || 'Unknown Item',
+          price: Math.round(item.price || 0),
+          deliveryfee: 0,
+          imgURL: toSingleImageUrl(item.imageUrl),
+          chose: true,
+          quantity: 100,
+          location: order.deliveryLocation?.address || 'Unknown Location',
+          count: Math.round(item.quantity || 1),
+          store: order.storeName || 'Tulete Store',
+          total: Math.round(lineTotal || 0),
+          irondelivery: false,
+          packagepickup: false,
+          express: false,
+          cancel: false,
+          show: true,
+          paid: false,
+          instructions: order.notes || order.instructions || '',
+          ordersts: ['Order Placed'],
+          orderststime: [getFlutterTime()],
+          amaountpaid: 0,
+          email: order.email || 'web@tulete.net',
+          tokOnesignal: '',
+          deliverytime: finalDeliveryTime,
+          cat: cat,
+          showtrackbtn: false,
+          deliveryDone: false,
+          status: 'Order Placed',
+          latlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
+          ProductLatlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
+          time: getFlutterTime(),
+          webOrderId: webOrderId,
+        };
+
+        const globalRef = collection(db, 'newcomfirmedorders');
+        await setDoc(doc(globalRef, itemDocId), itemPayload);
+
+        if (uids) {
+          const userNewConfirmedRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', itemDocId);
+          await setDoc(userNewConfirmedRef, itemPayload);
+
+          const userOrdersRef = doc(db, 'userOrderId', uids, 'orders', itemDocId);
+          await setDoc(userOrdersRef, itemPayload);
+        }
       }
     } catch (e) {
       console.error('Failed to create live flutter orders:', e);

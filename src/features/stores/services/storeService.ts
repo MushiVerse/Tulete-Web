@@ -128,23 +128,23 @@ class StoreService extends BaseFirestoreService<Store> {
   }
 
   /**
-   * Nairobi-based mock stores database for high-fidelity offline/caching fallback
+   * Dodoma-based mock stores database for high-fidelity offline/caching fallback
    */
   getMockStores(): Store[] {
     return [
       {
         id: 'store_mama_safi',
         store: 'Mama Safi Laundry & Dryclean',
-        description: 'Premium eco-friendly dry cleaning and express folding services in the heart of Kilimani.',
+        description: 'Premium eco-friendly dry cleaning and express folding services in the heart of Dodoma.',
         imgURL: 'https://images.unsplash.com/photo-1545173168-9f1947eebd01?w=120',
         ownerId: 'owner_1',
         rating: 4.8,
         reviewCount: 142,
         category: 'Laundry',
         availability: true,
-        address: 'Wood Avenue, Kilimani, Nairobi',
-        phone: '+254711222333',
-        whatsapp: '+254711222333',
+        address: 'Kisasa, Dodoma, Tanzania',
+        phone: '+255757449734',
+        whatsapp: '+255757449734',
         isVerified: true,
         gallery: [
           'https://images.unsplash.com/photo-1521566652839-697aa473761a?w=400',
@@ -160,7 +160,7 @@ class StoreService extends BaseFirestoreService<Store> {
           { days: 'Saturday', hours: '8:00 AM - 6:00 PM' },
           { days: 'Sunday & Holidays', hours: '10:00 AM - 4:00 PM' }
         ],
-        location: { lat: -6.7924, lng: 39.2083 },
+        location: { lat: -6.1630, lng: 35.7516 },
         reviews: [
           { id: 'rev_1', userName: 'Amina Omondi', rating: 5, comment: 'Extremely professional and quick! My suits arrived immaculate.', date: 'May 28, 2026' },
           { id: 'rev_2', userName: 'John Kiprop', rating: 4, comment: 'Good quality folding, though delivery had a minor delay due to rain.', date: 'May 24, 2026' }
@@ -176,9 +176,9 @@ class StoreService extends BaseFirestoreService<Store> {
         reviewCount: 98,
         category: 'Food',
         availability: true,
-        address: 'Masaki, Dar es Salaam, Tanzania',
-        phone: '+255722333444',
-        whatsapp: '+255722333444',
+        address: 'Central Dodoma, Tanzania',
+        phone: '+255757449734',
+        whatsapp: '+255757449734',
         isVerified: true,
         gallery: [
           'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400',
@@ -190,7 +190,7 @@ class StoreService extends BaseFirestoreService<Store> {
         hours: [
           { days: 'Monday - Sunday', hours: '9:00 AM - 11:00 PM' }
         ],
-        location: { lat: -6.7960, lng: 39.2100 },
+        location: { lat: -6.1700, lng: 35.7400 },
         reviews: [
           { id: 'rev_3', userName: 'Wanjiku Mwangi', rating: 5, comment: 'The best Choma in town! Tastes completely authentic.', date: 'May 29, 2026' }
         ]
@@ -205,9 +205,9 @@ class StoreService extends BaseFirestoreService<Store> {
         reviewCount: 65,
         category: 'Electrical',
         availability: true,
-        address: 'Kariakoo, Dar es Salaam, Tanzania',
-        phone: '+255733444555',
-        whatsapp: '+255733444555',
+        address: 'Makulu, Dodoma, Tanzania',
+        phone: '+255757449734',
+        whatsapp: '+255757449734',
         isVerified: true,
         gallery: [
           'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400',
@@ -219,7 +219,7 @@ class StoreService extends BaseFirestoreService<Store> {
         hours: [
           { days: 'Monday - Saturday', hours: '8:00 AM - 6:00 PM' }
         ],
-        location: { lat: -6.8180, lng: 39.2840 },
+        location: { lat: -6.1800, lng: 35.7600 },
         reviews: [
           { id: 'rev_4', userName: 'David Ndolo', rating: 5, comment: 'Extremely polite technician. Fixed my breaker issue in 20 minutes.', date: 'May 20, 2026' }
         ]
@@ -234,9 +234,9 @@ class StoreService extends BaseFirestoreService<Store> {
         reviewCount: 114,
         category: 'Beauty',
         availability: false, // Closed for demo styling
-        address: 'Oyster Bay, Dar es Salaam, Tanzania',
-        phone: '+255744555666',
-        whatsapp: '+255744555666',
+        address: 'Area D, Dodoma, Tanzania',
+        phone: '+255757449734',
+        whatsapp: '+255757449734',
         isVerified: false,
         gallery: [
           'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400',

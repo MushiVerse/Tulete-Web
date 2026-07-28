@@ -11,12 +11,13 @@ import { PageContainer, ContentContainer } from '../../../shared/components/layo
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
   Search, Calendar, Clock, ShoppingBag, Eye, 
-  RotateCcw, AlertCircle, Phone, XCircle, ArrowRight 
+  RotateCcw, AlertCircle, Phone, XCircle, ArrowRight, Sparkles, ChevronDown, ChevronUp, Layers, Shirt, MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 
-const STATUS_CONFIGS: Record<OrderStatus, { color: string; label: string; progress: number }> = {
+const STATUS_CONFIGS: Record<string, { color: string; label: string; progress: number }> = {
+  'Order Placed': { color: 'bg-amber-500 text-white', label: 'Order Placed', progress: 15 },
   Pending: { color: 'bg-amber-500 text-white', label: 'Pending', progress: 15 },
   Confirmed: { color: 'bg-blue-500 text-white', label: 'Confirmed', progress: 30 },
   Preparing: { color: 'bg-indigo-500 text-white', label: 'Preparing', progress: 50 },
@@ -27,6 +28,79 @@ const STATUS_CONFIGS: Record<OrderStatus, { color: string; label: string; progre
   Failed: { color: 'bg-red-500 text-white', label: 'Failed', progress: 0 },
 };
 
+/**
+ * Opens WhatsApp chat via +255757449734 with pre-filled order details
+ * Modeled directly after Flutter client contactUs.dart
+ */
+export function openWhatsAppSupport(orderId?: string, storeName?: string) {
+  const phone = '255757449734';
+  const orderRef = orderId ? `#${orderId.slice(-8).toUpperCase()}` : '';
+  const storeRef = storeName ? ` from ${storeName}` : '';
+  const message = `Hey!, I need your help with my Tulete order${orderRef}${storeRef}`;
+  const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  window.open(whatsappUrl, '_blank');
+}
+
+/**
+ * Parses a combined laundry order name string into individual laundry items
+ * e.g. "Suit (Iron, VIP) x2, Shirt (Wash) x3 [EXPRESS SERVICE]"
+ * Modeled directly after Flutter client parseLaundryItems
+ */
+export function parseLaundryItems(nameField: string) {
+  const items: { name: string; qty: number; services: string[] }[] = [];
+  if (!nameField) return { items, isExpress: false };
+
+  const isExpress = nameField.toUpperCase().includes('[EXPRESS SERVICE]');
+  const cleanName = nameField.replace(/\s*\[EXPRESS SERVICE\]/gi, '');
+  
+  let depth = 0;
+  let current = '';
+  const parts: string[] = [];
+  for (let i = 0; i < cleanName.length; i++) {
+    const char = cleanName[i];
+    if (char === '(') depth++;
+    else if (char === ')') depth--;
+
+    if (char === ',' && depth === 0) {
+      parts.push(current.trim());
+      current = '';
+      if (i + 1 < cleanName.length && cleanName[i + 1] === ' ') i++;
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) parts.push(current.trim());
+
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+
+    const qtyMatch = trimmed.match(/x(\d+)$/i);
+    let qty = 1;
+    let nameAndServices = trimmed;
+    if (qtyMatch) {
+      qty = parseInt(qtyMatch[1], 10) || 1;
+      nameAndServices = trimmed.substring(0, qtyMatch.index).trim();
+    }
+
+    const servicesMatch = nameAndServices.match(/\(([^)]+)\)/);
+    let services: string[] = [];
+    let itemName = nameAndServices;
+    if (servicesMatch) {
+      services = servicesMatch[1].split(',').map(s => s.trim());
+      itemName = nameAndServices.substring(0, servicesMatch.index).trim();
+    }
+
+    items.push({
+      name: itemName || 'Laundry Item',
+      qty,
+      services,
+    });
+  }
+
+  return { items, isExpress };
+}
+
 export const OrdersPage = () => {
   const navigate = useNavigate();
   const { orders, isLoading } = useOrderListRealtime();
@@ -36,8 +110,13 @@ export const OrdersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [supportOrder, setSupportOrder] = useState<Order | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
 
-  const getOrderStatusGroup = (status: OrderStatus): 'active' | 'completed' | 'cancelled' => {
+  const toggleExpand = (orderId: string) => {
+    setExpandedOrders(prev => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
+
+  const getOrderStatusGroup = (status: string): 'active' | 'completed' | 'cancelled' => {
     switch (status) {
       case 'Delivered':
         return 'completed';
@@ -54,7 +133,6 @@ export const OrdersPage = () => {
     setCancellingId(orderId);
     try {
       await orderService.cancelOrder(orderId);
-      // Firestore real-time listeners will automatically update the UI
     } catch (err) {
       console.error('Failed to cancel order:', err);
       alert('Could not cancel the order. Please try again or contact support.');
@@ -64,7 +142,7 @@ export const OrdersPage = () => {
   };
 
   const handleReorder = (order: Order) => {
-    order.items.forEach((item) => {
+    (order.items || []).forEach((item) => {
       addToCart({
         productId: item.productId,
         name: item.name,
@@ -80,9 +158,10 @@ export const OrdersPage = () => {
   // Filtering
   const filteredOrders = orders.filter((order) => {
     const tabMatch = getOrderStatusGroup(order.status) === activeTab;
-    const searchMatch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.storeName.toLowerCase().includes(searchQuery.toLowerCase());
+    const orderIdStr = (order.id || '').toLowerCase();
+    const storeNameStr = (order.storeName || '').toLowerCase();
+    const queryStr = searchQuery.toLowerCase();
+    const searchMatch = orderIdStr.includes(queryStr) || storeNameStr.includes(queryStr);
     return tabMatch && searchMatch;
   });
 
@@ -167,6 +246,13 @@ export const OrdersPage = () => {
                 ? new Date(order.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
+              const isLaundry = order.isLaundryOrder && order.items.some(i => (i as any).cat === 'Nguo');
+              const isExpanded = !!expandedOrders[order.id];
+
+              // Parse laundry items if this is a laundry order pack
+              const laundryNameField = (order as any).name || (order.items || []).map(i => i.name).join(', ');
+              const { items: laundryBreakdown, isExpress } = parseLaundryItems(laundryNameField);
+
               return (
                 <motion.div
                   key={order.id}
@@ -177,11 +263,27 @@ export const OrdersPage = () => {
                   transition={{ duration: 0.2 }}
                 >
                   <Card className="p-6 border border-border hover:border-slate-200 dark:hover:border-slate-700 bg-card shadow-sm hover:shadow-md transition-all">
-                    {/* Header */}
+                    {/* Header: Use actual store name without Dobi/Diko hardcoded categorization */}
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                       <div className="space-y-1">
-                        <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-muted-foreground block">Order ID: #{order.id.slice(-8).toUpperCase()}</span>
-                        <h3 className="font-extrabold text-foreground text-lg">{order.storeName}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-muted-foreground">Order ID: #{order.id.slice(-8).toUpperCase()}</span>
+                          {isLaundry && (
+                            <Badge className="bg-sky-500/10 text-sky-500 border-sky-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" /> Laundry Pack
+                            </Badge>
+                          )}
+                          {isExpress && (
+                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                              ⚡ Express
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Actual store or service provider name */}
+                        <h3 className="font-extrabold text-foreground text-lg flex items-center gap-2">
+                          {order.storeName || 'Tulete Service'}
+                        </h3>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -203,7 +305,57 @@ export const OrdersPage = () => {
                       </div>
                     )}
 
-                    {/* Items Info */}
+                    {/* LAUNDRY ITEM BREAKDOWN LIST (For Laundry Orders) */}
+                    {isLaundry && laundryBreakdown.length > 0 ? (
+                      <div className="bg-muted/50 border border-border/70 rounded-2xl p-4 mb-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                            <Shirt className="w-4 h-4 text-sky-500" /> Item Breakdown ({laundryBreakdown.reduce((acc, i) => acc + i.qty, 0)} items)
+                          </span>
+                          {laundryBreakdown.length > 4 && (
+                            <button
+                              onClick={() => toggleExpand(order.id)}
+                              className="text-xs font-bold text-sky-500 hover:text-sky-600 flex items-center gap-1"
+                            >
+                              {isExpanded ? 'Hide' : 'Show All'}
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {(isExpanded ? laundryBreakdown : laundryBreakdown.slice(0, 4)).map((item, idx) => (
+                            <div key={idx} className="bg-card border border-border/50 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-500 font-extrabold text-xs flex items-center justify-center shrink-0">
+                                  ×{item.qty}
+                                </span>
+                                <span className="font-bold text-xs text-foreground">{item.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap justify-end">
+                                {item.services.map((srv, sIdx) => (
+                                  <span key={sIdx} className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">
+                                    {srv}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Non-laundry item summary */
+                      <div className="bg-muted/40 rounded-xl p-3 mb-4 space-y-2">
+                        {(order.items || []).map((i, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs">
+                            <span className="font-semibold text-foreground">{i.name} <span className="text-muted-foreground">× {i.quantity}</span></span>
+                            <span className="font-bold text-foreground">{formatPrice(i.price * i.quantity)} {APP_SETTINGS.currency}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Items Info Bar */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-b border-border py-3 mb-4 gap-4">
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
@@ -212,7 +364,7 @@ export const OrdersPage = () => {
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
-                          {order.items.reduce((sum, i) => sum + i.quantity, 0)} {order.items.reduce((sum, i) => sum + i.quantity, 0) === 1 ? 'item' : 'items'}
+                          {(order.items || []).reduce((sum, i) => sum + i.quantity, 0)} {(order.items || []).reduce((sum, i) => sum + i.quantity, 0) === 1 ? 'item' : 'items'}
                         </div>
                       </div>
 
@@ -235,14 +387,14 @@ export const OrdersPage = () => {
                             {cancellingId === order.id ? 'Cancelling…' : 'Cancel Request'}
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          onClick={() => setSupportOrder(order)}
-                          className="text-foreground hover:bg-accent text-xs font-semibold"
+                        <button
+                          type="button"
+                          onClick={() => openWhatsAppSupport(order.id, order.storeName)}
+                          className="px-3.5 py-2 rounded-xl text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 dark:hover:bg-emerald-500/30 hover:text-emerald-700 dark:hover:text-emerald-300 border border-emerald-500/20 dark:border-emerald-500/30 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                         >
-                          <Phone className="w-4 h-4 mr-1.5" />
-                          Support
-                        </Button>
+                          <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          WhatsApp Support
+                        </button>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -284,20 +436,23 @@ export const OrdersPage = () => {
             animate={{ scale: 1, opacity: 1 }}
             className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl"
           >
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-              <Phone className="w-6 h-6 text-primary animate-bounce" />
+            <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 text-emerald-500">
+              <MessageCircle className="w-6 h-6 animate-bounce" />
             </div>
-            <h3 className="text-lg font-extrabold text-foreground mb-2">Contact Tulete Support</h3>
+            <h3 className="text-lg font-extrabold text-foreground mb-2">Tulete WhatsApp Support</h3>
             <p className="text-xs text-muted-foreground mb-6">
-              Need assistance with your order from <strong>{supportOrder.storeName}</strong>? Select an action below to connect.
+              Need assistance with your order <strong>#{supportOrder.id.slice(-8).toUpperCase()}</strong>? Chat directly with our team on WhatsApp (+255 757 449 734).
             </p>
             <div className="space-y-2">
-              <a 
-                href="tel:+254712345678" 
-                className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary/95 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition-all"
+              <Button
+                onClick={() => {
+                  openWhatsAppSupport(supportOrder.id, supportOrder.storeName);
+                  setSupportOrder(null);
+                }}
+                className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition-all"
               >
-                Call Hotline
-              </a>
+                <MessageCircle className="w-4 h-4" /> Chat on WhatsApp
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setSupportOrder(null)}
