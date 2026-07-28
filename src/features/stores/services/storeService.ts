@@ -32,6 +32,8 @@ export interface Store extends BaseDocument {
   reviewCount: number;
   category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides';
   cat?: string;
+  subCategory?: string;
+  mainCategory?: string;
   rates?: number[];
   availability: boolean;
   address: string;

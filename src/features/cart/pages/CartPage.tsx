@@ -49,10 +49,10 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
           </span>
 
           {/* Quantity controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 border border-border rounded-lg p-0.5 sm:p-1 bg-slate-50 dark:bg-slate-800">
+          <div className="flex items-center gap-1.5 sm:gap-2 border border-neutral-200/80 dark:border-zinc-800 rounded-xl p-0.5 sm:p-1 bg-neutral-100 dark:bg-zinc-900">
             <button
               onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-600 hover:text-primary dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
+              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-neutral-700 hover:text-primary dark:text-zinc-200 hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
@@ -67,7 +67,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                 }
                 updateQuantity(item.productId, item.quantity + 1);
               }}
-              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-600 hover:text-primary dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
+              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-neutral-700 hover:text-primary dark:text-zinc-200 hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
@@ -75,7 +75,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         </div>
 
         {/* Per-Item Laundry Customization */}
-        {item.isLaundry && (
+        {(item as any).cat === 'Nguo' && (
           <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
             {[
               { key: 'iron', label: 'Iron', prop: 'ironingSelected', icon: Flame },
@@ -102,7 +102,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         )}
 
         {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
-        {!item.isLaundry && (() => {
+        {(item as any).cat !== 'Nguo' && (() => {
           const isFoodItem = (item.cat && item.cat.toLowerCase() === 'food') || 
                              ((item as any).category && (item as any).category.toLowerCase() === 'food') || 
                              (fetchedDoc as any)?.cat === 'Food' || 
@@ -217,7 +217,7 @@ export const CartPage = () => {
   }, [currentLocation, items, laundryPreferences?.globalExpressSelected, laundryPreferences?.deliverytime]);
   const { subtotal, deliveryFee, expressFee, pickupFee, serviceFee, total, itemCount } = getTotals();
   
-  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo' || i.isLaundry || i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry'));
+  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo');
 
   if (items.length === 0) {
     return (

@@ -3,10 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, ArrowRight, ChevronRight, CheckCircle2, 
+  Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
   MapPin, Star, Plus, Minus, Trash2, ShieldCheck, 
   ShoppingBag, Flame, Clock, Navigation, Phone
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 import { PageContainer } from '../../../shared/components/layout';
 import { HomeSearchResultsView } from '../../home/components/HomeSearchResultsView';
 import { Button } from '../../../shared/components/ui/Button';
@@ -20,8 +23,9 @@ import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { productService, Product } from '../../products/services/productService';
 import { useDynamicPrice, getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
+import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
-// --- Static Data ---
+// --- Static Fallback Data ---
 const FOOD_CATEGORIES = [
   { id: 'all', name: 'All Food', icon: '🍽️' },
   { id: 'fast_food', name: 'Fast Food', icon: '🍔' },
@@ -182,13 +186,80 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
 export const FoodPage = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  const toggleCategoryExpand = (catName: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [catName]: !prev[catName]
+    }));
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Query foodSubCategory (main) and foodSubSubCategory (sub) from Firestore
+  const { data: foodSubCats = [] } = useQuery({
+    queryKey: ['foodSubCategory'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'foodSubCategory'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  const { data: foodSubSubCats = [] } = useQuery({
+    queryKey: ['foodSubSubCategory'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'foodSubSubCategory'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  const hierarchicalFoodCategories = React.useMemo(() => {
+    if (foodSubCats.length === 0) {
+      return FOOD_CATEGORIES.map(c => ({
+        id: c.id,
+        name: c.name,
+        icon: getCategoryEmoji(c.name, c.icon),
+        subCategories: []
+      }));
+    }
+
+    return foodSubCats.map((mainDoc: any) => {
+      const mainName = mainDoc.name || mainDoc.subCat || mainDoc.category || mainDoc.id;
+      const subItems = foodSubSubCats.filter((subDoc: any) => {
+        const refKey = subDoc.name || subDoc.category || subDoc.subCat || subDoc.mainCategory || subDoc.mainCat;
+        return String(refKey).toLowerCase().trim() === String(mainName).toLowerCase().trim();
+      });
+
+      return {
+        id: mainDoc.id,
+        name: mainName,
+        icon: getCategoryEmoji(mainName, mainDoc.icon || mainDoc.emoji),
+        subCategories: subItems.map((sub: any) => {
+          const subName = sub.subSubCat || sub.subCat || sub.subCategory || sub.name || sub.id;
+          return {
+            id: sub.id,
+            name: subName,
+            emoji: getCategoryEmoji(subName, '🍲')
+          };
+        })
+      };
+    });
+  }, [foodSubCats, foodSubSubCats]);
   
   // Cart & Auth
   const { items: cartItems, addToCart, removeFromCart, clearCart, updateQuantity, getTotals } = useCartStore();
@@ -222,19 +293,10 @@ export const FoodPage = () => {
   }, []);
 
   // Filter logic
-  const queryFilters = activeCategory !== 'all' 
-    ? [
-        { field: '_collection', operator: '==', value: 'foods' },
-        { field: 'category', operator: '==', value: activeCategory }
-      ] 
-    : [
-        { field: '_collection', operator: '==', value: 'foods' }
-      ];
-  
   const { data: foodsData, isLoading } = useFirestoreQuery(
     ['foods', 'page', activeCategory],
     productService,
-    { filters: queryFilters as any, limit: 100 }
+    { filters: [{ field: '_collection', operator: '==', value: 'foods' }] as any, limit: 100 }
   );
 
   const rawMeals = foodsData?.data || [];
@@ -242,8 +304,16 @@ export const FoodPage = () => {
   const { currentLocation } = useLocationStore();
 
   const filteredMeals = rawMeals.filter(meal => {
-    // Prevent empty slots by filtering unavailable items here before they get wrapped in grid divs
     if (meal.availability === false || (meal as any).availability === 'false') return false;
+
+    // Filter by active category / active sub category
+    if (activeSubCategory) {
+      const mealSub = ((meal as any).subsubCat || (meal as any).subCat || meal.category || '').toLowerCase();
+      if (!mealSub.includes(activeSubCategory.toLowerCase())) return false;
+    } else if (activeCategory && activeCategory !== 'all') {
+      const mealCat = (meal.category || (meal as any).subCat || '').toLowerCase();
+      if (!mealCat.includes(activeCategory.toLowerCase())) return false;
+    }
 
     const matchesSearch = meal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           meal.store.toLowerCase().includes(searchQuery.toLowerCase());
@@ -254,7 +324,6 @@ export const FoodPage = () => {
 
     return matchesSearch && matchesFee;
   }).sort((a, b) => {
-    // Primary sort: time (descending - newest first)
     const timeA = (a as any).time || (a as any).createdAt || '';
     const timeB = (b as any).time || (b as any).createdAt || '';
     if (timeA && timeB) {
@@ -266,7 +335,6 @@ export const FoodPage = () => {
       return -1;
     }
     
-    // Secondary sort: rating (descending)
     return (b.rating || 0) - (a.rating || 0);
   });
 
@@ -289,21 +357,89 @@ export const FoodPage = () => {
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
           <div className="space-y-2">
             <h2 className="text-xs font-extrabold text-foreground mb-4 uppercase tracking-widest opacity-80">Food Categories</h2>
-            {FOOD_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
-                  activeCategory === cat.id 
-                    ? 'bg-primary text-primary-foreground shadow-md scale-105' 
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                <span className="text-xl">{cat.icon}</span>
-                {cat.name}
-                {activeCategory === cat.id && <ChevronRight className="w-4 h-4 ml-auto" />}
-              </button>
-            ))}
+            
+            {/* All Food button */}
+            <button
+              onClick={() => { setActiveCategory('all'); setActiveSubCategory(null); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
+                activeCategory === 'all' && !activeSubCategory
+                  ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <span className="text-xl">🍽️</span>
+              All Food
+            </button>
+
+            {/* Dynamic foodSubCategory & foodSubSubCategory items */}
+            {hierarchicalFoodCategories.map((cat) => {
+              const isMainActive = activeCategory === cat.name;
+              const isExpanded = expandedCategories[cat.name] || isMainActive;
+
+              return (
+                <div key={cat.id} className="space-y-1">
+                  <div
+                    onClick={() => {
+                      setActiveCategory(isMainActive && !activeSubCategory ? 'all' : cat.name);
+                      setActiveSubCategory(null);
+                      toggleCategoryExpand(cat.name);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm cursor-pointer ${
+                      isMainActive && !activeSubCategory
+                        ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <span className="text-xl">{cat.icon}</span>
+                    <span className="flex-1 truncate">{cat.name}</span>
+                    {cat.subCategories.length > 0 && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCategoryExpand(cat.name);
+                        }}
+                        className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-all"
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Expanded foodSubSubCategory list */}
+                  <AnimatePresence>
+                    {isExpanded && cat.subCategories.length > 0 && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="pl-6 space-y-1 overflow-hidden"
+                      >
+                        {cat.subCategories.map((sub) => {
+                          const isSubActive = activeSubCategory === sub.name;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => {
+                                setActiveCategory(cat.name);
+                                setActiveSubCategory(isSubActive ? null : sub.name);
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left ${
+                                isSubActive
+                                  ? 'bg-primary/10 border border-primary text-primary'
+                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                              }`}
+                            >
+                              <span className="text-sm shrink-0">{sub.emoji}</span>
+                              <span className="truncate">{sub.name}</span>
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -369,12 +505,25 @@ export const FoodPage = () => {
 
           {/* Mobile Categories Pill Bar */}
           <div className="lg:hidden flex items-center gap-2 overflow-x-auto scrollbar-none pb-2">
-            {FOOD_CATEGORIES.map((cat) => (
+            <button
+              onClick={() => { setActiveCategory('all'); setActiveSubCategory(null); }}
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${
+                activeCategory === 'all' && !activeSubCategory
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+                  : 'bg-card border-border text-muted-foreground'
+              }`}
+            >
+              <span>🍽️</span> All
+            </button>
+            {hierarchicalFoodCategories.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => {
+                  setActiveCategory(activeCategory === cat.name ? 'all' : cat.name);
+                  setActiveSubCategory(null);
+                }}
                 className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${
-                  activeCategory === cat.id 
+                  activeCategory === cat.name 
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
                     : 'bg-card border-border text-muted-foreground'
                 }`}

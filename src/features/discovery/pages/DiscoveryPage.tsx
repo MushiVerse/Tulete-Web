@@ -182,6 +182,11 @@ export const DiscoveryPage = () => {
       const finalProducts = products
         .filter((item: any) => {
           if (item.availability === false || item.availability === 'false') return false;
+
+          // Omit "nguo" subCategory / category from DiscoveryPage results
+          const itemCat = String(item.category || item.cat || '').toLowerCase().trim();
+          const itemSubCat = String(item.subCategory || item.subCat || item.subsubCat || '').toLowerCase().trim();
+          if (itemCat === 'nguo' || itemSubCat === 'nguo') return false;
           
           // We don't early return true for stores anymore so we can check their distance fee!
 

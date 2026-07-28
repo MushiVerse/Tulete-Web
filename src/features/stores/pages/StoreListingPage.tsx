@@ -15,6 +15,7 @@ import {
   Navigation, Clock, TrendingUp, Tag, ChevronDown, Phone, ArrowRight, Bell, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
 const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; activeBg: string }> = {
@@ -277,9 +278,19 @@ export const StoreListingPage = () => {
   const { currentLocation } = useLocationStore();
 
   const [activeHub, setActiveHub] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+  const [selectedMainCategory, setSelectedMainCategory] = useState<string | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(
     searchParams.get('category') || null
   );
+  const [expandedMainCategories, setExpandedMainCategories] = useState<Record<string, boolean>>({});
+
+  const toggleExpandMain = (mainCat: string) => {
+    setExpandedMainCategories(prev => ({
+      ...prev,
+      [mainCat]: !prev[mainCat]
+    }));
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -313,21 +324,39 @@ export const StoreListingPage = () => {
 
   const allStores = storesData?.data || [];
 
-  // Extract dynamic categories from foodStores documents based on "cat" (and category) field
+  // Extract dynamic main categories & sub-categories ("cat") from store documents
+  const categoryHierarchy = React.useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    const defaultMains = ['Food', 'Laundry', 'Electrical', 'Beauty', 'Products'];
+    defaultMains.forEach(m => map.set(m, new Set<string>()));
+
+    allStores.forEach((s) => {
+      const mainCat = (s as any).mainCategory || (s as any).mainCat || s.category;
+      const subCat = (s as any).cat || (s as any).subCategory;
+      if (mainCat && typeof mainCat === 'string' && mainCat.trim()) {
+        const cleanMain = mainCat.trim();
+        if (!map.has(cleanMain)) {
+          map.set(cleanMain, new Set<string>());
+        }
+        if (subCat && typeof subCat === 'string' && subCat.trim()) {
+          map.get(cleanMain)!.add(subCat.trim());
+        }
+      }
+    });
+    return Array.from(map.entries()).map(([mainCat, subSet]) => ({
+      mainCategory: mainCat,
+      subCategories: Array.from(subSet),
+    }));
+  }, [allStores]);
+
   const dynamicCategories = React.useMemo(() => {
     const catsSet = new Set<string>();
     allStores.forEach((s) => {
       const docCat = (s as any).cat || s.category;
       if (docCat && typeof docCat === 'string' && docCat.trim()) {
-        const trimmed = docCat.trim();
-        if (trimmed.toLowerCase() !== 'nguo') {
-          catsSet.add(trimmed);
-        }
+        catsSet.add(docCat.trim());
       }
     });
-    if (catsSet.size === 0) {
-      CATEGORIES.filter(c => c.toLowerCase() !== 'nguo').forEach(c => catsSet.add(c));
-    }
     return Array.from(catsSet);
   }, [allStores]);
 
@@ -339,20 +368,24 @@ export const StoreListingPage = () => {
         : 99.9,
     }))
     .filter((s) => {
-      // Hard filter: hide completely unavailable stores
       if (s.availability === false) return false;
 
-      // Filter by delivery fee <= 10000 to ensure reasonable distance
       if (currentLocation && s.location) {
         const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
         if (fee > 10000) return false;
       }
 
-      if (selectedCategory) {
-        const storeCat = ((s as any).cat || s.category || '').toLowerCase().trim();
-        const selectedCatLower = selectedCategory.toLowerCase().trim();
-        if (storeCat !== selectedCatLower) return false;
+      if (selectedSubCategory) {
+        const storeSubCat = ((s as any).cat || (s as any).subCategory || s.subCategory || '').toLowerCase().trim();
+        const storeMainCat = ((s as any).mainCategory || s.category || '').toLowerCase().trim();
+        const subLower = selectedSubCategory.toLowerCase().trim();
+        if (storeSubCat !== subLower && storeMainCat !== subLower) return false;
+      } else if (selectedMainCategory) {
+        const storeMainCat = ((s as any).mainCategory || s.category || '').toLowerCase().trim();
+        const mainLower = selectedMainCategory.toLowerCase().trim();
+        if (storeMainCat !== mainLower) return false;
       }
+
       if (onlyOpen && !s.availability) return false;
       if (onlyVerified && !s.isVerified) return false;
       if (searchQuery) {
@@ -372,7 +405,6 @@ export const StoreListingPage = () => {
         const ratingDiff = (b.rating || 0) - (a.rating || 0);
         if (ratingDiff !== 0) return ratingDiff;
 
-        // Secondary sort: time (descending)
         const timeA = (a as any).time || (a as any).createdAt || '';
         const timeB = (b as any).time || (b as any).createdAt || '';
         if (timeA && timeB) return timeB.localeCompare(timeA);
@@ -382,13 +414,14 @@ export const StoreListingPage = () => {
         return 0;
       }
       if (sortBy === 'popular') return (b.reviewCount || 0) - (a.reviewCount || 0);
-      return a.distance - b.distance; // nearest
+      return a.distance - b.distance;
     });
 
-  const activeFiltersCount = [onlyOpen, onlyVerified, !!selectedCategory].filter(Boolean).length;
+  const activeFiltersCount = [onlyOpen, onlyVerified, !!selectedMainCategory, !!selectedSubCategory].filter(Boolean).length;
 
   const clearAll = () => {
-    setSelectedCategory(null);
+    setSelectedMainCategory(null);
+    setSelectedSubCategory(null);
     setSearchQuery('');
     setOnlyOpen(false);
     setOnlyVerified(false);
@@ -407,35 +440,85 @@ export const StoreListingPage = () => {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Categories</h2>
-                {selectedCategory && (
-                  <button onClick={() => setSelectedCategory(null)} className="text-[10px] text-destructive font-bold hover:underline">Clear</button>
+                {(selectedMainCategory || selectedSubCategory) && (
+                  <button onClick={() => { setSelectedMainCategory(null); setSelectedSubCategory(null); }} className="text-[10px] text-destructive font-bold hover:underline">Clear</button>
                 )}
               </div>
               <div className="space-y-1.5">
                 <button
-                  onClick={() => setSelectedCategory(null)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${!selectedCategory ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  onClick={() => { setSelectedMainCategory(null); setSelectedSubCategory(null); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${!selectedMainCategory && !selectedSubCategory ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                 >
                   <span className="text-base w-6 text-center shrink-0">🏪</span>
                   All Providers
                 </button>
-                {dynamicCategories.map((cat) => {
-                  const isActive = selectedCategory === cat;
-                  const cfg = getCategoryBadgeConfig(cat);
+                {categoryHierarchy.map((item) => {
+                  const isMainActive = selectedMainCategory === item.mainCategory;
+                  const isExpanded = expandedMainCategories[item.mainCategory] || isMainActive;
+                  const cfg = getCategoryBadgeConfig(item.mainCategory);
+
                   return (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(isActive ? null : cat)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border ${isActive
-                          ? `${cfg.activeBg} border-transparent shadow-sm`
-                          : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
-                        }`}
-                    >
-                      <span className="text-base w-6 text-center shrink-0">{cfg.emoji || '🏪'}</span>
-                      {cat}
-                      {isActive && <CheckCircle2 className="w-4 h-4 ml-auto shrink-0" />}
-                    </button>
+                    <div key={item.mainCategory} className="space-y-1">
+                      <div
+                        onClick={() => {
+                          setSelectedMainCategory(isMainActive && !selectedSubCategory ? null : item.mainCategory);
+                          setSelectedSubCategory(null);
+                          toggleExpandMain(item.mainCategory);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border cursor-pointer ${isMainActive && !selectedSubCategory
+                            ? `${cfg.activeBg} border-transparent shadow-sm`
+                            : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
+                          }`}
+                      >
+                        <span className="text-base w-6 text-center shrink-0">{cfg.emoji || '🏪'}</span>
+                        <span className="flex-1 truncate">{item.mainCategory}</span>
+                        {item.subCategories.length > 0 && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpandMain(item.mainCategory);
+                            }}
+                            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-all"
+                          >
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Sub-categories ("cat") list */}
+                      <AnimatePresence>
+                        {isExpanded && item.subCategories.length > 0 && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="pl-6 space-y-1 overflow-hidden"
+                          >
+                            {item.subCategories.map((subCat) => {
+                              const isSubActive = selectedSubCategory === subCat;
+                              return (
+                                <button
+                                  key={subCat}
+                                  onClick={() => {
+                                    setSelectedMainCategory(item.mainCategory);
+                                    setSelectedSubCategory(isSubActive ? null : subCat);
+                                  }}
+                                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-left border ${isSubActive
+                                      ? 'bg-primary/10 border-primary text-primary font-bold'
+                                      : 'text-muted-foreground border-transparent hover:bg-muted hover:text-foreground'
+                                    }`}
+                                >
+                                  <span className="text-sm shrink-0">{getCategoryEmoji(subCat, '🏷️')}</span>
+                                  <span className="truncate">{subCat}</span>
+                                  {isSubActive && <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-primary shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   );
                 })}
               </div>
@@ -556,8 +639,8 @@ export const StoreListingPage = () => {
           {/* ── Mobile Category Pills ────────────────────────────────── */}
           <div className="lg:hidden flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
             <button
-              onClick={() => setSelectedCategory(null)}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all ${!selectedCategory
+              onClick={() => { setSelectedMainCategory(null); setSelectedSubCategory(null); }}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all ${!selectedMainCategory && !selectedSubCategory
                   ? 'bg-primary text-primary-foreground border-primary shadow-md'
                   : 'bg-card border-border text-muted-foreground hover:border-primary/30'
                 }`}
@@ -565,20 +648,23 @@ export const StoreListingPage = () => {
               <span className="text-xs shrink-0">🏪</span>
               All
             </button>
-            {dynamicCategories.map((cat) => {
-              const cfg = getCategoryBadgeConfig(cat);
-              const isActive = selectedCategory === cat;
+            {categoryHierarchy.map((item) => {
+              const cfg = getCategoryBadgeConfig(item.mainCategory);
+              const isActive = selectedMainCategory === item.mainCategory;
               return (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(isActive ? null : cat)}
+                  key={item.mainCategory}
+                  onClick={() => {
+                    setSelectedMainCategory(isActive ? null : item.mainCategory);
+                    setSelectedSubCategory(null);
+                  }}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all max-w-[130px] whitespace-nowrap ${isActive
                       ? `${cfg.activeBg} border-transparent shadow-md`
                       : `bg-card border-border ${cfg.color} hover:border-primary/30`
                     }`}
                 >
                   <span className="text-xs shrink-0">{cfg.emoji || '🏪'}</span>
-                  <span className="truncate">{cat}</span>
+                  <span className="truncate">{item.mainCategory}</span>
                 </button>
               );
             })}

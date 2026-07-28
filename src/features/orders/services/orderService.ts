@@ -380,13 +380,10 @@ class OrderService extends BaseFirestoreService<Order> {
         return String(img);
       };
 
-      // Helper to strictly identify laundry items
+      // Helper to strictly identify laundry items (cat === "Nguo")
       const isLaundryItem = (item: any): boolean => {
         const cat = item.cat || item.category || '';
-        if (cat === 'Nguo') return true;
-        if (item.isLaundry === true) return true;
-        if (['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(cat)) return true;
-        return false;
+        return cat === 'Nguo';
       };
       
       const laundryItems = order.items.filter(item => isLaundryItem(item));

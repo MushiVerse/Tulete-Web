@@ -3,10 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, ArrowRight, ChevronRight, CheckCircle2, 
+  Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
   MapPin, Star, Plus, Minus, Phone, ShieldCheck, 
   ShoppingBag, Clock, Sparkles, Tag, Trash2
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 import { PageContainer } from '../../../shared/components/layout';
 import { HomeSearchResultsView } from '../../home/components/HomeSearchResultsView';
 import { Button } from '../../../shared/components/ui/Button';
@@ -22,6 +25,7 @@ import { useDynamicPrice, getDeliveryFee } from '../../location/hooks/useDynamic
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
+import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
 const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigate }: any) => {
   if (product.availability === false) {
@@ -123,7 +127,7 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
   );
 };
 
-// --- Static Data ---
+// --- Static Fallback Data ---
 const PRODUCT_CATEGORIES = [
   { id: 'all', name: 'All Products', icon: '🛍️' },
   { id: 'electronics', name: 'Electronics', icon: '📱' },
@@ -169,16 +173,83 @@ const PROMOS = [
 export const ProductsPage = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
+  const [expandedDepartments, setExpandedDepartments] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [mobileResults, setMobileResults] = useState<any[]>([]);
   const [mobileLoading, setMobileLoading] = useState(false);
 
+  const toggleDepartmentExpand = (deptName: string) => {
+    setExpandedDepartments(prev => ({
+      ...prev,
+      [deptName]: !prev[deptName]
+    }));
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Query ecommerceCategory (main) & ecommerceSubCategory (sub) from Firestore
+  const { data: ecommerceCats = [] } = useQuery({
+    queryKey: ['ecommerceCategory'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'ecommerceCategory'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  const { data: ecommerceSubCats = [] } = useQuery({
+    queryKey: ['ecommerceSubCategory'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'ecommerceSubCategory'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  const hierarchicalDepartments = React.useMemo(() => {
+    if (ecommerceCats.length === 0) {
+      return PRODUCT_CATEGORIES.map(c => ({
+        id: c.id,
+        name: c.name,
+        icon: getCategoryEmoji(c.name, c.icon),
+        subCategories: []
+      }));
+    }
+
+    return ecommerceCats.map((mainDoc: any) => {
+      const mainName = mainDoc.name || mainDoc.category || mainDoc.subCat || mainDoc.id;
+      const subItems = ecommerceSubCats.filter((subDoc: any) => {
+        const refKey = subDoc.name || subDoc.category || subDoc.mainCategory || subDoc.mainCat;
+        return String(refKey).toLowerCase().trim() === String(mainName).toLowerCase().trim();
+      });
+
+      return {
+        id: mainDoc.id,
+        name: mainName,
+        icon: getCategoryEmoji(mainName, mainDoc.icon || mainDoc.emoji),
+        subCategories: subItems.map((sub: any) => {
+          const subName = sub.subCat || sub.subsubCat || sub.subCategory || sub.name || sub.id;
+          return {
+            id: sub.id,
+            name: subName,
+            emoji: getCategoryEmoji(subName, '🛍️')
+          };
+        })
+      };
+    });
+  }, [ecommerceCats, ecommerceSubCats]);
 
   useEffect(() => {
     if (!isMobileSearchOpen || !searchQuery.trim()) { setMobileResults([]); return; }
@@ -229,19 +300,10 @@ export const ProductsPage = () => {
   }, []);
 
   // Filter logic
-  const queryFilters = activeCategory !== 'all' 
-    ? [
-        { field: '_collection', operator: '==', value: 'products' },
-        { field: 'category', operator: '==', value: activeCategory }
-      ] 
-    : [
-        { field: '_collection', operator: '==', value: 'products' }
-      ];
-  
   const { data: productsData, isLoading } = useFirestoreQuery(
     ['products', 'page', activeCategory],
     productService,
-    { filters: queryFilters as any, limit: 100 }
+    { filters: [{ field: '_collection', operator: '==', value: 'products' }] as any, limit: 100 }
   );
 
   const rawProducts = productsData?.data || [];
@@ -249,8 +311,16 @@ export const ProductsPage = () => {
   const { currentLocation } = useLocationStore();
 
   const filteredProducts = rawProducts.filter(item => {
-    // Prevent empty slots by filtering unavailable items here before they get wrapped in grid divs
     if (item.availability === false || (item as any).availability === 'false') return false;
+
+    // Filter by active category / active sub category
+    if (activeSubCategory) {
+      const itemSub = ((item as any).subCat || item.category || '').toLowerCase();
+      if (!itemSub.includes(activeSubCategory.toLowerCase())) return false;
+    } else if (activeCategory && activeCategory !== 'all') {
+      const itemCat = (item.category || (item as any).subCat || '').toLowerCase();
+      if (!itemCat.includes(activeCategory.toLowerCase())) return false;
+    }
 
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.store.toLowerCase().includes(searchQuery.toLowerCase());
@@ -261,7 +331,6 @@ export const ProductsPage = () => {
 
     return matchesSearch && matchesFee;
   }).sort((a, b) => {
-    // Primary sort: time (descending - newest first)
     const timeA = (a as any).time || (a as any).createdAt || '';
     const timeB = (b as any).time || (b as any).createdAt || '';
     if (timeA && timeB) {
@@ -273,15 +342,12 @@ export const ProductsPage = () => {
       return -1;
     }
     
-    // Secondary sort: rating (descending)
     return (b.rating || 0) - (a.rating || 0);
   });
 
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   
-  // Subscribe to location store so that the page updates on location change
-
   const handleCheckout = () => {
     if (!isAuthenticated) {
       openModal('login');
@@ -310,21 +376,89 @@ export const ProductsPage = () => {
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border px-6 pt-6 pb-28">
           <div className="sticky top-24 space-y-2 max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none pb-4">
             <h2 className="text-xs font-extrabold text-foreground mb-4 uppercase tracking-widest opacity-80">Departments</h2>
-            {PRODUCT_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
-                  activeCategory === cat.id 
-                    ? 'bg-primary text-primary-foreground shadow-md scale-105' 
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                <span className="text-xl">{cat.icon}</span>
-                {cat.name}
-                {activeCategory === cat.id && <ChevronRight className="w-4 h-4 ml-auto" />}
-              </button>
-            ))}
+            
+            {/* All Products button */}
+            <button
+              onClick={() => { setActiveCategory('all'); setActiveSubCategory(null); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
+                activeCategory === 'all' && !activeSubCategory
+                  ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <span className="text-xl">🛍️</span>
+              All Products
+            </button>
+
+            {/* Dynamic ecommerceCategory & ecommerceSubCategory items */}
+            {hierarchicalDepartments.map((cat) => {
+              const isMainActive = activeCategory === cat.name;
+              const isExpanded = expandedDepartments[cat.name] || isMainActive;
+
+              return (
+                <div key={cat.id} className="space-y-1">
+                  <div
+                    onClick={() => {
+                      setActiveCategory(isMainActive && !activeSubCategory ? 'all' : cat.name);
+                      setActiveSubCategory(null);
+                      toggleDepartmentExpand(cat.name);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm cursor-pointer ${
+                      isMainActive && !activeSubCategory
+                        ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <span className="text-xl">{cat.icon}</span>
+                    <span className="flex-1 truncate">{cat.name}</span>
+                    {cat.subCategories.length > 0 && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleDepartmentExpand(cat.name);
+                        }}
+                        className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-all"
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Expanded ecommerceSubCategory list */}
+                  <AnimatePresence>
+                    {isExpanded && cat.subCategories.length > 0 && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="pl-6 space-y-1 overflow-hidden"
+                      >
+                        {cat.subCategories.map((sub) => {
+                          const isSubActive = activeSubCategory === sub.name;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => {
+                                setActiveCategory(cat.name);
+                                setActiveSubCategory(isSubActive ? null : sub.name);
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left ${
+                                isSubActive
+                                  ? 'bg-primary/10 border border-primary text-primary'
+                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                              }`}
+                            >
+                              <span className="text-sm shrink-0">{sub.emoji}</span>
+                              <span className="truncate">{sub.name}</span>
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -394,12 +528,25 @@ export const ProductsPage = () => {
 
           {/* Mobile Categories Pill Bar */}
           <div className="lg:hidden flex items-center gap-2 overflow-x-auto scrollbar-none pb-2">
-            {PRODUCT_CATEGORIES.map((cat) => (
+            <button
+              onClick={() => { setActiveCategory('all'); setActiveSubCategory(null); }}
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${
+                activeCategory === 'all' && !activeSubCategory
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+                  : 'bg-card border-border text-muted-foreground'
+              }`}
+            >
+              <span>🛍️</span> All
+            </button>
+            {hierarchicalDepartments.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => {
+                  setActiveCategory(activeCategory === cat.name ? 'all' : cat.name);
+                  setActiveSubCategory(null);
+                }}
                 className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${
-                  activeCategory === cat.id 
+                  activeCategory === cat.name 
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
                     : 'bg-card border-border text-muted-foreground'
                 }`}

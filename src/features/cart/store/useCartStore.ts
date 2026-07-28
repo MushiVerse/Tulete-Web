@@ -246,7 +246,7 @@ export const useCartStore = create<CartState>()(
         
         const ratios = get().laundryRatios;
         items.forEach(item => {
-          const itemIsLaundry = item.isLaundry || (item as any).cat === 'Nguo' || item.storeId === 'laundry' || item.storeName?.toLowerCase().includes('laundry');
+          const itemIsLaundry = (item as any).cat === 'Nguo';
           if (itemIsLaundry) hasLaundry = true;
           
           let itemTotal = calculateItemTotal(item, ratios || undefined);
