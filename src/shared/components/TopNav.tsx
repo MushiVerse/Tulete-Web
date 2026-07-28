@@ -134,15 +134,15 @@ export const TopNav = () => {
             </span>
           </button>
 
-          {/* Language toggle */}
-          <button
+          {/* Language toggle (commented for now) */}
+          {/* <button
             onClick={toggleLanguage}
             className="relative px-2.5 py-1 text-xs font-extrabold text-muted-foreground hover:text-foreground rounded-full border border-border bg-muted/50 hover:bg-muted transition-all flex items-center gap-1 cursor-pointer"
             title={language === 'en' ? 'Switch to Swahili' : 'Badili kwenda Kiingereza'}
           >
             <Globe className="w-3.5 h-3.5 text-primary" />
             <span className="uppercase">{language === 'en' ? 'SW' : 'EN'}</span>
-          </button>
+          </button> */}
 
           {/* Theme toggle */}
           <button
