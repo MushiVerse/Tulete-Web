@@ -14,6 +14,9 @@ import {
   Utensils, Shirt, Zap, Sparkles, Car, Store as StoreIcon, ShoppingBag,
   Navigation, Clock, TrendingUp, Tag, ChevronDown, Phone, ArrowRight, Bell, ChevronRight
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
@@ -324,12 +327,42 @@ export const StoreListingPage = () => {
 
   const allStores = storesData?.data || [];
 
-  // Extract dynamic main categories & sub-categories ("cat") from store documents
+  const { data: firestoreStoreCats = [] } = useQuery({
+    queryKey: ['storeCategories'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'storeCategories'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  // Extract dynamic main categories & sub-categories from Firestore storeCategories collection & store documents
   const categoryHierarchy = React.useMemo(() => {
     const map = new Map<string, Set<string>>();
-    const defaultMains = ['Food', 'Laundry', 'Electrical', 'Beauty', 'Products'];
-    defaultMains.forEach(m => map.set(m, new Set<string>()));
 
+    // 1. Populate from Firestore storeCategories collection if available
+    firestoreStoreCats.forEach((catDoc: any) => {
+      const mainCat = catDoc.name || catDoc.category || catDoc.mainCategory || catDoc.title;
+      if (mainCat && typeof mainCat === 'string' && mainCat.trim()) {
+        const cleanMain = mainCat.trim();
+        if (!map.has(cleanMain)) {
+          map.set(cleanMain, new Set<string>());
+        }
+        if (Array.isArray(catDoc.subCategories)) {
+          catDoc.subCategories.forEach((sub: any) => {
+            const subStr = typeof sub === 'string' ? sub : sub?.name;
+            if (subStr && typeof subStr === 'string' && subStr.trim()) {
+              map.get(cleanMain)!.add(subStr.trim());
+            }
+          });
+        }
+      }
+    });
+
+    // 2. Populate dynamically from store documents fetched from Firestore
     allStores.forEach((s) => {
       const mainCat = (s as any).mainCategory || (s as any).mainCat || s.category;
       const subCat = (s as any).cat || (s as any).subCategory;
@@ -343,11 +376,12 @@ export const StoreListingPage = () => {
         }
       }
     });
+
     return Array.from(map.entries()).map(([mainCat, subSet]) => ({
       mainCategory: mainCat,
       subCategories: Array.from(subSet),
     }));
-  }, [allStores]);
+  }, [firestoreStoreCats, allStores]);
 
   const dynamicCategories = React.useMemo(() => {
     const catsSet = new Set<string>();
@@ -360,7 +394,64 @@ export const StoreListingPage = () => {
     return Array.from(catsSet);
   }, [allStores]);
 
-  const processedStores = allStores
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+function fuzzyMatchStore(s: any, query: string): boolean {
+  if (!query || !query.trim()) return true;
+  const q = query.toLowerCase().trim();
+
+  const targets = [
+    s.store || '',
+    s.name || '',
+    s.description || '',
+    s.address || '',
+    s.cat || '',
+    s.category || '',
+    s.mainCategory || '',
+    s.subCategory || '',
+  ].map(t => String(t).toLowerCase().trim());
+
+  if (targets.some(t => t.includes(q))) return true;
+
+  const qTokens = q.split(/\s+/).filter(Boolean);
+  return qTokens.every(qToken => {
+    return targets.some(target => {
+      if (target.includes(qToken)) return true;
+
+      const words = target.split(/\s+/).filter(Boolean);
+      return words.some(word => {
+        if (qToken.length <= 3) return word === qToken;
+        const maxDist = qToken.length <= 5 ? 1 : 2;
+        return levenshteinDistance(qToken, word) <= maxDist;
+      });
+    });
+  });
+}
+
+  const processedStores = (Array.isArray(allStores) ? allStores : [])
     .map((s) => ({
       ...s,
       distance: s.location
@@ -376,28 +467,19 @@ export const StoreListingPage = () => {
       }
 
       if (selectedSubCategory) {
-        const storeSubCat = ((s as any).cat || (s as any).subCategory || s.subCategory || '').toLowerCase().trim();
-        const storeMainCat = ((s as any).mainCategory || s.category || '').toLowerCase().trim();
+        const storeSubCat = ((s as any).cat || (s as any).subCategory || (s as any).subCat || s.subCategory || '').toLowerCase().trim();
+        const storeMainCat = ((s as any).mainCategory || (s as any).mainCat || s.category || '').toLowerCase().trim();
         const subLower = selectedSubCategory.toLowerCase().trim();
-        if (storeSubCat !== subLower && storeMainCat !== subLower) return false;
+        if (storeSubCat !== subLower && !storeSubCat.includes(subLower) && storeMainCat !== subLower && !storeMainCat.includes(subLower)) return false;
       } else if (selectedMainCategory) {
-        const storeMainCat = ((s as any).mainCategory || s.category || '').toLowerCase().trim();
+        const storeMainCat = ((s as any).mainCategory || (s as any).mainCat || (s as any).cat || s.category || '').toLowerCase().trim();
         const mainLower = selectedMainCategory.toLowerCase().trim();
-        if (storeMainCat !== mainLower) return false;
+        if (storeMainCat !== mainLower && !storeMainCat.includes(mainLower) && !mainLower.includes(storeMainCat)) return false;
       }
 
       if (onlyOpen && !s.availability) return false;
       if (onlyVerified && !s.isVerified) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const storeCat = ((s as any).cat || s.category || '').toLowerCase();
-        return (
-          s.store.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q) ||
-          s.address.toLowerCase().includes(q) ||
-          storeCat.includes(q)
-        );
-      }
+      if (searchQuery && !fuzzyMatchStore(s, searchQuery)) return false;
       return true;
     })
     .sort((a, b) => {

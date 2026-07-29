@@ -431,6 +431,23 @@ class OrderService extends BaseFirestoreService<Order> {
         const firstItem = laundryItems[0];
         const laundryDocId = `laundry_${webOrderId}`;
 
+        // Determine instructions specifically for laundry order (cat === "Nguo")
+        let laundryInstructionsText = order.instructions || '';
+        if (!laundryInstructionsText && order.notes) {
+          laundryInstructionsText = order.notes;
+        }
+
+        const prefDeliveryTime = useCartStore.getState().laundryPreferences?.deliverytime;
+        if (prefDeliveryTime && prefDeliveryTime !== 'Pickup' && prefDeliveryTime !== 'ASAP' && !laundryInstructionsText.includes('Preferred Pickup Time')) {
+          const timeFormatted = isNaN(new Date(prefDeliveryTime).getTime())
+            ? prefDeliveryTime
+            : new Date(prefDeliveryTime).toLocaleString();
+          const pickupStr = `Preferred Pickup Time: ${timeFormatted}`;
+          laundryInstructionsText = laundryInstructionsText
+            ? `${laundryInstructionsText}\n[${pickupStr}]`
+            : `[${pickupStr}]`;
+        }
+
         const laundryPayload = {
           uid: uids || 'unknown_uid',
           foodId: laundryDocId,
@@ -452,7 +469,7 @@ class OrderService extends BaseFirestoreService<Order> {
           cancel: false,
           show: true,
           paid: false,
-          instructions: order.notes || order.instructions || '',
+          instructions: laundryInstructionsText,
           ordersts: ['Order Placed'],
           orderststime: [getFlutterTime()],
           amaountpaid: 0,
@@ -513,7 +530,7 @@ class OrderService extends BaseFirestoreService<Order> {
           cancel: false,
           show: true,
           paid: false,
-          instructions: order.notes || order.instructions || '',
+          instructions: order.notes || '',
           ordersts: ['Order Placed'],
           orderststime: [getFlutterTime()],
           amaountpaid: 0,

@@ -70,7 +70,7 @@ const PROMOS = [
 
 const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
   const navigate = useNavigate();
-  if (meal.availability === false) {
+  if (meal.availability === false || meal.availability === 'false' || meal.available === false || meal.isAvailable === false) {
     return null;
   }
   
@@ -78,107 +78,105 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
   const isSoldOut = (meal.quantity !== undefined && meal.quantity <= 0) || (meal.idadi !== undefined && meal.idadi <= 0);
 
   return (
-    <div className="flex flex-col h-full">
-      <motion.div
-        layout
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={() => navigate(`/product/${encodeURIComponent(meal.id)}`)}
-        className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group bg-card border-border cursor-pointer"
-      >
-        <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
-          <img src={meal.imgUrl} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-          <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-            <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
-            <span className="text-xs font-extrabold">{meal.rating}</span>
-          </div>
-          {isSoldOut && (
-            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
-              <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
-                Sold Out
-              </span>
-            </div>
-          )}
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      onClick={() => navigate(`/product/${encodeURIComponent(meal.id)}`)}
+      className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group bg-card border-border cursor-pointer"
+    >
+      <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
+        <img src={meal.imgUrl} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+          <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
+          <span className="text-xs font-extrabold">{meal.rating}</span>
         </div>
+        {isSoldOut && (
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
+            <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
+              Sold Out
+            </span>
+          </div>
+        )}
+      </div>
 
-        <div className="flex flex-col flex-1">
-          <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5">{meal.store}</p>
-          <h3 className="font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors">{meal.name}</h3>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
-            <Clock className="w-3.5 h-3.5" /> 20-30 min
+      <div className="flex flex-col flex-1">
+        <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5">{meal.store}</p>
+        <h3 className="font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors">{meal.name}</h3>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
+          <Clock className="w-3.5 h-3.5" /> 20-30 min
+        </div>
+        
+        <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border">
+          <div>
+            <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
+            <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(dynamicPrice)}</span>
           </div>
           
-          <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border">
-            <div>
-              <span className="text-[10px] font-bold text-muted-foreground block mb-0.5">Est. Total</span>
-              <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(dynamicPrice)}</span>
-            </div>
-            
-            {cartItem ? (
-              <div 
-                className="flex items-center gap-1.5 sm:gap-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateQuantity(meal.id, cartItem.quantity - 1);
-                    }} 
-                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm"
-                  >
-                    <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                  </button>
-                  <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const stockLimit = meal.quantity !== undefined ? meal.quantity : meal.idadi;
-                      if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
-                        alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
-                        return;
-                      }
-                      updateQuantity(meal.id, cartItem.quantity + 1);
-                    }} 
-                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm"
-                  >
-                    <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                  </button>
-                </div>
+          {cartItem ? (
+            <div 
+              className="flex items-center gap-1.5 sm:gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateQuantity(meal.id, cartItem.quantity - 1);
+                  }} 
+                  className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm"
+                >
+                  <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                </button>
+                <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const stockLimit = meal.quantity !== undefined ? meal.quantity : meal.idadi;
+                    if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                      alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
+                      return;
+                    }
+                    updateQuantity(meal.id, cartItem.quantity + 1);
+                  }} 
+                  className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm"
+                >
+                  <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                </button>
               </div>
-            ) : (
-              <button
-                disabled={isSoldOut}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  addToCart({
-                    productId: meal.id,
-                    name: meal.name,
-                    price: meal.price,
-                    imageUrl: meal.imgUrl,
-                    storeId: meal.storeId,
-                    storeName: meal.store,
-                    brand: (meal as any).brand || (meal as any).pbrand || meal.storeId || '',
-                    cat: 'Food',
-                    location: meal.location,
-                    idadi: meal.quantity !== undefined ? meal.quantity : meal.idadi
-                  });
-                }}
-                className={`px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-extrabold flex items-center gap-1.5 ${
-                  !isSoldOut 
-                    ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95' 
-                    : 'bg-muted text-muted-foreground cursor-not-allowed'
-                }`}
-              >
-                <Plus className="w-4 h-4" /> Add
-              </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <button
+              disabled={isSoldOut}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addToCart({
+                  productId: meal.id,
+                  name: meal.name,
+                  price: meal.price,
+                  imageUrl: meal.imgUrl,
+                  storeId: meal.storeId,
+                  storeName: meal.store,
+                  brand: (meal as any).brand || (meal as any).pbrand || meal.storeId || '',
+                  cat: 'Food',
+                  location: meal.location,
+                  idadi: meal.quantity !== undefined ? meal.quantity : meal.idadi
+                });
+              }}
+              className={`px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-extrabold flex items-center gap-1.5 ${
+                !isSoldOut 
+                  ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95' 
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              }`}
+            >
+              <Plus className="w-4 h-4" /> Add
+            </button>
+          )}
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 };
 
@@ -238,27 +236,52 @@ export const FoodPage = () => {
       }));
     }
 
-    return foodSubCats.map((mainDoc: any) => {
-      const mainName = mainDoc.name || mainDoc.subCat || mainDoc.category || mainDoc.id;
+    const categoryMap = new Map<string, { id: string; name: string; icon: string; subCategoriesMap: Map<string, { id: string; name: string; emoji: string }> }>();
+
+    foodSubCats.forEach((mainDoc: any) => {
+      const rawName = mainDoc.name || mainDoc.subCat || mainDoc.category || mainDoc.id;
+      if (!rawName || typeof rawName !== 'string') return;
+      const mainName = rawName.trim();
+      const normKey = mainName.toLowerCase();
+
+      if (!categoryMap.has(normKey)) {
+        categoryMap.set(normKey, {
+          id: mainDoc.id,
+          name: mainName,
+          icon: getCategoryEmoji(mainName, mainDoc.icon || mainDoc.emoji),
+          subCategoriesMap: new Map(),
+        });
+      }
+
+      const catEntry = categoryMap.get(normKey)!;
+
       const subItems = foodSubSubCats.filter((subDoc: any) => {
         const refKey = subDoc.name || subDoc.category || subDoc.subCat || subDoc.mainCategory || subDoc.mainCat;
-        return String(refKey).toLowerCase().trim() === String(mainName).toLowerCase().trim();
+        return String(refKey).toLowerCase().trim() === normKey;
       });
 
-      return {
-        id: mainDoc.id,
-        name: mainName,
-        icon: getCategoryEmoji(mainName, mainDoc.icon || mainDoc.emoji),
-        subCategories: subItems.map((sub: any) => {
-          const subName = sub.subSubCat || sub.subCat || sub.subCategory || sub.name || sub.id;
-          return {
+      subItems.forEach((sub: any) => {
+        const rawSubName = sub.subSubCat || sub.subCat || sub.subCategory || sub.name || sub.id;
+        if (!rawSubName || typeof rawSubName !== 'string') return;
+        const subName = rawSubName.trim();
+        const subNormKey = subName.toLowerCase();
+
+        if (!catEntry.subCategoriesMap.has(subNormKey)) {
+          catEntry.subCategoriesMap.set(subNormKey, {
             id: sub.id,
             name: subName,
             emoji: getCategoryEmoji(subName, '🍲')
-          };
-        })
-      };
+          });
+        }
+      });
     });
+
+    return Array.from(categoryMap.values()).map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      icon: cat.icon,
+      subCategories: Array.from(cat.subCategoriesMap.values())
+    }));
   }, [foodSubCats, foodSubSubCats]);
   
   // Cart & Auth
@@ -304,15 +327,17 @@ export const FoodPage = () => {
   const { currentLocation } = useLocationStore();
 
   const filteredMeals = rawMeals.filter(meal => {
-    if (meal.availability === false || (meal as any).availability === 'false') return false;
+    if (meal.availability === false || (meal as any).availability === 'false' || (meal as any).available === false || (meal as any).isAvailable === false) return false;
 
     // Filter by active category / active sub category
     if (activeSubCategory) {
-      const mealSub = ((meal as any).subsubCat || (meal as any).subCat || meal.category || '').toLowerCase();
-      if (!mealSub.includes(activeSubCategory.toLowerCase())) return false;
+      const mealSub = ((meal as any).subsubCat || (meal as any).subCat || (meal as any).subCategory || meal.category || '').toLowerCase().trim();
+      const targetSub = activeSubCategory.toLowerCase().trim();
+      if (mealSub !== targetSub && !mealSub.includes(targetSub)) return false;
     } else if (activeCategory && activeCategory !== 'all') {
-      const mealCat = (meal.category || (meal as any).subCat || '').toLowerCase();
-      if (!mealCat.includes(activeCategory.toLowerCase())) return false;
+      const mealCat = (meal.category || (meal as any).subCat || (meal as any).mainCategory || (meal as any).cat || '').toLowerCase().trim();
+      const targetCat = activeCategory.toLowerCase().trim();
+      if (mealCat !== targetCat && !mealCat.includes(targetCat) && !targetCat.includes(mealCat)) return false;
     }
 
     const matchesSearch = meal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 

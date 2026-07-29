@@ -28,7 +28,7 @@ import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
 const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigate }: any) => {
-  if (product.availability === false) {
+  if (product.availability === false || product.availability === 'false' || product.available === false || product.isAvailable === false) {
     return null;
   }
 
@@ -37,15 +37,14 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
   const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
 
   return (
-    <div className="flex flex-col h-full">
-      <motion.div
-        layout
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group cursor-pointer bg-card border-border"
-        onClick={() => navigate(`/product/${product.id}`)}
-      >
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group cursor-pointer bg-card border-border"
+      onClick={() => navigate(`/product/${product.id}`)}
+    >
         <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
           <img src={product.imgUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
           <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
@@ -123,7 +122,6 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
           </div>
         </div>
       </motion.div>
-    </div>
   );
 };
 
@@ -311,15 +309,17 @@ export const ProductsPage = () => {
   const { currentLocation } = useLocationStore();
 
   const filteredProducts = rawProducts.filter(item => {
-    if (item.availability === false || (item as any).availability === 'false') return false;
+    if (item.availability === false || (item as any).availability === 'false' || (item as any).available === false || (item as any).isAvailable === false) return false;
 
     // Filter by active category / active sub category
     if (activeSubCategory) {
-      const itemSub = ((item as any).subCat || item.category || '').toLowerCase();
-      if (!itemSub.includes(activeSubCategory.toLowerCase())) return false;
+      const itemSub = ((item as any).subCat || (item as any).subCategory || item.category || '').toLowerCase().trim();
+      const targetSub = activeSubCategory.toLowerCase().trim();
+      if (itemSub !== targetSub && !itemSub.includes(targetSub)) return false;
     } else if (activeCategory && activeCategory !== 'all') {
-      const itemCat = (item.category || (item as any).subCat || '').toLowerCase();
-      if (!itemCat.includes(activeCategory.toLowerCase())) return false;
+      const itemCat = (item.category || (item as any).subCat || (item as any).mainCategory || (item as any).cat || '').toLowerCase().trim();
+      const targetCat = activeCategory.toLowerCase().trim();
+      if (itemCat !== targetCat && !itemCat.includes(targetCat) && !targetCat.includes(itemCat)) return false;
     }
 
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 

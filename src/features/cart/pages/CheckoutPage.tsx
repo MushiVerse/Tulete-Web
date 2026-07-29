@@ -161,13 +161,23 @@ export const CheckoutPage = () => {
         paymentMethod: 'Cash',
         paymentStatus: 'Pending',
         contactPhone: activePhone,
-        notes: deliverytime ? `${notes}\n[Preferred Time: ${new Date(deliverytime).toLocaleString()}]` : notes,
+        notes: notes,
         deliverytime: isLaundryOrder ? 'Pickup' : 'ASAP',
         no: activePhone, // Legacy backward compatibility for Flutter/Admin apps
-        // Laundry-specific fields
+        // Laundry-specific fields (cat === "Nguo")
         ...(isLaundryOrder && {
           isLaundryOrder: true,
-          ...(laundryInstructions && { instructions: laundryInstructions }),
+          instructions: (() => {
+            let instr = laundryInstructions || '';
+            if (deliverytime) {
+              const timeFormatted = isNaN(new Date(deliverytime).getTime())
+                ? deliverytime
+                : new Date(deliverytime).toLocaleString();
+              const pickupStr = `Preferred Pickup Time: ${timeFormatted}`;
+              instr = instr ? `${instr}\n[${pickupStr}]` : `[${pickupStr}]`;
+            }
+            return instr;
+          })(),
         }),
       };
 

@@ -259,6 +259,7 @@ export const LaundryPage = () => {
 
   // Filter and sort items by time (descending)
   const filteredItems = items.filter(item => {
+    if ((item as any).availability === false || (item as any).availability === 'false' || (item as any).available === false || (item as any).isAvailable === false) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       if (!item.name?.toLowerCase().includes(q) &&

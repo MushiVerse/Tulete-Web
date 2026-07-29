@@ -14,6 +14,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock, Plus, Minus, RotateCw, Crosshair, Maximize2, Target } from 'lucide-react';
 import { useLocationStore, SavedLocation } from '../store/useLocationStore';
+import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { storageService } from '../../../core/services/storageService';
 
@@ -29,6 +30,28 @@ const defaultCenter = {
   lng: 35.7516,
 };
 
+const darkMapStyles = [
+  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] },
+  { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] },
+];
+
+const lightMapStyles = [
+  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+];
+
 // We load the script globally — must be defined outside the component to prevent re-renders
 export const GOOGLE_MAPS_LIBRARIES: Libraries = ["places"];
 
@@ -43,6 +66,7 @@ export const LocationPickerModal = ({
 }) => {
 
   const { addSavedLocation, currentLocation, savedLocations, setCurrentLocation } = useLocationStore();
+  const { isDark } = useThemeStore();
   
   const [mapCenter, setMapCenter] = useState(
     currentLocation ? { lat: currentLocation.lat, lng: currentLocation.lng } : defaultCenter
@@ -57,6 +81,7 @@ export const LocationPickerModal = ({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [fallbackSuggestions, setFallbackSuggestions] = useState<Array<{ place_id: string; description: string; lat: number; lng: number }>>([]);
   
   const [isFullScreen, setIsFullScreen] = useState(false);
   // Adjust container height based on fullscreen mode
@@ -67,6 +92,7 @@ export const LocationPickerModal = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const prevIdlePosRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Clean up preview URL
   useEffect(() => {
@@ -98,15 +124,48 @@ export const LocationPickerModal = ({
     setValue,
     clearSuggestions,
   } = usePlacesAutocomplete({
-    requestOptions: {
-      /* Define search scope here if needed */
-    },
+    requestOptions: {},
     debounce: 300,
   });
+
+  // Fetch OpenStreetMap Nominatim fallback suggestions when Google Places has no results or isn't OK
+  useEffect(() => {
+    if (status !== 'OK' && searchValue.trim().length > 2) {
+      const controller = new AbortController();
+      const timer = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchValue)}&limit=5`, {
+            headers: { 'Accept-Language': 'en' },
+            signal: controller.signal,
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (Array.isArray(json)) {
+              setFallbackSuggestions(json.map((item: any) => ({
+                place_id: String(item.place_id),
+                description: item.display_name,
+                lat: parseFloat(item.lat),
+                lng: parseFloat(item.lon),
+              })));
+            }
+          }
+        } catch (e) {
+          // ignore error
+        }
+      }, 350);
+      return () => {
+        clearTimeout(timer);
+        controller.abort();
+      };
+    } else {
+      setFallbackSuggestions([]);
+    }
+  }, [searchValue, status]);
 
   const handleSelect = async (val: string) => {
     setValue(val, false);
     clearSuggestions();
+    setFallbackSuggestions([]);
 
     try {
       const results = await getGeocode({ address: val });
@@ -114,7 +173,6 @@ export const LocationPickerModal = ({
       setMapCenter({ lat, lng });
       setSelectedPos({ lat, lng });
       setAddressText(results[0].formatted_address);
-      // Update the global location store so price calculation reacts
       setCurrentLocation({
         id: Date.now().toString(),
         address: results[0].formatted_address,
@@ -128,7 +186,28 @@ export const LocationPickerModal = ({
         mapRef.current.setZoom(16);
       }
     } catch (error) {
-      console.error('Error: ', error);
+      console.error('Google Places Geocode error:', error);
+    }
+  };
+
+  const handleFallbackSelect = (item: { description: string; lat: number; lng: number }) => {
+    setValue(item.description, false);
+    clearSuggestions();
+    setFallbackSuggestions([]);
+    setMapCenter({ lat: item.lat, lng: item.lng });
+    setSelectedPos({ lat: item.lat, lng: item.lng });
+    setAddressText(item.description);
+    setCurrentLocation({
+      id: Date.now().toString(),
+      address: item.description,
+      lat: item.lat,
+      lng: item.lng,
+      specificInstructions: '',
+      lastUsedAt: Date.now(),
+    });
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat: item.lat, lng: item.lng });
+      mapRef.current.setZoom(16);
     }
   };
 
@@ -152,7 +231,6 @@ export const LocationPickerModal = ({
             if (results[0]) {
               setAddressText(results[0].formatted_address);
               setValue(results[0].formatted_address, false);
-              // Update global store with the current location
               setCurrentLocation({
                 id: Date.now().toString(),
                 address: results[0].formatted_address,
@@ -164,13 +242,11 @@ export const LocationPickerModal = ({
             }
           } catch (e) {
             console.error('Google Maps Geocoding failed:', e);
-            // Fallback to OpenStreetMap Nominatim from locationService
             try {
               const { locationService } = await import('../services/locationService');
               const fallbackAddress = await locationService.reverseGeocode(lat, lng);
               setAddressText(fallbackAddress);
               setValue(fallbackAddress, false);
-              // Update store with fallback address
               setCurrentLocation({
                 id: Date.now().toString(),
                 address: fallbackAddress,
@@ -214,7 +290,7 @@ export const LocationPickerModal = ({
       alert('Geolocation is not supported by your browser. Please select a location manually.');
       setIsLocating(false);
     }
-  }, [setValue]);
+  }, [setValue, setCurrentLocation]);
 
   // Auto-locate user when the modal opens if they haven't set a location yet
   useEffect(() => {
@@ -223,19 +299,13 @@ export const LocationPickerModal = ({
     }
   }, [isOpen, currentLocation, selectedPos, isLocating, handleUseCurrentLocation]);
 
-  const onMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return;
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
+  const updateSelectedLocation = useCallback(async (lat: number, lng: number) => {
     setSelectedPos({ lat, lng });
-    
-    // Reverse geocode
     try {
       const results = await getGeocode({ location: { lat, lng } });
       if (results[0]) {
         setAddressText(results[0].formatted_address);
         setValue(results[0].formatted_address, false);
-        // Update global location store so price recalculates
         setCurrentLocation({
           id: Date.now().toString(),
           address: results[0].formatted_address,
@@ -246,14 +316,11 @@ export const LocationPickerModal = ({
         });
       }
     } catch (err) {
-      console.error('Google Maps Geocoding failed on map click:', err);
-      // Fallback to OpenStreetMap Nominatim
       try {
         const { locationService } = await import('../services/locationService');
         const fallbackAddress = await locationService.reverseGeocode(lat, lng);
         setAddressText(fallbackAddress);
         setValue(fallbackAddress, false);
-        // Update store with fallback address
         setCurrentLocation({
           id: Date.now().toString(),
           address: fallbackAddress,
@@ -268,6 +335,34 @@ export const LocationPickerModal = ({
     }
   }, [setValue, setCurrentLocation]);
 
+  const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    updateSelectedLocation(lat, lng);
+  }, [updateSelectedLocation]);
+
+  // Auto-select center when map dragging stops
+  const handleMapIdle = useCallback(() => {
+    if (!mapRef.current) return;
+    const center = mapRef.current.getCenter();
+    if (!center) return;
+
+    const lat = center.lat();
+    const lng = center.lng();
+
+    if (
+      prevIdlePosRef.current &&
+      Math.abs(prevIdlePosRef.current.lat - lat) < 0.00005 &&
+      Math.abs(prevIdlePosRef.current.lng - lng) < 0.00005
+    ) {
+      return;
+    }
+
+    prevIdlePosRef.current = { lat, lng };
+    updateSelectedLocation(lat, lng);
+  }, [updateSelectedLocation]);
+
   const handleSaveLocation = async () => {
     if (!selectedPos || !specificInstructions.trim()) return;
 
@@ -278,7 +373,6 @@ export const LocationPickerModal = ({
         imageUrl = await storageService.uploadFile(selectedImage, 'location_images');
       } catch (error) {
         console.error('Failed to upload location image:', error);
-        // Continue saving location without image if upload fails
       } finally {
         setIsUploading(false);
       }
@@ -293,7 +387,6 @@ export const LocationPickerModal = ({
     };
 
     addSavedLocation(newLocation);
-    // Update current location to the newly saved one
     setCurrentLocation({
       id: Date.now().toString(),
       address: newLocation.address,
@@ -303,7 +396,6 @@ export const LocationPickerModal = ({
       lastUsedAt: Date.now(),
     });
 
-    // Reset states
     setSpecificInstructions('');
     removeImage();
     onClose();
@@ -330,14 +422,14 @@ export const LocationPickerModal = ({
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
         </DialogHeader>
 
-        <div className="p-5 space-y-5 overflow-y-auto flex-1 hide-scrollbar">
+        <div className="p-5 space-y-5 overflow-y-auto flex-1 hide-scrollbar scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {/* Quick Select Saved Locations */}
           {savedLocations.length > 0 && (
             <div className="space-y-2.5">
               <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5" /> Recent Locations
               </label>
-              <div className="flex gap-3 overflow-x-auto pb-2 snap-x hide-scrollbar">
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x hide-scrollbar scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {savedLocations.map((loc) => (
                   <button
                     key={loc.id}
@@ -372,17 +464,28 @@ export const LocationPickerModal = ({
               placeholder="Search for area, street name..."
               className="pl-10 bg-muted/50 border-border focus:bg-card transition-colors"
             />
-            {status === "OK" && (
-              <ul className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {data.map(({ place_id, description }) => (
+            {(status === "OK" || fallbackSuggestions.length > 0) && (
+              <ul className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto hide-scrollbar scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {status === "OK" && data.map(({ place_id, description }) => (
                   <li
                     key={place_id}
                     role="option"
                     aria-selected={false}
-                    className="p-3 hover:bg-muted cursor-pointer text-sm font-medium transition-colors border-b border-border last:border-0"
+                    className="p-3 hover:bg-muted cursor-pointer text-sm font-medium transition-colors border-b border-border last:border-0 text-foreground"
                     onMouseDown={() => handleSelect(description)}
                   >
                     {description}
+                  </li>
+                ))}
+                {status !== "OK" && fallbackSuggestions.map((item) => (
+                  <li
+                    key={item.place_id}
+                    role="option"
+                    aria-selected={false}
+                    className="p-3 hover:bg-muted cursor-pointer text-sm font-medium transition-colors border-b border-border last:border-0 text-foreground"
+                    onMouseDown={() => handleFallbackSelect(item)}
+                  >
+                    {item.description}
                   </li>
                 ))}
               </ul>
@@ -414,6 +517,7 @@ export const LocationPickerModal = ({
                   center={mapCenter}
                   zoom={14}
                   onClick={onMapClick}
+                  onIdle={handleMapIdle}
                   onLoad={(map) => { mapRef.current = map; }}
                   options={{
                     disableDefaultUI: true,
@@ -422,9 +526,7 @@ export const LocationPickerModal = ({
                     streetViewControl: false,
                     mapTypeControl: false,
                     fullscreenControl: false,
-                    styles: [
-                      { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-                    ],
+                    styles: isDark ? darkMapStyles : lightMapStyles,
                   }}
                 >
                   {selectedPos && (
@@ -434,13 +536,13 @@ export const LocationPickerModal = ({
                     />
                   )}
                   {/* One‑hand toolbar – top‑left for thumb reach */}
-                  <div className="absolute left-2 top-2 flex flex-col bg-white/80 rounded-lg shadow-md p-1 space-y-1">
+                  <div className="absolute left-2 top-2 flex flex-col bg-card/90 border border-border text-foreground rounded-lg shadow-md p-1 space-y-1 backdrop-blur">
                     <button
                       onClick={() => {
                         const map = mapRef.current;
                         if (map) map.setZoom((map.getZoom() || 14) + 1);
                       }}
-                      className="p-1 hover:bg-primary/10"
+                      className="p-1 hover:bg-primary/10 rounded"
                     >
                       <Plus className="w-5 h-5" />
                     </button>
@@ -449,14 +551,14 @@ export const LocationPickerModal = ({
                         const map = mapRef.current;
                         if (map) map.setZoom((map.getZoom() || 14) - 1);
                       }}
-                      className="p-1 hover:bg-primary/10"
+                      className="p-1 hover:bg-primary/10 rounded"
                     >
                       <Minus className="w-5 h-5" />
                     </button>
-                    <button onClick={handleUseCurrentLocation} className="p-1 hover:bg-primary/10">
+                    <button onClick={handleUseCurrentLocation} className="p-1 hover:bg-primary/10 rounded">
                       <Crosshair className="w-5 h-5" />
                     </button>
-                    <button onClick={() => setIsFullScreen(prev => !prev)} className="p-1 hover:bg-primary/10">
+                    <button onClick={() => setIsFullScreen(prev => !prev)} className="p-1 hover:bg-primary/10 rounded">
                       <Maximize2 className="w-4 h-4" />
                     </button>
                   </div>

@@ -158,12 +158,12 @@ export const useCartStore = create<CartState>()(
       })),
 
       applyLaundryServicesToAll: (config) => set((state) => ({
-        items: state.items.map(i => i.isLaundry ? { ...i, ...config } : i)
+        items: state.items.map(i => ((i as any).cat === 'Nguo') ? { ...i, ...config } : i)
       })),
 
       clearAllLaundryServices: () => set((state) => ({
         laundryPreferences: { deliverytime: '', instructions: '', globalExpressSelected: false },
-        items: state.items.map(i => i.isLaundry ? { 
+        items: state.items.map(i => ((i as any).cat === 'Nguo') ? { 
           ...i, 
           ironingSelected: false, 
           packagingSelected: false, 
