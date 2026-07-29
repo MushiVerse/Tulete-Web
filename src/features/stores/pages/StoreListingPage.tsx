@@ -327,11 +327,11 @@ export const StoreListingPage = () => {
 
   const allStores = storesData?.data || [];
 
-  const { data: firestoreStoreCats = [] } = useQuery({
-    queryKey: ['storeCategories'],
+  const { data: firestoreCategories = [] } = useQuery({
+    queryKey: ['CategoriesCollectionStoreListing'],
     queryFn: async () => {
       try {
-        const snap = await getDocs(collection(db, 'storeCategories'));
+        const snap = await getDocs(collection(db, 'Categories'));
         return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       } catch (e) {
         return [];
@@ -339,23 +339,30 @@ export const StoreListingPage = () => {
     }
   });
 
-  // Extract dynamic main categories & sub-categories from Firestore storeCategories collection & store documents
+  // Extract dynamic main categories & sub-categories from Firestore Categories collection & store documents
   const categoryHierarchy = React.useMemo(() => {
     const map = new Map<string, Set<string>>();
+    const EXCLUDED_CATS = ['all stores', 'all providers', 'all products', 'all'];
 
-    // 1. Populate from Firestore storeCategories collection if available
-    firestoreStoreCats.forEach((catDoc: any) => {
-      const mainCat = catDoc.name || catDoc.category || catDoc.mainCategory || catDoc.title;
-      if (mainCat && typeof mainCat === 'string' && mainCat.trim()) {
-        const cleanMain = mainCat.trim();
-        if (!map.has(cleanMain)) {
+    // 1. Populate from Firestore Categories collection using the "category" field
+    (Array.isArray(firestoreCategories) ? firestoreCategories : []).forEach((catDoc: any) => {
+      const rawCat = catDoc.category || catDoc.name;
+      if (rawCat && typeof rawCat === 'string' && rawCat.trim()) {
+        const cleanMain = rawCat.trim();
+        const normKey = cleanMain.toLowerCase();
+        if (EXCLUDED_CATS.includes(normKey)) return;
+
+        let existingKey = Array.from(map.keys()).find(k => k.toLowerCase() === normKey);
+        if (!existingKey) {
           map.set(cleanMain, new Set<string>());
+          existingKey = cleanMain;
         }
+
         if (Array.isArray(catDoc.subCategories)) {
           catDoc.subCategories.forEach((sub: any) => {
             const subStr = typeof sub === 'string' ? sub : sub?.name;
             if (subStr && typeof subStr === 'string' && subStr.trim()) {
-              map.get(cleanMain)!.add(subStr.trim());
+              map.get(existingKey!)!.add(subStr.trim());
             }
           });
         }
@@ -363,16 +370,21 @@ export const StoreListingPage = () => {
     });
 
     // 2. Populate dynamically from store documents fetched from Firestore
-    allStores.forEach((s) => {
-      const mainCat = (s as any).mainCategory || (s as any).mainCat || s.category;
+    (Array.isArray(allStores) ? allStores : []).forEach((s) => {
+      const rawMain = (s as any).mainCategory || (s as any).mainCat || s.category;
       const subCat = (s as any).cat || (s as any).subCategory;
-      if (mainCat && typeof mainCat === 'string' && mainCat.trim()) {
-        const cleanMain = mainCat.trim();
-        if (!map.has(cleanMain)) {
+      if (rawMain && typeof rawMain === 'string' && rawMain.trim()) {
+        const cleanMain = rawMain.trim();
+        const normKey = cleanMain.toLowerCase();
+        if (EXCLUDED_CATS.includes(normKey)) return;
+
+        let existingKey = Array.from(map.keys()).find(k => k.toLowerCase() === normKey);
+        if (!existingKey) {
           map.set(cleanMain, new Set<string>());
+          existingKey = cleanMain;
         }
         if (subCat && typeof subCat === 'string' && subCat.trim()) {
-          map.get(cleanMain)!.add(subCat.trim());
+          map.get(existingKey!)!.add(subCat.trim());
         }
       }
     });
@@ -381,7 +393,7 @@ export const StoreListingPage = () => {
       mainCategory: mainCat,
       subCategories: Array.from(subSet),
     }));
-  }, [firestoreStoreCats, allStores]);
+  }, [firestoreCategories, allStores]);
 
   const dynamicCategories = React.useMemo(() => {
     const catsSet = new Set<string>();

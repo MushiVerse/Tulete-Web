@@ -201,7 +201,19 @@ export const FoodPage = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Query foodSubCategory (main) and foodSubSubCategory (sub) from Firestore
+  // Query foodCategory, foodSubCategory, and foodSubSubCategory from Firestore
+  const { data: foodCats = [] } = useQuery({
+    queryKey: ['foodCategory'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'foodCategory'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
   const { data: foodSubCats = [] } = useQuery({
     queryKey: ['foodSubCategory'],
     queryFn: async () => {
@@ -227,7 +239,66 @@ export const FoodPage = () => {
   });
 
   const hierarchicalFoodCategories = React.useMemo(() => {
-    if (foodSubCats.length === 0) {
+    const categoryMap = new Map<string, { id: string; name: string; icon: string; subCategoriesMap: Map<string, { id: string; name: string; emoji: string }> }>();
+
+    // 1. Process foodCategory documents
+    foodCats.forEach((doc: any) => {
+      const rawName = doc.name || doc.category || doc.title;
+      if (!rawName || typeof rawName !== 'string') return;
+      const catName = rawName.trim();
+      if (!catName) return;
+      const normKey = catName.toLowerCase();
+
+      if (!categoryMap.has(normKey)) {
+        categoryMap.set(normKey, {
+          id: doc.id || normKey,
+          name: catName,
+          icon: getCategoryEmoji(catName, doc.icon || doc.emoji),
+          subCategoriesMap: new Map(),
+        });
+      }
+    });
+
+    // 2. Process foodSubCategory documents using the "name" field
+    foodSubCats.forEach((doc: any) => {
+      const rawName = doc.name || doc.subCat || doc.category;
+      if (!rawName || typeof rawName !== 'string') return;
+      const catName = rawName.trim();
+      if (!catName) return;
+      const normKey = catName.toLowerCase();
+
+      if (!categoryMap.has(normKey)) {
+        categoryMap.set(normKey, {
+          id: doc.id || normKey,
+          name: catName,
+          icon: getCategoryEmoji(catName, doc.icon || doc.emoji),
+          subCategoriesMap: new Map(),
+        });
+      }
+    });
+
+    // 3. Attach subcategories from foodSubSubCategory if matched
+    foodSubSubCats.forEach((sub: any) => {
+      const refKey = String(sub.name || sub.category || sub.subCat || sub.mainCategory || sub.mainCat || '').toLowerCase().trim();
+      if (refKey && categoryMap.has(refKey)) {
+        const catEntry = categoryMap.get(refKey)!;
+        const rawSubName = sub.subSubCat || sub.subCat || sub.subCategory || sub.name || sub.id;
+        if (rawSubName && typeof rawSubName === 'string') {
+          const subName = rawSubName.trim();
+          const subNormKey = subName.toLowerCase();
+          if (!catEntry.subCategoriesMap.has(subNormKey)) {
+            catEntry.subCategoriesMap.set(subNormKey, {
+              id: sub.id,
+              name: subName,
+              emoji: getCategoryEmoji(subName, '🍲')
+            });
+          }
+        }
+      }
+    });
+
+    // Fallback if no category documents were retrieved
+    if (categoryMap.size === 0) {
       return FOOD_CATEGORIES.map(c => ({
         id: c.id,
         name: c.name,
@@ -236,53 +307,13 @@ export const FoodPage = () => {
       }));
     }
 
-    const categoryMap = new Map<string, { id: string; name: string; icon: string; subCategoriesMap: Map<string, { id: string; name: string; emoji: string }> }>();
-
-    foodSubCats.forEach((mainDoc: any) => {
-      const rawName = mainDoc.name || mainDoc.subCat || mainDoc.category || mainDoc.id;
-      if (!rawName || typeof rawName !== 'string') return;
-      const mainName = rawName.trim();
-      const normKey = mainName.toLowerCase();
-
-      if (!categoryMap.has(normKey)) {
-        categoryMap.set(normKey, {
-          id: mainDoc.id,
-          name: mainName,
-          icon: getCategoryEmoji(mainName, mainDoc.icon || mainDoc.emoji),
-          subCategoriesMap: new Map(),
-        });
-      }
-
-      const catEntry = categoryMap.get(normKey)!;
-
-      const subItems = foodSubSubCats.filter((subDoc: any) => {
-        const refKey = subDoc.name || subDoc.category || subDoc.subCat || subDoc.mainCategory || subDoc.mainCat;
-        return String(refKey).toLowerCase().trim() === normKey;
-      });
-
-      subItems.forEach((sub: any) => {
-        const rawSubName = sub.subSubCat || sub.subCat || sub.subCategory || sub.name || sub.id;
-        if (!rawSubName || typeof rawSubName !== 'string') return;
-        const subName = rawSubName.trim();
-        const subNormKey = subName.toLowerCase();
-
-        if (!catEntry.subCategoriesMap.has(subNormKey)) {
-          catEntry.subCategoriesMap.set(subNormKey, {
-            id: sub.id,
-            name: subName,
-            emoji: getCategoryEmoji(subName, '🍲')
-          });
-        }
-      });
-    });
-
     return Array.from(categoryMap.values()).map(cat => ({
       id: cat.id,
       name: cat.name,
       icon: cat.icon,
       subCategories: Array.from(cat.subCategoriesMap.values())
     }));
-  }, [foodSubCats, foodSubSubCats]);
+  }, [foodCats, foodSubCats, foodSubSubCats]);
   
   // Cart & Auth
   const { items: cartItems, addToCart, removeFromCart, clearCart, updateQuantity, getTotals } = useCartStore();
