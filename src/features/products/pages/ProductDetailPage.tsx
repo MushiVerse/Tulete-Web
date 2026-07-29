@@ -21,18 +21,28 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { locationService } from '../../location/services/locationService';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
+import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
 /* Endless Vertical Grid Section for "More of ..." */
 const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] }) => {
+  const validItems = items.filter((p) => {
+    if (!p) return false;
+    const isUnavailable = p.availability === false || p.availability === "false" || String(p.availability).toLowerCase() === "false";
+    return !isUnavailable;
+  });
+
   const [visibleCount, setVisibleCount] = useState(12);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const loadNextBatch = () => {
-    if (isLoadingMore || visibleCount >= items.length) return;
+    if (isLoadingMore || visibleCount >= validItems.length) return;
     setIsLoadingMore(true);
     setTimeout(() => {
-      setVisibleCount((prev) => Math.min(prev + 8, items.length));
+      setVisibleCount((prev) => Math.min(prev + 8, validItems.length));
       setIsLoadingMore(false);
     }, 250);
   };
@@ -45,7 +55,7 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
     const scrollParent = sentinel.closest('.overflow-y-auto') || window;
 
     const handleScroll = () => {
-      if (isLoadingMore || visibleCount >= items.length) return;
+      if (isLoadingMore || visibleCount >= validItems.length) return;
       const rect = sentinel.getBoundingClientRect();
       const parentHeight = scrollParent === window ? window.innerHeight : (scrollParent as HTMLElement).clientHeight;
       if (rect.top <= parentHeight + 400) {
@@ -55,7 +65,7 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && visibleCount < items.length) {
+        if (entries[0].isIntersecting && visibleCount < validItems.length) {
           loadNextBatch();
         }
       },
@@ -80,9 +90,11 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
         (scrollParent as HTMLElement).removeEventListener('scroll', handleScroll);
       }
     };
-  }, [items.length, visibleCount, isLoadingMore]);
+  }, [validItems.length, visibleCount, isLoadingMore]);
 
-  const visibleItems = items.slice(0, visibleCount);
+  const visibleItems = validItems.slice(0, visibleCount);
+
+  if (validItems.length === 0) return null;
 
   return (
     <div className="space-y-4 pt-4 border-t border-border/40">
@@ -92,7 +104,7 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
           {title}
         </h2>
         <span className="text-xs font-bold text-muted-foreground">
-          Showing {visibleItems.length} of {items.length}
+          Showing {visibleItems.length} of {validItems.length}
         </span>
       </div>
 
@@ -208,6 +220,91 @@ export const ProductDetailPage = () => {
     },
     { enabled: true }
   );
+
+  // Fetch ecommerceCategory (name field) & foodSubCategory (subCat field) from Firestore for Departments filter
+  const { data: ecommerceCats = [] } = useQuery({
+    queryKey: ['ecommerceCategory'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'ecommerceCategory'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  const { data: foodSubCats = [] } = useQuery({
+    queryKey: ['foodSubCategory'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'foodSubCategory'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  // Combine and interleave categories from ecommerceCategory.name & foodSubCategory.subCat
+  const departmentCategories = React.useMemo(() => {
+    const categoriesMap = new Map<string, { id: string; name: string; icon: string; source: string }>();
+
+    // 1. Extract from ecommerceCategory using the "name" field
+    ecommerceCats.forEach((doc: any) => {
+      const rawName = doc.name || doc.category || doc.title;
+      if (rawName && typeof rawName === 'string') {
+        const trimmed = rawName.trim();
+        if (trimmed) {
+          const key = trimmed.toLowerCase();
+          if (!categoriesMap.has(key)) {
+            categoriesMap.set(key, {
+              id: doc.id || `ecom-${key}`,
+              name: trimmed,
+              icon: getCategoryEmoji(trimmed, doc.icon || doc.emoji || '🛍️'),
+              source: 'ecommerce'
+            });
+          }
+        }
+      }
+    });
+
+    // 2. Extract from foodSubCategory using the "subCat" field (or name fallback)
+    foodSubCats.forEach((doc: any) => {
+      const rawName = doc.subCat || doc.subcat || doc.name || doc.category;
+      if (rawName && typeof rawName === 'string') {
+        const trimmed = rawName.trim();
+        if (trimmed) {
+          const key = trimmed.toLowerCase();
+          if (!categoriesMap.has(key)) {
+            categoriesMap.set(key, {
+              id: doc.id || `foodsub-${key}`,
+              name: trimmed,
+              icon: getCategoryEmoji(trimmed, doc.icon || doc.emoji || '🍲'),
+              source: 'food'
+            });
+          }
+        }
+      }
+    });
+
+    const combined = Array.from(categoriesMap.values());
+
+    if (combined.length > 0) {
+      // Interleave / mix ecommerce and food subcategories together
+      const ecomList = combined.filter(c => c.source === 'ecommerce');
+      const foodList = combined.filter(c => c.source === 'food');
+      const mixed: typeof combined = [];
+      const maxLen = Math.max(ecomList.length, foodList.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (i < ecomList.length) mixed.push(ecomList[i]);
+        if (i < foodList.length) mixed.push(foodList[i]);
+      }
+      return mixed;
+    }
+
+    return PRODUCT_CATEGORIES.map(c => ({ ...c, source: 'ecommerce' }));
+  }, [ecommerceCats, foodSubCats]);
 
   // Compute display product (or fallback) unconditionally
   const displayProduct = product || {
@@ -368,14 +465,20 @@ export const ProductDetailPage = () => {
 
           <div className="space-y-2">
             <h2 className="text-xs font-extrabold text-foreground mb-4 uppercase tracking-widest opacity-80">Departments</h2>
-            {PRODUCT_CATEGORIES.map((cat) => (
+            {departmentCategories.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => navigate('/products')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm text-muted-foreground hover:bg-muted hover:text-foreground`}
+                onClick={() => {
+                  if (cat.source === 'food') {
+                    navigate(`/food?category=${encodeURIComponent(cat.name)}`);
+                  } else {
+                    navigate(`/products?category=${encodeURIComponent(cat.name)}`);
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm text-muted-foreground hover:bg-muted hover:text-foreground text-left"
               >
-                <span className="text-xl">{cat.icon}</span>
-                {cat.name}
+                <span className="text-xl shrink-0">{cat.icon}</span>
+                <span className="truncate flex-1">{cat.name}</span>
               </button>
             ))}
           </div>
@@ -671,11 +774,14 @@ export const ProductDetailPage = () => {
               ...((catProducts as any)?.data || [])
             ];
 
-            // Deduplicate items pool by ID and exclude displayProduct.id
+            // Deduplicate items pool by ID and exclude displayProduct.id and unavailable items
             const collectionPoolMap = new Map<string, any>();
             rawPool.forEach((item) => {
               if (item && item.id && item.id !== displayProduct.id) {
-                collectionPoolMap.set(item.id, item);
+                const isUnavailable = item.availability === false || item.availability === "false" || String(item.availability).toLowerCase() === "false";
+                if (!isUnavailable) {
+                  collectionPoolMap.set(item.id, item);
+                }
               }
             });
             const collectionPool = Array.from(collectionPoolMap.values());
@@ -708,7 +814,10 @@ export const ProductDetailPage = () => {
               }) : [];
 
               if (subSubMatches.length === 0 && subSubCatProducts?.data?.length) {
-                subSubMatches = subSubCatProducts.data.filter((p: any) => p && p.id !== displayProduct.id);
+                subSubMatches = subSubCatProducts.data.filter((p: any) => {
+                  if (!p || p.id === displayProduct.id) return false;
+                  return !(p.availability === false || p.availability === "false" || String(p.availability).toLowerCase() === "false");
+                });
               }
 
               // Do NOT duplicate or create dummy items; if 0 other items exist, finalSubSubList is empty
