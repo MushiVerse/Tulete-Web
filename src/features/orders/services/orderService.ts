@@ -450,6 +450,7 @@ class OrderService extends BaseFirestoreService<Order> {
 
         const laundryPayload = {
           uid: uids || 'unknown_uid',
+          userId: uids || 'unknown_uid',
           foodId: laundryDocId,
           uname: order.uname || 'Web User',
           no: order.contactPhone || '0000000000',
@@ -468,7 +469,7 @@ class OrderService extends BaseFirestoreService<Order> {
           express: globalExpress || false,
           cancel: false,
           show: true,
-          paid: false,
+          paid: true,
           instructions: laundryInstructionsText,
           ordersts: ['Order Placed'],
           orderststime: [getFlutterTime()],
@@ -486,23 +487,26 @@ class OrderService extends BaseFirestoreService<Order> {
           webOrderId: webOrderId,
         };
 
-        // A. Add to global `newcomfirmedorders` (Admin/Driver feed) - paid remains false
+        // A. Add to global `newcomfirmedorders` (Admin/Driver feed)
         const globalRef = collection(db, 'newcomfirmedorders');
         await setDoc(doc(globalRef, laundryDocId), laundryPayload);
 
-        // B. Add to user's personal `userOrderId/{uid}/newcomfirmedorders` - paid remains false
+        // B. Add to main `orders` collection (Web app main collection)
+        const mainOrdersRef = doc(db, 'orders', laundryDocId);
+        await setDoc(mainOrdersRef, laundryPayload);
+
+        // C. Add to user's personal `userOrderId/{uid}/newcomfirmedorders`
         if (uids) {
           const userNewConfirmedRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', laundryDocId);
           await setDoc(userNewConfirmedRef, laundryPayload);
 
-          // C. Add to user's personal `userOrderId/{uid}/orders` (Flutter orders collection)
-          // For Laundry or Laundry Packs: set paid to true in the "orders" document and not in "newcomfirmedorders"
+          // D. Add to user's personal `userOrderId/{uid}/orders`
           const userOrdersRef = doc(db, 'userOrderId', uids, 'orders', laundryDocId);
-          await setDoc(userOrdersRef, { ...laundryPayload, paid: true });
+          await setDoc(userOrdersRef, laundryPayload);
         }
       }
 
-      // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY
+      // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY (matching cartsHome.dart)
       for (const item of otherItems) {
         const cat = (item as any).cat || (item as any).category || 'Product';
         let finalDeliveryTime = cat === 'Product' ? 'Product' : 'ASAP';
@@ -511,6 +515,7 @@ class OrderService extends BaseFirestoreService<Order> {
 
         const itemPayload = {
           uid: uids || 'unknown_uid',
+          userId: uids || 'unknown_uid',
           foodId: item.productId || 'unknown_product',
           uname: order.uname || 'Web User',
           no: order.contactPhone || '0000000000',
@@ -529,7 +534,7 @@ class OrderService extends BaseFirestoreService<Order> {
           express: false,
           cancel: false,
           show: true,
-          paid: false,
+          paid: true,
           instructions: order.notes || '',
           ordersts: ['Order Placed'],
           orderststime: [getFlutterTime()],
@@ -547,8 +552,13 @@ class OrderService extends BaseFirestoreService<Order> {
           webOrderId: webOrderId,
         };
 
+        // Write to global `newcomfirmedorders` (matching cartsHome.dart)
         const globalRef = collection(db, 'newcomfirmedorders');
         await setDoc(doc(globalRef, itemDocId), itemPayload);
+
+        // Write to main `orders` collection
+        const mainOrdersRef = doc(db, 'orders', itemDocId);
+        await setDoc(mainOrdersRef, itemPayload);
 
         if (uids) {
           const userNewConfirmedRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', itemDocId);

@@ -130,74 +130,112 @@ export const CheckoutPage = () => {
         return;
       }
 
-      // Dynamic delivery fee is already computed in the render scope
       const dynamicPrices = getDynamicItemPrices();
-      const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
-        userId: user.id,
-        email: user.email || '',
-        uname: user.displayName || 'Web User',
-        items: items.map(item => {
-          const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
-          const unitPrice = item.quantity > 0 ? Math.round(rowTotal / item.quantity) : item.price;
-          return {
-            productId: item.productId,
-            name: item.name,
-            price: unitPrice,
-            quantity: item.quantity,
-            imageUrl: item.imageUrl,
-            cat: item.cat,
+
+      // Group items by store / laundry pack
+      const storeGroups: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof items } } = {};
+      items.forEach(item => {
+        const isLaundry = (item as any).cat === 'Nguo' || item.isLaundry || item.storeId === 'laundry';
+        const groupKey = isLaundry ? 'laundry_pack' : (item.storeId || item.storeName || 'general_store');
+        const sName = isLaundry ? (item.storeName || 'Laundry Services') : (item.storeName || 'Store Order');
+
+        if (!storeGroups[groupKey]) {
+          storeGroups[groupKey] = {
+            storeId: item.storeId || groupKey,
+            storeName: sName,
+            isLaundry: isLaundry,
+            items: []
           };
-        }),
-        totalAmount: finalTotalWithDelivery, // Computed with global modifiers and dynamic distance delivery fee
-        deliveryFee: computedDeliveryFee,
-        status: 'Pending',
-        storeId: items[0].storeId,
-        storeName: items[0].storeName,
-        deliveryLocation: {
-          address: selectedLocation.address,
-          lat: selectedLocation.lat,
-          lng: selectedLocation.lng,
-        },
-        paymentMethod: 'Cash',
-        paymentStatus: 'Pending',
-        contactPhone: activePhone,
-        notes: notes,
-        deliverytime: isLaundryOrder ? 'Pickup' : 'ASAP',
-        no: activePhone, // Legacy backward compatibility for Flutter/Admin apps
-        // Laundry-specific fields (cat === "Nguo")
-        ...(isLaundryOrder && {
-          isLaundryOrder: true,
-          instructions: (() => {
-            let instr = laundryInstructions || '';
-            if (deliverytime) {
-              const timeFormatted = isNaN(new Date(deliverytime).getTime())
-                ? deliverytime
-                : new Date(deliverytime).toLocaleString();
-              const pickupStr = `Preferred Pickup Time: ${timeFormatted}`;
-              instr = instr ? `${instr}\n[${pickupStr}]` : `[${pickupStr}]`;
-            }
-            return instr;
-          })(),
-        }),
-      };
+        }
+        storeGroups[groupKey].items.push(item);
+      });
 
-      // Create order in firestore (Web App format)
-      const createdOrder = await orderService.create(orderPayload);
+      const createdOrderIds: string[] = [];
+      const numGroups = Object.keys(storeGroups).length;
 
-      // Create orders in firestore (Live Flutter Format: 'newcomfirmedorders')
-      await orderService.createLiveFlutterOrders(orderPayload, createdOrder.id);
+      // Create a separate order per store group
+      for (const groupKey of Object.keys(storeGroups)) {
+        const group = storeGroups[groupKey];
+        const isLaundryGroup = group.isLaundry;
 
-      // Send SMS notification to Admin via KilaKona
-      await smsService.sendAdminOrderNotification(orderPayload);
+        const groupSubtotal = group.items.reduce((sum, item) => {
+          const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
+          return sum + rowTotal;
+        }, 0);
 
-      // Removed background simulation to allow the Flutter Admin app to actually process the order in real-time.
-      await orderService.initializeOrderTracking(createdOrder.id);
+        const groupDeliveryFee = Math.round(computedDeliveryFee / numGroups);
 
-      // Clear the local shopping cart
+        const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
+          userId: user.id,
+          email: user.email || '',
+          uname: user.displayName || 'Web User',
+          items: group.items.map(item => {
+            const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
+            const unitPrice = item.quantity > 0 ? Math.round(rowTotal / item.quantity) : item.price;
+            return {
+              productId: item.productId,
+              name: item.name,
+              price: unitPrice,
+              quantity: item.quantity,
+              imageUrl: item.imageUrl,
+              cat: item.cat,
+            };
+          }),
+          totalAmount: Math.round(groupSubtotal + groupDeliveryFee),
+          deliveryFee: groupDeliveryFee,
+          status: 'Pending',
+          storeId: group.storeId,
+          storeName: group.storeName,
+          deliveryLocation: {
+            address: selectedLocation.address,
+            lat: selectedLocation.lat,
+            lng: selectedLocation.lng,
+          },
+          paymentMethod: 'Cash',
+          paymentStatus: 'Pending',
+          contactPhone: activePhone,
+          notes: notes,
+          deliverytime: isLaundryGroup ? 'Pickup' : 'ASAP',
+          no: activePhone,
+          ...(isLaundryGroup && {
+            isLaundryOrder: true,
+            instructions: (() => {
+              let instr = laundryInstructions || '';
+              if (deliverytime) {
+                const timeFormatted = isNaN(new Date(deliverytime).getTime())
+                  ? deliverytime
+                  : new Date(deliverytime).toLocaleString();
+                const pickupStr = `Preferred Pickup Time: ${timeFormatted}`;
+                instr = instr ? `${instr}\n[${pickupStr}]` : `[${pickupStr}]`;
+              }
+              return instr;
+            })(),
+          }),
+        };
+
+        // Create main order document in 'orders'
+        const createdOrder = await orderService.create(orderPayload);
+        createdOrderIds.push(createdOrder.id);
+
+        // If laundry pack, create live flutter orders for BOTH 'orders' and 'newcomfirmedorders'
+        await orderService.createLiveFlutterOrders(orderPayload, createdOrder.id);
+
+        // Send SMS notification
+        await smsService.sendAdminOrderNotification(orderPayload);
+
+        // Initialize order tracking
+        await orderService.initializeOrderTracking(createdOrder.id);
+      }
+
+      // Clear local cart
       clearCart();
 
-      // Go to real-time tracking page
-      navigate(`/tracking/${createdOrder.id}`);
+      // Go to real-time tracking or orders list
+      if (createdOrderIds.length > 0) {
+        navigate(`/tracking/${createdOrderIds[0]}`);
+      } else {
+        navigate('/orders');
+      }
     } catch (error) {
       console.error('Failed to create order:', error);
     } finally {

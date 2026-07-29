@@ -25,8 +25,10 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { locationService } from '../../location/services/locationService';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, navigate }: any) => {
+  const productId = prod.id || prod.objectID || prod._id || prod.productId;
   const itemCat = (prod as any)?.cat || prod.category || store.category || 'Product';
   const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(prod.category);
   const dynamicPrice = useDynamicPrice(
@@ -37,18 +39,25 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
     undefined, 
     itemCat
   );
-  const cartItem = cartItems.find((ci: any) => ci.productId === prod.id);
+  const cartItem = cartItems.find((ci: any) => ci.productId === productId);
   const isSoldOut = prod.availability === false;
 
   return (
     <Card 
-      onClick={() => navigate(`/product/${encodeURIComponent(prod.id)}`)}
+      onClick={() => {
+        if (productId && productId !== 'undefined') {
+          navigate(`/product/${encodeURIComponent(productId)}`);
+        }
+      }}
       className="p-4 border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all flex gap-4 items-center cursor-pointer group"
     >
       <img 
-        src={prod.imgUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
-        alt={prod.name} 
+        src={prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
+        alt={prod.name || prod.title || 'Product'} 
         className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0 group-hover:scale-105 transition-transform"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120";
+        }}
       />
 
       <div className="flex-1 min-w-0">
@@ -60,7 +69,7 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
           ))}
         </div>
         
-        <h4 className="font-extrabold text-sm text-foreground truncate mb-1 group-hover:text-primary transition-colors">{prod.name}</h4>
+        <h4 className="font-extrabold text-sm text-foreground truncate mb-1 group-hover:text-primary transition-colors">{prod.name || prod.title || 'Item'}</h4>
         <p className="text-xs text-slate-550 dark:text-slate-400 line-clamp-1 mb-2 leading-relaxed">{prod.description}</p>
         
         <div className="flex justify-between items-center">
@@ -84,7 +93,7 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    updateQuantity(prod.id, cartItem.quantity - 1);
+                    if (productId) updateQuantity(productId, cartItem.quantity - 1);
                   }} 
                   className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm hover:bg-background/80"
                 >
@@ -99,7 +108,7 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
                       alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
                       return;
                     }
-                    updateQuantity(prod.id, cartItem.quantity + 1);
+                    if (productId) updateQuantity(productId, cartItem.quantity + 1);
                   }} 
                   className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
@@ -112,12 +121,13 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
               disabled={isSoldOut}
               onClick={(e) => {
                 e.stopPropagation();
+                if (!productId) return;
                 addToCart({
-                  productId: prod.id,
-                  name: prod.name,
-                  price: prod.price,
-                  basePrice: prod.price,
-                  imageUrl: prod.imgUrl,
+                  productId: productId,
+                  name: prod.name || prod.title || 'Item',
+                  price: prod.price || 0,
+                  basePrice: prod.price || 0,
+                  imageUrl: prod.imgUrl || prod.imgURL,
                   storeId: store.id,
                   storeName: store.store,
                   cat: itemCat,
@@ -156,6 +166,7 @@ export const StoreDetailsPage = () => {
   const [selectedProductCategory, setSelectedProductCategory] = useState<string | null>(null);
   const [geocodedAddress, setGeocodedAddress] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [algoliaStoreProducts, setAlgoliaStoreProducts] = useState<any[]>([]);
   
   // Local persistence for favorites
   const [isFavorite, setIsFavorite] = useState(() => {
@@ -185,24 +196,6 @@ export const StoreDetailsPage = () => {
     id || ''
   );
   
-  // Fetch items from 'foods', 'products', and 'cloths' collections
-  const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(
-    ['store_foods', id || ''],
-    productService,
-    { filters: [{ field: '_collection', operator: '==', value: 'foods' }] }
-  );
-  const { data: productsData, isLoading: isProductsDataLoading } = useFirestoreQuery(
-    ['store_products', id || ''],
-    productService,
-    { filters: [{ field: '_collection', operator: '==', value: 'products' }] }
-  );
-  const { data: clothsData, isLoading: isClothsLoading } = useFirestoreQuery(
-    ['store_cloths', id || ''],
-    productService,
-    { filters: [{ field: '_collection', operator: '==', value: 'cloths' }] }
-  );
-
-  const isProductsLoading = isFoodsLoading || isProductsDataLoading || isClothsLoading;
 
   const decodedId = id ? decodeURIComponent(id) : '';
 
@@ -228,8 +221,43 @@ export const StoreDetailsPage = () => {
   };
 
   const store = routeStoreData || dbStore || mockMatch || fallbackStore;
-  const targetStoreName = (store?.name || store?.store || fromProduct?.store || '').toLowerCase().trim();
+  const rawStoreName = store?.store || store?.name || fromProduct?.store || (decodedId && decodedId !== 's1' && decodedId !== 'undefined' ? decodedId : '');
+  const targetStoreName = rawStoreName.toLowerCase().trim();
   const targetStoreId = (id || store?.id || fromProduct?.storeId || '').toLowerCase().trim();
+
+  // Fetch Firestore collections for foods, products, and cloths according to specific store offering (matching store.dart logic)
+  const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(
+    ['store_foods', rawStoreName || id || ''],
+    productService,
+    { 
+      filters: [
+        { field: '_collection', operator: '==' as const, value: 'foods' },
+        ...(rawStoreName ? [{ field: 'store', operator: '==' as const, value: rawStoreName }] : [])
+      ] 
+    }
+  );
+  const { data: productsData, isLoading: isProductsDataLoading } = useFirestoreQuery(
+    ['store_products', rawStoreName || id || ''],
+    productService,
+    { 
+      filters: [
+        { field: '_collection', operator: '==' as const, value: 'products' },
+        ...(rawStoreName ? [{ field: 'store', operator: '==' as const, value: rawStoreName }] : [])
+      ] 
+    }
+  );
+  const { data: clothsData, isLoading: isClothsLoading } = useFirestoreQuery(
+    ['store_cloths', rawStoreName || id || ''],
+    productService,
+    { 
+      filters: [
+        { field: '_collection', operator: '==' as const, value: 'cloths' },
+        ...(rawStoreName ? [{ field: 'store', operator: '==' as const, value: rawStoreName }] : [])
+      ] 
+    }
+  );
+
+  const isProductsLoading = isFoodsLoading || isProductsDataLoading || isClothsLoading;
 
   const storeLat = store?.location?.lat ?? (store as any)?.lat ?? (store as any)?.latitude ?? -6.1630;
   const storeLng = store?.location?.lng ?? (store as any)?.lng ?? (store as any)?.longitude ?? 35.7516;
@@ -257,61 +285,123 @@ export const StoreDetailsPage = () => {
     };
   }, [storeLat, storeLng, store?.id]);
 
-  // Combine items from foods, products, cloths collections where store === opened store
-  const allCollectionDocs = [
+  // Query Algolia for products belonging to this specific store
+  useEffect(() => {
+    const fetchAlgoliaStoreItems = async () => {
+      const q = rawStoreName || targetStoreName || fromProduct?.store || targetStoreId || decodedId;
+      if (!q) return;
+      try {
+        const hits = await searchTuleteItems(q, { hitsPerPage: 100 });
+        if (hits && hits.length > 0) {
+          setAlgoliaStoreProducts(hits);
+        }
+      } catch (err) {
+        console.error('Failed to fetch Algolia store products:', err);
+      }
+    };
+    fetchAlgoliaStoreItems();
+  }, [rawStoreName, targetStoreName, targetStoreId, decodedId, fromProduct?.store]);
+
+  // Combine items from foods, products, cloths collections, Algolia hits, and mock fallbacks
+  const rawCombinedDocs = [
+    ...algoliaStoreProducts,
     ...(foodsData?.data || []),
     ...(productsData?.data || []),
-    ...(clothsData?.data || [])
+    ...(clothsData?.data || []),
+    ...productService.getMockProducts(store?.id || id)
   ];
 
+  // Deduplicate by item ID / objectID and ensure valid product object (strictly excluding store records and store name items)
+  const uniqueItemsMap = new Map();
+  rawCombinedDocs.forEach(item => {
+    if (!item) return;
+
+    // Strictly filter out store records or items named after the store itself
+    if (item.recordType === 'store' || item.type === 'store' || item._collection === 'stores' || item.isStore === true) {
+      return;
+    }
+
+    const itemName = String(item.name || item.title || '').trim().toLowerCase();
+    if (!itemName) return;
+
+    const currentStoreName = String(store?.store || store?.name || rawStoreName || '').trim().toLowerCase();
+    const currentTargetStoreName = targetStoreName ? targetStoreName.toLowerCase() : '';
+
+    if ((currentStoreName && itemName === currentStoreName) || (currentTargetStoreName && itemName === currentTargetStoreName)) {
+      return;
+    }
+
+    const itemId = item.id || item.objectID || item._id || item.productId;
+    if (itemId && !uniqueItemsMap.has(itemId)) {
+      uniqueItemsMap.set(itemId, { ...item, id: itemId });
+    }
+  });
+  const allCollectionDocs = Array.from(uniqueItemsMap.values());
+
   const matchedStoreProducts = allCollectionDocs.filter(item => {
-    if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
+    if (!item) return false;
     
-    const itemStore = String(item.store || (item as any).storeName || '').toLowerCase().trim();
+    const itemStore = String(item.store || (item as any).storeName || '').trim();
+    const itemStoreLower = itemStore.toLowerCase();
     const itemStoreId = String(item.storeId || '').toLowerCase().trim();
     const itemBrand = String((item as any).brand || (item as any).pbrand || '').toLowerCase().trim();
+    const itemFBrand = String((item as any).FBrand || '').toLowerCase().trim();
+    const itemLBrand = String((item as any).LBrand || '').toLowerCase().trim();
+    const itemPBrand = String((item as any).pbrand || '').toLowerCase().trim();
 
     const fromProdStore = String(fromProduct?.store || '').toLowerCase().trim();
     const fromProdStoreId = String(fromProduct?.storeId || '').toLowerCase().trim();
+    const rawStoreNameLower = rawStoreName.toLowerCase();
 
     const matchesName = Boolean(
-      (targetStoreName && itemStore === targetStoreName) ||
-      (targetStoreName && targetStoreName.length > 2 && itemStore.includes(targetStoreName)) ||
-      (itemStore && itemStore.length > 2 && targetStoreName.includes(itemStore))
+      itemStore === rawStoreName ||
+      (itemStoreLower && itemStoreLower === rawStoreNameLower) ||
+      (itemStoreLower && targetStoreName && itemStoreLower === targetStoreName) ||
+      (itemStoreLower && rawStoreNameLower.length > 2 && itemStoreLower.includes(rawStoreNameLower)) ||
+      (itemStoreLower && rawStoreNameLower.length > 2 && rawStoreNameLower.includes(itemStoreLower)) ||
+      (itemFBrand && rawStoreNameLower.includes(itemFBrand)) ||
+      (itemLBrand && rawStoreNameLower.includes(itemLBrand)) ||
+      (itemPBrand && rawStoreNameLower.includes(itemPBrand))
     );
 
     const matchesId = Boolean(
       (targetStoreId && itemStoreId === targetStoreId) ||
-      (targetStoreId && itemStore === targetStoreId) ||
-      (targetStoreId && itemBrand === targetStoreId)
+      (targetStoreId && itemStoreLower === targetStoreId) ||
+      (targetStoreId && itemBrand === targetStoreId) ||
+      (targetStoreId && itemFBrand === targetStoreId) ||
+      (targetStoreId && itemLBrand === targetStoreId)
     );
 
     const matchesFromProduct = Boolean(
       fromProduct && (
         item.id === fromProduct.id ||
-        (fromProdStore && (itemStore === fromProdStore || itemStore.includes(fromProdStore) || fromProdStore.includes(itemStore))) ||
-        (fromProdStoreId && (itemStoreId === fromProdStoreId || itemStore === fromProdStoreId))
+        (fromProdStore && (itemStoreLower === fromProdStore || itemStoreLower.includes(fromProdStore) || fromProdStore.includes(itemStoreLower))) ||
+        (fromProdStoreId && (itemStoreId === fromProdStoreId || itemStoreLower === fromProdStoreId))
       )
     );
 
     return matchesName || matchesId || matchesFromProduct;
   });
 
+  // Strict products list: Show store products matching this specific store, or category fallback
   let products = matchedStoreProducts;
+
+  if (products.length === 0 && allCollectionDocs.length > 0) {
+    const storeCategoryLower = (store?.category || store?.cat || '').toLowerCase();
+    products = allCollectionDocs.filter(item => {
+      const itemCat = String(item.category || item.cat || '').toLowerCase();
+      if (storeCategoryLower.includes('laund') || storeCategoryLower.includes('nguo')) {
+        return itemCat.includes('laund') || itemCat.includes('nguo') || itemCat.includes('suit') || itemCat.includes('wash') || itemCat.includes('bedding');
+      }
+      if (storeCategoryLower.includes('food') || storeCategoryLower.includes('restaur')) {
+        return itemCat.includes('food') || itemCat.includes('meal') || itemCat.includes('platter') || itemCat.includes('quick');
+      }
+      return true;
+    });
+  }
 
   if (products.length === 0 && fromProduct) {
     products = [fromProduct];
-  } else if (products.length === 0 && store) {
-    const categoryLower = (store.category || '').toLowerCase();
-    products = productService.getMockProducts().filter(p => {
-      const storeNameLower = (p.store || '').toLowerCase();
-      const pCat = (p.category || '').toLowerCase();
-      if (categoryLower.includes('food') && (storeNameLower.includes('kibanda') || pCat.includes('plat') || pCat.includes('meal'))) return true;
-      if (categoryLower.includes('laund') && (storeNameLower.includes('safi') || pCat.includes('suit') || pCat.includes('wash'))) return true;
-      if (categoryLower.includes('elect') && (storeNameLower.includes('fundi') || pCat.includes('repair') || pCat.includes('install'))) return true;
-      if (categoryLower.includes('beaut') && (storeNameLower.includes('glam') || pCat.includes('hair') || pCat.includes('nail'))) return true;
-      return false;
-    });
   }
 
   // Interactive operational Map
@@ -504,27 +594,19 @@ export const StoreDetailsPage = () => {
     }
   };
 
-  if (!store) {
-    return (
-      <PageContainer>
-        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6">
-          <AlertTriangle className="w-14 h-14 text-destructive mb-4 animate-bounce" />
-          <h2 className="text-2xl font-bold mb-1">Store Not Found</h2>
-          <p className="text-muted-foreground mb-6 max-w-sm">We couldn't locate this service provider. It may have been disabled or deleted.</p>
-          <Button onClick={() => navigate('/explore')}>Discover Providers</Button>
-        </div>
-      </PageContainer>
-    );
-  }
+
 
   // Categories of store-specific items
-  const productCategories = Array.from(new Set(products.map((p) => p.category)));
+  const productCategories = Array.from(new Set(products.filter(p => p && p.category).map((p) => p.category)));
 
-  // Filter products
+  // Filter products safely
   const filteredProducts = products.filter((p) => {
+    if (!p) return false;
     const categoryMatch = !selectedProductCategory || p.category === selectedProductCategory;
-    const searchMatch = p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
-                        p.description.toLowerCase().includes(productSearch.toLowerCase());
+    const pName = String(p.name || '').toLowerCase();
+    const pDesc = String(p.description || '').toLowerCase();
+    const q = String(productSearch || '').toLowerCase();
+    const searchMatch = pName.includes(q) || pDesc.includes(q);
     return categoryMatch && searchMatch;
   });
 

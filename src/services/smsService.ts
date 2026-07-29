@@ -1,15 +1,43 @@
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../core/firebase/config';
+
 // KilaKona SMS API Configuration
-// IMPORTANT: In a real-world scenario, you should NOT expose your API Key/Secret in the frontend.
-// It is recommended to create a backend endpoint (e.g. Firebase Cloud Function) that handles the SMS sending.
 const KILAKONA_API_KEY = import.meta.env.VITE_KILAKONA_API_KEY || 'mushi';
 const KILAKONA_API_SECRET = import.meta.env.VITE_KILAKONA_API_SECRET || 'jytUxmm6S9MdcJ47zcsK';
 const KILAKONA_SENDER_ID = import.meta.env.VITE_KILAKONA_SENDER_ID || 'TULETE';
 
-// Admin phone numbers to receive the SMS
+// Main Admin phone numbers to receive the SMS
 const ADMIN_PHONES = ['255764587748']; 
-// Unaweza kuongeza namba zaidi kama hapa chini
 
-// const ADMIN_PHONES = ['255764587748', '255757449734']; 
+/**
+ * Retrieves phone numbers belonging to a specific store from the 'UsersandRoles' collection
+ * (JS/TS equivalent of Flutter getPhonesByStore function)
+ */
+export async function getPhonesByStore(store: string): Promise<string[]> {
+  try {
+    if (!store || store.trim() === '') return [];
+    const usersAndRolesRef = collection(db, 'UsersandRoles');
+    const q = query(usersAndRolesRef, where('store', '==', store.trim()));
+    const querySnapshot = await getDocs(q);
+    const phoneNumbers: string[] = [];
+
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data && data.phone && typeof data.phone === 'string') {
+        let phone = data.phone.trim().replace(/\+/g, '').replace(/\s+/g, '');
+        if (phone.startsWith('0')) {
+          phone = '255' + phone.substring(1);
+        }
+        if (phone) phoneNumbers.push(phone);
+      }
+    });
+
+    return phoneNumbers;
+  } catch (e) {
+    console.error('Error retrieving store phone numbers from UsersandRoles:', e);
+    return [];
+  }
+}
 
 export const smsService = {
   /**
@@ -19,6 +47,7 @@ export const smsService = {
    */
   async sendBulkSMSKilaKona(message: string, contacts: string[], deliveryReportUrl?: string): Promise<any> {
     try {
+      if (!contacts || contacts.length === 0) return null;
       const url = 'https://messaging.kilakona.co.tz/api/v1/vendor/message/send';
 
       const response = await fetch(url, {
@@ -52,7 +81,7 @@ export const smsService = {
   },
 
   /**
-   * Sends an order notification to the admin.
+   * Sends an order notification to the admin (255764587748) and the store vendor phone numbers.
    */
   async sendAdminOrderNotification(order: any): Promise<void> {
     try {
@@ -64,11 +93,17 @@ export const smsService = {
       const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const dateTimeStr = `${dateStr} ${timeStr}`;
       
-      const message = `New Tulete Order!\nDate: ${dateTimeStr}\nFrom: ${uname}\nItems: ${itemsList}\nTotal: ${totalAmount}/=\nLoc: ${deliveryLocation.address || 'N/A'}\nStore: ${storeName || 'N/A'}`;
+      const message = `New Order!\nDate: ${dateTimeStr}\nFrom: ${uname}\nItems: ${itemsList}\nTotal: ${totalAmount}/=\nLoc: ${deliveryLocation.address || 'N/A'}\nStore: ${storeName || 'N/A'}`;
       
-      await this.sendBulkSMSKilaKona(message, ADMIN_PHONES);
+      // Fetch specific phone numbers for this store from UsersandRoles
+      const storePhones = await getPhonesByStore(storeName);
+
+      // Merge main admin phone '255764587748' and store vendor phones
+      const recipientPhones = Array.from(new Set([...ADMIN_PHONES, ...storePhones]));
+
+      await this.sendBulkSMSKilaKona(message, recipientPhones);
     } catch (e) {
-      console.error('Failed to notify admin via SMS:', e);
+      console.error('Failed to notify admin and store via SMS:', e);
     }
   }
 };

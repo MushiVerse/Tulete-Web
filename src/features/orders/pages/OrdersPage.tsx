@@ -264,9 +264,10 @@ export const OrdersPage = () => {
                 ? new Date(order.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
-              const catName = (order as any).cat || (order.items && order.items[0]?.cat) || '';
-              const isLaundry = catName === 'Nguo' || (order.isLaundryOrder && (catName === 'Nguo' || (order.items || []).some((i: any) => i.cat === 'Nguo')));
-              const isFood = !isLaundry && (catName === 'Food' || (order.items || []).some((i: any) => i.cat === 'Food'));
+              const catName = (order as any).cat || (order as any).category || (order.items && order.items[0]?.cat) || '';
+              const catLower = String(catName).toLowerCase();
+              const isLaundry = catName === 'Nguo' || catLower.includes('nguo') || catLower.includes('laund') || Boolean(order.isLaundryOrder);
+              const isFood = !isLaundry && (catName === 'Food' || catLower.includes('food') || (order.items || []).some((i: any) => String(i.cat || '').toLowerCase().includes('food')));
               const isProduct = !isLaundry && !isFood;
               const isExpanded = !!expandedOrders[order.id];
 

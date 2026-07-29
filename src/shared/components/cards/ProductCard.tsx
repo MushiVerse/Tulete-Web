@@ -27,7 +27,7 @@ export const ProductCard = ({
   isFavorite = false,
   onClick
 }: ProductCardProps) => {
-  if (product.availability === false) {
+  if (product.availability === false || (product as any).availability === "false" || String((product as any).availability).toLowerCase() === "false") {
     return null;
   }
 

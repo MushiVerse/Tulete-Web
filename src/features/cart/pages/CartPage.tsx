@@ -284,27 +284,78 @@ export const CartPage = () => {
               </div>
             </div>
 
-            {/* Scrollable Cart Items Container */}
-            <div className="flex-1 lg:overflow-y-auto scrollbar-none space-y-3 min-h-0 pr-1 pb-4">
+            {/* Scrollable Cart Items Container Grouped by Store */}
+            <div className="flex-1 lg:overflow-y-auto scrollbar-none space-y-6 min-h-0 pr-1 pb-4">
               <AnimatePresence>
-                {items.map((item) => (
-                  <motion.div
-                    key={item.productId}
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 50 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <CartItemCard
-                      item={item}
-                      updateQuantity={updateQuantity}
-                      removeFromCart={removeFromCart}
-                      toggleDelivery={toggleDelivery}
-                      updateLaundryItemConfig={updateLaundryItemConfig}
-                    />
-                  </motion.div>
-                ))}
+                {(() => {
+                  const groupedCart: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof items } } = {};
+
+                  items.forEach((item) => {
+                    const isLaundry = (item as any).cat === 'Nguo' || item.isLaundry || item.storeId === 'laundry';
+                    const key = isLaundry
+                      ? 'laundry_pack'
+                      : (item.storeId || item.storeName || 'general_store');
+                    
+                    const storeName = isLaundry
+                      ? (item.storeName || 'Laundry Services')
+                      : (item.storeName || 'Store');
+
+                    if (!groupedCart[key]) {
+                      groupedCart[key] = {
+                        storeId: item.storeId || key,
+                        storeName: storeName,
+                        isLaundry: isLaundry,
+                        items: [],
+                      };
+                    }
+                    groupedCart[key].items.push(item);
+                  });
+
+                  return Object.values(groupedCart).map((group) => (
+                    <div key={group.storeId} className="space-y-3">
+                      {/* Store / Laundry Pack Header */}
+                      <div className="flex items-center justify-between p-3.5 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
+                            group.isLaundry ? 'bg-sky-500/10 text-sky-500' : 'bg-primary/10 text-primary'
+                          }`}>
+                            {group.isLaundry ? <Sparkles className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                              {group.isLaundry ? `Laundry Pack (${group.storeName})` : group.storeName}
+                            </h3>
+                            <p className="text-[11px] text-muted-foreground font-semibold">
+                              {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Store Items */}
+                      <div className="space-y-3 pl-1 sm:pl-2">
+                        {group.items.map((item) => (
+                          <motion.div
+                            key={item.productId}
+                            layout
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 50 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <CartItemCard
+                              item={item}
+                              updateQuantity={updateQuantity}
+                              removeFromCart={removeFromCart}
+                              toggleDelivery={toggleDelivery}
+                              updateLaundryItemConfig={updateLaundryItemConfig}
+                            />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
               </AnimatePresence>
 
               {/* Order Preferences Section in Cart (Scrolls with items) */}

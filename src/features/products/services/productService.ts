@@ -95,7 +95,7 @@ class ProductService extends BaseFirestoreService<Product> {
       lng = data.location.longitude;
     }
 
-    const rawImages = data.imgURL || data.imgUrl || data.images;
+    const rawImages = data.imgURL || data.imgUrl || data.images || data.image || data.pic || data.photo;
     let imagesList: string[] = [];
     if (Array.isArray(rawImages)) {
       imagesList = rawImages.filter(s => typeof s === 'string' && s.trim().length > 0);
@@ -105,7 +105,8 @@ class ProductService extends BaseFirestoreService<Product> {
 
     const mainImgUrl = imagesList.length > 0 ? imagesList[0] : 
                       (typeof data.imgUrl === 'string' && data.imgUrl.trim().length > 0 ? data.imgUrl.trim() : 
-                      (typeof data.imgURL === 'string' && data.imgURL.trim().length > 0 ? data.imgURL.trim() : ''));
+                      (typeof data.imgURL === 'string' && data.imgURL.trim().length > 0 ? data.imgURL.trim() : 
+                      (typeof data.image === 'string' && data.image.trim().length > 0 ? data.image.trim() : '')));
 
     return {
       id: data.id,
@@ -114,7 +115,7 @@ class ProductService extends BaseFirestoreService<Product> {
       price: data.price !== undefined ? Number(data.price) : 0,
       oldprice: data.oldprice !== undefined ? Number(data.oldprice) : undefined,
       imgUrl: mainImgUrl,
-      imgURL: data.imgURL || data.imgUrl || data.images || mainImgUrl,
+      imgURL: data.imgURL || data.imgUrl || data.images || data.image || mainImgUrl,
       images: imagesList.length > 0 ? imagesList : (mainImgUrl ? [mainImgUrl] : []),
       storeId: data.storeId || '',
       store: data.store || '',
@@ -263,13 +264,33 @@ class ProductService extends BaseFirestoreService<Product> {
     try {
       const q = query(collection(db, targetCollection), ...constraints);
       const querySnapshot = await getDocs(q);
-      
-      const data = querySnapshot.docs.map(docVal => this.parse({ id: docVal.id, ...docVal.data() }));
-      const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
+      let docs = querySnapshot.docs;
+
+      // If specific constraints returned no docs, fallback to fetching recent collection docs so client matching can check normalized store/brand names
+      if (docs.length === 0 && constraints.length > 0) {
+        try {
+          const fallbackQ = query(collection(db, targetCollection), limit(100));
+          const fallbackSnap = await getDocs(fallbackQ);
+          if (!fallbackSnap.empty) {
+            docs = fallbackSnap.docs;
+          }
+        } catch (_) {}
+      }
+
+      const data = docs.map(docVal => this.parse({ id: docVal.id, _collection: targetCollection, ...docVal.data() }));
+      const lastDoc = docs.length > 0 ? docs[docs.length - 1] : null;
       return { data, lastDoc };
     } catch (error) {
       console.error(`Error querying collection ${targetCollection}:`, error);
-      return { data: [], lastDoc: null };
+      try {
+        const fallbackQ = query(collection(db, targetCollection), limit(100));
+        const fallbackSnap = await getDocs(fallbackQ);
+        const data = fallbackSnap.docs.map(docVal => this.parse({ id: docVal.id, _collection: targetCollection, ...docVal.data() }));
+        const lastDoc = fallbackSnap.docs.length > 0 ? fallbackSnap.docs[fallbackSnap.docs.length - 1] : null;
+        return { data, lastDoc };
+      } catch (_) {
+        return { data: [], lastDoc: null };
+      }
     }
   }
 
