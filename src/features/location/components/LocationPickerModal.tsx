@@ -86,6 +86,7 @@ export const LocationPickerModal = ({
   
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'hybrid'>('roadmap');
+  const [isUserTyping, setIsUserTyping] = useState(false);
   // Adjust container height based on fullscreen mode
   const dynamicContainerStyle = {
     ...containerStyle,
@@ -130,9 +131,9 @@ export const LocationPickerModal = ({
     debounce: 300,
   });
 
-  // Fetch OpenStreetMap Nominatim fallback suggestions when Google Places has no results or isn't OK
+  // Fetch OpenStreetMap Nominatim fallback suggestions ONLY when user is actively typing in search field
   useEffect(() => {
-    if (status !== 'OK' && searchValue.trim().length > 2) {
+    if (isUserTyping && status !== 'OK' && searchValue.trim().length > 2) {
       const controller = new AbortController();
       const timer = setTimeout(async () => {
         try {
@@ -162,9 +163,10 @@ export const LocationPickerModal = ({
     } else {
       setFallbackSuggestions([]);
     }
-  }, [searchValue, status]);
+  }, [searchValue, status, isUserTyping]);
 
   const handleSelect = async (val: string) => {
+    setIsUserTyping(false);
     setValue(val, false);
     clearSuggestions();
     setFallbackSuggestions([]);
@@ -193,6 +195,7 @@ export const LocationPickerModal = ({
   };
 
   const handleFallbackSelect = (item: { description: string; lat: number; lng: number }) => {
+    setIsUserTyping(false);
     setValue(item.description, false);
     clearSuggestions();
     setFallbackSuggestions([]);
@@ -215,6 +218,9 @@ export const LocationPickerModal = ({
 
   const handleUseCurrentLocation = useCallback(async () => {
     setIsLocating(true);
+    setIsUserTyping(false);
+    clearSuggestions();
+    setFallbackSuggestions([]);
     try {
       const loc = await locationService.detectUserLocation();
       setMapCenter({ lat: loc.lat, lng: loc.lng });
@@ -238,10 +244,13 @@ export const LocationPickerModal = ({
     } finally {
       setIsLocating(false);
     }
-  }, [setValue, setCurrentLocation]);
+  }, [setValue, setCurrentLocation, clearSuggestions]);
 
   const updateSelectedLocation = useCallback(async (lat: number, lng: number) => {
     setSelectedPos({ lat, lng });
+    setIsUserTyping(false);
+    clearSuggestions();
+    setFallbackSuggestions([]);
     try {
       const results = await getGeocode({ location: { lat, lng } });
       if (results[0] && results[0].formatted_address) {
@@ -278,7 +287,7 @@ export const LocationPickerModal = ({
     } catch (fallbackErr) {
       setAddressText('Selected Map Location');
     }
-  }, [setValue, setCurrentLocation]);
+  }, [setValue, setCurrentLocation, clearSuggestions]);
 
   const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
@@ -405,12 +414,23 @@ export const LocationPickerModal = ({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={searchValue}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => {
+                setIsUserTyping(true);
+                setValue(e.target.value);
+              }}
+              onFocus={() => {
+                if (searchValue.trim().length > 0) {
+                  setIsUserTyping(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setIsUserTyping(false), 250);
+              }}
               placeholder="Search for area, street name..."
               className="pl-10 bg-muted/50 border-border focus:bg-card transition-colors"
             />
-            {(status === "OK" || fallbackSuggestions.length > 0) && (
-              <ul className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto hide-scrollbar scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {isUserTyping && (status === "OK" || fallbackSuggestions.length > 0) && (
+              <ul className="absolute z-20 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto hide-scrollbar scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {status === "OK" && data.map(({ place_id, description }) => (
                   <li
                     key={place_id}
