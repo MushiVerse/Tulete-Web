@@ -8,6 +8,7 @@ import { useCartStore } from '../../cart/store/useCartStore';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
 interface BrandDetailsViewProps {
   brandName: string;
@@ -36,10 +37,18 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName, c
       // Local filtering for price and availability
       const filtered = results.filter((item: any) => {
         if (item.price < minPrice || item.price > maxPrice) return false;
-        if (showAvailable && item.availability === false) return false;
+        if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
         // Verify brand locally just in case faceting isn't configured in Algolia yet
         if (item.brand !== brandName) return false;
         return true;
+      }).map((item: any) => {
+        const { rating, reviewCount } = getNormalizedRating(item);
+        return {
+          ...item,
+          id: item.objectID || item.id,
+          rating,
+          reviewCount
+        };
       });
 
       setProducts(filtered);

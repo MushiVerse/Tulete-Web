@@ -10,6 +10,7 @@ import { useDynamicPrice } from '../../../features/location/hooks/useDynamicPric
 import { useCartStore } from '../../../features/cart/store/useCartStore';
 import { formatPrice } from '../../utils/formatPrice';
 import { APP_SETTINGS } from '../../../core/config/settings';
+import { getNormalizedRating } from '../../utils/ratingUtils';
 
 interface ProductCardProps {
   product: Product;
@@ -30,14 +31,18 @@ export const ProductCard = ({
     return null;
   }
 
+  const { rating: normRating } = getNormalizedRating(product);
+  const displayRating = (product.rating && Number(product.rating) > 0) ? Number(product.rating) : normRating;
+
   const { items: cartItems, updateQuantity, addToCart } = useCartStore();
   const cartItem = cartItems.find(i => i.productId === product.id);
   
   const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
   
-  const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
-  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location);
-  const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory, product.location) : undefined;
+  const itemCat = (product as any)?.cat || product.category || 'Product';
+  const isLaundryCategory = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
+  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location, undefined, itemCat);
+  const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory, product.location, undefined, itemCat) : undefined;
 
   // Format price
   const formattedPrice = `${APP_SETTINGS.currency} ${formatPrice(magicPrice)}`;
@@ -111,7 +116,7 @@ export const ProductCard = ({
               </div>
               <div className="flex items-center gap-1 bg-black/50 backdrop-blur-md px-1.5 py-0.5 rounded-full shrink-0 shadow-sm">
                 <Star className="w-3 h-3 fill-warning stroke-warning" />
-                <span className="text-[10px] font-extrabold text-white">{(product.rating ?? 0).toFixed(1)}</span>
+                <span className="text-[10px] font-extrabold text-white">{displayRating.toFixed(1)}</span>
               </div>
             </div>
             
@@ -176,10 +181,11 @@ export const ProductCard = ({
                         productId: product.id,
                         name: product.name,
                         price: product.price,
+                        basePrice: product.price,
                         imageUrl: product.imgUrl,
                         storeId: product.storeId,
                         storeName: product.store,
-                        cat: (product as any)?.cat || product.category || 'Product',
+                        cat: itemCat,
                         location: product.location,
                         isLaundry: isLaundryCategory,
                         idadi: product.quantity !== undefined ? product.quantity : product.idadi

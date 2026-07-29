@@ -74,7 +74,8 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
     return null;
   }
   
-  const dynamicPrice = useDynamicPrice(meal.price, meal.storeId, false, meal.location);
+  const mealCat = (meal as any)?.cat || meal.category || 'Food';
+  const dynamicPrice = useDynamicPrice(meal.price, meal.storeId, mealCat === 'Nguo', meal.location, undefined, mealCat);
   const isSoldOut = (meal.quantity !== undefined && meal.quantity <= 0) || (meal.idadi !== undefined && meal.idadi <= 0);
 
   return (
@@ -156,11 +157,12 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
                   productId: meal.id,
                   name: meal.name,
                   price: meal.price,
+                  basePrice: meal.price,
                   imageUrl: meal.imgUrl,
                   storeId: meal.storeId,
                   storeName: meal.store,
                   brand: (meal as any).brand || (meal as any).pbrand || meal.storeId || '',
-                  cat: 'Food',
+                  cat: mealCat,
                   location: meal.location,
                   idadi: meal.quantity !== undefined ? meal.quantity : meal.idadi
                 });

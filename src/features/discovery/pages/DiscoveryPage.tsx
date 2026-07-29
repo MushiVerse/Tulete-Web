@@ -181,7 +181,7 @@ export const DiscoveryPage = () => {
 
       const finalProducts = products
         .filter((item: any) => {
-          if (item.availability === false || item.availability === 'false') return false;
+          if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
 
           // Omit "nguo" subCategory / category from DiscoveryPage results
           const itemCat = String(item.category || item.cat || '').toLowerCase().trim();

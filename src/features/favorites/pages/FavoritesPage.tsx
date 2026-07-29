@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFavoritesStore } from '../hooks/useFavoritesStore';
 import { useCartStore } from '../../cart/store/useCartStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { productService } from '../../products/services/productService';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
@@ -331,18 +333,23 @@ export const FavoritesPage = () => {
                                   onClick={() => {
                                     const catalog = productService.getMockProducts('all');
                                     const item = catalog.find((c) => c.id === fav.itemId);
+                                    const cat = (item as any)?.cat || item?.category || '';
+                                    const isLaundry = cat === 'Nguo' || item?.category === 'Laundry' || item?.category?.toLowerCase().includes('cloth') || (item as any)?._collection === 'cloths';
+                                    const baseItemPrice = fav.price || item?.price || 0;
+
                                     addToCart({
                                       productId: fav.itemId,
                                       baseProductId: fav.itemId,
                                       name: fav.name,
-                                      price: fav.price || 0,
+                                      price: baseItemPrice,
+                                      basePrice: baseItemPrice,
                                       imageUrl: fav.imageUrl,
                                       storeId: item?.storeId || 's1', 
                                       storeName: item?.store || 'Verified Partner',
-                                      cat: item?.category || '',
+                                      cat,
                                       location: item?.location,
                                       idadi: item?.idadi,
-                                      isLaundry: item?.category === 'Laundry' || item?.category === 'Nguo' || item?.category?.toLowerCase().includes('cloth') || (item as any)?._collection === 'cloths'
+                                      isLaundry
                                     });
                                     alert(`${fav.name} added to cart!`);
                                   }}
@@ -430,6 +437,7 @@ export const FavoritesPage = () => {
                                       baseProductId: item.id,
                                       name: item.name,
                                       price: item.price,
+                                      basePrice: item.price,
                                       imageUrl: item.imgUrl,
                                       storeId: item.storeId,
                                       storeName: item.store,

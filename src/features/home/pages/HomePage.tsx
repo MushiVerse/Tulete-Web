@@ -29,7 +29,7 @@ import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
-import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
+import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 
 
 /*  Shared Configs  */
@@ -310,7 +310,7 @@ export const HomePage = () => {
       try {
         const filterStr = filterValue === 'food' ? 'recordType:food'
           : filterValue === 'product' ? 'recordType:product'
-          : filterValue === 'laundry' ? 'recordType:cloth'
+          : filterValue === 'laundry' ? '(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)'
           : 'NOT recordType:brand';
         const hits = await searchTuleteItems(searchQuery, { filters: filterStr, hitsPerPage: 40 });
         if (!controller.signal.aborted) setMobileResults(hits);
@@ -351,16 +351,18 @@ export const HomePage = () => {
   };
 
   const handleAddToCart = (p: Product) => {
-    let cat = 'Product';
+    let cat = (p as any).cat || 'Product';
     const collection = (p as Product & { _collection?: string })._collection;
     if (collection === 'foods' || foods.some(f => f.id === p.id)) cat = 'Food';
-    else if (collection === 'cloths' || cloths.some(c => c.id === p.id)) cat = 'Laundry';
-    
+    else if (collection === 'cloths' || cloths.some(c => c.id === p.id)) cat = 'Nguo';
+
+    const isLaundry = cat === 'Nguo' || cat === 'Laundry' || p.category === 'Laundry' || p.category?.toLowerCase().includes('cloth');
     addToCart({
       productId: p.id,
       baseProductId: p.id,
       name: p.name,
       price: p.price,
+      basePrice: p.price,
       imageUrl: p.imgUrl,
       storeId: p.storeId,
       storeName: p.store,
@@ -368,7 +370,7 @@ export const HomePage = () => {
       cat,
       location: p.location,
       idadi: p.idadi,
-      isLaundry: cat === 'Laundry' || p.category === 'Laundry' || p.category?.toLowerCase().includes('cloth')
+      isLaundry
     });
   };
 
@@ -385,7 +387,7 @@ export const HomePage = () => {
   const processItems = (items: any[], type: 'food' | 'product') => {
     return items
       .filter(item => {
-        if (item.availability === false || item.availability === 'false') return false;
+        if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
 
         let location: { lat: number; lng: number } | undefined;
         if (item.location && typeof item.location === 'string') {

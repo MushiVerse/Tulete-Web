@@ -226,11 +226,12 @@ export const ProductDetailPage = () => {
     availability: true,
   };
 
-  const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(displayProduct.category);
+  const itemCat = (displayProduct as any)?.cat || displayProduct.category || 'Product';
+  const isLaundryCategory = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(displayProduct.category);
   
   // Execute ALL hooks unconditionally BEFORE any early return
-  const magicPrice = useDynamicPrice(displayProduct.price || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location);
-  const calcOldPrice = useDynamicPrice(displayProduct.oldprice || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location);
+  const magicPrice = useDynamicPrice(displayProduct.price || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location, undefined, itemCat);
+  const calcOldPrice = useDynamicPrice(displayProduct.oldprice || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location, undefined, itemCat);
   const magicOldPrice = displayProduct.oldprice ? calcOldPrice : undefined;
 
   const handleCheckout = () => {
@@ -511,10 +512,11 @@ export const ProductDetailPage = () => {
                           productId: displayProduct.id,
                           name: displayProduct.name,
                           price: displayProduct.price,
+                          basePrice: displayProduct.price,
                           imageUrl: selectedImageUrl,
                           storeId: displayProduct.storeId,
                           storeName: displayProduct.store,
-                          cat: (displayProduct as any)?.cat || displayProduct.category || 'Product',
+                          cat: itemCat,
                           isLaundry: isLaundryCategory,
                           location: displayProduct.location,
                           idadi: displayProduct.idadi
@@ -568,7 +570,7 @@ export const ProductDetailPage = () => {
                     availability: true,
                     isVerified: true
                   };
-                  navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData } });
+                  navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData, fromProduct: displayProduct } });
                 };
 
                 return (

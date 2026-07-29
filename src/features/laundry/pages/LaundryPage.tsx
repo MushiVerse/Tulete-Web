@@ -26,6 +26,7 @@ import {
 } from '../../../shared/components/ui/Dialog';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
+import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 
 const STATS = [
   { value: '50+', label: 'Local Cleaners', icon: Shirt },
@@ -205,7 +206,7 @@ export const LaundryPage = () => {
     const run = async () => {
       setMobileLoading(true);
       try {
-        const hits = await searchTuleteItems(searchQuery, { filters: 'recordType:cloth', hitsPerPage: 40 });
+        const hits = await searchTuleteItems(searchQuery, { filters: '(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)', hitsPerPage: 40 });
         if (!controller.signal.aborted) setMobileResults(hits);
       } finally {
         if (!controller.signal.aborted) setMobileLoading(false);
@@ -261,10 +262,9 @@ export const LaundryPage = () => {
   const filteredItems = items.filter(item => {
     if ((item as any).availability === false || (item as any).availability === 'false' || (item as any).available === false || (item as any).isAvailable === false) return false;
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      if (!item.name?.toLowerCase().includes(q) &&
-          !item.brand?.toLowerCase().includes(q) &&
-          !item.store?.toLowerCase().includes(q)) return false;
+      if (!isItemFuzzyMatch(searchQuery, item, ['name', 'brand', 'store', 'category', 'description'])) {
+        return false;
+      }
     }
     return true;
   }).sort((a, b) => {
@@ -417,8 +417,8 @@ export const LaundryPage = () => {
           </div>
 
           {/* Search Row */}
-          <div className="flex gap-3">
-            <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14">
+          <div className="sticky top-0 z-20 flex gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+            <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
               <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" />
               <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
                 Laundry

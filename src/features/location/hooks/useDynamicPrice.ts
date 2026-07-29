@@ -2,67 +2,153 @@ import { useState, useEffect } from 'react';
 import { useLocationStore } from '../store/useLocationStore';
 import { storeService } from '../../stores/services/storeService';
 
+/**
+ * TZS Rounding function (matches Flutter roundUp logic)
+ */
+export function roundUp(price: number): number {
+  const p = Math.round(price);
+  if (p >= 1000) {
+    const lastTwoDigits = Math.floor(p / 10) % 10;
+    if (lastTwoDigits < 5) {
+      return Math.floor(p / 100) * 100;
+    } else if (lastTwoDigits === 5 && p % 100 === 0) {
+      return Math.floor(p / 100) * 100;
+    } else {
+      return (Math.floor(p / 100) + 1) * 100;
+    }
+  } else {
+    const lastTwoDigits = p % 100;
+    if (lastTwoDigits === 0) {
+      return Math.floor(p / 100) * 100;
+    } else if (lastTwoDigits < 50) {
+      return Math.floor(p / 100) * 100;
+    } else {
+      return (Math.floor(p / 100) + 1) * 100;
+    }
+  }
+}
+
+/**
+ * Single delivery fee calculation algorithm using Haversine formula and roundUp.
+ * Strictly returns 0 for Laundry items (cat === 'Nguo' or isLaundry === true).
+ */
+export function calculateDeliveryFeeAlgorithm(
+  productLocation: string | { lat: number; lng: number } | null | undefined,
+  userLocation: string | { lat: number; lng: number } | null | undefined,
+  deliveryRation: number = 1000,
+  category?: string,
+  isLaundry?: boolean
+): number {
+  if (category === 'Nguo' || isLaundry === true) {
+    return 0;
+  }
+  if (!productLocation || !userLocation) return 0;
+
+  try {
+    let productLatt: number;
+    let productLongg: number;
+    let userLatt: number;
+    let userLongg: number;
+
+    if (typeof productLocation === 'string') {
+      const prodCodiList = productLocation.split(',');
+      if (prodCodiList.length < 2) return 0;
+      productLatt = parseFloat(prodCodiList[0].trim());
+      productLongg = parseFloat(prodCodiList[1].trim());
+    } else {
+      productLatt = productLocation.lat;
+      productLongg = productLocation.lng;
+    }
+
+    if (typeof userLocation === 'string') {
+      const userCodiList = userLocation.split(',');
+      if (userCodiList.length < 2) return 0;
+      userLatt = parseFloat(userCodiList[0].trim());
+      userLongg = parseFloat(userCodiList[1].trim());
+    } else {
+      userLatt = userLocation.lat;
+      userLongg = userLocation.lng;
+    }
+
+    if (isNaN(productLatt) || isNaN(productLongg) || isNaN(userLatt) || isNaN(userLongg)) {
+      return 0;
+    }
+
+    const p = 0.017453292519943295;
+    const a =
+      0.5 -
+      Math.cos((userLatt - productLatt) * p) / 2 +
+      (Math.cos(productLatt * p) *
+        Math.cos(userLatt * p) *
+        (1 - Math.cos((userLongg - productLongg) * p))) /
+        2;
+
+    const distanceRatio = 12742 * Math.asin(Math.sqrt(a));
+    const deliveryFee = roundUp(Math.round(distanceRatio) * deliveryRation);
+    return deliveryFee;
+  } catch (e) {
+    console.error('shida iko', e);
+    return 0;
+  }
+}
+
 export function getDeliveryFee(
   currentLocation: { lat: number; lng: number } | null,
-  productLocation?: { lat: number; lng: number },
+  productLocation?: { lat: number; lng: number } | string,
   storeId?: string,
   isLaundry?: boolean,
-  isDeliverySelected?: boolean
+  isDeliverySelected?: boolean,
+  category?: string,
+  deliveryRation: number = 1000
 ): number {
-  if (!currentLocation) return 0;
+  if (isLaundry || category === 'Nguo' || isDeliverySelected === false) {
+    return 0;
+  }
 
   let targetLocation = productLocation;
 
   if (!targetLocation && storeId) {
     const allStores = storeService.getMockStores();
-    const store = allStores.find(s => s.id === storeId);
+    const store = allStores.find((s) => s.id === storeId);
     if (store && store.location) {
       targetLocation = store.location;
     }
   }
 
-  if (targetLocation) {
-    const R = 6371;
-    const dLat = (targetLocation.lat - currentLocation.lat) * (Math.PI / 180);
-    const dLon = (targetLocation.lng - currentLocation.lng) * (Math.PI / 180);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
-              Math.cos(currentLocation.lat * (Math.PI / 180)) * Math.cos(targetLocation.lat * (Math.PI / 180)) * 
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distanceKm = R * c;
+  if (!targetLocation || !currentLocation) return 0;
 
-    let calculatedFee = distanceKm * 1000;
-    if (distanceKm > 150) {
-      calculatedFee = 15000;
-    }
-    const roundedFee = Math.round(calculatedFee);
+  return calculateDeliveryFeeAlgorithm(targetLocation, currentLocation, deliveryRation, category, isLaundry);
+}
 
-    if (isLaundry) {
-      if (isDeliverySelected !== false) {
-        if (roundedFee <= 0) return 50;
-        if (roundedFee < 2000) return 0;
-        if (roundedFee <= 3000) return 200;
-        if (roundedFee <= 5000) return 300;
-        if (roundedFee <= 7000) return 400;
-        if (roundedFee <= 9000) return 500;
-        if (roundedFee <= 15000) return 700;
-        return 1200;
-      }
-      return 0;
-    } else {
-      return isDeliverySelected === false ? 0 : roundedFee;
-    }
-  }
-  
-  return 0;
+export function getItemPriceWithDelivery(
+  basePrice: number,
+  currentLocation: { lat: number; lng: number } | null,
+  productLocation?: { lat: number; lng: number } | string,
+  storeId?: string,
+  isLaundry?: boolean,
+  isDeliverySelected?: boolean,
+  category?: string,
+  deliveryRation: number = 1000
+): number {
+  const fee = getDeliveryFee(
+    currentLocation,
+    productLocation,
+    storeId,
+    isLaundry,
+    isDeliverySelected,
+    category,
+    deliveryRation
+  );
+  return Math.round(Number(basePrice) + fee);
 }
 
 export function useDynamicPrice(
-  basePrice: number, 
-  storeId?: string, 
-  isLaundry?: boolean, 
-  productLocation?: { lat: number; lng: number },
-  isDeliverySelected?: boolean
+  basePrice: number,
+  storeId?: string,
+  isLaundry?: boolean,
+  productLocation?: { lat: number; lng: number } | string,
+  isDeliverySelected?: boolean,
+  category?: string
 ) {
   const { currentLocation } = useLocationStore();
   const [magicPrice, setMagicPrice] = useState(basePrice);
@@ -72,10 +158,28 @@ export function useDynamicPrice(
       setMagicPrice(basePrice);
       return;
     }
-    
-    const fee = getDeliveryFee(currentLocation, productLocation, storeId, isLaundry, isDeliverySelected);
-    setMagicPrice(Number(basePrice) + fee);
-  }, [basePrice, storeId, currentLocation, isLaundry, productLocation?.lat, productLocation?.lng, isDeliverySelected]);
+
+    const priceWithFee = getItemPriceWithDelivery(
+      basePrice,
+      currentLocation,
+      productLocation,
+      storeId,
+      isLaundry,
+      isDeliverySelected,
+      category
+    );
+    setMagicPrice(priceWithFee);
+  }, [
+    basePrice,
+    storeId,
+    currentLocation,
+    isLaundry,
+    typeof productLocation === 'string'
+      ? productLocation
+      : `${productLocation?.lat},${productLocation?.lng}`,
+    isDeliverySelected,
+    category,
+  ]);
 
   return Math.round(magicPrice);
 }

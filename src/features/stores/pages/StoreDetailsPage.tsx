@@ -24,6 +24,122 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { locationService } from '../../location/services/locationService';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
+import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+
+const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, navigate }: any) => {
+  const itemCat = (prod as any)?.cat || prod.category || store.category || 'Product';
+  const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(prod.category);
+  const dynamicPrice = useDynamicPrice(
+    prod.price, 
+    store.id, 
+    isLaundry, 
+    prod.location || store.location, 
+    undefined, 
+    itemCat
+  );
+  const cartItem = cartItems.find((ci: any) => ci.productId === prod.id);
+  const isSoldOut = prod.availability === false;
+
+  return (
+    <Card 
+      onClick={() => navigate(`/product/${encodeURIComponent(prod.id)}`)}
+      className="p-4 border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all flex gap-4 items-center cursor-pointer group"
+    >
+      <img 
+        src={prod.imgUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
+        alt={prod.name} 
+        className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0 group-hover:scale-105 transition-transform"
+      />
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          {prod.tags?.map((tag: any, i: number) => (
+            <Badge key={i} className="bg-amber-400/20 text-amber-800 border-0 text-[8px] font-bold py-0 px-1 rounded-sm">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+        
+        <h4 className="font-extrabold text-sm text-foreground truncate mb-1 group-hover:text-primary transition-colors">{prod.name}</h4>
+        <p className="text-xs text-slate-550 dark:text-slate-400 line-clamp-1 mb-2 leading-relaxed">{prod.description}</p>
+        
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-1.5">
+            <span className="font-extrabold text-sm text-foreground">
+              {formatPrice(dynamicPrice)} {APP_SETTINGS.currency}
+            </span>
+            {prod.oldprice && (
+              <span className="text-[10px] text-slate-400 line-through">
+                {formatPrice(prod.oldprice)} {APP_SETTINGS.currency}
+              </span>
+            )}
+          </div>
+
+          {cartItem && cartItem.quantity > 0 ? (
+            <div 
+              className="flex items-center gap-1.5 sm:gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateQuantity(prod.id, cartItem.quantity - 1);
+                  }} 
+                  className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm hover:bg-background/80"
+                >
+                  <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                </button>
+                <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const stockLimit = prod.quantity !== undefined ? prod.quantity : (prod as any).idadi;
+                    if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                      alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
+                      return;
+                    }
+                    updateQuantity(prod.id, cartItem.quantity + 1);
+                  }} 
+                  className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                >
+                  <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              disabled={isSoldOut}
+              onClick={(e) => {
+                e.stopPropagation();
+                addToCart({
+                  productId: prod.id,
+                  name: prod.name,
+                  price: prod.price,
+                  basePrice: prod.price,
+                  imageUrl: prod.imgUrl,
+                  storeId: store.id,
+                  storeName: store.store,
+                  cat: itemCat,
+                  location: prod.location || store.location,
+                  idadi: prod.quantity !== undefined ? prod.quantity : (prod as any).idadi
+                });
+              }}
+              className={`px-3 py-1.5 rounded-xl shadow-sm transition-all text-xs font-extrabold flex items-center gap-1 shrink-0 ${
+                !isSoldOut
+                  ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add
+            </button>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 export const StoreDetailsPage = () => {
   const { isDark } = useThemeStore();
@@ -31,6 +147,7 @@ export const StoreDetailsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const routeStoreData = location.state?.storeData as Store | undefined;
+  const fromProduct = location.state?.fromProduct as any | undefined;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // States
@@ -97,13 +214,13 @@ export const StoreDetailsPage = () => {
 
   const fallbackStore: Store = {
     id: decodedId || 's1',
-    store: decodedId && decodedId !== 's1' && decodedId !== 'undefined' ? decodedId : 'Tulete Partner Store',
+    store: fromProduct?.store || (decodedId && decodedId !== 's1' && decodedId !== 'undefined' ? decodedId : 'Tulete Partner Store'),
     description: 'Welcome to our store! We provide high quality items with fast delivery.',
     imgURL: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
     ownerId: 'owner-1',
     rating: 4.8,
     reviewCount: 156,
-    category: 'Food',
+    category: fromProduct?.category || 'Food',
     availability: true,
     address: 'Dodoma, Tanzania',
     location: { lat: -6.1630, lng: 35.7516 },
@@ -111,8 +228,8 @@ export const StoreDetailsPage = () => {
   };
 
   const store = routeStoreData || dbStore || mockMatch || fallbackStore;
-  const targetStoreName = (store?.name || store?.store || '').toLowerCase().trim();
-  const targetStoreId = (id || store?.id || '').toLowerCase().trim();
+  const targetStoreName = (store?.name || store?.store || fromProduct?.store || '').toLowerCase().trim();
+  const targetStoreId = (id || store?.id || fromProduct?.storeId || '').toLowerCase().trim();
 
   const storeLat = store?.location?.lat ?? (store as any)?.lat ?? (store as any)?.latitude ?? -6.1630;
   const storeLng = store?.location?.lng ?? (store as any)?.lng ?? (store as any)?.longitude ?? 35.7516;
@@ -148,18 +265,43 @@ export const StoreDetailsPage = () => {
   ];
 
   const matchedStoreProducts = allCollectionDocs.filter(item => {
+    if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
+    
     const itemStore = String(item.store || (item as any).storeName || '').toLowerCase().trim();
     const itemStoreId = String(item.storeId || '').toLowerCase().trim();
-    return (
+    const itemBrand = String((item as any).brand || (item as any).pbrand || '').toLowerCase().trim();
+
+    const fromProdStore = String(fromProduct?.store || '').toLowerCase().trim();
+    const fromProdStoreId = String(fromProduct?.storeId || '').toLowerCase().trim();
+
+    const matchesName = Boolean(
       (targetStoreName && itemStore === targetStoreName) ||
-      (targetStoreId && (itemStore === targetStoreId || itemStoreId === targetStoreId)) ||
-      (targetStoreName && itemStore.includes(targetStoreName))
+      (targetStoreName && targetStoreName.length > 2 && itemStore.includes(targetStoreName)) ||
+      (itemStore && itemStore.length > 2 && targetStoreName.includes(itemStore))
     );
+
+    const matchesId = Boolean(
+      (targetStoreId && itemStoreId === targetStoreId) ||
+      (targetStoreId && itemStore === targetStoreId) ||
+      (targetStoreId && itemBrand === targetStoreId)
+    );
+
+    const matchesFromProduct = Boolean(
+      fromProduct && (
+        item.id === fromProduct.id ||
+        (fromProdStore && (itemStore === fromProdStore || itemStore.includes(fromProdStore) || fromProdStore.includes(itemStore))) ||
+        (fromProdStoreId && (itemStoreId === fromProdStoreId || itemStore === fromProdStoreId))
+      )
+    );
+
+    return matchesName || matchesId || matchesFromProduct;
   });
 
-  let products = matchedStoreProducts.length > 0 ? matchedStoreProducts : productService.getMockProducts(id);
+  let products = matchedStoreProducts;
 
-  if (products.length === 0 && store) {
+  if (products.length === 0 && fromProduct) {
+    products = [fromProduct];
+  } else if (products.length === 0 && store) {
     const categoryLower = (store.category || '').toLowerCase();
     products = productService.getMockProducts().filter(p => {
       const storeNameLower = (p.store || '').toLowerCase();
@@ -582,112 +724,15 @@ export const StoreDetailsPage = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredProducts.map((prod) => (
-                  <Card 
+                  <StoreProductRow 
                     key={prod.id} 
-                    onClick={() => navigate(`/product/${encodeURIComponent(prod.id)}`)}
-                    className="p-4 border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all flex gap-4 items-center cursor-pointer group"
-                  >
-                    <img 
-                      src={prod.imgUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
-                      alt={prod.name} 
-                      className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0 group-hover:scale-105 transition-transform"
-                    />
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        {/* <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary">{prod.category}</span> */}
-                        {prod.tags.map((tag, i) => (
-                          <Badge key={i} className="bg-amber-400/20 text-amber-800 border-0 text-[8px] font-bold py-0 px-1 rounded-sm">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      
-                      <h4 className="font-extrabold text-sm text-foreground truncate mb-1 group-hover:text-primary transition-colors">{prod.name}</h4>
-                      <p className="text-xs text-slate-550 dark:text-slate-400 line-clamp-1 mb-2 leading-relaxed">{prod.description}</p>
-                      
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-sm text-foreground">
-                            {formatPrice(prod.price)} {APP_SETTINGS.currency}
-                          </span>
-                          {prod.oldprice && (
-                            <span className="text-[10px] text-slate-400 line-through">
-                              {formatPrice(prod.oldprice)} {APP_SETTINGS.currency}
-                            </span>
-                          )}
-                        </div>
-
-                        {(() => {
-                          const cartItem = cartItems.find((ci) => ci.productId === prod.id);
-                          const isSoldOut = prod.availability === false;
-
-                          if (cartItem && cartItem.quantity > 0) {
-                            return (
-                              <div 
-                                className="flex items-center gap-1.5 sm:gap-2"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div className="flex items-center gap-1 sm:gap-1.5 bg-muted px-1.5 sm:px-2 py-1 rounded-xl">
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      updateQuantity(prod.id, cartItem.quantity - 1);
-                                    }} 
-                                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm hover:bg-background/80"
-                                  >
-                                    <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                  </button>
-                                  <span className="font-extrabold text-xs sm:text-sm min-w-[1rem] text-center">{cartItem.quantity}</span>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const stockLimit = prod.quantity !== undefined ? prod.quantity : (prod as any).idadi;
-                                      if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
-                                        alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
-                                        return;
-                                      }
-                                      updateQuantity(prod.id, cartItem.quantity + 1);
-                                    }} 
-                                    className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-                                  >
-                                    <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <button
-                              disabled={isSoldOut}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addToCart({
-                                  productId: prod.id,
-                                  name: prod.name,
-                                  price: prod.price,
-                                  imageUrl: prod.imgUrl,
-                                  storeId: store.id,
-                                  storeName: store.store,
-                                  cat: (prod as any)?.cat || prod.category || store.category || 'Product',
-                                  location: prod.location,
-                                  idadi: prod.quantity !== undefined ? prod.quantity : (prod as any).idadi
-                                });
-                              }}
-                              className={`px-3 py-1.5 rounded-xl shadow-sm transition-all text-xs font-extrabold flex items-center gap-1 shrink-0 ${
-                                !isSoldOut
-                                  ? 'bg-primary text-primary-foreground hover:scale-105 active:scale-95'
-                                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-                              }`}
-                            >
-                              <Plus className="w-3.5 h-3.5" /> Add
-                            </button>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </Card>
+                    prod={prod} 
+                    store={store} 
+                    cartItems={cartItems} 
+                    updateQuantity={updateQuantity} 
+                    addToCart={addToCart} 
+                    navigate={navigate} 
+                  />
                 ))}
               </div>
             )}

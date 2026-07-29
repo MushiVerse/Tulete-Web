@@ -212,6 +212,21 @@ export const CartPage = () => {
   useEffect(() => {
     setTotals(getTotals());
   }, [currentLocation, items, laundryPreferences?.globalExpressSelected, laundryPreferences?.deliverytime]);
+
+  // Clear preferred pickup time on CartPage mount and window close/unload
+  useEffect(() => {
+    setLaundryPreferences({ deliverytime: '' });
+
+    const handleBeforeUnload = () => {
+      useCartStore.getState().setLaundryPreferences({ deliverytime: '' });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [setLaundryPreferences]);
+
   const { subtotal, deliveryFee, expressFee, pickupFee, serviceFee, total, itemCount } = getTotals();
 
   const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo');
@@ -439,6 +454,12 @@ export const CartPage = () => {
                   <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
                 </div>
                 {/* Delivery Fee hidden per request, total calculation remains identical */}
+                {serviceFee > 0 && (
+                  <div className="flex justify-between text-primary font-bold">
+                    <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> Service Charge</span>
+                    <span>+{formatPrice(serviceFee)} {APP_SETTINGS.currency}</span>
+                  </div>
+                )}
                 {expressFee > 0 && (
                   <div className="flex justify-between text-primary font-bold">
                     <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-primary fill-primary/20" /> Express Charges</span>
@@ -449,12 +470,6 @@ export const CartPage = () => {
                   <div className="flex justify-between text-primary font-bold">
                     <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-primary" /> Preferred Pickup Charge</span>
                     <span>+{formatPrice(pickupFee)} {APP_SETTINGS.currency}</span>
-                  </div>
-                )}
-                {serviceFee > 0 && (
-                  <div className="flex justify-between text-muted-foreground font-semibold">
-                    <span>Service Fee (5%)</span>
-                    <span>{formatPrice(serviceFee)} {APP_SETTINGS.currency}</span>
                   </div>
                 )}
               </div>

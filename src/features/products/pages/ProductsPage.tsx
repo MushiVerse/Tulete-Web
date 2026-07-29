@@ -26,14 +26,20 @@ import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOver
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 
-const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigate }: any) => {
-  if (product.availability === false || product.availability === 'false' || product.available === false || product.isAvailable === false) {
+const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuantity, navigate }: any) => {
+  if (rawProduct.availability === false || rawProduct.availability === 'false' || rawProduct.available === false || rawProduct.isAvailable === false) {
     return null;
   }
 
-  const isLaundryCategory = ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
-  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location);
+  const { rating: normRating } = getNormalizedRating(rawProduct);
+  const product = { ...rawProduct, rating: rawProduct.rating || normRating };
+
+  const itemCat = (product as any)?.cat || product.category || 'Product';
+  const isLaundryCategory = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
+  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location, undefined, itemCat);
   const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
 
   return (
@@ -101,10 +107,11 @@ const ProductGridItem = ({ product, cartItem, addToCart, updateQuantity, navigat
                     productId: product.id,
                     name: product.name,
                     price: product.price,
+                    basePrice: product.price,
                     imageUrl: product.imgUrl,
                     storeId: product.storeId,
                     storeName: product.store,
-                    cat: 'Product',
+                    cat: itemCat,
                     location: product.location,
                     isLaundry: isLaundryCategory,
                     idadi: product.quantity !== undefined ? product.quantity : product.idadi
@@ -322,8 +329,7 @@ export const ProductsPage = () => {
       if (itemCat !== targetCat && !itemCat.includes(targetCat) && !targetCat.includes(itemCat)) return false;
     }
 
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.store.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = isItemFuzzyMatch(searchQuery, item, ['name', 'store', 'brand', 'category', 'description']);
     
     // Filter by delivery fee <= 10000
     const deliveryFee = getDeliveryFee(currentLocation, item.location, item.storeId, false, true);

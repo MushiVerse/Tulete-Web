@@ -4,6 +4,9 @@ import { X, SearchX, Loader2 } from 'lucide-react';
 import { ProductCard } from './cards/ProductCard';
 import { Skeleton } from './ui/Skeleton';
 import { useCartStore } from '../../features/cart/store/useCartStore';
+import { useLocationStore } from '../../features/location/store/useLocationStore';
+import { getItemPriceWithDelivery } from '../../features/location/hooks/useDynamicPrice';
+import { getNormalizedRating } from '../utils/ratingUtils';
 
 interface MobileSearchOverlayProps {
   query: string;
@@ -32,19 +35,22 @@ export const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
   }, []);
 
   const handleAddToCart = (product: any) => {
-    const cat = product.category || product.recordType === 'cloth' ? 'Laundry' : '';
+    const cat = product.cat || product.category || (product.recordType === 'cloth' ? 'Nguo' : 'Product');
+    const isLaundry = cat === 'Nguo' || cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth' || product._collection === 'cloths';
+    const baseItemPrice = product.price ?? 0;
     addToCart({
       productId: product.id || product.objectID,
       baseProductId: product.id || product.objectID,
       name: product.name,
-      price: product.price ?? 0,
+      price: baseItemPrice,
+      basePrice: baseItemPrice,
       imageUrl: product.imgUrl || product.imgURL || product.image || '',
       storeId: product.storeId || 'unknown',
       storeName: product.store || 'Unknown Store',
       cat,
       location: product.location,
       idadi: product.idadi,
-      isLaundry: cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth' || product._collection === 'cloths'
+      isLaundry
     });
   };
 
@@ -109,18 +115,10 @@ export const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {results.map((item: any) => {
-              // Normalize Algolia/Firestore hit
-              let rating = 0, reviewCount = 0;
-              if (Array.isArray(item.rate) && item.rate.length > 0) {
-                const rates = item.rate.map(Number).filter((n: number) => !isNaN(n));
-                reviewCount = rates.length;
-                rating = rates.reduce((s: number, r: number) => s + r, 0) / reviewCount;
-              } else if (item.rating && Number(item.rating) > 0) {
-                rating = Number(item.rating);
-                reviewCount = item.reviewCount ? Number(item.reviewCount) : 1;
-              }
-              if (rating === 0) rating = 4.5 + ((item.name?.length || 5) % 5) / 10;
+            {results
+              .filter((item: any) => item.availability !== false && item.availability !== 'false' && item.available !== false && item.isAvailable !== false)
+              .map((item: any) => {
+              const { rating, reviewCount } = getNormalizedRating(item);
 
               const product = {
                 ...item,
@@ -130,7 +128,7 @@ export const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
                 imgUrl: item.imgUrl || item.imgURL || item.image || '',
                 storeId: item.storeId || '',
                 store: item.store || item.storeName || '',
-                rating: Math.round(rating * 10) / 10,
+                rating,
                 reviewCount,
                 category: item.category || item.cat || '',
                 tags: item.tags || [],

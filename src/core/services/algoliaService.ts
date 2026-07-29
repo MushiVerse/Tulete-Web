@@ -35,7 +35,13 @@ export const searchTuleteItems = async (
         },
       ],
     });
-    return (results[0] as any).hits;
+    const hits = ((results[0] as any)?.hits || []) as any[];
+    return hits.filter((item: any) => 
+      item.availability !== false && 
+      item.availability !== 'false' && 
+      item.available !== false && 
+      item.isAvailable !== false
+    );
   } catch (error) {
     console.error('Algolia Search Error:', error);
     return [];

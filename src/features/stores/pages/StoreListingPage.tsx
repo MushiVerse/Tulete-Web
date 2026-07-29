@@ -471,7 +471,7 @@ function fuzzyMatchStore(s: any, query: string): boolean {
         : 99.9,
     }))
     .filter((s) => {
-      if (s.availability === false) return false;
+      if (s.availability === false || (s as any).availability === 'false' || (s as any).available === false || (s as any).isAvailable === false) return false;
 
       if (currentLocation && s.location) {
         const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);

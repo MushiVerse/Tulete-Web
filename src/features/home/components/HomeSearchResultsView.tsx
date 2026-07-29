@@ -5,6 +5,9 @@ import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useCartStore } from '../../cart/store/useCartStore';
+import { useLocationStore } from '../../location/store/useLocationStore';
+import { getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
 interface HomeSearchResultsViewProps {
   query: string;
@@ -30,7 +33,7 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
       } else if (filterValue === 'product') {
         filterStr = `recordType:product`;
       } else if (filterValue === 'laundry') {
-        filterStr = `recordType:cloth`;
+        filterStr = `(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)`;
       } else {
         filterStr = `NOT recordType:brand`;
       }
@@ -40,7 +43,14 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
         hitsPerPage: 20
       });
       
-      setResults(hits);
+      const validHits = (hits || []).filter((item: any) => 
+        item.availability !== false && 
+        item.availability !== 'false' && 
+        item.available !== false && 
+        item.isAvailable !== false
+      );
+
+      setResults(validHits);
       setLoading(false);
     };
 
@@ -48,19 +58,22 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
   }, [query, filterValue]);
 
   const handleAddToCart = (product: any) => {
-    const cat = product.category || product.recordType === 'cloth' ? 'Laundry' : 'Product';
+    const cat = product.cat || product.category || (product.recordType === 'cloth' ? 'Nguo' : 'Product');
+    const isLaundry = cat === 'Nguo' || cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth';
+    const baseItemPrice = product.price || 0;
     addToCart({
       productId: product.objectID || product.id,
       baseProductId: product.objectID || product.id,
       name: product.name,
-      price: product.price || 0,
+      price: baseItemPrice,
+      basePrice: baseItemPrice,
       imageUrl: product.image || product.imgURL || '',
       storeId: product.storeId || 'unknown',
       storeName: product.store || 'Unknown Store',
       cat,
       location: product.location,
       idadi: product.idadi,
-      isLaundry: cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth'
+      isLaundry
     });
   };
 
@@ -90,12 +103,13 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
       <AnimatePresence>
         {results.map((item, i) => {
+          const { rating, reviewCount } = getNormalizedRating(item);
           const product = {
             ...item,
             id: item.objectID || item.id,
             imgUrl: item.imgURL || item.image || item.imgUrl || '',
-            rating: item.rating || 0,
-            reviewCount: item.reviewCount || 0
+            rating,
+            reviewCount
           };
           
           return (
