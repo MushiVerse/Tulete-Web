@@ -22,6 +22,108 @@ export interface TravelDetails {
 
 class LocationService {
   /**
+   * Fast IP Geolocation fallback for desktop browsers / blocked permissions
+   */
+  async fetchIPLocation(): Promise<{ lat: number; lng: number; address: string }> {
+    try {
+      const res = await fetch('https://ipwho.is/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && data.latitude && data.longitude) {
+          const city = data.city || data.region || 'Tanzania';
+          const country = data.country || 'Tanzania';
+          return {
+            lat: data.latitude,
+            lng: data.longitude,
+            address: `${city}, ${country}`,
+          };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.latitude && data.longitude) {
+          const city = data.city || data.region || 'Tanzania';
+          const country = data.country_name || 'Tanzania';
+          return {
+            lat: data.latitude,
+            lng: data.longitude,
+            address: `${city}, ${country}`,
+          };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    throw new Error('IP geolocation unavailable');
+  }
+
+  /**
+   * Resilient user location detector catching exact GPS coordinates first
+   */
+  async detectUserLocation(): Promise<{ lat: number; lng: number; address: string }> {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        this.fetchIPLocation()
+          .then(async (ipLoc) => {
+            const address = await this.reverseGeocode(ipLoc.lat, ipLoc.lng);
+            resolve({ lat: ipLoc.lat, lng: ipLoc.lng, address });
+          })
+          .catch(() => resolve({ lat: -6.1630, lng: 35.7516, address: 'Dodoma, Tanzania' }));
+        return;
+      }
+
+      let resolved = false;
+
+      // 1. Try High-Accuracy GPS first for exact position
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (resolved) return;
+          resolved = true;
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const address = await this.reverseGeocode(lat, lng);
+          resolve({ lat, lng, address });
+        },
+        // 2. If high accuracy times out, try standard browser location
+        () => {
+          if (resolved) return;
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              if (resolved) return;
+              resolved = true;
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const address = await this.reverseGeocode(lat, lng);
+              resolve({ lat, lng, address });
+            },
+            // 3. Fallback to IP geolocation if browser GPS fails/denied
+            async () => {
+              if (resolved) return;
+              resolved = true;
+              try {
+                const ipLoc = await this.fetchIPLocation();
+                const address = await this.reverseGeocode(ipLoc.lat, ipLoc.lng);
+                resolve({ lat: ipLoc.lat, lng: ipLoc.lng, address });
+              } catch (e) {
+                resolve({ lat: -6.1630, lng: 35.7516, address: 'Dodoma, Tanzania' });
+              }
+            },
+            { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+          );
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  }
+
+  /**
    * Browser-native Geolocation fetcher
    */
   getCurrentPosition(): Promise<GeoLocation> {
@@ -48,9 +150,26 @@ class LocationService {
   }
 
   /**
-   * Reverse Geocoding helper (Coordinates -> Human Address string) using OpenStreetMap Nominatim
+   * Reverse Geocoding helper (Coordinates -> Human Address string)
+   * Uses Google Maps Geocoder if loaded, Nominatim, & BigDataCloud fallback.
+   * NEVER returns raw numeric lat/lng strings!
    */
   async reverseGeocode(lat: number, lng: number): Promise<string> {
+    // 1. Try Google Maps Geocoder if available on window
+    if (typeof window !== 'undefined' && (window as any).google?.maps?.Geocoder) {
+      try {
+        const geocoder = new (window as any).google.maps.Geocoder();
+        const response = await geocoder.geocode({ location: { lat, lng } });
+        if (response.results && response.results[0] && response.results[0].formatted_address) {
+          const cleaned = response.results[0].formatted_address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '');
+          if (cleaned.trim()) return cleaned.trim();
+        }
+      } catch (e) {
+        console.warn('Google reverse geocode failed, trying OpenStreetMap:', e);
+      }
+    }
+
+    // 2. Try OpenStreetMap Nominatim
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
@@ -61,33 +180,53 @@ class LocationService {
         }
       );
       
-      if (!response.ok) throw new Error('Geocoding failed');
-      
-      const data = await response.json();
-      
-      if (data && data.address) {
-        const addr = data.address;
-        const road = addr.road || addr.street || addr.pedestrian || addr.residential || addr.suburb || addr.neighbourhood || addr.building;
-        const city = addr.city || addr.town || addr.municipality || addr.county || addr.state;
-        const country = addr.country || 'Tanzania';
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data && data.address) {
+          const addr = data.address;
+          const road = addr.road || addr.street || addr.pedestrian || addr.residential || addr.suburb || addr.neighbourhood || addr.building || addr.amenity;
+          const suburb = addr.suburb || addr.neighbourhood || addr.quarter || addr.city_district;
+          const city = addr.city || addr.town || addr.municipality || addr.county || addr.state;
+          const country = addr.country || 'Tanzania';
 
-        if (road && city) {
-          return `${road}, ${city}, ${country}`;
+          const parts = [road, suburb, city, country].filter(Boolean);
+          if (parts.length >= 2) {
+            return parts.join(', ');
+          }
+        }
+
+        if (data && data.display_name) {
+          const addressParts = data.display_name.split(', ');
+          if (addressParts.length > 3) {
+            return addressParts.slice(0, 3).join(', ');
+          }
+          return data.display_name;
         }
       }
-
-      if (data && data.display_name) {
-        const addressParts = data.display_name.split(', ');
-        if (addressParts.length > 3) {
-          return addressParts.slice(0, 3).join(', ');
-        }
-        return data.display_name;
-      }
-      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      console.warn('Nominatim reverse geocode error:', error);
     }
+
+    // 3. Try BigDataCloud Reverse Geocoding API (client free tier, HTTPS)
+    try {
+      const bdcRes = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+      );
+      if (bdcRes.ok) {
+        const bdcData = await bdcRes.json();
+        const locality = bdcData.locality || bdcData.city || bdcData.principalSubdivision;
+        const country = bdcData.countryName || 'Tanzania';
+        if (locality) {
+          return `${locality}, ${country}`;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // 4. Default friendly address placeholder (NEVER return raw lat/long numerical string)
+    return 'Selected Location';
   }
 
   /**

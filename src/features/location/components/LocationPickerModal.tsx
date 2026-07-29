@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, Marker, type Libraries } from '@react-google-maps/api';
+import { GoogleMap, Marker, MarkerF, type Libraries } from '@react-google-maps/api';
 import usePlacesAutocomplete, {
   getGeocode,
   getLatLng,
@@ -12,11 +12,12 @@ import {
 } from '../../../shared/components/ui/Dialog';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
-import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock, Plus, Minus, RotateCw, Crosshair, Maximize2, Target } from 'lucide-react';
+import { MapPin, Navigation, Search, Check, Sparkles, AlertCircle, ImagePlus, Loader2, X, History, Clock, Plus, Minus, RotateCw, Crosshair, Maximize2, Target, Layers } from 'lucide-react';
 import { useLocationStore, SavedLocation } from '../store/useLocationStore';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { storageService } from '../../../core/services/storageService';
+import { locationService } from '../services/locationService';
 
 const containerStyle = {
   width: '100%',
@@ -84,6 +85,7 @@ export const LocationPickerModal = ({
   const [fallbackSuggestions, setFallbackSuggestions] = useState<Array<{ place_id: string; description: string; lat: number; lng: number }>>([]);
   
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'hybrid'>('roadmap');
   // Adjust container height based on fullscreen mode
   const dynamicContainerStyle = {
     ...containerStyle,
@@ -211,127 +213,70 @@ export const LocationPickerModal = ({
     }
   };
 
-  const handleUseCurrentLocation = useCallback(() => {
+  const handleUseCurrentLocation = useCallback(async () => {
     setIsLocating(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setMapCenter({ lat, lng });
-          setSelectedPos({ lat, lng });
-          if (mapRef.current) {
-            mapRef.current.panTo({ lat, lng });
-            mapRef.current.setZoom(16);
-          }
-          
-          // Reverse geocode
-          try {
-            const results = await getGeocode({ location: { lat, lng } });
-            if (results[0]) {
-              setAddressText(results[0].formatted_address);
-              setValue(results[0].formatted_address, false);
-              setCurrentLocation({
-                id: Date.now().toString(),
-                address: results[0].formatted_address,
-                lat,
-                lng,
-                specificInstructions: '',
-                lastUsedAt: Date.now(),
-              });
-            }
-          } catch (e) {
-            console.error('Google Maps Geocoding failed:', e);
-            try {
-              const { locationService } = await import('../services/locationService');
-              const fallbackAddress = await locationService.reverseGeocode(lat, lng);
-              setAddressText(fallbackAddress);
-              setValue(fallbackAddress, false);
-              setCurrentLocation({
-                id: Date.now().toString(),
-                address: fallbackAddress,
-                lat,
-                lng,
-                specificInstructions: '',
-                lastUsedAt: Date.now(),
-              });
-            } catch (fallbackErr) {
-              setAddressText('Current Location Selected');
-            }
-          }
-          setIsLocating(false);
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          setIsLocating(false);
-          const fallback = defaultCenter;
-          setMapCenter(fallback);
-          setSelectedPos(fallback);
-          setAddressText('Default location (Dodoma, Tanzania)');
-          setValue('Dodoma, Tanzania', false);
-          setCurrentLocation({
-            id: Date.now().toString(),
-            address: 'Dodoma, Tanzania',
-            lat: fallback.lat,
-            lng: fallback.lng,
-            specificInstructions: '',
-            lastUsedAt: Date.now(),
-          });
-
-          if (error.code === error.PERMISSION_DENIED) {
-            alert('Location permission denied. Using default location. You can pick another location on the map.');
-          } else {
-            alert('Unable to retrieve your location. Using default location. You can pick another location on the map.');
-          }
-        },
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
-      );
-    } else {
-      alert('Geolocation is not supported by your browser. Please select a location manually.');
+    try {
+      const loc = await locationService.detectUserLocation();
+      setMapCenter({ lat: loc.lat, lng: loc.lng });
+      setSelectedPos({ lat: loc.lat, lng: loc.lng });
+      setAddressText(loc.address);
+      setValue(loc.address, false);
+      setCurrentLocation({
+        id: Date.now().toString(),
+        address: loc.address,
+        lat: loc.lat,
+        lng: loc.lng,
+        specificInstructions: '',
+        lastUsedAt: Date.now(),
+      });
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat: loc.lat, lng: loc.lng });
+        mapRef.current.setZoom(16);
+      }
+    } catch (error) {
+      console.error('Location detection failed:', error);
+    } finally {
       setIsLocating(false);
     }
   }, [setValue, setCurrentLocation]);
-
-  // Auto-locate user when the modal opens if they haven't set a location yet
-  useEffect(() => {
-    if (isOpen && !currentLocation && !selectedPos && !isLocating) {
-      handleUseCurrentLocation();
-    }
-  }, [isOpen, currentLocation, selectedPos, isLocating, handleUseCurrentLocation]);
 
   const updateSelectedLocation = useCallback(async (lat: number, lng: number) => {
     setSelectedPos({ lat, lng });
     try {
       const results = await getGeocode({ location: { lat, lng } });
-      if (results[0]) {
-        setAddressText(results[0].formatted_address);
-        setValue(results[0].formatted_address, false);
+      if (results[0] && results[0].formatted_address) {
+        const rawAddr = results[0].formatted_address;
+        const cleanedAddr = rawAddr.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').trim() || rawAddr;
+        setAddressText(cleanedAddr);
+        setValue(cleanedAddr, false);
         setCurrentLocation({
           id: Date.now().toString(),
-          address: results[0].formatted_address,
+          address: cleanedAddr,
           lat,
           lng,
           specificInstructions: '',
           lastUsedAt: Date.now(),
         });
+        return;
       }
     } catch (err) {
-      try {
-        const { locationService } = await import('../services/locationService');
-        const fallbackAddress = await locationService.reverseGeocode(lat, lng);
-        setAddressText(fallbackAddress);
-        setValue(fallbackAddress, false);
-        setCurrentLocation({
-          id: Date.now().toString(),
-          address: fallbackAddress,
-          lat,
-          lng,
-          specificInstructions: '',
-          lastUsedAt: Date.now(),
-        });
-      } catch (fallbackErr) {
-        setAddressText('Custom Map Location');
-      }
+      // ignore
+    }
+
+    try {
+      const fallbackAddress = await locationService.reverseGeocode(lat, lng);
+      setAddressText(fallbackAddress);
+      setValue(fallbackAddress, false);
+      setCurrentLocation({
+        id: Date.now().toString(),
+        address: fallbackAddress,
+        lat,
+        lng,
+        specificInstructions: '',
+        lastUsedAt: Date.now(),
+      });
+    } catch (fallbackErr) {
+      setAddressText('Selected Map Location');
     }
   }, [setValue, setCurrentLocation]);
 
@@ -519,6 +464,7 @@ export const LocationPickerModal = ({
                   onClick={onMapClick}
                   onIdle={handleMapIdle}
                   onLoad={(map) => { mapRef.current = map; }}
+                  mapTypeId={mapTypeId}
                   options={{
                     disableDefaultUI: true,
                     zoomControl: false,
@@ -526,23 +472,18 @@ export const LocationPickerModal = ({
                     streetViewControl: false,
                     mapTypeControl: false,
                     fullscreenControl: false,
-                    styles: isDark ? darkMapStyles : lightMapStyles,
+                    styles: mapTypeId === 'hybrid' ? [] : (isDark ? darkMapStyles : lightMapStyles),
                   }}
                 >
-                  {selectedPos && (
-                    <Marker
-                      position={selectedPos}
-                      animation={google.maps.Animation.DROP}
-                    />
-                  )}
                   {/* One‑hand toolbar – top‑left for thumb reach */}
-                  <div className="absolute left-2 top-2 flex flex-col bg-card/90 border border-border text-foreground rounded-lg shadow-md p-1 space-y-1 backdrop-blur">
+                  <div className="absolute left-2 top-2 flex flex-col bg-card/90 border border-border text-foreground rounded-lg shadow-md p-1 space-y-1 backdrop-blur z-10">
                     <button
                       onClick={() => {
                         const map = mapRef.current;
                         if (map) map.setZoom((map.getZoom() || 14) + 1);
                       }}
                       className="p-1 hover:bg-primary/10 rounded"
+                      title="Zoom In"
                     >
                       <Plus className="w-5 h-5" />
                     </button>
@@ -552,24 +493,51 @@ export const LocationPickerModal = ({
                         if (map) map.setZoom((map.getZoom() || 14) - 1);
                       }}
                       className="p-1 hover:bg-primary/10 rounded"
+                      title="Zoom Out"
                     >
                       <Minus className="w-5 h-5" />
                     </button>
-                    <button onClick={handleUseCurrentLocation} className="p-1 hover:bg-primary/10 rounded">
+                    <button onClick={handleUseCurrentLocation} className="p-1 hover:bg-primary/10 rounded" title="My Location">
                       <Crosshair className="w-5 h-5" />
                     </button>
-                    <button onClick={() => setIsFullScreen(prev => !prev)} className="p-1 hover:bg-primary/10 rounded">
+                    <button
+                      onClick={() => setMapTypeId(prev => (prev === 'roadmap' ? 'hybrid' : 'roadmap'))}
+                      className={`p-1 rounded transition-colors ${
+                        mapTypeId === 'hybrid'
+                          ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                          : 'hover:bg-primary/10'
+                      }`}
+                      title={mapTypeId === 'hybrid' ? 'Switch to Standard Map' : 'Switch to Satellite View'}
+                    >
+                      <Layers className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => setIsFullScreen(prev => !prev)} className="p-1 hover:bg-primary/10 rounded" title="Toggle Fullscreen">
                       <Maximize2 className="w-4 h-4" />
                     </button>
                   </div>
                 </GoogleMap>
-                 {/* Modern centered badge icon with halo animation */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="relative">
-                    <div className="absolute inset-0 w-12 h-12 bg-primary/10 rounded-full animate-ping"></div>
-                    <div className="bg-primary/30 rounded-full p-2 shadow-lg animate-pulse">
-                      <MapPin className="w-6 h-6 text-primary animate-bounce" />
+
+                {/* Sleek Centered Location Target Pin with Thin Pointer Tip */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                  <div className="relative flex flex-col items-center -translate-y-full mb-1">
+                    {/* Address / Landmark Pill Badge above Marker */}
+                    <div className="mb-1.5 bg-slate-900/90 dark:bg-slate-100/95 text-white dark:text-slate-900 text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-lg border border-white/20 dark:border-black/20 tracking-tight flex items-center gap-1.5 backdrop-blur-xs max-w-[200px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="truncate">{addressText || 'Move map to select location'}</span>
                     </div>
+
+                    {/* Compact Pin Head with Thin Downward Pointer Tip */}
+                    <div className="relative flex flex-col items-center">
+                      <div className="absolute -inset-1 bg-primary/30 rounded-full animate-ping" />
+                      <div className="relative bg-primary text-primary-foreground p-1.5 rounded-full shadow-md border border-white dark:border-slate-900 flex items-center justify-center">
+                        <MapPin className="w-4 h-4 fill-current text-white" />
+                      </div>
+                      {/* Thin Pointer Tip */}
+                      <div className="w-0.5 h-2.5 bg-primary rounded-b-full shadow-xs -mt-0.5" />
+                    </div>
+
+                    {/* Ground Target Dot Shadow */}
+                    <div className="w-2.5 h-0.5 bg-black/50 rounded-full blur-[0.5px] mt-0.5" />
                   </div>
                 </div>
               </>

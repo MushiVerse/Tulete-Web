@@ -288,7 +288,7 @@ export const CheckoutPage = () => {
                   </div>
 
                   {/* Visual Map Preview */}
-                  <MiniMapPreview isLoaded={isMapLoaded} lat={currentLocation.lat} lng={currentLocation.lng} />
+                  <MiniMapPreview isLoaded={isMapLoaded} lat={currentLocation.lat} lng={currentLocation.lng} address={currentLocation.address} />
                 </div>
               ) : (
                 <div className="bg-muted p-6 rounded-xl text-center border border-dashed border-border mb-4">
