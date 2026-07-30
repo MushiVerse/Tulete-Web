@@ -590,6 +590,21 @@ export const ProductDetailPage = () => {
                 </div>
 
                 {(() => {
+                  const stockVal = typeof (displayProduct as any).quantity === 'number' 
+                    ? (displayProduct as any).quantity 
+                    : (typeof (displayProduct as any).idadi === 'number' ? (displayProduct as any).idadi : undefined);
+
+                  if (stockVal !== undefined && stockVal > 0) {
+                    return (
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full inline-block mt-2">
+                        {stockVal} left in stock
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {(() => {
                   const qty = typeof (displayProduct as any).quantity === 'number' 
                     ? (displayProduct as any).quantity 
                     : (typeof (displayProduct as any).idadi === 'number' ? (displayProduct as any).idadi : undefined);
@@ -622,7 +637,8 @@ export const ProductDetailPage = () => {
                           cat: itemCat,
                           isLaundry: isLaundryCategory,
                           location: displayProduct.location,
-                          idadi: displayProduct.idadi
+                          idadi: qty,
+                          maxQuantity: qty,
                         });
                       }}
                     >

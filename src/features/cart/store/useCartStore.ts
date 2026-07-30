@@ -34,6 +34,7 @@ export interface CartItem {
   cat?: string;
   location?: { lat: number; lng: number };
   idadi?: number;
+  maxQuantity?: number;
 }
 
 export interface LaundryRatios {
@@ -188,22 +189,33 @@ export const useCartStore = create<CartState>()(
       addToCart: (item) =>
         set((state) => {
           const basePrice = (item as any).basePrice || item.price;
+          const rawStock = (item as any).maxQuantity ?? (item as any).stockQuantity ?? (item as any).quantity ?? (item as any).idadi;
+          const stock = typeof rawStock === 'number' && !isNaN(rawStock) 
+            ? rawStock 
+            : (typeof rawStock === 'string' && !isNaN(parseInt(rawStock, 10)) ? parseInt(rawStock, 10) : undefined);
 
           const existingItem = state.items.find((i) => i.productId === item.productId);
           if (existingItem) {
-            if (item.idadi !== undefined && existingItem.quantity >= item.idadi) {
-              alert(`Cannot add more. Only ${item.idadi} items available in stock.`);
+            const limit = existingItem.maxQuantity ?? stock;
+            if (limit !== undefined && limit > 0 && existingItem.quantity >= limit) {
+              alert(`Cannot add more. Maximum available stock reached (${limit} left in stock).`);
               return state;
             }
             return {
               items: state.items.map((i) =>
                 i.productId === item.productId
-                  ? { ...i, quantity: i.quantity + 1, price: basePrice, basePrice }
+                  ? { ...i, quantity: i.quantity + 1, price: basePrice, basePrice, maxQuantity: limit }
                   : i
               ),
             };
           }
-          return { items: [...state.items, { ...item, price: basePrice, basePrice, quantity: 1 }] };
+
+          if (stock !== undefined && stock <= 0) {
+            alert(`This item is currently out of stock.`);
+            return state;
+          }
+
+          return { items: [...state.items, { ...item, price: basePrice, basePrice, quantity: 1, maxQuantity: stock }] };
         }),
 
       removeFromCart: (productId) =>
@@ -221,14 +233,18 @@ export const useCartStore = create<CartState>()(
       updateQuantity: (productId, quantity) => {
         set((state) => {
           const item = state.items.find((i) => i.productId === productId);
-          if (item && item.idadi !== undefined && quantity > item.idadi) {
-            alert(`Cannot update quantity. Only ${item.idadi} items available in stock.`);
-            return state;
+          let finalQty = quantity;
+          if (item) {
+            const limit = item.maxQuantity ?? (item as any).idadi;
+            if (limit !== undefined && limit > 0 && quantity > limit) {
+              alert(`Cannot increase quantity. Maximum available stock reached (${limit} left in stock).`);
+              finalQty = limit;
+            }
           }
           const newItems =
-            quantity <= 0
+            finalQty <= 0
               ? state.items.filter((i) => i.productId !== productId)
-              : state.items.map((i) => (i.productId === productId ? { ...i, quantity } : i));
+              : state.items.map((i) => (i.productId === productId ? { ...i, quantity: finalQty } : i));
           const hasLaundry = newItems.some((i) => (i as any).cat === 'Nguo' || (i as any).category === 'Nguo');
 
           return {

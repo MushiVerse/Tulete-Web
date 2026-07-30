@@ -1,7 +1,7 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map, Store, Heart } from 'lucide-react';
+import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map, Store, Heart, ExternalLink } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { useFilterStore } from '../store/useFilterStore';
@@ -727,26 +727,41 @@ export const DiscoveryPage = () => {
                    {quickViewProduct.description && (
                      <div className="mt-6">
                        <h3 className="text-sm font-bold text-foreground mb-2">Description</h3>
-                       <p className="text-muted-foreground text-sm leading-relaxed">{quickViewProduct.description}</p>
+                       <div className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line bg-muted/40 p-3.5 rounded-2xl border border-border/60 max-h-48 overflow-y-auto">
+                         {quickViewProduct.description}
+                       </div>
                      </div>
                    )}
                    
-                   <div className="mt-8 flex gap-3">
-                     <button 
-                       onClick={() => handleToggleFavorite(quickViewProduct)}
-                       className="p-4 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0"
+                   <div className="mt-6 flex flex-col gap-3">
+                     <div className="flex gap-3">
+                       <button 
+                         onClick={() => handleToggleFavorite(quickViewProduct)}
+                         className="p-4 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0"
+                       >
+                         <Heart className={`w-6 h-6 ${isFavorited(quickViewProduct.id) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+                       </button>
+                       <Button 
+                         onClick={() => { 
+                           handleAddToCart(quickViewProduct); 
+                           setQuickViewProduct(null); 
+                         }} 
+                         className="flex-1 py-6 text-lg font-bold rounded-2xl shadow-lg shadow-primary/25"
+                       >
+                         Add to Cart
+                       </Button>
+                     </div>
+
+                     <button
+                       onClick={() => {
+                         const targetId = quickViewProduct.id || quickViewProduct.objectID;
+                         setQuickViewProduct(null);
+                         navigate(`/product/${encodeURIComponent(targetId)}`);
+                       }}
+                       className="w-full py-3.5 px-4 rounded-2xl border border-primary/30 bg-primary/10 text-primary font-extrabold text-sm hover:bg-primary/20 transition-all flex items-center justify-center gap-2 shadow-xs"
                      >
-                       <Heart className={`w-6 h-6 ${isFavorited(quickViewProduct.id) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+                       <ExternalLink className="w-4 h-4" /> View Full Product Details
                      </button>
-                     <Button 
-                       onClick={() => { 
-                         handleAddToCart(quickViewProduct); 
-                         setQuickViewProduct(null); 
-                       }} 
-                       className="flex-1 py-6 text-lg font-bold rounded-2xl shadow-lg shadow-primary/25"
-                     >
-                       Add to Cart
-                     </Button>
                    </div>
                 </div>
               </motion.div>

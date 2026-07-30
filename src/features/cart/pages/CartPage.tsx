@@ -41,7 +41,20 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
       {/* Item Details */}
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-foreground truncate text-sm sm:text-base mb-0.5">{item.name}</h3>
-        <p className="text-xs text-muted-foreground mb-2 truncate">From {item.storeName}</p>
+        <p className="text-xs text-muted-foreground mb-1 truncate">From {item.storeName}</p>
+
+        {/* Left in stock indicator */}
+        {(() => {
+          const limit = item.maxQuantity ?? item.idadi;
+          if (limit !== undefined && limit > 0) {
+            return (
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-1.5 block">
+                {limit} left in stock
+              </span>
+            );
+          }
+          return null;
+        })()}
 
         <div className="flex items-center justify-between flex-wrap gap-2">
           {/* Price */}
@@ -63,8 +76,9 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
             </span>
             <button
               onClick={() => {
-                if (item.idadi !== undefined && item.quantity >= item.idadi) {
-                  alert(`Cannot add more. Only ${item.idadi} items available in stock.`);
+                const limit = item.maxQuantity ?? item.idadi;
+                if (limit !== undefined && limit > 0 && item.quantity >= limit) {
+                  alert(`Cannot add more. Maximum available stock reached (${limit} left in stock).`);
                   return;
                 }
                 updateQuantity(item.productId, item.quantity + 1);

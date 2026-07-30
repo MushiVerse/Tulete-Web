@@ -39,13 +39,18 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName, c
         if (item.price < minPrice || item.price > maxPrice) return false;
         if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
         // Verify brand locally just in case faceting isn't configured in Algolia yet
-        if (item.brand !== brandName) return false;
+        const bVal = String(item.brand || item.pbrand || item.FBrand || item.LBrand || item.store || '').toLowerCase().trim();
+        const tVal = brandName.toLowerCase().trim();
+        if (bVal && tVal && !bVal.includes(tVal) && !tVal.includes(bVal)) return false;
         return true;
       }).map((item: any) => {
         const { rating, reviewCount } = getNormalizedRating(item);
+        const resolvedImg = item.imgUrl || item.imgURL || item.image || item.imageUrl || (Array.isArray(item.images) ? item.images[0] : '') || (Array.isArray(item.imgURL) ? item.imgURL[0] : '') || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
         return {
           ...item,
           id: item.objectID || item.id,
+          name: item.name || item.title || 'Brand Item',
+          imgUrl: typeof resolvedImg === 'string' ? resolvedImg : (Array.isArray(resolvedImg) ? resolvedImg[0] : ''),
           rating,
           reviewCount
         };

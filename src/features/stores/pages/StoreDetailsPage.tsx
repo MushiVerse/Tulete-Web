@@ -132,7 +132,8 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
                   storeName: store.store,
                   cat: itemCat,
                   location: prod.location || store.location,
-                  idadi: prod.quantity !== undefined ? prod.quantity : (prod as any).idadi
+                  idadi: prod.quantity !== undefined ? prod.quantity : (prod as any).idadi,
+                  maxQuantity: prod.quantity !== undefined ? prod.quantity : (prod as any).idadi,
                 });
               }}
               className={`px-3 py-1.5 rounded-xl shadow-sm transition-all text-xs font-extrabold flex items-center gap-1 shrink-0 ${

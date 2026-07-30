@@ -14,6 +14,7 @@ export interface LaundryItem extends BaseDocument {
   brand: string;
   location: string;
   quantity: number;          // > 0 means service available
+  idadi?: number;
   category: string;          // "Nguo" for laundry items
   store: string;
   description?: string;

@@ -93,6 +93,18 @@ const LaundryItemCard = ({
               <Shirt className="w-10 h-10 text-muted-foreground/50" />
             </div>
           )}
+          {/* Floating quantity left badge in top right corner of image */}
+          {(() => {
+            const stockVal = item.quantity !== undefined ? item.quantity : item.idadi;
+            if (stockVal !== undefined && stockVal > 0 && isAvailable) {
+              return (
+                <div className="absolute top-2 right-2 bg-background/90 backdrop-blur text-foreground border border-border/50 font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow-sm z-10">
+                  {stockVal} left
+                </div>
+              );
+            }
+            return null;
+          })()}
           {!isAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <span className="text-[10px] font-extrabold text-white px-2 py-1 bg-destructive rounded shadow">UNAVAILABLE</span>

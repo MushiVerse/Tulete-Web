@@ -57,6 +57,18 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
             <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
             <span className="text-xs font-extrabold">{product.rating}</span>
           </div>
+          {/* Floating quantity left badge in top right corner of image */}
+          {(() => {
+            const stockVal = product.quantity !== undefined ? product.quantity : product.idadi;
+            if (stockVal !== undefined && stockVal > 0 && !isSoldOut) {
+              return (
+                <div className="absolute top-2 right-2 bg-background/90 backdrop-blur text-foreground border border-border/50 font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow-sm z-10">
+                  {stockVal} left
+                </div>
+              );
+            }
+            return null;
+          })()}
           {isSoldOut && (
             <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
               <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
@@ -114,7 +126,8 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
                     cat: itemCat,
                     location: product.location,
                     isLaundry: isLaundryCategory,
-                    idadi: product.quantity !== undefined ? product.quantity : product.idadi
+                    idadi: product.quantity !== undefined ? product.quantity : product.idadi,
+                    maxQuantity: product.quantity !== undefined ? product.quantity : product.idadi,
                   });
                 }}
                 className={`px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-extrabold flex items-center gap-1.5 ${

@@ -1,36 +1,18 @@
-import React, { useEffect } from 'react';
+import { formatPrice } from '../../../shared/utils/formatPrice';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNotificationsStore } from '../hooks/useNotificationsStore';
-import { AppNotification, NotificationType } from '../services/notificationService';
+import { useNotificationsRealtime, FirebaseOrderNotification } from '../hooks/useNotificationsRealtime';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
-import {
-  Bell, Package, Truck, MessageSquare, Tag, CreditCard,
-  Star, Info, X, CheckCheck, ChevronRight
+import { Skeleton } from '../../../shared/components/ui/Skeleton';
+import { 
+  Bell, Package, Truck, CheckCheck, ChevronRight, 
+  Sparkles, Clock, MapPin, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const notifIcon: Record<NotificationType, React.ReactNode> = {
-  order_update: <Package className="w-4 h-4 text-indigo-500" />,
-  delivery_update: <Truck className="w-4 h-4 text-emerald-500" />,
-  message: <MessageSquare className="w-4 h-4 text-sky-500" />,
-  promotion: <Tag className="w-4 h-4 text-amber-500" />,
-  payment_confirmed: <CreditCard className="w-4 h-4 text-green-500" />,
-  review_reply: <Star className="w-4 h-4 text-yellow-500" />,
-  system: <Info className="w-4 h-4 text-slate-400" />,
-};
-
-const notifBg: Record<NotificationType, string> = {
-  order_update: 'bg-indigo-50 dark:bg-indigo-950/30',
-  delivery_update: 'bg-emerald-50 dark:bg-emerald-950/30',
-  message: 'bg-sky-50 dark:bg-sky-950/30',
-  promotion: 'bg-amber-50 dark:bg-amber-950/30',
-  payment_confirmed: 'bg-green-50 dark:bg-green-950/30',
-  review_reply: 'bg-yellow-50 dark:bg-yellow-950/30',
-  system: 'bg-muted',
-};
+import { APP_SETTINGS } from '@/core/config/settings';
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -42,131 +24,200 @@ function timeAgo(date: Date): string {
 
 export const NotificationsPage = () => {
   const navigate = useNavigate();
-  const { notifications, initialize, markRead, markAllRead, dismiss, getUnreadCount } =
-    useNotificationsStore();
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } = useNotificationsRealtime();
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    initialize('user_current');
-  }, [initialize]);
+  const toggleExpand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
-  const unreadCount = getUnreadCount();
-
-  const handleClick = (notif: AppNotification) => {
-    markRead(notif.id);
-    if (notif.deepLink) navigate(notif.deepLink);
+  const handleNotificationClick = async (notif: FirebaseOrderNotification) => {
+    await markAsRead(notif.orderId);
+    navigate(notif.deepLink);
   };
 
   return (
     <PageContainer>
       <ContentContainer size="sm" className="flex flex-col min-h-[85vh]">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
-            Activity Center
-          </span>
-          <h1 className="text-2xl font-extrabold text-foreground mt-3 flex items-center gap-2">
-            Notifications
-            {unreadCount > 0 && (
-              <Badge className="bg-primary text-white text-xs font-extrabold w-6 h-6 flex items-center justify-center rounded-full animate-bounce">
-                {unreadCount}
-              </Badge>
-            )}
-          </h1>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
+              Activity Center
+            </span>
+            <h1 className="text-2xl font-extrabold text-foreground mt-3 flex items-center gap-2">
+              Order Notifications
+              {unreadCount > 0 && (
+                <Badge className="bg-primary text-white text-xs font-extrabold px-2 py-0.5 rounded-full animate-bounce">
+                  {unreadCount} New
+                </Badge>
+              )}
+            </h1>
+          </div>
+
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={markAllAsRead}
+              className="text-xs font-bold rounded-full"
+            >
+              <CheckCheck className="w-3.5 h-3.5 mr-1.5 text-primary" />
+              Mark all as read
+            </Button>
+          )}
         </div>
 
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={markAllRead}
-            className="text-xs font-bold"
-          >
-            <CheckCheck className="w-3.5 h-3.5 mr-1.5" />
-            Mark all read
-          </Button>
-        )}
-      </div>
-
-      {/* Notifications list */}
-      {notifications.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-20 bg-muted/40 border border-border/80 rounded-2xl">
-          <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-base font-bold text-foreground mb-1">All Caught Up!</h3>
-          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            No notifications right now. We'll alert you when something needs your attention.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <AnimatePresence>
-            {notifications.map((notif) => (
-              <motion.div
-                key={notif.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: 40, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.2 }}
-                layout
-              >
-                <Card
-                  className={`relative flex items-start gap-3.5 p-4 border cursor-pointer transition-all group shadow-sm hover:shadow-md ${
-                    notif.isRead
-                      ? 'border-border bg-card'
-                      : `${notifBg[notif.type]} border-l-4 border-l-primary`
-                  }`}
-                  onClick={() => handleClick(notif)}
-                >
-                  {/* Icon */}
-                  <div className="mt-0.5 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-border flex items-center justify-center flex-shrink-0 shadow-sm">
-                    {notifIcon[notif.type]}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className={`text-xs font-extrabold leading-snug ${notif.isRead ? 'text-slate-700 dark:text-slate-300' : 'text-slate-950 dark:text-white'}`}>
-                          {notif.title}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed line-clamp-2">
-                          {notif.body}
-                        </p>
-                      </div>
-
-                      {/* Dismiss button */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); dismiss(notif.id); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 rounded-full transition-all flex-shrink-0"
-                        title="Dismiss"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                        {timeAgo(notif.createdAt)}
-                      </span>
-
-                      {notif.deepLink && (
-                        <span className="text-[9px] font-extrabold text-primary flex items-center gap-0.5 group-hover:gap-1.5 transition-all">
-                          View <ChevronRight className="w-3 h-3" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Unread dot */}
-                  {!notif.isRead && (
-                    <span className="absolute top-4 right-3 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  )}
-                </Card>
-              </motion.div>
+        {/* Loading Skeletons */}
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-4 border border-border animate-pulse flex gap-3">
+                <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/3 rounded" />
+                  <Skeleton className="h-3 w-2/3 rounded" />
+                  <Skeleton className="h-3 w-1/2 rounded" />
+                </div>
+              </Card>
             ))}
-          </AnimatePresence>
-        </div>
-      )}
+          </div>
+        ) : notifications.length === 0 ? (
+          /* Empty Notifications State */
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-1 flex flex-col items-center justify-center text-center py-20 bg-card border border-border/80 rounded-3xl my-4 shadow-sm"
+          >
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
+              <Bell className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-1">No notifications yet!</h3>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-6">
+              When your order status updates (e.g. Confirmed, Preparing, Picked Up, Delivered), alerts will appear right here.
+            </p>
+            <Button onClick={() => navigate('/orders')} size="sm" className="rounded-full px-6 font-bold">
+              View Your Orders
+            </Button>
+          </motion.div>
+        ) : (
+          /* Real-time Order Notifications List */
+          <div className="space-y-3">
+            <AnimatePresence>
+              {notifications.map((notif) => {
+                const isExpanded = !!expandedIds[notif.id];
+
+                return (
+                  <motion.div
+                    key={notif.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    layout
+                  >
+                    <Card
+                      className={`relative p-4 border cursor-pointer transition-all group shadow-sm hover:shadow-md ${
+                        !notif.isRead
+                          ? 'border-primary/40 bg-primary/5 border-l-4 border-l-primary'
+                          : 'border-border bg-card'
+                      }`}
+                      onClick={() => handleNotificationClick(notif)}
+                    >
+                      <div className="flex items-start gap-3.5">
+                        {/* Icon */}
+                        <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs ${
+                          !notif.isRead ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {notif.status === 'Delivered' ? (
+                            <CheckCheck className="w-5 h-5" />
+                          ) : notif.status === 'On The Way' || notif.status === 'Picked Up' ? (
+                            <Truck className="w-5 h-5 animate-pulse" />
+                          ) : (
+                            <Package className="w-5 h-5" />
+                          )}
+                        </div>
+
+                        {/* Content Header */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                                #{notif.orderId.slice(-8).toUpperCase()}
+                              </span>
+                              {!notif.isRead && (
+                                <Badge className="bg-rose-500 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full uppercase shadow-xs">
+                                  NEW
+                                </Badge>
+                              )}
+                              <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                                {notif.status}
+                              </Badge>
+                            </div>
+
+                            <span className="text-[10px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              {timeAgo(notif.createdAt)}
+                            </span>
+                          </div>
+
+                          <h3 className="font-extrabold text-sm text-foreground truncate">
+                            {notif.storeName}
+                          </h3>
+
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 font-medium">
+                            {notif.itemName} • Total: {formatPrice(notif.total)} {APP_SETTINGS.currency}
+                          </p>
+
+                          {/* Stepper Timeline Preview (if multiple status updates exist) */}
+                          {notif.ordersts.length > 1 && (
+                            <div className="mt-3 pt-2 border-t border-border/50">
+                              <button
+                                type="button"
+                                onClick={(e) => toggleExpand(notif.id, e)}
+                                className="text-[11px] font-extrabold text-primary hover:underline flex items-center gap-1"
+                              >
+                                {isExpanded ? 'Hide Status History' : `View Status History (${notif.ordersts.length} updates)`}
+                                {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                              </button>
+
+                              {isExpanded && (
+                                <div className="mt-2.5 space-y-2 pl-2 border-l-2 border-primary/30 text-xs">
+                                  {notif.ordersts.map((sts, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-[11px]">
+                                      <span className={`font-bold ${idx === notif.ordersts.length - 1 ? 'text-primary' : 'text-muted-foreground'}`}>
+                                        {sts}
+                                      </span>
+                                      {notif.orderststime[idx] && (
+                                        <span className="text-[10px] text-slate-400 font-mono">
+                                          {notif.orderststime[idx].slice(11, 16)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/40 text-[11px]">
+                            <span className="text-muted-foreground font-semibold flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-primary" /> Track live delivery progress
+                            </span>
+                            <span className="font-extrabold text-primary flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                              Track Order <ChevronRight className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
       </ContentContainer>
     </PageContainer>
   );

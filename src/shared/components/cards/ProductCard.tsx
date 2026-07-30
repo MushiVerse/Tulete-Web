@@ -96,6 +96,19 @@ export const ProductCard = ({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
+            {/* Floating quantity left badge in top right corner of image */}
+            {(() => {
+              const stockVal = product.quantity !== undefined ? product.quantity : product.idadi;
+              if (stockVal !== undefined && stockVal > 0 && !isSoldOut) {
+                return (
+                  <div className="absolute top-2.5 right-2.5 bg-background/90 backdrop-blur text-foreground border border-border/50 font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow-sm z-10">
+                    {stockVal} left
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {isSoldOut && (
               <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
                 <span className="text-foreground font-extrabold text-xs bg-background px-4 py-2 rounded-full shadow-lg">
@@ -114,13 +127,13 @@ export const ProductCard = ({
                   {product.store}
                 </span>
               </div>
-              <div className="flex items-center gap-1 bg-black/50 backdrop-blur-md px-1.5 py-0.5 rounded-full shrink-0 shadow-sm">
+              <div className="flex items-center gap-1 bg-background/90 backdrop-blur text-foreground border border-border/40 px-1.5 py-0.5 rounded-full shrink-0 shadow-sm">
                 <Star className="w-3 h-3 fill-warning stroke-warning" />
-                <span className="text-[10px] font-extrabold text-white">{displayRating.toFixed(1)}</span>
+                <span className="text-[10px] font-extrabold">{displayRating.toFixed(1)}</span>
               </div>
             </div>
             
-            <h3 className="font-extrabold text-sm text-foreground line-clamp-2 leading-snug mb-3 flex-grow group-hover:text-primary transition-colors">
+            <h3 className="font-extrabold text-sm text-foreground line-clamp-2 leading-snug mb-1 flex-grow group-hover:text-primary transition-colors">
               {product.name}
             </h3>
 
@@ -156,7 +169,7 @@ export const ProductCard = ({
                         e.stopPropagation();
                         const stockLimit = product.quantity !== undefined ? product.quantity : product.idadi;
                         if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
-                          alert(`Cannot add more. Only ${stockLimit} items available in stock.`);
+                          alert(`Cannot add more. Maximum available stock reached (${stockLimit} left in stock).`);
                           return;
                         }
                         updateQuantity(product.id, cartItem.quantity + 1);
@@ -174,6 +187,7 @@ export const ProductCard = ({
                     e.preventDefault();
                     e.stopPropagation();
                     
+                    const stockVal = product.quantity !== undefined ? product.quantity : product.idadi;
                     if (onAddToCart) {
                       onAddToCart(product);
                     } else {
@@ -188,7 +202,8 @@ export const ProductCard = ({
                         cat: itemCat,
                         location: product.location,
                         isLaundry: isLaundryCategory,
-                        idadi: product.quantity !== undefined ? product.quantity : product.idadi
+                        idadi: stockVal,
+                        maxQuantity: stockVal,
                       });
                     }
                   }}
