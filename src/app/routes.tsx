@@ -48,6 +48,10 @@ const Laundry = React.lazy(() => import('../features/laundry/pages/LaundryPage')
 const Food = React.lazy(() => import('../features/food/pages/FoodPage').then(m => ({ default: m.FoodPage })));
 const Products = React.lazy(() => import('../features/products/pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
 const BrandDetails = React.lazy(() => import('../pages').then(m => ({ default: m.BrandDetailsPage })));
+const HelpCenter = React.lazy(() => import('../pages').then(m => ({ default: m.HelpCenterPage })));
+const SafetyInfo = React.lazy(() => import('../pages').then(m => ({ default: m.SafetyInfoPage })));
+const Cancellation = React.lazy(() => import('../pages').then(m => ({ default: m.CancellationPage })));
+const Contact = React.lazy(() => import('../pages').then(m => ({ default: m.ContactPage })));
 const NotFound = React.lazy(() => import('../pages').then(m => ({ default: m.NotFoundPage })));
 
 const withSuspense = (Component: React.ComponentType) => (
@@ -73,6 +77,10 @@ export const router = createBrowserRouter([
           { path: 'laundry', element: <Suspense fallback={<GridSkeleton />}><Laundry /></Suspense> },
           { path: 'food', element: <Suspense fallback={<GridSkeleton />}><Food /></Suspense> },
           { path: 'products', element: <Suspense fallback={<GridSkeleton />}><Products /></Suspense> },
+          { path: 'help', element: withSuspense(HelpCenter) },
+          { path: 'safety', element: withSuspense(SafetyInfo) },
+          { path: 'cancellation', element: withSuspense(Cancellation) },
+          { path: 'contact', element: withSuspense(Contact) },
           { path: 'brand/:brandName', element: withSuspense(BrandDetails) },
           { path: 'store/:id', element: withSuspense(StoreDetails) },
           { path: 'product/:id', element: withSuspense(ProductDetail) },

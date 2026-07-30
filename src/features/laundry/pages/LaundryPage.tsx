@@ -212,6 +212,10 @@ export const LaundryPage = () => {
   const [mobileResults, setMobileResults] = useState<any[]>([]);
   const [mobileLoading, setMobileLoading] = useState(false);
 
+  // Pagination state (20 items initially, loads +20 on scroll)
+  const [visibleCount, setVisibleCount] = useState(20);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!isMobileSearchOpen || !searchQuery.trim()) { setMobileResults([]); return; }
     const controller = new AbortController();
@@ -293,6 +297,35 @@ export const LaundryPage = () => {
     }
     return (b.rating || 0) - (a.rating || 0);
   });
+
+  // Reset pagination when category or search query changes
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [selectedCategory, searchQuery]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 20);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const target = loadMoreRef.current;
+    observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [filteredItems.length, visibleCount]);
+
+  const displayedItems = filteredItems.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredItems.length;
 
   const getCartQuantity = (productId: string) => {
     return cartItems.find(i => i.productId === productId)?.quantity || 0;
@@ -455,6 +488,15 @@ export const LaundryPage = () => {
           </div>
 
           {/* Items List */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-extrabold flex items-center gap-2">
+              <Shirt className="w-5 h-5 text-sky-500" /> Services & Package Deals
+            </h2>
+            <span className="text-sm font-bold text-muted-foreground">
+              Showing {Math.min(visibleCount, filteredItems.length)} of {filteredItems.length} Items
+            </span>
+          </div>
+
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
               {[1, 2, 3, 4, 5, 6].map(i => (
@@ -485,7 +527,7 @@ export const LaundryPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
               <AnimatePresence>
-                {filteredItems.map((item, idx) => (
+                {displayedItems.map((item, idx) => (
                   <div key={item.id} className="flex flex-col h-full">
                     <LaundryItemCard
                       item={item}
@@ -499,6 +541,13 @@ export const LaundryPage = () => {
                   </div>
                 ))}
               </AnimatePresence>
+
+              {hasMore && (
+                <div ref={loadMoreRef} className="col-span-full py-8 flex flex-col items-center justify-center gap-2">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs font-semibold text-muted-foreground">Loading more items...</span>
+                </div>
+              )}
             </div>
           )}
         </div>

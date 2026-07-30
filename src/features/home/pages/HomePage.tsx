@@ -618,15 +618,15 @@ export const HomePage = () => {
         return pSub && String(pSub).toLowerCase() === targetSub;
       });
       if (matched.length > 0) {
-        return matched.slice(0, 8);
+        return matched.slice(0, 20);
       }
     }
-    return currentItems.slice(0, 8);
+    return currentItems.slice(0, 20);
   }, [currentItems, activeRecommendedSubCat]);
-  const mostRatedProducts = [...currentItems].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
-  const interestedLately = currentItems.slice(0, 6);
-  const wishlistProducts = currentItems.slice(0, 5); // Fallback slice from 0 if there are fewer than 3 items
-  const productsNearMe = shuffleWithSeed(currentItems, homeSeed + 600).slice(0, 8);
+  const mostRatedProducts = [...currentItems].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 20);
+  const interestedLately = currentItems.slice(0, 20);
+  const wishlistProducts = currentItems.slice(0, 20); // Fallback slice from 0 if there are fewer than 3 items
+  const productsNearMe = shuffleWithSeed(currentItems, homeSeed + 600).slice(0, 20);
 
   const dailyMeals = foods;
   const dailyDeals = products.filter(p => p.oldprice && p.oldprice > p.price);
@@ -970,7 +970,7 @@ export const HomePage = () => {
               </HorizontalCarousel>
             ) : recommendedProducts.length > 0 && (
               <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products" autoScrollSpeed={0.3}>
-                {recommendedProducts.slice(0, 8).map(product => (
+                {recommendedProducts.slice(0, 20).map(product => (
                   <div key={`rec-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -1032,7 +1032,7 @@ export const HomePage = () => {
                     if (filterValue === 'laundry') return actualCategory === 'laundry';
                     return true;
                   })
-                  .slice(0, 6).map((store) => (
+                  .slice(0, 20).map((store) => (
                   <div key={`store-${store.id}`} className="w-[280px] sm:w-[320px] shrink-0">
                     <FeaturedStoreCard
                       store={store}
@@ -1067,7 +1067,7 @@ export const HomePage = () => {
             {/* 4. Most rated */}
             {mostRatedProducts.length > 0 && (
               <HorizontalCarousel title="Most rated" icon={<Flame className="w-5 h-5 text-orange-500 fill-orange-500" />} actionLink="/explore?sort=popular" autoScrollSpeed={0.4}>
-                {mostRatedProducts.slice(0, 8).map(product => (
+                {mostRatedProducts.slice(0, 20).map(product => (
                   <div key={`rated-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -1083,7 +1083,7 @@ export const HomePage = () => {
             {/* 5. What interested you lately (Only when logged in & has userViewed docs) */}
             {isAuthenticated && userViewedItems.length > 0 && (
               <HorizontalCarousel title="What interested you lately" icon={<Clock className="w-5 h-5 text-muted-foreground" />} actionLink="/explore" autoScrollSpeed={0.2}>
-                {userViewedItems.map(product => (
+                {userViewedItems.slice(0, 20).map(product => (
                   <div key={`int-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -1099,7 +1099,7 @@ export const HomePage = () => {
             {/* 6. What you wish for (From userfavorites document using uids) */}
             {userFavoritesItems.length > 0 ? (
               <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
-                {userFavoritesItems.map(product => (
+                {userFavoritesItems.slice(0, 20).map(product => (
                   <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -1131,7 +1131,7 @@ export const HomePage = () => {
                 {(products.filter(p => (p.oldprice && p.oldprice > p.price) || p.tags?.includes('Super Saver')).length >= 2
                   ? products.filter(p => (p.oldprice && p.oldprice > p.price) || p.tags?.includes('Super Saver'))
                   : products
-                ).slice(0, 10).map(product => (
+                ).slice(0, 20).map(product => (
                   <div key={`daily-shopping-deal-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -1147,7 +1147,7 @@ export const HomePage = () => {
             {/* 7. Daily meals & drinks (Food Only) */}
             {(!filterValue || filterValue === 'food') && dailyMeals.length > 0 && (
               <HorizontalCarousel title="Daily meals & drinks" icon={<Utensils className="w-5 h-5 text-primary" />} actionLink="/food">
-                {dailyMeals.map(product => (
+                {dailyMeals.slice(0, 20).map(product => (
                   <div key={`food-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -1163,7 +1163,7 @@ export const HomePage = () => {
             {/* 8. Daily deals in shopping (Products Only) */}
             {(!filterValue || filterValue === 'product') && dailyDeals.length > 0 && (
               <HorizontalCarousel title="Daily deals in shopping" icon={<Tag className="w-5 h-5 text-warning" />} actionLink="/products?deals=true" autoScrollSpeed={0.3}>
-                {dailyDeals.map(product => (
+                {dailyDeals.slice(0, 20).map(product => (
                   <div key={`deal-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -1179,7 +1179,7 @@ export const HomePage = () => {
             {/* 9. What we clean (Laundry Only) */}
             {(!filterValue || filterValue === 'laundry') && laundryClean.length > 0 && (
               <HorizontalCarousel title="What we clean" icon={<Sparkles className="w-5 h-5 text-primary" />} actionLink="/laundry" autoScrollSpeed={0.4}>
-                {laundryClean.map(product => (
+                {laundryClean.slice(0, 20).map(product => (
                   <div key={`laundry-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 

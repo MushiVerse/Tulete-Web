@@ -237,6 +237,10 @@ export const FoodPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
+  // Pagination state (20 items initially, loads +20 on scroll)
+  const [visibleCount, setVisibleCount] = useState(20);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
   const toggleCategoryExpand = (catName: string) => {
     setExpandedCategories(prev => ({
       ...prev,
@@ -439,8 +443,36 @@ export const FoodPage = () => {
       return -1;
     }
     
-    return (b.rating || 0) - (a.rating || 0);
   });
+
+  // Reset pagination when category or search query changes
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [activeCategory, activeSubCategory, searchQuery]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 20);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const target = loadMoreRef.current;
+    observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [filteredMeals.length, visibleCount]);
+
+  const displayedMeals = filteredMeals.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredMeals.length;
 
   const { deliveryFee: globalDeliveryFee, total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
@@ -596,6 +628,9 @@ export const FoodPage = () => {
               <h2 className="text-lg font-extrabold flex items-center gap-2">
                 <Star className="w-5 h-5 text-orange-500 fill-orange-500" /> Top Rated Meals
               </h2>
+              <span className="text-sm font-bold text-muted-foreground">
+                Showing {Math.min(visibleCount, filteredMeals.length)} of {filteredMeals.length} Items
+              </span>
             </div>
             
             {isLoading ? (
@@ -611,13 +646,20 @@ export const FoodPage = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">
                 <AnimatePresence>
-                  {filteredMeals.map((meal) => {
+                  {displayedMeals.map((meal) => {
                     const cartItem = cartItems.find(i => i.productId === meal.id);
                     return (
                       <MealCard key={meal.id} meal={meal} cartItem={cartItem} updateQuantity={updateQuantity} addToCart={addToCart} />
                     );
                   })}
                 </AnimatePresence>
+
+                {hasMore && (
+                  <div ref={loadMoreRef} className="col-span-full py-8 flex flex-col items-center justify-center gap-2">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-semibold text-muted-foreground">Loading more items...</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -680,12 +722,21 @@ export const FoodPage = () => {
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  { value: '100+', label: 'Local Kitchens', icon: ShoppingBag },
-                  { value: '4.8★', label: 'Avg Rating', icon: Star },
-                  { value: '30min', label: 'Fast Delivery', icon: Clock },
-                  { value: '24/7', label: 'Support', icon: Phone },
-                ].map(({ value, label, icon: Icon }) => (
-                  <div key={label} className="flex items-center gap-3">
+                  { value: '100+', label: 'Local Kitchens', icon: ShoppingBag, onClick: undefined },
+                  { value: '4.8★', label: 'Avg Rating', icon: Star, onClick: undefined },
+                  { value: '30min', label: 'Fast Delivery', icon: Clock, onClick: undefined },
+                  { 
+                    value: '24/7', 
+                    label: 'WhatsApp Support', 
+                    icon: Phone, 
+                    onClick: () => window.open('https://wa.me/255764587748?text=Hello%20Tulete%20Support', '_blank') 
+                  },
+                ].map(({ value, label, icon: Icon, onClick }) => (
+                  <div 
+                    key={label} 
+                    onClick={onClick}
+                    className={`flex items-center gap-3 ${onClick ? 'cursor-pointer hover:bg-muted/50 p-2 rounded-2xl transition-colors' : ''}`}
+                  >
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                       <Icon className="w-5 h-5" />
                     </div>
@@ -696,6 +747,39 @@ export const FoodPage = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* HELP & POLICIES WIDGET */}
+            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm space-y-3">
+              <h2 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground mb-3">Help & Safety</h2>
+              <button
+                onClick={() => navigate('/help')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-muted/40 hover:bg-primary/10 hover:text-primary transition-colors text-xs font-bold text-foreground text-left"
+              >
+                <span>❓ Help Center</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => navigate('/safety')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-muted/40 hover:bg-primary/10 hover:text-primary transition-colors text-xs font-bold text-foreground text-left"
+              >
+                <span>🛡️ Safety Info</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => navigate('/cancellation')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-muted/40 hover:bg-primary/10 hover:text-primary transition-colors text-xs font-bold text-foreground text-left"
+              >
+                <span>❌ Cancellation Policy</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => window.open('https://wa.me/255764587748?text=Hello%20Tulete%20Support', '_blank')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors text-xs font-extrabold text-left"
+              >
+                <span>💬 WhatsApp Support (+255764587748)</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
 
           </div>

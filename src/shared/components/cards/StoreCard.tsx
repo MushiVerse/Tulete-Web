@@ -9,9 +9,10 @@ interface StoreCardProps {
   store: Store;
   distanceKm?: number;
   onClick?: () => void;
+  viewMode?: 'grid' | 'list';
 }
 
-export const StoreCard = ({ store, distanceKm, onClick }: StoreCardProps) => {
+export const StoreCard = ({ store, distanceKm, onClick, viewMode = 'grid' }: StoreCardProps) => {
   // Category from document field "cat", falling back to "category"
   const displayCategory = (store as any).cat || store.category || 'Store';
 
@@ -25,6 +26,60 @@ export const StoreCard = ({ store, distanceKm, onClick }: StoreCardProps) => {
     : (typeof store.rating === 'number' ? store.rating : parseFloat(String(store.rating || 0)));
   const totalCount = ratesCount > 0 ? ratesCount : (store.reviewCount || 0);
 
+  if (viewMode === 'list') {
+    return (
+      <motion.div
+        whileHover={{ y: -2 }}
+        transition={{ duration: 0.2 }}
+        className="w-full"
+        onClick={onClick}
+      >
+        <Card className="overflow-hidden flex flex-row group cursor-pointer border-border/40 shadow-sm hover:shadow-md transition-all rounded-3xl p-3 gap-4 items-center w-full">
+          <div className="relative w-28 sm:w-36 h-24 rounded-2xl overflow-hidden bg-muted shrink-0">
+            <img
+              src={store.imgURL}
+              alt={`${store.store} banner`}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              loading="lazy"
+            />
+            <div className="absolute top-2 right-2">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${store.availability ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'}`}>
+                {store.availability ? 'OPEN' : 'CLOSED'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col justify-between min-w-0">
+            <div className="flex justify-between items-start gap-2 mb-1">
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground line-clamp-1">{store.store}</h3>
+              <div className="flex items-center gap-0.5 text-yellow-500 shrink-0 bg-yellow-500/10 px-2 py-0.5 rounded-full text-xs font-bold">
+                <Star className="w-3 h-3 fill-current text-yellow-500" />
+                <span>{computedAvg.toFixed(1)}</span>
+                {totalCount > 0 && (
+                  <span className="text-muted-foreground font-semibold ml-0.5">({totalCount})</span>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+              {store.description}
+            </p>
+
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+              <span className="truncate max-w-[120px] font-semibold text-primary">{displayCategory}</span>
+              {distanceKm !== undefined && (
+                <div className="flex items-center gap-1 shrink-0 font-medium">
+                  <MapPin className="w-3 h-3" />
+                  <span>{distanceKm.toFixed(1)} km</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       whileHover={{ y: -4 }}
@@ -35,14 +90,14 @@ export const StoreCard = ({ store, distanceKm, onClick }: StoreCardProps) => {
       <Card className="h-full overflow-hidden flex flex-col group cursor-pointer">
         {/* Banner */}
         <div className="relative h-24 bg-muted overflow-hidden">
-          <img 
-            src={store.imgURL} 
+          <img
+            src={store.imgURL}
             alt={`${store.store} banner`}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          
+
           {/* Status Badge */}
           <div className="absolute top-2 right-2">
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${store.availability ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'}`}>

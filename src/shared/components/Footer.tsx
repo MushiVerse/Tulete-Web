@@ -7,6 +7,21 @@ import { useDeviceOS } from '../../core/hooks/useDeviceOS';
 
 export const Footer = () => {
   const { showPlayBadge } = useDeviceOS();
+  const [inquiryQuestion, setInquiryQuestion] = React.useState('');
+
+  const handleContactUs = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const msg = encodeURIComponent("Hello Tulete Support, I have a question regarding your services.");
+    window.open('https://wa.me/255764587748?text=' + msg, '_blank');
+  };
+
+  const handleSendStayUpdated = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inquiryQuestion.trim()) return;
+    const msg = encodeURIComponent(`Hello Tulete Team,\n\nI have a question:\n${inquiryQuestion.trim()}`);
+    window.open('https://wa.me/255757449734?text=' + msg, '_blank');
+    setInquiryQuestion('');
+  };
 
   return (
     <footer className="bg-secondary text-secondary-foreground border-t border-secondary-foreground/10 mt-auto w-full relative overflow-hidden">
@@ -33,10 +48,22 @@ export const Footer = () => {
             <p className="text-sm text-secondary-foreground/70 leading-relaxed font-medium pr-4">
               Your premium marketplace for laundry, food delivery, and daily essentials. Fast, reliable, and right at your doorstep. We bring the city to you.
             </p>
-            <div className="flex items-center gap-3 pt-2">
-              {['FB', 'X', 'IG', 'IN'].map(social => (
-                <a key={social} href="#" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-secondary-foreground/80 hover:bg-primary hover:text-primary-foreground hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(249,148,32,0.4)] hover:border-primary font-bold text-xs transition-all duration-300">
-                  {social}
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              {[
+                { name: 'Facebook', url: APP_SETTINGS.socialLinks.facebook },
+                { name: 'Instagram', url: APP_SETTINGS.socialLinks.instagram },
+                { name: 'TikTok', url: APP_SETTINGS.socialLinks.tiktok },
+                { name: 'YouTube', url: APP_SETTINGS.socialLinks.youtube },
+              ].map(social => (
+                <a 
+                  key={social.name} 
+                  href={social.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  title={social.name}
+                  className="h-10 px-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-secondary-foreground/80 hover:bg-primary hover:text-primary-foreground hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(249,148,32,0.4)] hover:border-primary font-bold text-xs transition-all duration-300"
+                >
+                  {social.name}
                 </a>
               ))}
             </div>
@@ -76,10 +103,20 @@ export const Footer = () => {
           <div className="lg:col-span-2">
             <h3 className="text-sm font-extrabold tracking-wider uppercase mb-6 text-white">Support</h3>
             <ul className="space-y-4">
-              <li><Link to="/help" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Help Center</Link></li>
-              <li><Link to="/safety" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Safety Info</Link></li>
-              <li><Link to="/cancellation" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Cancellation</Link></li>
-              <li><Link to="/contact" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-block flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Contact Us</Link></li>
+              <li><Link to="/help" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Help Center</Link></li>
+              <li><Link to="/safety" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Safety Info</Link></li>
+              <li><Link to="/cancellation" className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Cancellation</Link></li>
+              <li>
+                <a 
+                  href="https://wa.me/255764587748"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleContactUs}
+                  className="text-sm font-medium text-secondary-foreground/70 hover:text-primary hover:translate-x-2 transition-all duration-300 inline-flex items-center gap-2"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/50" /> Contact Us
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -87,20 +124,27 @@ export const Footer = () => {
           <div className="lg:col-span-4">
             <h3 className="text-sm font-extrabold tracking-wider uppercase mb-6 text-white">Stay Updated</h3>
             <p className="text-sm font-medium text-secondary-foreground/70 mb-5">
-              Subscribe to our newsletter for exclusive deals, latest services, and community updates.
+              Have a question or need an answer? Type your question below and send directly to our support team on WhatsApp.
             </p>
-            <div className="flex gap-2 relative">
+            <form onSubmit={handleSendStayUpdated} className="flex gap-2 relative">
               <input 
-                type="email" 
-                placeholder="Enter your email address" 
+                type="text" 
+                value={inquiryQuestion}
+                onChange={(e) => setInquiryQuestion(e.target.value)}
+                placeholder="What do you need an answer for?" 
                 className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-2xl pl-5 pr-14 py-3.5 text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all backdrop-blur-sm"
+                required
               />
-              <button className="absolute right-1.5 top-1.5 bottom-1.5 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-colors shadow-[0_0_10px_rgba(249,148,32,0.3)]">
+              <button 
+                type="submit" 
+                title="Send question via WhatsApp (+255757449734)"
+                className="absolute right-1.5 top-1.5 bottom-1.5 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-colors shadow-[0_0_10px_rgba(249,148,32,0.3)]"
+              >
                 <Send className="w-4 h-4 ml-0.5" />
               </button>
-            </div>
+            </form>
             <div className="mt-6 flex items-center gap-2 text-xs font-medium text-secondary-foreground/50">
-              <ShieldCheck className="w-4 h-4 text-primary/70" /> We respect your privacy. No spam.
+              <ShieldCheck className="w-4 h-4 text-primary/70" /> Messages sent directly to (+255 757 449 734)
             </div>
           </div>
 

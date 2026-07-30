@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { storeService } from '../../stores/services/storeService';
-import { MapPin, Store as StoreIcon, ExternalLink, Sparkles, X, Layers, Globe } from 'lucide-react';
+import { MapPin, Store as StoreIcon, ExternalLink, Sparkles, X, Layers, Globe, Search, Loader2, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
@@ -83,9 +83,28 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
   const { isDark } = useThemeStore();
   const { currentLocation } = useLocationStore();
   const navigate = useNavigate();
+  const [foodStores, setFoodStores] = useState<any[]>([]);
   const [hoveredStore, setHoveredStore] = useState<any>(null);
   const [selectedStore, setSelectedStore] = useState<any>(null);
-  const [foodStores, setFoodStores] = useState<any[]>([]);
+  const mapRef = useRef<any>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const isSelectingRef = useRef<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<{ lat: number; lng: number; title: string } | null>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Fetch store markers from Firestore "foodStores" collection
   useEffect(() => {
@@ -120,19 +139,50 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
 
   // Compute final markers to display with proximity offset so nearby stores don't overlap
   const storeMarkers = useMemo(() => {
-    const rawList = foodStores.length > 0 ? foodStores : (items.length > 0 ? items : storeService.getMockStores()).map((item) => {
-      const pos = parseStoreLocation(item.location) || (typeof item.location === 'object' && item.location.lat ? item.location : null);
-      const storeName = item.store || item.name || item.storeName || 'Store';
-      return {
-        id: item.id || item.objectID || `store_${Math.random()}`,
-        ...item,
-        storeName,
-        locationPos: pos,
-        availability: item.availability !== false && item.available !== false,
-      };
-    }).filter((s) => s.locationPos !== null);
+    const storesList: any[] = [];
+    const seenKeys = new Set<string>();
 
-    // Apply geometric fan-out offset for stores located very close to each other
+    const getNormalizedKey = (item: any): string => {
+      const storeName = (item.store || item.storeName || item.name || '').toLowerCase().trim();
+      const cleanName = storeName.replace(/[^a-z0-9]/g, '');
+      if (cleanName) return cleanName;
+
+      const pos = parseStoreLocation(item.location) || (typeof item.location === 'object' && item.location && typeof item.location.lat === 'number' ? item.location : null);
+      if (pos) return `${pos.lat.toFixed(4)}_${pos.lng.toFixed(4)}`;
+
+      return String(item.id || Math.random());
+    };
+
+    const addStore = (item: any) => {
+      if (!item) return;
+      const key = getNormalizedKey(item);
+      if (!key || seenKeys.has(key)) return;
+
+      const pos = parseStoreLocation(item.location) || (typeof item.location === 'object' && item.location && typeof item.location.lat === 'number' ? item.location : null);
+      const storeName = item.store || item.name || item.storeName || 'Store';
+      const category = item.category || item.cat || item.mainCategory || 'Partner Store';
+      
+      if (pos) {
+        seenKeys.add(key);
+        storesList.push({
+          id: item.id || key,
+          ...item,
+          storeName,
+          category,
+          locationPos: pos,
+          availability: item.availability !== false && item.available !== false,
+        });
+      }
+    };
+
+    // Priority 1: Real Firestore stores
+    foodStores.forEach(addStore);
+    // Priority 2: Passed items prop
+    if (Array.isArray(items)) items.forEach(addStore);
+    // Priority 3: Fallback mock stores
+    storeService.getMockStores().forEach(addStore);
+
+    const rawList = storesList;
     const adjusted: any[] = [];
     const minDistance = 0.00035; // ~35 meters threshold
 
@@ -164,6 +214,160 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
 
     return adjusted;
   }, [foodStores, items]);
+
+  // Autocomplete search for stores, shops, restaurants, areas, landmarks
+  useEffect(() => {
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      return;
+    }
+
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      const q = searchQuery.toLowerCase().trim();
+      const results: any[] = [];
+      const seenSearchTitles = new Set<string>();
+
+      // 1. Search local stores, shops, restaurants
+      storeMarkers.forEach((store) => {
+        const sName = (store.storeName || store.store || store.name || '').toLowerCase();
+        const sAddr = (store.address || '').toLowerCase();
+        const sCat = (store.cat || store.category || '').toLowerCase();
+        const sDesc = (store.description || '').toLowerCase();
+
+        if (sName.includes(q) || sAddr.includes(q) || sCat.includes(q) || sDesc.includes(q)) {
+          const normTitleKey = (store.storeName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+          if (normTitleKey) seenSearchTitles.add(normTitleKey);
+
+          let badgeLabel = 'Store';
+          let badgeColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+
+          if (sCat.includes('food') || sCat.includes('restaur') || sName.includes('fast food') || sName.includes('choma') || sName.includes('delight')) {
+            badgeLabel = 'Restaurant';
+            badgeColor = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+          } else if (sCat.includes('laund') || sCat.includes('clean')) {
+            badgeLabel = 'Laundry';
+            badgeColor = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+          } else if (sCat.includes('electr') || sCat.includes('power')) {
+            badgeLabel = 'Electronics';
+            badgeColor = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+          } else if (sCat.includes('beaut') || sCat.includes('salon')) {
+            badgeLabel = 'Beauty';
+            badgeColor = 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20';
+          } else if (sCat.includes('shop') || sCat.includes('mart')) {
+            badgeLabel = 'Shop';
+            badgeColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+          }
+
+          results.push({
+            id: `store_${store.id}`,
+            title: store.storeName,
+            subtitle: store.address || store.category || 'Partner Spot',
+            lat: store.locationPos.lat,
+            lng: store.locationPos.lng,
+            type: 'store',
+            badgeLabel,
+            badgeColor,
+            storeObj: store,
+          });
+        }
+      });
+
+      // 2. Search OpenStreetMap Nominatim for shops, restaurants, landmarks & areas
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1`,
+          { headers: { 'Accept-Language': 'en' } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          data.forEach((item: any) => {
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lon);
+            if (!isNaN(lat) && !isNaN(lng)) {
+              const parts = (item.display_name || '').split(',');
+              const title = parts[0] || item.display_name;
+              const normTitleKey = title.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+
+              // Skip duplicate place entries if title already matched a partner store
+              if (normTitleKey && seenSearchTitles.has(normTitleKey)) return;
+              if (normTitleKey) seenSearchTitles.add(normTitleKey);
+
+              let badgeLabel = 'Landmark';
+              let badgeColor = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+              const itemClass = (item.class || '').toLowerCase();
+              const itemType = (item.type || '').toLowerCase();
+
+              if (itemClass === 'shop' || itemType.includes('shop') || itemType.includes('supermarket') || itemType.includes('convenience') || itemType.includes('mall')) {
+                badgeLabel = 'Shop';
+                badgeColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+              } else if (itemType.includes('restaurant') || itemType.includes('fast_food') || itemType.includes('food')) {
+                badgeLabel = 'Restaurant';
+                badgeColor = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+              } else if (itemType.includes('cafe') || itemType.includes('coffee') || itemType.includes('bakery')) {
+                badgeLabel = 'Cafe & Bakery';
+                badgeColor = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+              } else if (itemType.includes('pharmacy') || itemType.includes('hospital') || itemType.includes('clinic')) {
+                badgeLabel = 'Health & Care';
+                badgeColor = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+              } else if (itemClass === 'place' || itemType.includes('suburb') || itemType.includes('town') || itemType.includes('city') || itemType.includes('village')) {
+                badgeLabel = 'Area';
+                badgeColor = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+              }
+
+              const subtitle = parts.slice(1, 3).join(', ').trim() || 'Location';
+
+              results.push({
+                id: `place_${item.place_id || Math.random()}`,
+                title,
+                subtitle,
+                lat,
+                lng,
+                type: 'place',
+                badgeLabel,
+                badgeColor,
+              });
+            }
+          });
+        }
+      } catch (e) {
+        // ignore network error
+      }
+
+      setSearchResults(results.slice(0, 8));
+      setIsSearching(false);
+      setShowSuggestions(true);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, storeMarkers]);
+
+  const handleSelectSuggestion = (item: any) => {
+    isSelectingRef.current = true;
+    setShowSuggestions(false);
+    setSearchResults([]);
+    setSearchQuery(item.title);
+
+    if (item.type === 'store') {
+      setSelectedStore(item.storeObj);
+      setSelectedPlace(null);
+    } else {
+      setSelectedStore(null);
+      setSelectedPlace({ lat: item.lat, lng: item.lng, title: item.title });
+    }
+
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat: item.lat, lng: item.lng });
+      mapRef.current.setZoom(item.type === 'store' ? 16 : 15);
+    }
+  };
 
   const center = useMemo(() => {
     if (currentLocation) {
@@ -208,12 +412,85 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
 
   return (
     <div className="relative w-full h-[320px] md:h-[520px] rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-border group">
-      {/* Top Header Badge */}
-      <div className="absolute top-4 left-4 z-10 bg-background/90 backdrop-blur-md px-4 py-2 rounded-full border border-border shadow-md flex items-center gap-2">
-        <MapPin className="w-4 h-4 text-primary animate-pulse" />
-        <span className="text-sm font-extrabold text-foreground">
-          Stores & Outlets ({storeMarkers.length})
-        </span>
+      {/* Floating Location & Store Search Bar */}
+      <div ref={searchContainerRef} className="absolute top-4 left-4 right-36 sm:right-auto sm:w-72 md:w-80 lg:w-96 z-20">
+        <div className="relative">
+          <div className="flex items-center bg-background/95 backdrop-blur-md border border-border shadow-lg rounded-2xl px-3 h-10 gap-2">
+            {isSearching ? (
+              <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+            ) : (
+              <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+            )}
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                isSelectingRef.current = false;
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                if (searchResults.length > 0) setShowSuggestions(true);
+              }}
+              placeholder="Search shops, restaurants, stores, areas..."
+              className="w-full bg-transparent text-xs font-bold text-foreground placeholder:text-muted-foreground outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setShowSuggestions(false);
+                  setSelectedPlace(null);
+                }}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-full cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Autocomplete Suggestions Dropdown */}
+          <AnimatePresence>
+            {showSuggestions && searchResults.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className="absolute top-11 left-0 right-0 bg-background/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl p-1.5 space-y-1 max-h-64 overflow-y-auto scrollbar-none z-30"
+              >
+                {searchResults.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSelectSuggestion(item)}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-muted/80 text-left transition-colors cursor-pointer group"
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      item.type === 'store' ? 'bg-primary/10 text-primary' : 'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      {item.type === 'store' ? <StoreIcon className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-extrabold text-foreground truncate group-hover:text-primary transition-colors">
+                          {item.title}
+                        </span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
+                          item.badgeColor || (item.type === 'store' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400' : 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400')
+                        }`}>
+                          {item.badgeLabel || (item.type === 'store' ? 'Store' : 'Area')}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground font-medium truncate">
+                        {item.subtitle}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Floating Layer Switcher (Map vs Satellite) */}
@@ -250,6 +527,7 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
           center={center}
           zoom={14}
           mapTypeId={mapTypeId}
+          onLoad={(map) => { mapRef.current = map; }}
           options={{
             disableDefaultUI: true,
             zoomControl: true,
@@ -257,6 +535,18 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
             styles: mapTypeId === 'roadmap' ? (isDark ? DARK_MAP_STYLES : LIGHT_MAP_STYLES) : LIGHT_MAP_STYLES
           }}
         >
+          {/* Searched Location Area Pin */}
+          {selectedPlace && (
+            <MarkerF
+              position={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}
+              title={selectedPlace.title}
+              icon={{
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+              }}
+              zIndex={1000}
+            />
+          )}
+
           {/* User's Current Location Pin */}
           {currentLocation && (
             <MarkerF

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { storeService, Store } from '../services/storeService';
 import { Button } from '../../../shared/components/ui/Button';
@@ -297,6 +297,10 @@ export const StoreListingPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Pagination state (20 items initially, loads +20 on scroll)
+  const [visibleCount, setVisibleCount] = useState(20);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [onlyOpen, setOnlyOpen] = useState(searchParams.get('available') === 'true');
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'popular'>(
@@ -510,6 +514,35 @@ function fuzzyMatchStore(s: any, query: string): boolean {
       if (sortBy === 'popular') return (b.reviewCount || 0) - (a.reviewCount || 0);
       return a.distance - b.distance;
     });
+
+  // Reset pagination when category, search query, location hub, or filters change
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [selectedMainCategory, selectedSubCategory, searchQuery, activeHub, onlyOpen, onlyVerified, sortBy]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 20);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const target = loadMoreRef.current;
+    observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [processedStores.length, visibleCount]);
+
+  const displayedStores = processedStores.slice(0, visibleCount);
+  const hasMore = visibleCount < processedStores.length;
 
   const activeFiltersCount = [onlyOpen, onlyVerified, !!selectedMainCategory, !!selectedSubCategory].filter(Boolean).length;
 
@@ -801,6 +834,14 @@ function fuzzyMatchStore(s: any, query: string): boolean {
             )}
           </AnimatePresence>
 
+          {/* ── Results Header ───────────────────────── */}
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">Providers List</h2>
+            <span className="text-sm font-bold text-muted-foreground">
+              Showing {Math.min(visibleCount, processedStores.length)} of {processedStores.length} Stores
+            </span>
+          </div>
+
           {/* ── Results ───────────────────────────────────────── */}
           {isLoading ? (
             <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4' : 'space-y-3'}>
@@ -828,39 +869,50 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                 Clear All Filters
               </Button>
             </motion.div>
-          ) : viewMode === 'grid' ? (
-            /* ── Grid View ─ */
-            <motion.div
-              layout
-              className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
-            >
-              <AnimatePresence>
-                {processedStores.map((store) => (
-                  <StoreGridCard
-                    key={store.id}
-                    store={store}
-                    isFav={favorites.includes(store.id)}
-                    onFav={(e) => toggleFav(store.id, e)}
-                    onClick={() => navigate(`/store/${store.id}`)}
-                  />
-                ))}
-              </AnimatePresence>
-            </motion.div>
           ) : (
-            /* ── List View ─ */
-            <div className="space-y-3">
-              <AnimatePresence>
-                {processedStores.map((store) => (
-                  <StoreListCard
-                    key={store.id}
-                    store={store}
-                    isFav={favorites.includes(store.id)}
-                    onFav={(e) => toggleFav(store.id, e)}
-                    onClick={() => navigate(`/store/${store.id}`)}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
+            <>
+              {viewMode === 'grid' ? (
+                /* ── Grid View ─ */
+                <motion.div
+                  layout
+                  className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+                >
+                  <AnimatePresence>
+                    {displayedStores.map((store) => (
+                      <StoreGridCard
+                        key={store.id}
+                        store={store}
+                        isFav={favorites.includes(store.id)}
+                        onFav={(e) => toggleFav(store.id, e)}
+                        onClick={() => navigate(`/store/${store.id}`)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+              ) : (
+                /* ── List View ─ */
+                <div className="space-y-3">
+                  <AnimatePresence>
+                    {displayedStores.map((store) => (
+                      <StoreListCard
+                        key={store.id}
+                        store={store}
+                        isFav={favorites.includes(store.id)}
+                        onFav={(e) => toggleFav(store.id, e)}
+                        onClick={() => navigate(`/store/${store.id}`)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {hasMore && (
+                <div ref={loadMoreRef} className="col-span-full py-8 flex flex-col items-center justify-center gap-2">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs font-semibold text-muted-foreground">Loading more stores...</span>
+                </div>
+              )}
+            </>
           )}
 
         </div>

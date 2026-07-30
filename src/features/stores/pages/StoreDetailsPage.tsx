@@ -26,6 +26,9 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { locationService } from '../../location/services/locationService';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
+import { toast } from 'sonner';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, navigate }: any) => {
@@ -217,6 +220,11 @@ export const StoreDetailsPage = () => {
     setViewerOpen(true);
   };
   
+  // Store rating states
+  const [storeUserRating, setStoreUserRating] = useState<number>(0);
+  const [storeHoverRating, setStoreHoverRating] = useState<number>(0);
+  const [isSubmittingStoreRating, setIsSubmittingStoreRating] = useState(false);
+
   // Local persistence for favorites
   const [isFavorite, setIsFavorite] = useState(() => {
     const saved = localStorage.getItem('tulete_favorite_stores');
@@ -241,13 +249,13 @@ export const StoreDetailsPage = () => {
 
   const decodedId = id ? decodeURIComponent(id) : '';
 
-  const { data: dbStore, isLoading: isStoreLoading } = useFirestoreDocument(
+  const { data: dbStore, isLoading: isStoreDocLoading } = useFirestoreDocument(
     ['store', id || ''],
     storeService,
     id || ''
   );
   
-  const { data: dbStoresByName } = useFirestoreQuery(
+  const { data: dbStoresByName, isLoading: isStoreQueryLoading } = useFirestoreQuery(
     ['store_by_name', decodedId],
     storeService,
     {
@@ -255,6 +263,10 @@ export const StoreDetailsPage = () => {
     }
   );
   const dbStoreByName = dbStoresByName?.data && dbStoresByName.data.length > 0 ? dbStoresByName.data[0] : null;
+
+  const isStoreLoading = isStoreDocLoading || isStoreQueryLoading;
+  const isCheckingRegistration = Boolean(isStoreLoading);
+  const isRegisteredInFoodStores = Boolean(dbStore || dbStoreByName);
 
   const mockMatch = storeService.getMockStores().find((s) => 
     s.id === id || s.id === decodedId || 
@@ -471,6 +483,11 @@ export const StoreDetailsPage = () => {
     products = [fromProduct];
   }
 
+  // Strictly return NO items inside if store is not yet registered in foodStores Firestore collection
+  if (!isCheckingRegistration && !isRegisteredInFoodStores) {
+    products = [];
+  }
+
   // Interactive operational Map
   useEffect(() => {
     if (activeTab !== 'hours' || !store) return;
@@ -659,7 +676,44 @@ export const StoreDetailsPage = () => {
       }).catch(console.error);
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Store link copied to clipboard!');
+      toast.success('Store link copied to clipboard!');
+    }
+  };
+
+  // Store rating logic matching Flutter addRatesToFoodStore
+  const handleRateStore = async (stars: number) => {
+    if (!isAuthenticated) {
+      openModal('login');
+      return;
+    }
+    const storeIdToRate = store?.id || targetStoreId || id;
+    if (!storeIdToRate || isSubmittingStoreRating) return;
+
+    setIsSubmittingStoreRating(true);
+    setStoreUserRating(stars);
+
+    try {
+      const docRef = doc(db, 'foodStores', storeIdToRate);
+      const snap = await getDoc(docRef);
+
+      let currentRates: any[] = [];
+      if (snap.exists()) {
+        const data = snap.data();
+        const rawRates = data.rates;
+        if (Array.isArray(rawRates)) {
+          currentRates = rawRates.map(Number).filter((n) => !isNaN(n));
+        }
+      }
+
+      const updatedRates = [...currentRates, stars];
+      await setDoc(docRef, { rates: updatedRates }, { merge: true });
+
+      toast.success('Thanks, Rated');
+    } catch (err) {
+      console.error('Error rating store:', err);
+      toast.error('Failed to submit rating. Please try again.');
+    } finally {
+      setIsSubmittingStoreRating(false);
     }
   };
 
@@ -687,7 +741,7 @@ export const StoreDetailsPage = () => {
         {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
           <button 
-            onClick={() => navigate('/explore')} 
+            onClick={() => navigate('/explore?map=true', { state: { showMap: true } })} 
             className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground mb-8"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Discovery
@@ -727,7 +781,7 @@ export const StoreDetailsPage = () => {
         <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
           {/* Mobile Back & Actions */}
           <div className="lg:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between py-3 mb-6">
-            <button onClick={() => navigate('/explore')} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
+            <button onClick={() => navigate('/explore?map=true', { state: { showMap: true } })} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">
@@ -777,10 +831,40 @@ export const StoreDetailsPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 self-start md:self-auto bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md border border-white/10">
-            <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
-            <span>{store.rating}</span>
-            <span className="text-slate-400 font-normal">({store.reviewCount} Reviews)</span>
+          <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md border border-white/10">
+              <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+              <span>{store.rating}</span>
+              <span className="text-slate-400 font-normal">({store.reviewCount} Reviews)</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md border border-white/10">
+              <span className="text-slate-300 font-bold mr-0.5">Rate Me Please:</span>
+              <div className="flex items-center gap-0.5" onMouseLeave={() => setStoreHoverRating(0)}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRateStore(star);
+                    }}
+                    onMouseEnter={() => setStoreHoverRating(star)}
+                    disabled={isSubmittingStoreRating}
+                    className="p-0.5 rounded hover:scale-125 transition-transform cursor-pointer disabled:opacity-50"
+                    title={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                  >
+                    <Star
+                      className={`w-3.5 h-3.5 transition-colors ${
+                        (storeHoverRating || storeUserRating) >= star
+                          ? 'fill-amber-400 stroke-amber-400 text-amber-400'
+                          : 'text-slate-400/60'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -830,66 +914,104 @@ export const StoreDetailsPage = () => {
       <div>
         {activeTab === 'menu' && (
           <div className="space-y-6">
-            {/* Store search bar & categories horizontal filter */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="Search item, clean package..."
-                  className="pl-10 bg-card border-border"
-                />
+            {isCheckingRegistration ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3 bg-card border border-border rounded-3xl">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-xs font-extrabold">Verifying store registration on Tulete platform...</p>
               </div>
-
-              {productCategories.length > 0 && (
-                <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-2 sm:pb-0">
-                  <button
-                    onClick={() => setSelectedProductCategory(null)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
-                      selectedProductCategory === null
-                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                        : 'bg-card border-border text-muted-foreground'
-                    }`}
-                  >
-                    All Items
-                  </button>
-                  {productCategories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedProductCategory(cat)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
-                        selectedProductCategory === cat
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                          : 'bg-card border-border text-muted-foreground'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+            ) : !isRegisteredInFoodStores ? (
+              <div className="p-8 md:p-12 text-center rounded-3xl bg-amber-500/10 border border-amber-500/30 dark:bg-amber-950/20 shadow-lg space-y-4 my-2">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+                  <AlertTriangle className="w-8 h-8" />
                 </div>
-              )}
-            </div>
-
-            {/* Menu Items Grid */}
-            {filteredProducts.length === 0 ? (
-              <div className="text-center py-10 bg-muted border border-slate-150 dark:border-slate-800 rounded-2xl">
-                <p className="text-xs text-muted-foreground">No matching services or items found.</p>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h3 className="text-xl font-extrabold text-foreground">
+                    Store Not Registered on Tulete
+                  </h3>
+                  <p className="text-xs md:text-sm text-muted-foreground font-medium leading-relaxed">
+                    This store is not yet registered in our official <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono font-bold text-foreground">foodStores</code> directory on the Tulete platform.
+                  </p>
+                  <p className="text-xs text-muted-foreground font-semibold">
+                    Items, services, and online ordering are currently unavailable for this store until the merchant completes registration.
+                  </p>
+                </div>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                  <Badge className="bg-amber-500 text-white border-0 px-4 py-1.5 rounded-full text-xs font-extrabold shadow-sm">
+                    Unregistered Merchant
+                  </Badge>
+                  <Button 
+                    onClick={() => navigate('/explore?map=true', { state: { showMap: true } })} 
+                    variant="outline" 
+                    className="rounded-full text-xs font-bold px-4 hover:bg-muted"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Back to Discovery
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredProducts.map((prod) => (
-                  <StoreProductRow 
-                    key={prod.id} 
-                    prod={prod} 
-                    store={store} 
-                    cartItems={cartItems} 
-                    updateQuantity={updateQuantity} 
-                    addToCart={addToCart} 
-                    navigate={navigate} 
-                  />
-                ))}
-              </div>
+              <>
+                {/* Store search bar & categories horizontal filter */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="Search item, clean package..."
+                      className="pl-10 bg-card border-border"
+                    />
+                  </div>
+
+                  {productCategories.length > 0 && (
+                    <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-2 sm:pb-0">
+                      <button
+                        onClick={() => setSelectedProductCategory(null)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                          selectedProductCategory === null
+                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                            : 'bg-card border-border text-muted-foreground'
+                        }`}
+                      >
+                        All Items
+                      </button>
+                      {productCategories.map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedProductCategory(cat)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                            selectedProductCategory === cat
+                              ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                              : 'bg-card border-border text-muted-foreground'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Menu Items Grid */}
+                {filteredProducts.length === 0 ? (
+                  <div className="text-center py-10 bg-muted border border-slate-150 dark:border-slate-800 rounded-2xl">
+                    <p className="text-xs text-muted-foreground">No matching services or items found.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredProducts.map((prod) => (
+                      <StoreProductRow 
+                        key={prod.id} 
+                        prod={prod} 
+                        store={store} 
+                        cartItems={cartItems} 
+                        updateQuantity={updateQuantity} 
+                        addToCart={addToCart} 
+                        navigate={navigate} 
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

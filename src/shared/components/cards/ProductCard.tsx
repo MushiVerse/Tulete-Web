@@ -18,6 +18,7 @@ interface ProductCardProps {
   onToggleFavorite?: (product: Product) => void;
   isFavorite?: boolean;
   onClick?: (product: Product) => void;
+  viewMode?: 'grid' | 'list';
 }
 
 export const ProductCard = ({ 
@@ -25,7 +26,8 @@ export const ProductCard = ({
   onAddToCart, 
   onToggleFavorite,
   isFavorite = false,
-  onClick
+  onClick,
+  viewMode = 'grid'
 }: ProductCardProps) => {
   if (product.availability === false || (product as any).availability === "false" || String((product as any).availability).toLowerCase() === "false") {
     return null;
@@ -51,6 +53,155 @@ export const ProductCard = ({
   const wrapperProps = onClick 
     ? { onClick: () => onClick(product), className: "block h-full cursor-pointer" } 
     : { to: `/product/${encodeURIComponent(product.id)}`, className: "block h-full" };
+
+  if (viewMode === 'list') {
+    return (
+      <motion.div
+        whileHover={{ y: -2 }}
+        transition={{ duration: 0.2 }}
+        className="w-full"
+      >
+        <Wrapper {...wrapperProps as any}>
+          <Card className="overflow-hidden flex flex-row group relative bg-card border-border/40 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 rounded-3xl p-2.5 sm:p-3 gap-3.5 sm:gap-4 items-center w-full">
+            {/* Left Image Thumbnail */}
+            <div className="relative w-28 sm:w-36 h-28 sm:h-32 rounded-2xl overflow-hidden bg-muted/50 shrink-0">
+              <img 
+                src={product.imgUrl} 
+                alt={product.name}
+                className="object-cover w-full h-full transition-transform duration-500 ease-out group-hover:scale-105"
+                loading="lazy"
+              />
+              
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleFavorite?.(product);
+                }}
+                className="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 active:scale-95 transition-all group/fav"
+                title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${isFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+              </button>
+
+              {product.tags?.includes('Most TamTam') && (
+                <span className="absolute bottom-2 left-2 text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-success/90 text-primary-foreground tracking-wide">
+                  HOT 🔥
+                </span>
+              )}
+              
+              {isSoldOut && (
+                <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-20">
+                  <span className="text-foreground font-extrabold text-[10px] bg-background px-2.5 py-1 rounded-full shadow-lg">
+                    Sold Out
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Right Side Content Details */}
+            <div className="flex-1 flex flex-col justify-between min-w-0 h-full py-0.5">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <Store className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-xs font-bold text-muted-foreground truncate">
+                      {product.store}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-background/90 backdrop-blur text-foreground border border-border/40 px-2 py-0.5 rounded-full shrink-0 shadow-sm">
+                    <Star className="w-3 h-3 fill-warning stroke-warning" />
+                    <span className="text-xs font-extrabold">{displayRating.toFixed(1)}</span>
+                  </div>
+                </div>
+
+                <h3 className="font-extrabold text-sm sm:text-base text-foreground line-clamp-2 leading-snug mb-1 group-hover:text-primary transition-colors">
+                  {product.name}
+                </h3>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/50">
+                <div className="flex flex-col">
+                  {magicOldPrice && magicOldPrice > magicPrice && (
+                    <span className="text-[10px] font-bold text-muted-foreground line-through">
+                      {APP_SETTINGS.currency} {formatPrice(magicOldPrice)}
+                    </span>
+                  )}
+                  <span className="font-extrabold text-sm sm:text-base text-foreground">
+                    {formattedPrice}
+                  </span>
+                </div>
+
+                {cartItem ? (
+                  <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-xl">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        updateQuantity(product.id, cartItem.quantity - 1);
+                      }} 
+                      className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md bg-background text-foreground shadow-sm hover:bg-background/80"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-extrabold text-xs min-w-[1rem] text-center">{cartItem.quantity}</span>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const stockLimit = product.quantity !== undefined ? product.quantity : product.idadi;
+                        if (stockLimit !== undefined && cartItem.quantity >= stockLimit) {
+                          alert(`Cannot add more. Maximum available stock reached (${stockLimit} left in stock).`);
+                          return;
+                        }
+                        updateQuantity(product.id, cartItem.quantity + 1);
+                      }} 
+                      className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    disabled={isSoldOut}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const stockVal = product.quantity !== undefined ? product.quantity : product.idadi;
+                      if (onAddToCart) {
+                        onAddToCart(product);
+                      } else {
+                        addToCart({
+                          productId: product.id,
+                          name: product.name,
+                          price: product.price,
+                          basePrice: product.price,
+                          imageUrl: product.imgUrl,
+                          storeId: product.storeId || '',
+                          storeName: product.store || '',
+                          cat: itemCat,
+                          idadi: stockVal,
+                          location: product.location,
+                        });
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+                      isSoldOut 
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                        : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </Wrapper>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

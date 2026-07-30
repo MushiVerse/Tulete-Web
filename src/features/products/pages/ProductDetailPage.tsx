@@ -1,7 +1,8 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ArrowRight, Sparkles } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ArrowRight, Sparkles, Plus, Minus } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageContainer } from '../../../shared/components/layout';
 import { ImageGallery } from '../../discovery/components/ImageGallery';
 import { Button } from '../../../shared/components/ui/Button';
@@ -22,7 +23,7 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { locationService } from '../../location/services/locationService';
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
@@ -34,7 +35,7 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
     return !isUnavailable;
   });
 
-  const [visibleCount, setVisibleCount] = useState(12);
+  const [visibleCount, setVisibleCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -42,9 +43,9 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
     if (isLoadingMore || visibleCount >= validItems.length) return;
     setIsLoadingMore(true);
     setTimeout(() => {
-      setVisibleCount((prev) => Math.min(prev + 8, validItems.length));
+      setVisibleCount((prev) => Math.min(prev + 20, validItems.length));
       setIsLoadingMore(false);
-    }, 250);
+    }, 400);
   };
 
   useEffect(() => {
@@ -117,15 +118,13 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
         ))}
       </div>
 
-      {/* Scroll Trigger / Sentinel */}
-      {visibleCount < items.length && (
-        <div ref={loadMoreRef} className="py-6 text-center">
-          <div className="flex items-center justify-center gap-2 text-sm font-bold text-primary animate-pulse">
-            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" />
-            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
-            <span>Loading more items...</span>
-          </div>
+      {/* Scroll Trigger / Circular Loader Sentinel */}
+      {visibleCount < validItems.length && (
+        <div ref={loadMoreRef} className="py-8 flex flex-col items-center justify-center gap-3 col-span-full">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin shadow-sm" />
+          <span className="text-xs font-extrabold text-muted-foreground tracking-wide">
+            Loading next items...
+          </span>
         </div>
       )}
     </div>
@@ -148,7 +147,7 @@ export const ProductDetailPage = () => {
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const { items: cartItems, addToCart, removeFromCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, updateQuantity, getTotals } = useCartStore();
   
   // Subscribe to location store so price and cart total update instantly on location change
   const { currentLocation } = useLocationStore();
@@ -301,12 +300,56 @@ export const ProductDetailPage = () => {
     }
   };
 
+  // Rating logic matching Flutter addRatesToProducts
+  const [userRating, setUserRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
+  const handleRateProduct = async (stars: number) => {
+    if (!isAuthenticated) {
+      openModal('login');
+      return;
+    }
+    const targetItem = product || displayProduct;
+    if (!targetItem?.id || isSubmittingRating) return;
+
+    setIsSubmittingRating(true);
+    setUserRating(stars);
+
+    try {
+      const targetColl = targetCollection === 'products' ? 'products' : 'foods';
+      const docRef = doc(db, targetColl, targetItem.id);
+      const snap = await getDoc(docRef);
+
+      let currentRates: any[] = [];
+      if (snap.exists()) {
+        const data = snap.data();
+        const rawRate = data.rate;
+        if (typeof rawRate === 'number' || typeof rawRate === 'string') {
+          await updateDoc(docRef, { rate: deleteField() }).catch(() => {});
+        } else if (Array.isArray(rawRate)) {
+          currentRates = rawRate.map(Number).filter((n) => !isNaN(n));
+        }
+      }
+
+      const updatedRates = [...currentRates, stars];
+      await setDoc(docRef, { rate: updatedRates }, { merge: true });
+
+      toast.success('Thanks, Rated');
+    } catch (err) {
+      console.error('Error rating product:', err);
+      toast.error('Failed to submit rating. Please try again.');
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+
   // 1. Fetch subSubCat products from targetCollection (for Related section)
   const { data: subSubCatProducts } = useFirestoreQuery(
     ['products', 'related-subsub', targetCollection, targetSubSubCat],
     productService,
     { 
-      limit: 10, 
+      limit: 100, 
       filters: targetSubSubCat ? [
         { field: '_collection', operator: '==', value: targetCollection },
         { field: 'subSubCat', operator: '==', value: targetSubSubCat }
@@ -320,7 +363,7 @@ export const ProductDetailPage = () => {
     ['products', 'related-subcat', targetCollection, targetSubCat],
     productService,
     { 
-      limit: 20, 
+      limit: 100, 
       filters: targetSubCat ? [
         { field: '_collection', operator: '==', value: targetCollection },
         { field: 'subCat', operator: '==', value: targetSubCat }
@@ -334,7 +377,7 @@ export const ProductDetailPage = () => {
     ['products', 'related-cat', targetCollection, rawCat],
     productService,
     { 
-      limit: 20, 
+      limit: 100, 
       filters: [{ field: '_collection', operator: '==', value: targetCollection }]
     },
     { enabled: true }
@@ -663,12 +706,39 @@ export const ProductDetailPage = () => {
                   {displayProduct.name}
                 </h1>
                 
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-4 mb-4 flex-wrap">
                   <div className="flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded text-sm font-bold">
                     <Star className="w-4 h-4 fill-current" />
                     <span>{(displayProduct.rating ?? 0).toFixed(1)}</span>
                     <span className="text-muted-foreground text-xs ml-1">({displayProduct.reviewCount} reviews)</span>
                   </div>
+
+                  {!isLaundryProduct && (
+                    <div className="flex items-center gap-1.5 pl-3 border-l border-border">
+                      <span className="text-xs font-bold text-muted-foreground">Rate Me Please:</span>
+                      <div className="flex items-center gap-0.5" onMouseLeave={() => setHoverRating(0)}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => handleRateProduct(star)}
+                            onMouseEnter={() => setHoverRating(star)}
+                            disabled={isSubmittingRating}
+                            className="p-0.5 rounded hover:scale-125 transition-transform cursor-pointer disabled:opacity-50"
+                            title={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                          >
+                            <Star
+                              className={`w-4 h-4 transition-colors ${
+                                (hoverRating || userRating) >= star
+                                  ? 'fill-yellow-500 text-yellow-500'
+                                  : 'text-muted-foreground/40'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {(() => {
                     const qty = typeof (displayProduct as any).quantity === 'number' 
                       ? (displayProduct as any).quantity 
@@ -710,25 +780,11 @@ export const ProductDetailPage = () => {
                 </div>
 
                 {(() => {
-                  const stockVal = typeof (displayProduct as any).quantity === 'number' 
-                    ? (displayProduct as any).quantity 
-                    : (typeof (displayProduct as any).idadi === 'number' ? (displayProduct as any).idadi : undefined);
-
-                  if (stockVal !== undefined && stockVal > 0) {
-                    return (
-                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full inline-block mt-2">
-                        {stockVal} left in stock
-                      </span>
-                    );
-                  }
-                  return null;
-                })()}
-
-                {(() => {
                   const qty = typeof (displayProduct as any).quantity === 'number' 
                     ? (displayProduct as any).quantity 
                     : (typeof (displayProduct as any).idadi === 'number' ? (displayProduct as any).idadi : undefined);
 
+                  const stockVal = qty;
                   const isSoldOut = qty !== undefined && qty <= 0;
                   const isUnavailable = displayProduct.availability === false;
                   const isPurchasable = !isSoldOut && !isUnavailable;
@@ -740,30 +796,80 @@ export const ProductDetailPage = () => {
                     buttonText = 'Unavailable';
                   }
 
+                  const cartItem = cartItems.find((i) => i.productId === displayProduct.id || i.baseProductId === displayProduct.id);
+
                   return (
-                    <Button 
-                      className="w-full md:w-auto mt-6 h-12 px-8 text-base font-extrabold shadow-md rounded-2xl disabled:opacity-60 disabled:cursor-not-allowed"
-                      disabled={!isPurchasable}
-                      onClick={() => {
-                        if (!isPurchasable) return;
-                        addToCart({
-                          productId: displayProduct.id,
-                          name: displayProduct.name,
-                          price: displayProduct.price,
-                          basePrice: displayProduct.price,
-                          imageUrl: selectedImageUrl,
-                          storeId: displayProduct.storeId,
-                          storeName: displayProduct.store,
-                          cat: itemCat,
-                          isLaundry: isLaundryCategory,
-                          location: displayProduct.location,
-                          idadi: qty,
-                          maxQuantity: qty,
-                        });
-                      }}
-                    >
-                      {buttonText}
-                    </Button>
+                    <div className="mt-6 flex flex-col md:flex-row md:items-center gap-4">
+                      {stockVal !== undefined && stockVal > 0 && (
+                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-2 rounded-full inline-flex items-center w-fit shrink-0">
+                          {stockVal} left in stock
+                        </span>
+                      )}
+
+                      {cartItem && cartItem.quantity > 0 ? (
+                        <div className="flex items-center gap-3 bg-muted p-1.5 rounded-2xl border border-border w-fit">
+                          <button
+                            onClick={() => {
+                              if (cartItem.quantity > 1) {
+                                updateQuantity(cartItem.productId, cartItem.quantity - 1);
+                              } else {
+                                removeFromCart(cartItem.productId);
+                              }
+                            }}
+                            className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center font-extrabold text-foreground hover:bg-primary/10 hover:text-primary active:scale-95 transition-all shadow-sm cursor-pointer"
+                            title="Decrease quantity"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <span className="font-extrabold text-base min-w-[28px] text-center text-foreground px-1">
+                            {cartItem.quantity}
+                          </span>
+
+                          <button
+                            onClick={() => {
+                              if (stockVal !== undefined && cartItem.quantity >= stockVal) {
+                                toast.warning(`Limit reached! Maximum available stock for this item is ${stockVal}.`);
+                                return;
+                              }
+                              updateQuantity(cartItem.productId, cartItem.quantity + 1);
+                            }}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold transition-all shadow-md cursor-pointer ${
+                              stockVal !== undefined && cartItem.quantity >= stockVal
+                                ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                : 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
+                            }`}
+                            title={stockVal !== undefined && cartItem.quantity >= stockVal ? "Stock limit reached" : "Increase quantity"}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <Button 
+                          className="w-full md:w-auto h-12 px-8 text-base font-extrabold shadow-md rounded-2xl disabled:opacity-60 disabled:cursor-not-allowed"
+                          disabled={!isPurchasable}
+                          onClick={() => {
+                            if (!isPurchasable) return;
+                            addToCart({
+                              productId: displayProduct.id,
+                              name: displayProduct.name,
+                              price: displayProduct.price,
+                              basePrice: displayProduct.price,
+                              imageUrl: selectedImageUrl,
+                              storeId: displayProduct.storeId,
+                              storeName: displayProduct.store,
+                              cat: itemCat,
+                              isLaundry: isLaundryCategory,
+                              location: displayProduct.location,
+                              idadi: qty,
+                              maxQuantity: qty,
+                            });
+                          }}
+                        >
+                          {buttonText}
+                        </Button>
+                      )}
+                    </div>
                   );
                 })()}
               </div>
@@ -925,7 +1031,7 @@ export const ProductDetailPage = () => {
             // 1. LAUNDRY ITEMS (category === "Nguo" or collection === "cloths"):
             // Return ONLY 1 section "Laundries" (endless vertical scroll, no sub-categorization)
             if (isLaundry) {
-              const finalLaundryList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 20 }).map((_, i) => ({
+              const finalLaundryList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 60 }).map((_, i) => ({
                 ...displayProduct,
                 id: `laundry-item-${i + 1}`,
                 name: `Laundry Service Item ${i + 1}`,
@@ -978,17 +1084,9 @@ export const ProductDetailPage = () => {
 
               return (
                 <div className="mt-8 mb-24 lg:mb-12 space-y-10">
-                  {/* i. Related Section (Horizontal Scroll Carousel) */}
+                  {/* i. Related Section (Endless Grid with 20-item pagination & circular loader) */}
                   {finalSubSubList.length > 0 && subSubVal && (
-                    <div>
-                      <SectionWrapper title="Related" actionLink="/explore">
-                        {finalSubSubList.map((prod) => (
-                          <div key={prod.id} className="shrink-0 w-[170px] md:w-[210px] snap-center">
-                            <ProductCard product={prod} />
-                          </div>
-                        ))}
-                      </SectionWrapper>
-                    </div>
+                    <EndlessMoreOfSection title="Related" items={finalSubSubList} />
                   )}
 
                   {/* ii. More of [subCat] Section (Endless Vertical Grid, Zero Duplicates) */}
@@ -999,7 +1097,7 @@ export const ProductDetailPage = () => {
 
             // 3. Fallback single section
             const mainCatLabel = displayProduct.category || (activeCollection === 'products' ? 'Products' : 'Foods');
-            const finalCatList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 20 }).map((_, i) => ({
+            const finalCatList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 60 }).map((_, i) => ({
               ...displayProduct,
               id: `cat-item-${i + 1}`,
               name: `${mainCatLabel} Item ${i + 1}`,
