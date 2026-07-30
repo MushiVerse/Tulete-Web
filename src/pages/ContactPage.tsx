@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../shared/components/ui/Button';
+import { FacebookIcon, InstagramIcon, TikTokIcon, YoutubeIcon } from '../shared/components/SocialIcons';
+import { APP_SETTINGS } from '../core/config/settings';
 
 const MAIN_SUPPORT_WHATSAPP = '255764587748';
 const INQUIRY_WHATSAPP = '255757449734';
@@ -135,19 +137,21 @@ export const ContactPage = () => {
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           {[
-            { name: 'Facebook', url: 'https://www.facebook.com/share/1BAsk78Dwy/', color: 'bg-blue-600/10 text-blue-600 border-blue-600/20 hover:bg-blue-600 hover:text-white' },
-            { name: 'Instagram', url: 'https://www.instagram.com/tulete_enterprises/', color: 'bg-pink-500/10 text-pink-600 border-pink-500/20 hover:bg-pink-600 hover:text-white' },
-            { name: 'TikTok', url: 'https://www.tiktok.com/@tulete_enterprises', color: 'bg-stone-500/10 text-foreground border-border hover:bg-foreground hover:text-background' },
-            { name: 'YouTube', url: 'https://www.youtube.com/@tulete_enterprises', color: 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-600 hover:text-white' },
-          ].map(social => (
+            { name: 'Instagram', url: APP_SETTINGS.socialLinks.instagram, Icon: InstagramIcon, color: 'bg-pink-500/10 text-pink-600 border-pink-500/20 hover:bg-pink-600 hover:text-white' },
+            { name: 'TikTok', url: APP_SETTINGS.socialLinks.tiktok, Icon: TikTokIcon, color: 'bg-muted text-foreground border-border hover:bg-foreground hover:text-background' },
+            { name: 'YouTube', url: APP_SETTINGS.socialLinks.youtube, Icon: YoutubeIcon, color: 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-600 hover:text-white' },
+            { name: 'Facebook', url: APP_SETTINGS.socialLinks.facebook, Icon: FacebookIcon, color: 'bg-blue-600/10 text-blue-600 border-blue-600/20 hover:bg-blue-600 hover:text-white' },
+          ].map(({ name, url, Icon, color }) => (
             <a 
-              key={social.name}
-              href={social.url}
+              key={name}
+              href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className={`px-5 py-2.5 rounded-2xl border font-extrabold text-xs transition-all flex items-center gap-2 shadow-sm hover:scale-105 active:scale-95 ${social.color}`}
+              title={name}
+              aria-label={name}
+              className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-sm hover:scale-110 active:scale-95 ${color}`}
             >
-              {social.name}
+              <Icon className="w-5 h-5" />
             </a>
           ))}
         </div>

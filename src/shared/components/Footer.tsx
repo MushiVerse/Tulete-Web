@@ -4,6 +4,7 @@ import { Send, ShieldCheck } from 'lucide-react';
 import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 import { APP_SETTINGS } from '../../core/config/settings';
 import { useDeviceOS } from '../../core/hooks/useDeviceOS';
+import { FacebookIcon, InstagramIcon, TikTokIcon, YoutubeIcon } from './SocialIcons';
 
 export const Footer = () => {
   const { showPlayBadge } = useDeviceOS();
@@ -48,22 +49,23 @@ export const Footer = () => {
             <p className="text-sm text-secondary-foreground/70 leading-relaxed font-medium pr-4">
               Your premium marketplace for laundry, food delivery, and daily essentials. Fast, reliable, and right at your doorstep. We bring the city to you.
             </p>
-            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               {[
-                { name: 'Facebook', url: APP_SETTINGS.socialLinks.facebook },
-                { name: 'Instagram', url: APP_SETTINGS.socialLinks.instagram },
-                { name: 'TikTok', url: APP_SETTINGS.socialLinks.tiktok },
-                { name: 'YouTube', url: APP_SETTINGS.socialLinks.youtube },
-              ].map(social => (
+                { name: 'Instagram', url: APP_SETTINGS.socialLinks.instagram, Icon: InstagramIcon },
+                { name: 'TikTok', url: APP_SETTINGS.socialLinks.tiktok, Icon: TikTokIcon },
+                { name: 'YouTube', url: APP_SETTINGS.socialLinks.youtube, Icon: YoutubeIcon },
+                { name: 'Facebook', url: APP_SETTINGS.socialLinks.facebook, Icon: FacebookIcon },
+              ].map(({ name, url, Icon }) => (
                 <a 
-                  key={social.name} 
-                  href={social.url} 
+                  key={name} 
+                  href={url} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  title={social.name}
-                  className="h-10 px-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-secondary-foreground/80 hover:bg-primary hover:text-primary-foreground hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(249,148,32,0.4)] hover:border-primary font-bold text-xs transition-all duration-300"
+                  title={name}
+                  aria-label={name}
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-secondary-foreground/80 hover:bg-primary hover:text-primary-foreground hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(249,148,32,0.4)] hover:border-primary transition-all duration-300"
                 >
-                  {social.name}
+                  <Icon className="w-5 h-5" />
                 </a>
               ))}
             </div>

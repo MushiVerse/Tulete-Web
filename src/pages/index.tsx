@@ -36,5 +36,8 @@ export { HelpCenterPage } from './HelpCenterPage';
 export { SafetyInfoPage } from './SafetyInfoPage';
 export { CancellationPage } from './CancellationPage';
 export { ContactPage } from './ContactPage';
+export { PrivacyPolicyPage } from './PrivacyPolicyPage';
+export { TermsOfServicePage } from './TermsOfServicePage';
+export { CookiesSettingsPage } from './CookiesSettingsPage';
 export const BrandDetailsPage = createPage('Brand Details', 'View brand specific products.');
 export { NotFoundPage } from './NotFoundPage';

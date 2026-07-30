@@ -52,6 +52,9 @@ const HelpCenter = React.lazy(() => import('../pages').then(m => ({ default: m.H
 const SafetyInfo = React.lazy(() => import('../pages').then(m => ({ default: m.SafetyInfoPage })));
 const Cancellation = React.lazy(() => import('../pages').then(m => ({ default: m.CancellationPage })));
 const Contact = React.lazy(() => import('../pages').then(m => ({ default: m.ContactPage })));
+const PrivacyPolicy = React.lazy(() => import('../pages').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsOfService = React.lazy(() => import('../pages').then(m => ({ default: m.TermsOfServicePage })));
+const CookiesSettings = React.lazy(() => import('../pages').then(m => ({ default: m.CookiesSettingsPage })));
 const NotFound = React.lazy(() => import('../pages').then(m => ({ default: m.NotFoundPage })));
 
 const withSuspense = (Component: React.ComponentType) => (
@@ -81,6 +84,9 @@ export const router = createBrowserRouter([
           { path: 'safety', element: withSuspense(SafetyInfo) },
           { path: 'cancellation', element: withSuspense(Cancellation) },
           { path: 'contact', element: withSuspense(Contact) },
+          { path: 'privacy', element: withSuspense(PrivacyPolicy) },
+          { path: 'terms', element: withSuspense(TermsOfService) },
+          { path: 'cookies', element: withSuspense(CookiesSettings) },
           { path: 'brand/:brandName', element: withSuspense(BrandDetails) },
           { path: 'store/:id', element: withSuspense(StoreDetails) },
           { path: 'product/:id', element: withSuspense(ProductDetail) },
