@@ -560,6 +560,11 @@ class OrderService extends BaseFirestoreService<Order> {
             : `[${pickupStr}]`;
         }
 
+        const isIron = laundryItems.some((item: any) => item.ironingSelected) || order.irondelivery || false;
+        const isPackage = laundryItems.some((item: any) => item.packagingSelected) || order.packagepickup || false;
+        const isVip = laundryItems.some((item: any) => item.vipSelected) || false;
+        const isExpress = globalExpress || order.express || false;
+
         const laundryPayload = {
           uid: uids || 'unknown_uid',
           userId: uids || 'unknown_uid',
@@ -576,9 +581,10 @@ class OrderService extends BaseFirestoreService<Order> {
           count: totalLaundryCount,
           store: order.storeName || 'Tulete Laundry',
           total: Math.round(totalLaundryPrice),
-          irondelivery: order.irondelivery || false,
-          packagepickup: order.packagepickup || false,
-          express: globalExpress || false,
+          irondelivery: isIron,
+          packagepickup: isPackage,
+          express: isExpress,
+          vip: isVip,
           cancel: false,
           show: true,
           paid: true,
@@ -618,6 +624,10 @@ class OrderService extends BaseFirestoreService<Order> {
           email: order.email || 'web@tulete.net',
           uid: uids || 'unknown_uid',
           time: getFlutterTime(),
+          irondelivery: isIron,
+          packagepickup: isPackage,
+          express: isExpress,
+          vip: isVip,
         };
 
         // A. Add to global `newcomfirmedorders` (Admin/Driver feed)
@@ -632,7 +642,8 @@ class OrderService extends BaseFirestoreService<Order> {
       // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY (matching cartsHome.dart)
       for (const item of otherItems) {
         const cat = (item as any).cat || (item as any).category || 'Product';
-        let finalDeliveryTime = cat === 'Product' ? 'Product' : 'ASAP';
+        const slot = (item as any).deliverySlot;
+        let finalDeliveryTime = slot || (cat === 'Product' ? 'Product' : 'ASAP');
         const lineTotal = item.price * item.quantity;
         const itemDocId = `${item.productId || 'item'}_${webOrderId}`;
 

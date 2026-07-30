@@ -101,10 +101,50 @@ export function parseLaundryItems(nameField: string) {
   return { items, isExpress };
 }
 
+/**
+ * Determines whether an order is eligible for cancellation.
+ * An order can be cancelled if:
+ * 1. Its status is active (not already Cancelled, Delivered, or Failed).
+ * 2. Less than 30 minutes have elapsed since the order was placed.
+ */
+function isOrderCancelable(order: Order): boolean {
+  if (['Cancelled', 'Delivered', 'Failed'].includes(order.status)) {
+    return false;
+  }
+
+  let orderTimeMs = 0;
+  if (order.createdAt?.seconds) {
+    orderTimeMs = order.createdAt.seconds * 1000;
+  } else if ((order as any).createdAt?.toDate) {
+    orderTimeMs = (order as any).createdAt.toDate().getTime();
+  } else if (order.createdAt) {
+    const parsed = new Date(order.createdAt).getTime();
+    if (!isNaN(parsed)) orderTimeMs = parsed;
+  } else if ((order as any).time) {
+    const parsed = new Date((order as any).time).getTime();
+    if (!isNaN(parsed)) orderTimeMs = parsed;
+  }
+
+  if (!orderTimeMs) return true;
+
+  const thirtyMinutesMs = 30 * 60 * 1000;
+  const elapsedMs = Date.now() - orderTimeMs;
+
+  return elapsedMs < thirtyMinutesMs;
+}
+
 export const OrdersPage = () => {
   const navigate = useNavigate();
   const { orders, isLoading } = useOrderListRealtime();
   const { addToCart } = useCartStore();
+
+  const [, setNow] = React.useState(Date.now());
+
+  // Periodically refresh current time every 30 seconds so 30-minute cancel window updates live
+  React.useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'cancelled'>('active');
   const [searchQuery, setSearchQuery] = useState('');
@@ -418,7 +458,7 @@ export const OrdersPage = () => {
                     {/* Footer Actions */}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        {order.status === 'Pending' && (
+                        {isOrderCancelable(order) && (
                           <Button
                             variant="ghost"
                             onClick={() => handleCancelOrder(order.id)}
@@ -426,7 +466,7 @@ export const OrdersPage = () => {
                             className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs font-semibold disabled:opacity-60"
                           >
                             <XCircle className="w-4 h-4 mr-1.5" />
-                            {cancellingId === order.id ? 'Cancelling…' : 'Cancel Request'}
+                            {cancellingId === order.id ? 'Cancelling…' : 'Cancel Order'}
                           </Button>
                         )}
                         <button

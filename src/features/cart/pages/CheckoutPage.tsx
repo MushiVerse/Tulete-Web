@@ -179,6 +179,10 @@ export const CheckoutPage = () => {
               quantity: item.quantity,
               imageUrl: item.imageUrl,
               cat: item.cat,
+              deliverySlot: (item as any).deliverySlot,
+              ironingSelected: (item as any).ironingSelected,
+              packagingSelected: (item as any).packagingSelected,
+              vipSelected: (item as any).vipSelected,
             };
           }),
           totalAmount: Math.round(groupSubtotal + groupDeliveryFee),
