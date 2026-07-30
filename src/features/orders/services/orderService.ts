@@ -28,6 +28,7 @@ export interface OrderLocation {
   lat: number;
   lng: number;
   address: string;
+  specificInstructions?: string;
 }
 
 export interface Order extends BaseDocument {
@@ -74,6 +75,27 @@ function getFlutterTime(): string {
   const micro = pad(now.getMilliseconds() * 1000, 6); // Mock microseconds
 
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${micro}`;
+}
+
+/**
+ * Resolves delivery location string for Flutter document 'location' field.
+ * Uses specificInstructions (landmarks) if set, otherwise extracts primary area from address.
+ */
+function resolveDeliveryLocationString(deliveryLocation?: OrderLocation): string {
+  if (!deliveryLocation) return 'Unknown Location';
+
+  const instructions = deliveryLocation.specificInstructions?.trim();
+  if (instructions) {
+    return instructions;
+  }
+
+  const addr = deliveryLocation.address;
+  if (!addr || addr.includes('(Default)')) {
+    return 'Unknown Location';
+  }
+
+  const cleaned = addr.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').split(',')[0].trim();
+  return cleaned || addr || 'Unknown Location';
 }
 
 export interface DriverLocation {
@@ -460,7 +482,7 @@ class OrderService extends BaseFirestoreService<Order> {
           imgURL: toSingleImageUrl(firstItem.imageUrl),
           chose: true,
           quantity: 100,
-          location: order.deliveryLocation?.address || 'Unknown Location',
+          location: resolveDeliveryLocationString(order.deliveryLocation),
           count: totalLaundryCount,
           store: order.storeName || 'Tulete Laundry',
           total: Math.round(totalLaundryPrice),
@@ -525,7 +547,7 @@ class OrderService extends BaseFirestoreService<Order> {
           imgURL: toSingleImageUrl(item.imageUrl),
           chose: true,
           quantity: 100,
-          location: order.deliveryLocation?.address || 'Unknown Location',
+          location: resolveDeliveryLocationString(order.deliveryLocation),
           count: Math.round(item.quantity || 1),
           store: order.storeName || 'Tulete Store',
           total: Math.round(lineTotal || 0),

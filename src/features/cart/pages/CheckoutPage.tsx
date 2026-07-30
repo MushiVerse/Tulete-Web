@@ -190,6 +190,7 @@ export const CheckoutPage = () => {
             address: selectedLocation.address,
             lat: selectedLocation.lat,
             lng: selectedLocation.lng,
+            specificInstructions: (selectedLocation as any).specificInstructions,
           },
           paymentMethod: 'Cash',
           paymentStatus: 'Pending',
