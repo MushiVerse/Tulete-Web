@@ -12,7 +12,7 @@ interface FavoritesStore {
 
   // Actions
   initialize: (userId: string) => void;
-  toggleFavorite: (userId: string, item: Omit<FavoriteItem, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  toggleFavorite: (userId: string, item: any) => Promise<void>;
   isFavorited: (itemId: string) => boolean;
   createWishlist: (userId: string, name: string, description?: string) => void;
   addToWishlist: (wishlistId: string, itemId: string) => void;
@@ -85,9 +85,9 @@ export const useFavoritesStore = create<FavoritesStore>()(
         }
       },
 
-      toggleFavorite: async (userId, item) => {
+      toggleFavorite: async (userId, item: any) => {
         const current = get().favorites;
-        const targetItemId = item.itemId;
+        const targetItemId = item?.itemId || item?.id || item?.foodId || '';
         const exists = current.find((f) => f.itemId === targetItemId || f.id === targetItemId || (f as any).foodId === targetItemId);
 
         if (exists) {
@@ -110,7 +110,12 @@ export const useFavoritesStore = create<FavoritesStore>()(
           // Optimistic add
           const newFavorite: FavoriteItem = {
             id: targetItemId || `fav_${Date.now()}`,
-            userId,
+            userId: userId || 'guest_user',
+            type: item.type || 'product',
+            itemId: targetItemId || `item_${Date.now()}`,
+            name: item.name || item.title || '',
+            description: item.description || '',
+            imageUrl: item.imageUrl || item.imgURL || item.imgUrl || '',
             ...item,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -127,13 +132,13 @@ export const useFavoritesStore = create<FavoritesStore>()(
                 foodId: targetItemId,
                 name: item.name || '',
                 price: item.price || 0,
-                imgURL: item.imageUrl || (item as any).imgURL || (item as any).imgUrl || '',
-                brand: (item as any).brand || (item as any).store || '',
-                location: (item as any).location || '',
+                imgURL: item.imageUrl || item.imgURL || item.imgUrl || '',
+                brand: item.brand || item.store || '',
+                location: item.location || '',
                 description: item.description || '',
-                category: (item as any).category || (item as any).cat || '',
-                cat: (item as any).cat || (item as any).category || '',
-                store: (item as any).store || (item as any).brand || '',
+                category: item.category || item.cat || '',
+                cat: item.cat || item.category || '',
+                store: item.store || item.brand || '',
                 fav: true,
                 time: new Date().toISOString(),
                 userId,

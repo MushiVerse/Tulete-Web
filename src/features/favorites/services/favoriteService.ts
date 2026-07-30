@@ -13,6 +13,12 @@ export interface FavoriteItem extends BaseDocument {
   price?: number;
   rating?: number;
   reviewCount?: number;
+  category?: string;
+  cat?: string;
+  store?: string;
+  brand?: string;
+  location?: string;
+  [key: string]: any;
 }
 
 export interface WishlistCollection extends BaseDocument {

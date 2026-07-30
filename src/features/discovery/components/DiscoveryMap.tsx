@@ -1,12 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { storeService } from '../../stores/services/storeService';
-import { MapPin } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { MapPin, Store as StoreIcon, ExternalLink, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface DiscoveryMapProps {
   items?: any[];
@@ -45,35 +46,176 @@ const DARK_MAP_STYLES = [
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
 ];
 
+// Helper to safely parse lat/lng from location string ("-6.1630, 35.7516") or object
+const parseStoreLocation = (locField: any): { lat: number; lng: number } | null => {
+  if (!locField) return null;
+  if (typeof locField === 'object') {
+    const lat = Number(locField.lat ?? locField.latitude);
+    const lng = Number(locField.lng ?? locField.longitude);
+    if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
+      return { lat, lng };
+    }
+  }
+  if (typeof locField === 'string') {
+    const parts = locField.split(/[,;\s]+/).map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const lat = parseFloat(parts[0]);
+      const lng = parseFloat(parts[1]);
+      if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
+        return { lat, lng };
+      }
+    }
+  }
+  return null;
+};
+
+// High-visibility stable SVG pin marker icon using System Primary Color (#F99420)
+const STORE_PIN_ICON = {
+  url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="19" cy="19" r="16" fill="#F99420" stroke="#ffffff" stroke-width="3.5"/>
+      <path d="M19 9L27 15.5V26H11V15.5L19 9Z" fill="white"/>
+      <rect x="16" y="19" width="6" height="7" fill="#F99420"/>
+    </svg>
+  `)}`,
+};
+
 export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
   const { isDark } = useThemeStore();
   const { currentLocation } = useLocationStore();
   const navigate = useNavigate();
-  const [selectedStore, setSelectedStore] = React.useState<any>(null);
+  const [hoveredStore, setHoveredStore] = useState<any>(null);
+  const [selectedStore, setSelectedStore] = useState<any>(null);
+  const [foodStores, setFoodStores] = useState<any[]>([]);
+
+  // Fetch store markers from Firestore "foodStores" collection
+  useEffect(() => {
+    try {
+      const storesRef = collection(db, 'foodStores');
+      const unsubscribe = onSnapshot(storesRef, (snapshot) => {
+        const list: any[] = [];
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          const storeName = data.store || data.name || data.storeName || '';
+          const pos = parseStoreLocation(data.location);
+
+          if (pos && storeName) {
+            list.push({
+              id: docSnap.id,
+              ...data,
+              storeName,
+              locationPos: pos,
+              availability: data.availability !== false && data.available !== false,
+            });
+          }
+        });
+        setFoodStores(list);
+      }, (err) => {
+        console.warn('Error subscribing to foodStores for DiscoveryMap:', err);
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('foodStores listener error:', e);
+    }
+  }, []);
+
+  // Compute final markers to display with proximity offset so nearby stores don't overlap
+  const storeMarkers = useMemo(() => {
+    const rawList = foodStores.length > 0 ? foodStores : (items.length > 0 ? items : storeService.getMockStores()).map((item) => {
+      const pos = parseStoreLocation(item.location) || (typeof item.location === 'object' && item.location.lat ? item.location : null);
+      const storeName = item.store || item.name || item.storeName || 'Store';
+      return {
+        id: item.id || item.objectID || `store_${Math.random()}`,
+        ...item,
+        storeName,
+        locationPos: pos,
+        availability: item.availability !== false && item.available !== false,
+      };
+    }).filter((s) => s.locationPos !== null);
+
+    // Apply geometric fan-out offset for stores located very close to each other
+    const adjusted: any[] = [];
+    const minDistance = 0.00035; // ~35 meters threshold
+
+    for (let i = 0; i < rawList.length; i++) {
+      let { lat, lng } = rawList[i].locationPos;
+      let count = 0;
+
+      for (let j = 0; j < i; j++) {
+        const prevLat = adjusted[j].locationPos.lat;
+        const prevLng = adjusted[j].locationPos.lng;
+        const dist = Math.hypot(lat - prevLat, lng - prevLng);
+        if (dist < minDistance) {
+          count++;
+        }
+      }
+
+      if (count > 0) {
+        const angle = count * (2 * Math.PI / 6);
+        const radius = minDistance * Math.ceil(count / 6);
+        lat += radius * Math.cos(angle);
+        lng += radius * Math.sin(angle);
+      }
+
+      adjusted.push({
+        ...rawList[i],
+        locationPos: { lat, lng },
+      });
+    }
+
+    return adjusted;
+  }, [foodStores, items]);
 
   const center = useMemo(() => {
     if (currentLocation) {
       return { lat: currentLocation.lat, lng: currentLocation.lng };
     }
+    if (storeMarkers.length > 0 && storeMarkers[0].locationPos) {
+      return storeMarkers[0].locationPos;
+    }
     return defaultCenter;
-  }, [currentLocation]);
-
-  const displayItems = useMemo(() => {
-    if (items && items.length > 0) return items;
-    return storeService.getMockStores();
-  }, [items]);
+  }, [currentLocation, storeMarkers]);
 
   const isGoogleLoaded = typeof window !== 'undefined' && !!(window as any).google?.maps;
 
+  const handleOpenStore = (storeObj: any) => {
+    const targetStoreName = storeObj.storeName || storeObj.store || storeObj.name || storeObj.id;
+    const storeImage = storeObj.imgURL || storeObj.imgUrl || storeObj.image || storeObj.imageUrl || '';
+    const storeCategory = storeObj.cat || storeObj.category || 'Food';
+    const storeAvailability = storeObj.availability !== undefined ? Boolean(storeObj.availability) : (storeObj.available !== false);
+
+    // Pass image, category & availability via React Router location state so StoreDetailsPage opens with exact state
+    navigate(`/store/${encodeURIComponent(targetStoreName)}`, {
+      state: {
+        storeData: {
+          id: storeObj.id,
+          store: targetStoreName,
+          name: targetStoreName,
+          imgURL: storeImage,
+          category: storeCategory,
+          cat: storeCategory,
+          availability: storeAvailability,
+          description: storeObj.description || '',
+          location: storeObj.locationPos || storeObj.location,
+          address: storeObj.address || 'Dodoma, Tanzania',
+          rating: storeObj.rating || 4.8,
+        }
+      }
+    });
+  };
+
+  const activeStore = hoveredStore || selectedStore;
+
   return (
-    <div className="relative w-full h-[300px] md:h-[500px] rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-border group">
-      <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border shadow-md">
-        <h3 className="text-sm font-extrabold flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-primary" />
-          Places Near You
-        </h3>
+    <div className="relative w-full h-[320px] md:h-[520px] rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-border group">
+      {/* Top Header Badge */}
+      <div className="absolute top-4 left-4 z-10 bg-background/90 backdrop-blur-md px-4 py-2 rounded-full border border-border shadow-md flex items-center gap-2">
+        <MapPin className="w-4 h-4 text-primary animate-pulse" />
+        <span className="text-sm font-extrabold text-foreground">
+          Stores & Outlets ({storeMarkers.length})
+        </span>
       </div>
-      
+
       {isGoogleLoaded ? (
         <GoogleMap
           mapContainerStyle={containerStyle}
@@ -93,39 +235,87 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
                 url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
               }}
               zIndex={999}
+              title="Your Location"
             />
           )}
 
-          {/* Store/Item Pins */}
-          {displayItems.map((item) => (
-            item.location && (
-              <MarkerF
-                key={item.id || item.objectID}
-                position={item.location}
-                icon={{
-                  url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                }}
-                onClick={() => setSelectedStore(item)}
-              />
-            )
+          {/* Interactive Stable Store Markers */}
+          {storeMarkers.map((store) => (
+            <MarkerF
+              key={store.id}
+              position={store.locationPos}
+              title={store.storeName}
+              icon={STORE_PIN_ICON}
+              onMouseOver={() => setHoveredStore(store)}
+              onClick={() => {
+                setSelectedStore(store);
+                handleOpenStore(store);
+              }}
+            />
           ))}
 
-          {selectedStore && selectedStore.location && (
+          {/* Floating Preview Modal Anchored Directly on Top of the Hovered Marker */}
+          {activeStore && activeStore.locationPos && (
             <InfoWindowF
-              position={selectedStore.location}
-              onCloseClick={() => setSelectedStore(null)}
+              position={activeStore.locationPos}
+              onCloseClick={() => {
+                setSelectedStore(null);
+                setHoveredStore(null);
+              }}
+              options={{
+                pixelOffset: typeof window !== 'undefined' && (window as any).google?.maps ? new (window as any).google.maps.Size(0, -35) : undefined,
+              }}
             >
-              <div className="p-1 max-w-[200px]">
-                <div className="w-full h-24 rounded-lg overflow-hidden mb-2">
-                  <img src={selectedStore.imgURL || selectedStore.imgUrl || selectedStore.image || selectedStore.imageUrl} alt={selectedStore.name || selectedStore.store} className="w-full h-full object-cover" />
+              <div 
+                className="w-[240px] flex flex-col items-start justify-start text-left gap-2 cursor-pointer p-1.5 pb-4 text-slate-900"
+                onClick={() => handleOpenStore(activeStore)}
+              >
+                {/* Store Preview Image */}
+                <div className="w-full h-28 rounded-xl overflow-hidden relative bg-slate-100 border border-slate-200 shrink-0 group">
+                  <img 
+                    src={activeStore.imgURL || activeStore.imgUrl || activeStore.image || activeStore.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400'} 
+                    alt={activeStore.storeName} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 </div>
-                <h4 className="font-extrabold text-sm text-gray-900 leading-tight">{selectedStore.name || selectedStore.store}</h4>
-                <p className="text-xs text-gray-600 line-clamp-1 mb-2">{selectedStore.categories?.join(', ') || selectedStore.category}</p>
+
+                {/* Header Row: Category Badge (Far Left) & Availability (Far Right) */}
+                <div className="flex items-center justify-between w-full gap-2 mt-1">
+                  <span 
+                    className="text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-sm truncate max-w-[130px] text-left"
+                    style={{ backgroundColor: 'rgba(249, 148, 32, 0.15)', color: '#F99420' }}
+                  >
+                    {activeStore.cat || activeStore.category || 'Store'}
+                  </span>
+
+                  <span className={`text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full text-white shadow-sm shrink-0 ml-auto ${activeStore.availability !== false ? 'bg-emerald-500' : 'bg-slate-500'}`}>
+                    {activeStore.availability !== false ? 'OPEN' : 'CLOSED'}
+                  </span>
+                </div>
+
+                {/* Store Name & Description (High-contrast explicit text colors for InfoWindow visibility) */}
+                <div className="flex flex-col items-start justify-start text-left w-full space-y-0.5 mt-0.5">
+                  <h4 className="font-extrabold text-sm leading-tight line-clamp-1 text-slate-900 text-left w-full">
+                    {activeStore.storeName}
+                  </h4>
+
+                  <p className="text-[11px] font-medium text-slate-600 line-clamp-2 text-left w-full leading-snug">
+                    {activeStore.description || activeStore.address || 'Explore full menu, pricing, and available store items.'}
+                  </p>
+                </div>
+
+                {/* Action Button with extra top & bottom padding */}
                 <button 
-                  onClick={() => navigate(selectedStore.recordType === 'store' ? `/store/${selectedStore.id || selectedStore.objectID}` : `/product/${selectedStore.id || selectedStore.objectID}`)}
-                  className="w-full py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenStore(activeStore);
+                  }}
+                  className="w-full py-2.5 px-3.5 text-white text-xs font-extrabold rounded-xl transition-all shadow-md flex items-center justify-between mt-2 mb-2 active:scale-95 hover:opacity-90 cursor-pointer"
+                  style={{ backgroundColor: '#F99420' }}
                 >
-                  View Details
+                  <span>Open Store</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
                 </button>
               </div>
             </InfoWindowF>
@@ -149,3 +339,5 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
     </div>
   );
 };
+
+

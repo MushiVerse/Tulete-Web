@@ -203,6 +203,20 @@ export const StoreDetailsPage = () => {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [algoliaStoreProducts, setAlgoliaStoreProducts] = useState<any[]>([]);
   
+  // Image Viewer Modal state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerTitle, setViewerTitle] = useState('');
+
+  const openImageViewer = (imgs: string[], index = 0, title?: string) => {
+    if (!imgs || imgs.length === 0) return;
+    setViewerImages(imgs);
+    setViewerIndex(index);
+    setViewerTitle(title || store?.store || 'Image Preview');
+    setViewerOpen(true);
+  };
+  
   // Local persistence for favorites
   const [isFavorite, setIsFavorite] = useState(() => {
     const saved = localStorage.getItem('tulete_favorite_stores');
@@ -225,14 +239,22 @@ export const StoreDetailsPage = () => {
     navigate('/cart');
   };
 
+  const decodedId = id ? decodeURIComponent(id) : '';
+
   const { data: dbStore, isLoading: isStoreLoading } = useFirestoreDocument(
     ['store', id || ''],
     storeService,
     id || ''
   );
   
-
-  const decodedId = id ? decodeURIComponent(id) : '';
+  const { data: dbStoresByName } = useFirestoreQuery(
+    ['store_by_name', decodedId],
+    storeService,
+    {
+      filters: decodedId ? [{ field: 'store', operator: '==' as const, value: decodedId }] : []
+    }
+  );
+  const dbStoreByName = dbStoresByName?.data && dbStoresByName.data.length > 0 ? dbStoresByName.data[0] : null;
 
   const mockMatch = storeService.getMockStores().find((s) => 
     s.id === id || s.id === decodedId || 
@@ -255,7 +277,17 @@ export const StoreDetailsPage = () => {
     isVerified: true
   };
 
-  const store = routeStoreData || dbStore || mockMatch || fallbackStore;
+  const passedStoreData = location.state?.storeData || location.state?.store;
+  const baseStore = routeStoreData || dbStore || dbStoreByName || mockMatch || fallbackStore;
+
+  const store: Store = {
+    ...baseStore,
+    imgURL: passedStoreData?.imgURL || passedStoreData?.imgUrl || passedStoreData?.image || baseStore.imgURL || (baseStore as any)?.imgUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+    category: passedStoreData?.cat || passedStoreData?.category || baseStore.category || baseStore.cat || 'Food',
+    cat: passedStoreData?.cat || passedStoreData?.category || baseStore.cat || baseStore.category || 'Food',
+    availability: passedStoreData?.availability !== undefined ? Boolean(passedStoreData.availability) : baseStore.availability,
+  };
+
   const rawStoreName = store?.store || store?.name || fromProduct?.store || (decodedId && decodedId !== 's1' && decodedId !== 'undefined' ? decodedId : '');
   const targetStoreName = rawStoreName.toLowerCase().trim();
   const targetStoreId = (id || store?.id || fromProduct?.storeId || '').toLowerCase().trim();
@@ -528,8 +560,9 @@ export const StoreDetailsPage = () => {
   if (isStoreLoading || isProductsLoading) {
     return (
       <PageContainer>
-        <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
-          {/* Left Sidebar Skeleton (Desktop) */}
+        <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative justify-start items-start">
+          <div className="w-full flex h-full overflow-hidden relative justify-start items-start">
+            {/* Left Sidebar Skeleton (Desktop) */}
           <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full p-6 space-y-4">
             <div className="h-4 w-32 bg-muted rounded-md animate-pulse mb-6" />
             <div className="h-3 w-24 bg-muted rounded-md animate-pulse uppercase" />
@@ -597,6 +630,7 @@ export const StoreDetailsPage = () => {
             </div>
           </div>
         </div>
+        </div>
       </PageContainer>
     );
   }
@@ -647,7 +681,8 @@ export const StoreDetailsPage = () => {
 
   return (
     <PageContainer>
-      <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative">
+      <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative justify-start items-start">
+        <div className="w-full flex h-full overflow-hidden relative justify-start items-start">
         
         {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
@@ -709,7 +744,10 @@ export const StoreDetailsPage = () => {
           </div>
 
       {/* Hero Banner details */}
-      <div className="relative h-60 md:h-72 rounded-3xl overflow-hidden mb-6 shadow-md border border-border bg-slate-100 dark:bg-slate-900">
+      <div 
+        onClick={() => store?.imgURL && openImageViewer([store.imgURL], 0, store.store)}
+        className="relative h-60 md:h-72 rounded-3xl overflow-hidden mb-6 shadow-md border border-border bg-slate-100 dark:bg-slate-900 cursor-pointer group"
+      >
         <img 
           src={store.imgURL} 
           alt={store.store} 
@@ -1063,12 +1101,12 @@ export const StoreDetailsPage = () => {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {(store.gallery || []).map((imgUrl, i) => (
-                  <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm bg-slate-100">
+                  <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm bg-slate-100 dark:bg-slate-900 border border-border">
                     <img 
                       src={imgUrl} 
                       alt={`Gallery ${i}`} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => window.open(imgUrl, '_blank')}
+                      onClick={() => openImageViewer(store.gallery || [imgUrl], i, `${store.store} Photo Gallery`)}
                     />
                   </div>
                 ))}
@@ -1157,6 +1195,7 @@ export const StoreDetailsPage = () => {
           )}
         </AnimatePresence>
 
+      </div>
       </div>
     </PageContainer>
   );
