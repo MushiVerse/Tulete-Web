@@ -180,7 +180,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                   }`}
               >
                 <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false ? 'fill-current' : ''}`} />
-                Pick Up (No Distance Fee)
+                Pick Up (No Delivery)
               </button>
             </div>
           );

@@ -161,6 +161,19 @@ function getTimeInMs(order: Order): number {
   return 0;
 }
 
+function removeUndefinedFields(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(removeUndefinedFields);
+  
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = removeUndefinedFields(value);
+    }
+  }
+  return cleaned;
+}
+
 class OrderService extends BaseFirestoreService<Order> {
   constructor() {
     super('orders');
@@ -180,11 +193,11 @@ class OrderService extends BaseFirestoreService<Order> {
       ? doc(db, targetCollection, customId) 
       : doc(collection(db, targetCollection));
 
-    const payload = {
+    const payload = removeUndefinedFields({
       ...data,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    };
+    });
 
     await setDoc(docRef, payload);
     return { id: docRef.id, ...payload } as Order;
@@ -520,23 +533,11 @@ class OrderService extends BaseFirestoreService<Order> {
           combinedName += ' [EXPRESS SERVICE]';
         }
 
-        let totalLaundryPrice = 0;
-        let totalLaundryCount = 0;
-
-        for (const item of laundryItems) {
-          let lineTotal = item.price * item.quantity;
-          if (ratios) {
-            if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * (ratios.iron - ratios.wash);
-            if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * (ratios.package - ratios.wash);
-            if ((item as any).vipSelected) lineTotal += (item.price * item.quantity) * (ratios.vip - ratios.wash);
-          } else {
-            if ((item as any).ironingSelected) lineTotal += (item.price * item.quantity) * 0.95;
-            if ((item as any).packagingSelected) lineTotal += (item.price * item.quantity) * 2.9;
-            if ((item as any).vipSelected) lineTotal += (item.price * item.quantity) * 4.3;
-          }
-          totalLaundryPrice += lineTotal;
-          totalLaundryCount += item.quantity;
-        }
+        const totalLaundryCount = laundryItems.reduce((acc, item) => acc + item.quantity, 0);
+        const calculatedItemSum = laundryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const finalLaundryPrice = (order.totalAmount && order.totalAmount > 0)
+          ? Math.round(order.totalAmount)
+          : Math.round(calculatedItemSum + (order.deliveryFee || 0));
 
         const firstItem = laundryItems[0];
         const timestamp = String(Date.now() % 100000).padStart(5, '0');
@@ -572,7 +573,7 @@ class OrderService extends BaseFirestoreService<Order> {
           uname: order.uname || 'Web User',
           no: order.contactPhone || '0000000000',
           name: combinedName,
-          price: Math.round(totalLaundryPrice),
+          price: finalLaundryPrice,
           deliveryfee: 0,
           imgURL: toSingleImageUrl(firstItem.imageUrl),
           chose: true,
@@ -580,7 +581,7 @@ class OrderService extends BaseFirestoreService<Order> {
           location: resolveDeliveryLocationString(order.deliveryLocation),
           count: totalLaundryCount,
           store: order.storeName || 'Tulete Laundry',
-          total: Math.round(totalLaundryPrice),
+          total: finalLaundryPrice,
           irondelivery: isIron,
           packagepickup: isPackage,
           express: isExpress,
@@ -618,7 +619,7 @@ class OrderService extends BaseFirestoreService<Order> {
           instructions: laundryInstructionsText,
           status: 'received',
           paid: true,
-          price: Math.round(totalLaundryPrice).toString(),
+          price: finalLaundryPrice.toString(),
           quantity: totalLaundryCount,
           uname: order.uname || 'Web User',
           email: order.email || 'web@tulete.net',
@@ -632,18 +633,28 @@ class OrderService extends BaseFirestoreService<Order> {
 
         // A. Add to global `newcomfirmedorders` (Admin/Driver feed)
         const globalRef = collection(db, 'newcomfirmedorders');
-        await setDoc(doc(globalRef, laundryDocId), laundryPayload);
+        await setDoc(doc(globalRef, laundryDocId), removeUndefinedFields(laundryPayload));
 
         // B. Add to main `orders` collection (using specific 'orders' schema)
         const mainOrdersRef = doc(db, 'orders', laundryDocId);
-        await setDoc(mainOrdersRef, laundryOrdersPayload);
+        await setDoc(mainOrdersRef, removeUndefinedFields(laundryOrdersPayload));
       }
 
       // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY (matching cartsHome.dart)
       for (const item of otherItems) {
         const cat = (item as any).cat || (item as any).category || 'Product';
         const slot = (item as any).deliverySlot;
-        let finalDeliveryTime = slot || (cat === 'Product' ? 'Product' : 'ASAP');
+        const isPickUp = (item as any).isDeliverySelected === false;
+        const isFood = String(cat).toLowerCase() === 'food';
+
+        let finalDeliveryTime = 'Product';
+        if (isPickUp) {
+          finalDeliveryTime = 'Pickup';
+        } else if (isFood) {
+          finalDeliveryTime = slot || 'ASAP';
+        } else {
+          finalDeliveryTime = 'Product';
+        }
         const lineTotal = item.price * item.quantity;
         const itemDocId = `${item.productId || 'item'}_${webOrderId}`;
 
@@ -688,7 +699,7 @@ class OrderService extends BaseFirestoreService<Order> {
 
         // Write to global `newcomfirmedorders` (matching cartsHome.dart)
         const globalRef = collection(db, 'newcomfirmedorders');
-        await setDoc(doc(globalRef, itemDocId), itemPayload);
+        await setDoc(doc(globalRef, itemDocId), removeUndefinedFields(itemPayload));
       }
     } catch (e) {
       console.error('Failed to create live flutter orders:', e);
@@ -701,30 +712,29 @@ class OrderService extends BaseFirestoreService<Order> {
    * 3. newcomfirmedorders (global)           — sets cancel: true on all docs linked by webOrderId
    */
   async cancelOrder(orderId: string): Promise<void> {
-    const batch = writeBatch(db);
+    try {
+      // 1. Update the web app's order document in 'orders' if it exists
+      const orderRef = doc(db, 'orders', orderId);
+      const orderSnap = await getDoc(orderRef);
+      if (orderSnap.exists()) {
+        await setDoc(orderRef, { status: 'Cancelled', updatedAt: serverTimestamp() }, { merge: true });
+      }
 
-    // 1. Update the web app's order document (checking 'orders' or 'newcomfirmedorders')
-    const orderRef = doc(db, 'orders', orderId);
-    const orderSnap = await getDoc(orderRef);
-    if (orderSnap.exists()) {
-      batch.update(orderRef, { status: 'Cancelled', updatedAt: serverTimestamp() });
-    } else {
+      // 2. Update order document in 'newcomfirmedorders' if it exists directly by ID
       const ncRef = doc(db, 'newcomfirmedorders', orderId);
       const ncSnap = await getDoc(ncRef);
       if (ncSnap.exists()) {
-        batch.update(ncRef, { status: 'Cancelled', cancel: true, updatedAt: serverTimestamp() });
+        await setDoc(ncRef, { status: 'Cancelled', cancel: true, updatedAt: serverTimestamp() }, { merge: true });
       }
-    }
 
-    // 2. Update tracking document
-    const trackingRef = doc(db, 'tracking', orderId);
-    batch.update(trackingRef, { status: 'Cancelled', updatedAt: serverTimestamp() });
+      // 3. Safely update tracking document if it exists
+      const trackingRef = doc(db, 'tracking', orderId);
+      const trackingSnap = await getDoc(trackingRef);
+      if (trackingSnap.exists()) {
+        await setDoc(trackingRef, { status: 'Cancelled', updatedAt: serverTimestamp() }, { merge: true });
+      }
 
-    // Commit web app docs first
-    await batch.commit();
-
-    // 3. Update all Flutter newcomfirmedorders docs linked by webOrderId
-    try {
+      // 4. Update all Flutter newcomfirmedorders docs linked by webOrderId
       const globalQ = query(
         collection(db, 'newcomfirmedorders'),
         where('webOrderId', '==', orderId)
@@ -733,12 +743,13 @@ class OrderService extends BaseFirestoreService<Order> {
       if (!globalSnap.empty) {
         const flutterBatch = writeBatch(db);
         globalSnap.docs.forEach((d) => {
-          flutterBatch.update(d.ref, { cancel: true, updatedAt: serverTimestamp() });
+          flutterBatch.update(d.ref, { cancel: true, status: 'Cancelled', updatedAt: serverTimestamp() });
         });
         await flutterBatch.commit();
       }
     } catch (e) {
-      console.error('Failed to cancel Flutter newcomfirmedorders:', e);
+      console.error('Failed to cancel order:', e);
+      throw e;
     }
   }
 }

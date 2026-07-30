@@ -10,7 +10,7 @@ import { Label } from '../../../shared/components/ui/Label';
 import { Textarea } from '../../../shared/components/ui/Textarea';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
-import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck } from 'lucide-react';
+import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck, Sparkles, Zap } from 'lucide-react';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
 import { useLocationStore } from '../../location/store/useLocationStore';
@@ -51,7 +51,7 @@ export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user, savedPhoneNumber, savePhoneNumber } = useAuthStore();
   const { items, getTotals, clearCart, laundryPreferences, getDynamicItemPrices } = useCartStore();
-  const { subtotal, total, deliveryFee } = getTotals();
+  const { subtotal, total, deliveryFee, expressFee = 0, pickupFee = 0, serviceFee = 0 } = getTotals();
 
   const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
   const { deliverytime, instructions: laundryInstructions } = laundryPreferences || {};
@@ -164,6 +164,8 @@ export const CheckoutPage = () => {
         }, 0);
 
         const groupDeliveryFee = Math.round(computedDeliveryFee / numGroups);
+        const groupExtraLaundryCharges = isLaundryGroup ? (expressFee + pickupFee + serviceFee) : 0;
+        const groupTotalAmount = Math.round(groupSubtotal + groupDeliveryFee + groupExtraLaundryCharges);
 
         const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
           userId: user.id,
@@ -177,15 +179,16 @@ export const CheckoutPage = () => {
               name: item.name,
               price: unitPrice,
               quantity: item.quantity,
-              imageUrl: item.imageUrl,
-              cat: item.cat,
-              deliverySlot: (item as any).deliverySlot,
-              ironingSelected: (item as any).ironingSelected,
-              packagingSelected: (item as any).packagingSelected,
-              vipSelected: (item as any).vipSelected,
+              imageUrl: item.imageUrl || '',
+              cat: item.cat || '',
+              deliverySlot: (item as any).deliverySlot || null,
+              isDeliverySelected: item.isDeliverySelected,
+              ironingSelected: (item as any).ironingSelected || false,
+              packagingSelected: (item as any).packagingSelected || false,
+              vipSelected: (item as any).vipSelected || false,
             };
           }),
-          totalAmount: Math.round(groupSubtotal + groupDeliveryFee),
+          totalAmount: groupTotalAmount,
           deliveryFee: groupDeliveryFee,
           status: 'Pending',
           storeId: group.storeId,
@@ -441,7 +444,24 @@ export const CheckoutPage = () => {
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
                 </div>
-                {/* Delivery Fee hidden per request, sum remains identical */}
+                {serviceFee > 0 && (
+                  <div className="flex justify-between text-primary font-bold text-xs">
+                    <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> Service Charge (5%)</span>
+                    <span>+{formatPrice(serviceFee)} {APP_SETTINGS.currency}</span>
+                  </div>
+                )}
+                {expressFee > 0 && (
+                  <div className="flex justify-between text-primary font-bold text-xs">
+                    <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-primary fill-primary/20" /> Express Charges</span>
+                    <span>+{formatPrice(expressFee)} {APP_SETTINGS.currency}</span>
+                  </div>
+                )}
+                {pickupFee > 0 && (
+                  <div className="flex justify-between text-primary font-bold text-xs">
+                    <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-primary" /> Preferred Pickup Charge</span>
+                    <span>+{formatPrice(pickupFee)} {APP_SETTINGS.currency}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-lg font-extrabold text-foreground border-t border-border/50 pt-3">
                   <span>Total to Pay</span>
                   <span className="text-primary">{formatPrice(finalTotalWithDelivery)} {APP_SETTINGS.currency}</span>
