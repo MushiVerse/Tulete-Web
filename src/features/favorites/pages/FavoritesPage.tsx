@@ -16,6 +16,9 @@ import {
   Trash2, ShoppingCart, Star, Eye, ExternalLink, Sparkles, X, Store as StoreIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 import { APP_SETTINGS } from '@/core/config/settings';
 
 export const FavoritesPage = () => {
@@ -33,6 +36,9 @@ export const FavoritesPage = () => {
   const [newWishlistDesc, setNewWishlistDesc] = useState('');
   const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
 
+  const { user, isAuthenticated } = useAuthStore();
+  const [firestoreFavorites, setFirestoreFavorites] = useState<any[]>([]);
+
   const { 
     favorites, 
     wishlists, 
@@ -45,10 +51,63 @@ export const FavoritesPage = () => {
 
   const { addToCart } = useCartStore();
 
-  // Initialize
+  // Initialize store
   useEffect(() => {
     initialize('user_current');
   }, [initialize]);
+
+  // Live Firestore subscription for userfavorites collection
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      setFirestoreFavorites([]);
+      return;
+    }
+    try {
+      const ref = collection(db, 'userfavorites', user.id, 'favorites');
+      const unsubscribe = onSnapshot(ref, (snap) => {
+        const list: any[] = [];
+        snap.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data.fav !== false) {
+            list.push({
+              id: docSnap.id,
+              itemId: data.foodId || data.id || docSnap.id,
+              userId: user.id,
+              type: data.type || (data.category === 'Store' ? 'store' : 'product'),
+              name: data.name || data.nam1 || 'Favorite Item',
+              description: data.description || data.desc || '',
+              imageUrl: data.imgURL || data.img1 || data.imgUrl || '',
+              price: Number(data.price || data.price1 || 0),
+              rating: Number(data.rating || 4.8),
+              reviewCount: Number(data.reviewCount || 1),
+              time: data.time || data.updatedAt || data.createdAt || '',
+            });
+          }
+        });
+
+        // Arrange in descending order using "time" field
+        list.sort((a, b) => {
+          const getTimeMs = (item: any) => {
+            const rawTime = item.time || item.createdAt || item.updatedAt;
+            if (!rawTime) return 0;
+            if (rawTime instanceof Date) return rawTime.getTime();
+            return new Date(rawTime).getTime() || 0;
+          };
+          return getTimeMs(b) - getTimeMs(a);
+        });
+
+        setFirestoreFavorites(list);
+      }, (err) => {
+        console.warn('Error listening to userfavorites in FavoritesPage:', err);
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('userfavorites listener error:', e);
+    }
+  }, [user?.id, isAuthenticated]);
+
+  // Combined favorites: prefers live Firestore favorites if available, fallback to store favorites
+  const activeFavorites = (isAuthenticated && firestoreFavorites.length > 0) ? firestoreFavorites : favorites;
 
   // Handle toggle remove
   const handleRemove = (itemId: string, type: 'store' | 'product' | 'service', name: string) => {
@@ -62,7 +121,7 @@ export const FavoritesPage = () => {
   };
 
   // Filter & Sort favorites
-  const filteredFavorites = favorites
+  const filteredFavorites = activeFavorites
     .filter((fav) => {
       // Category type filter
       if (favoriteTypeFilter === 'store' && fav.type !== 'store') return false;
@@ -83,8 +142,14 @@ export const FavoritesPage = () => {
       if (sortBy === 'price_high') {
         return (b.price || 0) - (a.price || 0);
       }
-      // 'recent' fallback
-      return 1; // standard list order
+      // 'recent' sorting: arrange in descending order using "time" field
+      const getTimeMs = (item: any) => {
+        const rawTime = item.time || item.createdAt || item.updatedAt;
+        if (!rawTime) return 0;
+        if (rawTime instanceof Date) return rawTime.getTime();
+        return new Date(rawTime).getTime() || 0;
+      };
+      return getTimeMs(b) - getTimeMs(a);
     });
 
   // Handle wishlist folder creation

@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
   MapPin, Star, Plus, Minus, Trash2, ShieldCheck, 
-  ShoppingBag, Flame, Clock, Navigation, Phone
+  ShoppingBag, Flame, Clock, Navigation, Phone, Heart
 } from 'lucide-react';
+import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
@@ -70,6 +71,9 @@ const PROMOS = [
 
 const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const { isFavorited, toggleFavorite } = useFavoritesStore();
+  
   if (meal.availability === false || meal.availability === 'false' || meal.available === false || meal.isAvailable === false) {
     return null;
   }
@@ -77,6 +81,26 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
   const mealCat = (meal as any)?.cat || meal.category || 'Food';
   const dynamicPrice = useDynamicPrice(meal.price, meal.storeId, mealCat === 'Nguo', meal.location, undefined, mealCat);
   const isSoldOut = (meal.quantity !== undefined && meal.quantity <= 0) || (meal.idadi !== undefined && meal.idadi <= 0);
+  const isFav = isFavorited(meal.id);
+
+  const handleToggleFav = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    toggleFavorite(user?.id || 'guest_user', {
+      type: 'product',
+      itemId: meal.id,
+      name: meal.name,
+      description: meal.description || '',
+      imageUrl: meal.imgUrl || '',
+      price: meal.price,
+      rating: meal.rating,
+      reviewCount: meal.reviewCount,
+      category: mealCat,
+      cat: mealCat,
+      store: meal.store || '',
+      location: meal.location || '',
+    });
+  };
 
   return (
     <motion.div
@@ -89,10 +113,19 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
     >
       <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
         <img src={meal.imgUrl} alt={meal.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm z-10">
           <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
           <span className="text-xs font-extrabold">{meal.rating}</span>
         </div>
+
+        {/* Favorite Button (Bottom Left of Item Image) */}
+        <button 
+          onClick={handleToggleFav}
+          className="absolute bottom-2 left-2 z-20 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
+          title={isFav ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${isFav ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+        </button>
         {/* Floating quantity left badge in top right corner of image */}
         {(() => {
           const stockVal = meal.quantity !== undefined ? meal.quantity : meal.idadi;

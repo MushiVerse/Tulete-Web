@@ -22,7 +22,7 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { locationService } from '../../location/services/locationService';
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 
@@ -156,7 +156,7 @@ export const ProductDetailPage = () => {
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   
-  const { isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
 
   // Fetch specific product using decoded ID
@@ -181,6 +181,125 @@ export const ProductDetailPage = () => {
   const targetSubSubCat = (product as any)?.subSubCat || (product as any)?.subSubCategory || (product as any)?.speccat;
   const targetSubCat = (product as any)?.subCat || (product as any)?.subCategory || (product as any)?.scat;
   const isLaundryProduct = targetCollection === 'cloths';
+
+  // ── Record to userViewed (Only Products and Foods, NOT Laundry items) ──
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id || !product?.id) return;
+
+    const itemCat = (product as any)?.cat || product?.category || '';
+    const isLaundry = isLaundryProduct || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat);
+
+    // Save subCat preference to localStorage for Recommended for you section
+    const currentSubCat = (product as any)?.subCat || (product as any)?.subCategory || targetSubCat;
+    if (currentSubCat) {
+      try {
+        localStorage.setItem('tulete_recommended_subcat', String(currentSubCat));
+      } catch (e) {}
+    }
+
+    // Only Products and Foods are added to userViewed (Not Laundry items)
+    if (isLaundry) return;
+
+    const docRef = doc(db, 'userViewed', user.id, 'recentlyViewed', product.id);
+
+    getDoc(docRef)
+      .then((docSnap) => {
+        const justPrice = product.price || 0;
+        if (docSnap.exists()) {
+          // Updating price on user recently viewed if it exists (matching ViewDetails.dart L438-L451)
+          updateDoc(docRef, {
+            price: justPrice,
+            time: new Date().toISOString(),
+          }).catch(() => {});
+        } else {
+          // Add new document to userViewed
+          setDoc(docRef, {
+            foodId: product.id,
+            name: product.name || '',
+            price: justPrice,
+            imgURL: (product as any).imgUrl || (product as any).imgURL || '',
+            brand: (product as any).brand || product.store || '',
+            location: (product as any).location || '',
+            description: product.description || '',
+            category: product.category || '',
+            cat: itemCat,
+            subCat: (product as any).subCat || '',
+            subSubCat: (product as any).subSubCat || '',
+            store: product.store || '',
+            quantity: product.quantity ?? 1,
+            availability: product.availability !== false,
+            rate: (product as any).rate || [product.rating || 4.8],
+            time: new Date().toISOString(),
+            userId: user.id,
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated, user?.id, product?.id, isLaundryProduct]);
+
+  // ── Sync & record userfavorites (matching ViewDetails.dart L453-L467) ──
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id || !product?.id) return;
+
+    const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', product.id);
+
+    getDoc(favDocRef)
+      .then((docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.fav !== false) {
+            setIsFavorite(true);
+          }
+          // Updating price on user favorite if it exists
+          if (product.price !== undefined) {
+            updateDoc(favDocRef, {
+              price: product.price,
+            }).catch(() => {});
+          }
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated, user?.id, product?.id]);
+
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      openModal('login');
+      return;
+    }
+    const targetProduct = product || displayProduct;
+    if (!user?.id || !targetProduct?.id) return;
+
+    const nextState = !isFavorite;
+    setIsFavorite(nextState);
+
+    const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', targetProduct.id);
+
+    try {
+      if (nextState) {
+        await setDoc(favDocRef, {
+          foodId: targetProduct.id,
+          name: targetProduct.name || '',
+          price: targetProduct.price || 0,
+          imgURL: (targetProduct as any).imgUrl || (targetProduct as any).imgURL || '',
+          brand: (targetProduct as any).brand || targetProduct.store || '',
+          location: (targetProduct as any).location || '',
+          description: targetProduct.description || '',
+          category: targetProduct.category || '',
+          cat: (targetProduct as any).cat || targetProduct.category || '',
+          store: targetProduct.store || '',
+          fav: true,
+          time: new Date().toISOString(),
+          userId: user.id,
+        }, { merge: true });
+      } else {
+        await updateDoc(favDocRef, { fav: false }).catch(async () => {
+          await deleteDoc(favDocRef);
+        });
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+    }
+  };
 
   // 1. Fetch subSubCat products from targetCollection (for Related section)
   const { data: subSubCatProducts } = useFirestoreQuery(
@@ -507,8 +626,9 @@ export const ProductDetailPage = () => {
                 <Share2 className="w-5 h-5" />
               </button>
               <button 
-                onClick={() => setIsFavorite(!isFavorite)}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
+                onClick={handleToggleFavorite}
+                className="p-2 rounded-full hover:bg-muted transition-colors cursor-pointer"
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               >
                 <Heart className={`w-5 h-5 ${isFavorite ? 'fill-destructive text-destructive' : ''}`} />
               </button>

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
   MapPin, Star, Plus, Minus, Phone, ShieldCheck, 
-  ShoppingBag, Clock, Sparkles, Tag, Trash2
+  ShoppingBag, Clock, Sparkles, Tag, Trash2, Heart
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { ProductCardSkeleton } from '../../../shared/components/ui/Skeleton';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
@@ -30,6 +31,9 @@ import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 
 const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuantity, navigate }: any) => {
+  const { user } = useAuthStore();
+  const { isFavorited, toggleFavorite } = useFavoritesStore();
+
   if (rawProduct.availability === false || rawProduct.availability === 'false' || rawProduct.available === false || rawProduct.isAvailable === false) {
     return null;
   }
@@ -41,6 +45,26 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
   const isLaundryCategory = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
   const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location, undefined, itemCat);
   const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
+  const isFav = isFavorited(product.id);
+
+  const handleToggleFav = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    toggleFavorite(user?.id || 'guest_user', {
+      type: 'product',
+      itemId: product.id,
+      name: product.name,
+      description: product.description || '',
+      imageUrl: product.imgUrl || '',
+      price: product.price,
+      rating: product.rating,
+      reviewCount: product.reviewCount,
+      category: itemCat,
+      cat: itemCat,
+      store: product.store || '',
+      location: product.location || '',
+    });
+  };
 
   return (
     <motion.div
@@ -53,10 +77,19 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
     >
         <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
           <img src={product.imgUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-          <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+          <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm z-10">
             <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
             <span className="text-xs font-extrabold">{product.rating}</span>
           </div>
+
+          {/* Favorite Button (Bottom Left of Item Image) */}
+          <button 
+            onClick={handleToggleFav}
+            className="absolute bottom-2 left-2 z-20 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
+            title={isFav ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${isFav ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+          </button>
           {/* Floating quantity left badge in top right corner of image */}
           {(() => {
             const stockVal = product.quantity !== undefined ? product.quantity : product.idadi;

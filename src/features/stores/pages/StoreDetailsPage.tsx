@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
+import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { locationService } from '../../location/services/locationService';
@@ -28,6 +29,9 @@ import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 
 const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, navigate }: any) => {
+  const { user } = useAuthStore();
+  const { isFavorited, toggleFavorite } = useFavoritesStore();
+
   const productId = prod.id || prod.objectID || prod._id || prod.productId;
   const itemCat = (prod as any)?.cat || prod.category || store.category || 'Product';
   const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(prod.category);
@@ -41,6 +45,26 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
   );
   const cartItem = cartItems.find((ci: any) => ci.productId === productId);
   const isSoldOut = prod.availability === false;
+  const isFav = isFavorited(productId);
+
+  const handleToggleFav = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    toggleFavorite(user?.id || 'guest_user', {
+      type: 'product',
+      itemId: productId,
+      name: prod.name || prod.title || 'Item',
+      description: prod.description || '',
+      imageUrl: prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]) || '',
+      price: prod.price || 0,
+      rating: prod.rating,
+      reviewCount: prod.reviewCount,
+      category: itemCat,
+      cat: itemCat,
+      store: store.store || '',
+      location: prod.location || store.location || '',
+    });
+  };
 
   return (
     <Card 
@@ -51,14 +75,24 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
       }}
       className="p-4 border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all flex gap-4 items-center cursor-pointer group"
     >
-      <img 
-        src={prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
-        alt={prod.name || prod.title || 'Product'} 
-        className="w-20 h-20 rounded-xl object-cover bg-slate-50 flex-shrink-0 group-hover:scale-105 transition-transform"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120";
-        }}
-      />
+      <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-slate-50">
+        <img 
+          src={prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120"} 
+          alt={prod.name || prod.title || 'Product'} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120";
+          }}
+        />
+        {/* Favorite Button (Bottom Left of Item Image) */}
+        <button 
+          onClick={handleToggleFav}
+          className="absolute bottom-1 left-1 z-20 w-6 h-6 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
+          title={isFav ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart className={`w-3 h-3 transition-all duration-200 ${isFav ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+        </button>
+      </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">

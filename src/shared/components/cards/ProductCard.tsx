@@ -74,18 +74,6 @@ export const ProductCard = ({
             )}
           </div>
 
-          {/* Favorite Button */}
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleFavorite?.(product);
-            }}
-            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-sm hover:bg-white/40 active:scale-95 transition-all"
-          >
-            <Heart className={`w-4 h-4 transition-all duration-200 ${isFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white'}`} />
-          </button>
-
           {/* Image Container */}
           <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/50 shrink-0">
             <img 
@@ -95,6 +83,19 @@ export const ProductCard = ({
               loading="lazy"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            {/* Favorite Button (Bottom Left of Item Image) */}
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleFavorite?.(product);
+              }}
+              className="absolute bottom-3 left-3 z-20 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
+              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart className={`w-4 h-4 transition-all duration-200 ${isFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+            </button>
             
             {/* Floating quantity left badge in top right corner of image */}
             {(() => {

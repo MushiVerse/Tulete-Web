@@ -1,5 +1,5 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../../shared/components/layout';
 import { Button } from '../../../shared/components/ui/Button';
@@ -15,6 +15,8 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useCartStore } from '../../cart/store/useCartStore';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { HorizontalCarousel } from '../../../shared/components/ui/HorizontalCarousel';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
@@ -30,6 +32,7 @@ import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOver
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
+import { useNotificationsRealtime } from '../../notifications/hooks/useNotificationsRealtime';
 
 
 /*  Shared Configs  */
@@ -277,6 +280,46 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
   );
 };
 
+/* ── 10-Hour Seed & Seeded Shuffle Helpers ── */
+const get10HourSeed = (): number => {
+  try {
+    const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+    const storedSeed = localStorage.getItem('tulete_home_seed');
+    const storedTime = localStorage.getItem('tulete_home_seed_time');
+    const now = Date.now();
+
+    if (storedSeed && storedTime && (now - Number(storedTime) < TEN_HOURS_MS)) {
+      return Number(storedSeed);
+    }
+    const newSeed = Math.floor(Math.random() * 1000000) + 1;
+    localStorage.setItem('tulete_home_seed', String(newSeed));
+    localStorage.setItem('tulete_home_seed_time', String(now));
+    return newSeed;
+  } catch (e) {
+    return Math.floor(Date.now() / (10 * 60 * 60 * 1000));
+  }
+};
+
+const seededRandom = (seed: number) => {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const shuffleWithSeed = <T,>(array: T[], seed: number): T[] => {
+  const shuffled = [...array];
+  const rand = seededRandom(seed);
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 /*  Main HomePage  */
 export const HomePage = () => {
   const navigate = useNavigate();
@@ -287,6 +330,109 @@ export const HomePage = () => {
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
   const { currentLocation } = useLocationStore();
+  const { unreadCount } = useNotificationsRealtime();
+
+  // 10-Hour Seed for data-level item randomization across all categories
+  const homeSeed = useMemo(() => get10HourSeed(), []);
+
+  // ── Firestore Subscriptions for userViewed & userfavorites ──
+  const [userViewedItems, setUserViewedItems] = useState<Product[]>([]);
+  const [userFavoritesItems, setUserFavoritesItems] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      setUserViewedItems([]);
+      return;
+    }
+    try {
+      const ref = collection(db, 'userViewed', user.id, 'recentlyViewed');
+      const unsubscribe = onSnapshot(ref, (snap) => {
+        const list: Product[] = [];
+        snap.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          list.push({
+            id: data.foodId || data.id || docSnap.id,
+            name: data.name || data.nam1 || 'Viewed Item',
+            price: Number(data.price || data.price1 || 0),
+            oldprice: data.oldprice ? Number(data.oldprice) : undefined,
+            imgUrl: data.imgURL || data.img1 || data.imgUrl || '',
+            storeId: data.storeId || data.store || data.brand || '',
+            store: data.store || data.brand || 'Tulete Store',
+            rating: Number(data.rating || 4.8),
+            reviewCount: Number(data.reviewCount || 1),
+            category: data.category || data.cate || data.cat || 'Product',
+            description: data.description || data.desc || '',
+            availability: data.availability !== false,
+            subCat: data.subCat || data.subCategory || data.speccat || '',
+            time: data.time || data.updatedAt || data.createdAt || '',
+            tags: [],
+          } as any);
+        });
+
+        // Requirement 2: Sort "What interested you lately" in descending order using "time"
+        list.sort((a: any, b: any) => {
+          const timeA = a.time ? new Date(a.time).getTime() : 0;
+          const timeB = b.time ? new Date(b.time).getTime() : 0;
+          return timeB - timeA;
+        });
+
+        setUserViewedItems(list);
+      }, (err) => {
+        console.warn('Error fetching userViewed items:', err);
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('userViewed listener failed:', e);
+    }
+  }, [user?.id, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      setUserFavoritesItems([]);
+      return;
+    }
+    try {
+      const ref = collection(db, 'userfavorites', user.id, 'favorites');
+      const unsubscribe = onSnapshot(ref, (snap) => {
+        const list: Product[] = [];
+        snap.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data.fav !== false) {
+            list.push({
+              id: data.foodId || data.id || docSnap.id,
+              name: data.name || data.nam1 || 'Favorite Item',
+              price: Number(data.price || data.price1 || 0),
+              oldprice: data.oldprice ? Number(data.oldprice) : undefined,
+              imgUrl: data.imgURL || data.img1 || data.imgUrl || '',
+              storeId: data.storeId || data.store || data.brand || '',
+              store: data.store || data.brand || 'Tulete Store',
+              rating: Number(data.rating || 4.8),
+              reviewCount: Number(data.reviewCount || 1),
+              category: data.category || data.cate || data.cat || 'Product',
+              description: data.description || data.desc || '',
+              availability: data.availability !== false,
+              time: data.time || data.updatedAt || data.createdAt || '',
+              tags: [],
+            } as any);
+          }
+        });
+
+        // Sort "What you wish for" items in descending order using "time"
+        list.sort((a: any, b: any) => {
+          const timeA = a.time ? new Date(a.time).getTime() : 0;
+          const timeB = b.time ? new Date(b.time).getTime() : 0;
+          return timeB - timeA;
+        });
+
+        setUserFavoritesItems(list);
+      }, (err) => {
+        console.warn('Error fetching userfavorites items:', err);
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('userfavorites listener failed:', e);
+    }
+  }, [user?.id, isAuthenticated]);
 
   const [filterValue, setFilterValue] = useState<'food' | 'product' | 'laundry' | 'brands' | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<{name: string, category: string} | null>(null);
@@ -381,11 +527,11 @@ export const HomePage = () => {
   const { data: storesData, isLoading: isStoresLoading } = useFirestoreQuery(
     ['stores', 'home'],
     storeService,
-    { limit: 12 }
+    { limit: 40 }
   );
 
-  const processItems = (items: any[], type: 'food' | 'product') => {
-    return items
+  const processItems = (items: any[], type: 'food' | 'product', seedOffset: number = 0) => {
+    const validItems = items
       .filter(item => {
         if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
 
@@ -407,93 +553,80 @@ export const HomePage = () => {
           if (type === 'product' && fee > 10000) return false;
         }
         return true;
-      })
-      .sort((a: any, b: any) => {
-        // Primary sort: time (descending - newest first)
-        const timeA = a.time || a.createdAt || '';
-        const timeB = b.time || b.createdAt || '';
-        if (timeA && timeB) {
-          const timeDiff = String(timeB).localeCompare(String(timeA));
-          if (timeDiff !== 0) return timeDiff;
-        } else if (timeB) {
-          return 1;
-        } else if (timeA) {
-          return -1;
-        }
-
-        // Secondary sort: rating (descending)
-        const getRating = (it: any) => {
-          let rating = 0;
-          let reviewCount = 0;
-          if (Array.isArray(it.rate) && it.rate.length > 0) {
-            const rates = it.rate.map(Number).filter((n: number) => !isNaN(n));
-            reviewCount = rates.length;
-            rating = rates.reduce((s: number, r: number) => s + r, 0) / reviewCount;
-          } else if (it.rating !== undefined && Number(it.rating) > 0) {
-            rating = Number(it.rating);
-            reviewCount = it.reviewCount ? Number(it.reviewCount) : 1;
-          }
-          if (rating === 0 || reviewCount === 0) {
-            rating = 4.5 + ((it.name?.length || it.store?.length || 5) % 5) / 10;
-          }
-          return rating;
-        };
-
-        const ratingA = getRating(a);
-        const ratingB = getRating(b);
-        return ratingB - ratingA;
       });
+
+    // Randomize category items at data level using the 10-hour seed
+    return shuffleWithSeed(validItems, homeSeed + seedOffset);
   };
 
   const stores = storesData?.data || [];
-  const processedStores = stores
-    .filter(s => {
-      if (s.availability === false) return false;
-      if (currentLocation && s.location) {
-        const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
-        if (fee > 10000) return false;
-      }
-      return true;
-    })
-    .sort((a: any, b: any) => {
-      // Primary sort: time (descending)
-      const timeA = a.time || a.createdAt || '';
-      const timeB = b.time || b.createdAt || '';
-      if (timeA && timeB) {
-        const timeDiff = String(timeB).localeCompare(String(timeA));
-        if (timeDiff !== 0) return timeDiff;
-      } else if (timeB) {
-        return 1;
-      } else if (timeA) {
-        return -1;
-      }
-      return (b.rating || 0) - (a.rating || 0);
-    });
+  const validStores = stores.filter(s => {
+    if (s.availability === false) return false;
+    if (currentLocation && s.location) {
+      const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
+      if (fee > 10000) return false;
+    }
+    return true;
+  });
+
+  // Randomize stores at data level using the 10-hour seed
+  const processedStores = shuffleWithSeed(validStores, homeSeed + 400);
 
   const topStores = processedStores;
   const openStores = processedStores;
 
-  const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(['foods', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'foods' }], limit: 8 });
-  const { data: productsData, isLoading: isProductsLoading } = useFirestoreQuery(['products', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'products' }], limit: 8 });
-  const { data: clothsData, isLoading: isClothsLoading } = useFirestoreQuery(['cloths', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'cloths' }], limit: 8 });
+  const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(['foods', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'foods' }], limit: 50 });
+  const { data: productsData, isLoading: isProductsLoading } = useFirestoreQuery(['products', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'products' }], limit: 50 });
+  const { data: clothsData, isLoading: isClothsLoading } = useFirestoreQuery(['cloths', 'home'], productService, { filters: [{ field: '_collection', operator: '==', value: 'cloths' }], limit: 50 });
 
-  const foods = processItems(foodsData?.data || [], 'food');
-  const products = processItems(productsData?.data || [], 'product');
-  const cloths = processItems(clothsData?.data || [], 'product');
+  const foods = processItems(foodsData?.data || [], 'food', 100);
+  const products = processItems(productsData?.data || [], 'product', 200);
+  const cloths = processItems(clothsData?.data || [], 'product', 300);
   
-  // Create allItems without deduplicating incorrectly
-  const allItems = [...foods, ...products, ...cloths];
+  // Create allItems randomized with 10-hour seed
+  const allItems = shuffleWithSeed([...foods, ...products, ...cloths], homeSeed + 500);
 
   let currentItems = allItems;
   if (filterValue === 'food') currentItems = foods;
   if (filterValue === 'product') currentItems = products;
   if (filterValue === 'laundry') currentItems = cloths;
 
-  const recommendedProducts = currentItems.slice(0, 8);
+  // Requirement 1: Recommended for you subCat preference logic (from userViewed & localStorage)
+  const activeRecommendedSubCat = useMemo(() => {
+    if (userViewedItems.length > 0) {
+      const latestItem = userViewedItems[0] as any;
+      const latestSubCat = latestItem.subCat || latestItem.subCategory || latestItem.speccat;
+      if (latestSubCat) {
+        try {
+          localStorage.setItem('tulete_recommended_subcat', String(latestSubCat));
+        } catch (e) {}
+        return String(latestSubCat);
+      }
+    }
+    try {
+      return localStorage.getItem('tulete_recommended_subcat') || null;
+    } catch (e) {
+      return null;
+    }
+  }, [userViewedItems]);
+
+  const recommendedProducts = useMemo(() => {
+    if (activeRecommendedSubCat) {
+      const targetSub = activeRecommendedSubCat.toLowerCase();
+      const matched = currentItems.filter((p: any) => {
+        const pSub = p.subCat || p.subCategory || p.speccat || p.cat || p.category;
+        return pSub && String(pSub).toLowerCase() === targetSub;
+      });
+      if (matched.length > 0) {
+        return matched.slice(0, 8);
+      }
+    }
+    return currentItems.slice(0, 8);
+  }, [currentItems, activeRecommendedSubCat]);
   const mostRatedProducts = [...currentItems].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
   const interestedLately = currentItems.slice(0, 6);
   const wishlistProducts = currentItems.slice(0, 5); // Fallback slice from 0 if there are fewer than 3 items
-  const productsNearMe = [...currentItems].sort(() => 0.5 - Math.random()).slice(0, 8);
+  const productsNearMe = shuffleWithSeed(currentItems, homeSeed + 600).slice(0, 8);
 
   const dailyMeals = foods;
   const dailyDeals = products.filter(p => p.oldprice && p.oldprice > p.price);
@@ -642,10 +775,15 @@ export const HomePage = () => {
             </div>
             <button
               onClick={() => navigate('/notifications')}
-              className="relative w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+              className="relative w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm cursor-pointer"
+              title="Notifications"
             >
               <Bell className="w-6 h-6" />
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-card" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-primary text-primary-foreground text-[11px] font-extrabold rounded-full flex items-center justify-center shadow-md animate-in zoom-in duration-200 border-2 border-background">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -942,10 +1080,10 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 5. What interested you lately */}
-            {interestedLately.length > 0 && (
+            {/* 5. What interested you lately (Only when logged in & has userViewed docs) */}
+            {isAuthenticated && userViewedItems.length > 0 && (
               <HorizontalCarousel title="What interested you lately" icon={<Clock className="w-5 h-5 text-muted-foreground" />} actionLink="/explore" autoScrollSpeed={0.2}>
-                {interestedLately.map(product => (
+                {userViewedItems.map(product => (
                   <div key={`int-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
@@ -958,11 +1096,43 @@ export const HomePage = () => {
               </HorizontalCarousel>
             )}
 
-            {/* 6. What you wish for */}
-            {wishlistProducts.length > 0 && (
+            {/* 6. What you wish for (From userfavorites document using uids) */}
+            {userFavoritesItems.length > 0 ? (
+              <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
+                {userFavoritesItems.map(product => (
+                  <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={true}
+                      onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            ) : (wishlistProducts.length > 0 && (
               <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
                 {wishlistProducts.map(product => (
                   <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
+                    <ProductCard 
+                      product={product} 
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
+                    />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            ))}
+
+            {/* NEW SECTION: Daily Shopping Deals (from products document collection) */}
+            {(!filterValue || filterValue === 'product') && products.length > 0 && (
+              <HorizontalCarousel title="Daily Shopping Deals" icon={<ShoppingBag className="w-5 h-5 text-emerald-500" />} actionLink="/products?deals=true" autoScrollSpeed={0.35}>
+                {(products.filter(p => (p.oldprice && p.oldprice > p.price) || p.tags?.includes('Super Saver')).length >= 2
+                  ? products.filter(p => (p.oldprice && p.oldprice > p.price) || p.tags?.includes('Super Saver'))
+                  : products
+                ).slice(0, 10).map(product => (
+                  <div key={`daily-shopping-deal-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 
                       isFavorite={isFavorited(product.id)}

@@ -1,15 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { favoriteService, FavoriteItem, WishlistCollection, FavoriteType } from '../services/favoriteService';
+import { favoriteService, FavoriteItem, WishlistCollection } from '../services/favoriteService';
+import { db } from '../../../core/firebase/config';
+import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 interface FavoritesStore {
   favorites: FavoriteItem[];
   wishlists: WishlistCollection[];
   initialized: boolean;
+  activeUserId: string | null;
 
   // Actions
   initialize: (userId: string) => void;
-  toggleFavorite: (userId: string, item: Omit<FavoriteItem, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => void;
+  toggleFavorite: (userId: string, item: Omit<FavoriteItem, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   isFavorited: (itemId: string) => boolean;
   createWishlist: (userId: string, name: string, description?: string) => void;
   addToWishlist: (wishlistId: string, itemId: string) => void;
@@ -17,52 +20,134 @@ interface FavoritesStore {
   deleteWishlist: (wishlistId: string) => void;
 }
 
+let firestoreUnsubscribe: (() => void) | null = null;
+
 export const useFavoritesStore = create<FavoritesStore>()(
   persist(
     (set, get) => ({
       favorites: [],
       wishlists: [],
       initialized: false,
+      activeUserId: null,
 
       initialize: (userId) => {
-        if (get().initialized) return;
+        if (!userId) return;
+        if (get().activeUserId === userId && get().initialized) return;
 
-        const mockFavs = favoriteService.getMockFavorites(userId);
-        const mockWishes = favoriteService.getMockWishlists(userId);
+        // Clean up any previous listener
+        if (firestoreUnsubscribe) {
+          firestoreUnsubscribe();
+          firestoreUnsubscribe = null;
+        }
 
-        set({
-          favorites: mockFavs,
-          wishlists: mockWishes,
-          initialized: true,
-        });
+        set({ activeUserId: userId, initialized: true });
+
+        if (userId !== 'guest_user') {
+          try {
+            const favsRef = collection(db, 'userfavorites', userId, 'favorites');
+            firestoreUnsubscribe = onSnapshot(favsRef, (snapshot) => {
+              const items: FavoriteItem[] = [];
+              snapshot.docs.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (data.fav !== false) {
+                  const targetId = data.foodId || data.id || docSnap.id;
+                  items.push({
+                    id: docSnap.id,
+                    userId,
+                    type: (data.type as any) || 'product',
+                    itemId: targetId,
+                    name: data.name || data.nam1 || 'Favorite Item',
+                    description: data.description || '',
+                    imageUrl: data.imgURL || data.imageUrl || data.imgUrl || '',
+                    price: Number(data.price || 0),
+                    rating: Number(data.rating || 0),
+                    reviewCount: Number(data.reviewCount || 0),
+                    createdAt: data.time ? new Date(data.time) : new Date(),
+                    updatedAt: data.time ? new Date(data.time) : new Date(),
+                    ...(data as any),
+                  });
+                }
+              });
+              set({ favorites: items });
+            }, (err) => {
+              console.warn('Error listening to userfavorites:', err);
+            });
+          } catch (e) {
+            console.warn('Firestore subscription failed in useFavoritesStore:', e);
+          }
+        } else {
+          const mockFavs = favoriteService.getMockFavorites(userId);
+          const mockWishes = favoriteService.getMockWishlists(userId);
+          set({
+            favorites: mockFavs,
+            wishlists: mockWishes,
+          });
+        }
       },
 
-      toggleFavorite: (userId, item) => {
+      toggleFavorite: async (userId, item) => {
         const current = get().favorites;
-        const exists = current.find((f) => f.itemId === item.itemId);
+        const targetItemId = item.itemId;
+        const exists = current.find((f) => f.itemId === targetItemId || f.id === targetItemId || (f as any).foodId === targetItemId);
 
         if (exists) {
           // Optimistic remove
           set({
-            favorites: current.filter((f) => f.itemId !== item.itemId),
+            favorites: current.filter((f) => f.itemId !== targetItemId && f.id !== targetItemId && (f as any).foodId !== targetItemId),
           });
+
+          if (userId && userId !== 'guest_user') {
+            try {
+              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
+              await updateDoc(favDocRef, { fav: false }).catch(async () => {
+                await deleteDoc(favDocRef);
+              });
+            } catch (err) {
+              console.error('Error removing favorite from Firestore userfavorites:', err);
+            }
+          }
         } else {
           // Optimistic add
           const newFavorite: FavoriteItem = {
-            id: `fav_${Date.now()}`,
+            id: targetItemId || `fav_${Date.now()}`,
             userId,
             ...item,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
+
           set({
             favorites: [...current, newFavorite],
           });
+
+          if (userId && userId !== 'guest_user') {
+            try {
+              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
+              await setDoc(favDocRef, {
+                foodId: targetItemId,
+                name: item.name || '',
+                price: item.price || 0,
+                imgURL: item.imageUrl || (item as any).imgURL || (item as any).imgUrl || '',
+                brand: (item as any).brand || (item as any).store || '',
+                location: (item as any).location || '',
+                description: item.description || '',
+                category: (item as any).category || (item as any).cat || '',
+                cat: (item as any).cat || (item as any).category || '',
+                store: (item as any).store || (item as any).brand || '',
+                fav: true,
+                time: new Date().toISOString(),
+                userId,
+              }, { merge: true });
+            } catch (err) {
+              console.error('Error adding favorite to Firestore userfavorites:', err);
+            }
+          }
         }
       },
 
       isFavorited: (itemId) => {
-        return get().favorites.some((f) => f.itemId === itemId);
+        if (!itemId) return false;
+        return get().favorites.some((f) => f.itemId === itemId || f.id === itemId || (f as any).foodId === itemId);
       },
 
       createWishlist: (userId, name, description) => {
@@ -119,7 +204,8 @@ export const useFavoritesStore = create<FavoritesStore>()(
       },
     }),
     {
-      name: 'tulete_favorites_storage', // Persist to LocalStorage
+      name: 'tulete_favorites_storage',
     }
   )
 );
+
