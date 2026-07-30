@@ -11,14 +11,14 @@ export interface LanguageCurrencyOption {
 }
 
 export const SUPPORTED_LANGUAGES: LanguageCurrencyOption[] = [
-  { code: 'en', name: 'Default (TZ)', currency: 'TZS', symbol: 'TSH', rate: 1.0 },
-  { code: 'sw', name: 'Swahili (Tanzania)', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
+  { code: 'default', name: 'Default (TZ)', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
+  { code: 'sw', name: 'Swahili', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
   { code: 'en', name: 'English (US)', currency: 'USD', symbol: '$', rate: 0.000377 },
   { code: 'fr', name: 'Français (EU)', currency: 'EUR', symbol: '€', rate: 0.00035 },
   { code: 'ar', name: 'العربية (UAE)', currency: 'AED', symbol: 'AED', rate: 0.00139 },
   { code: 'zh', name: '中文 (China)', currency: 'CNY', symbol: '¥', rate: 0.00274 },
-  { code: 'de', name: 'Deutsch (Germany)', currency: 'EUR', symbol: '€', rate: 0.00035 },
-  { code: 'es', name: 'Español (Spain)', currency: 'EUR', symbol: '€', rate: 0.00035 },
+  { code: 'de', name: 'Deutsch', currency: 'EUR', symbol: '€', rate: 0.00035 },
+  { code: 'es', name: 'Español', currency: 'EUR', symbol: '€', rate: 0.00035 },
 ];
 
 interface CurrencyLanguageState {
@@ -29,7 +29,7 @@ interface CurrencyLanguageState {
 export const useCurrencyLanguageStore = create<CurrencyLanguageState>()(
   persist(
     (set) => ({
-      currentLanguage: SUPPORTED_LANGUAGES[0], // Default Swahili / TZS
+      currentLanguage: SUPPORTED_LANGUAGES[0], // Default starting language is Default (TZ)
       setLanguage: (langCode: string) => {
         const target = SUPPORTED_LANGUAGES.find(l => l.code === langCode) || SUPPORTED_LANGUAGES[0];
         set({ currentLanguage: target });
@@ -40,7 +40,7 @@ export const useCurrencyLanguageStore = create<CurrencyLanguageState>()(
         // Dispatch window event for instant real-time component updates
         window.dispatchEvent(new CustomEvent('tulete-currency-change', { detail: target }));
 
-        // Apply Google Translate Cookie
+        // Apply Google Translate Cookie and trigger instant translation
         applyGoogleTranslate(target.code);
       },
     }),
@@ -78,17 +78,24 @@ export function useCurrency() {
   };
 }
 
-// Helper to trigger Google Translate Web Widget
+// Helper to trigger Google Translate Web Widget for instant real-time response
 export function applyGoogleTranslate(langCode: string) {
   try {
+    const targetCode = (langCode === 'default' || !langCode) ? 'sw' : langCode;
     const domain = window.location.hostname;
-    document.cookie = `googtrans=/auto/${langCode}; path=/; domain=${domain}`;
-    document.cookie = `googtrans=/auto/${langCode}; path=/;`;
 
+    // Instantly set cookies for Google Translate widget
+    document.cookie = `googtrans=/auto/${targetCode}; path=/; domain=${domain}`;
+    document.cookie = `googtrans=/auto/${targetCode}; path=/;`;
+    document.cookie = `googtrans=/sw/${targetCode}; path=/; domain=${domain}`;
+    document.cookie = `googtrans=/sw/${targetCode}; path=/;`;
+
+    // Immediately trigger Google Translate select element if present in DOM
     const selectElem = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
     if (selectElem) {
-      selectElem.value = langCode;
+      selectElem.value = targetCode;
       selectElem.dispatchEvent(new Event('change'));
+      selectElem.dispatchEvent(new Event('input'));
     }
   } catch (err) {
     console.error("Google Translate widget error:", err);
