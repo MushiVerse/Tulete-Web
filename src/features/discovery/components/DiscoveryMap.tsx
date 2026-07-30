@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { storeService } from '../../stores/services/storeService';
-import { MapPin, Store as StoreIcon, ExternalLink, Sparkles, X } from 'lucide-react';
+import { MapPin, Store as StoreIcon, ExternalLink, Sparkles, X, Layers, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
@@ -26,11 +26,9 @@ const defaultCenter = {
 };
 
 const LIGHT_MAP_STYLES = [
-  {
-    featureType: "poi",
-    elementType: "labels",
-    stylers: [{ visibility: "off" }]
-  }
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
 ];
 
 const DARK_MAP_STYLES = [
@@ -38,11 +36,12 @@ const DARK_MAP_STYLES = [
   { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
   { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
   { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
   { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
   { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
 ];
 
@@ -204,6 +203,7 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
     });
   };
 
+  const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'hybrid'>('roadmap');
   const activeStore = hoveredStore || selectedStore;
 
   return (
@@ -216,15 +216,45 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
         </span>
       </div>
 
+      {/* Floating Layer Switcher (Map vs Satellite) */}
+      <div className="absolute top-4 right-4 z-10 bg-background/90 backdrop-blur-md p-1 rounded-2xl border border-border shadow-md flex items-center gap-1 select-none">
+        <button
+          onClick={() => setMapTypeId('roadmap')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+            mapTypeId === 'roadmap'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+          title="Vector Map View"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Map</span>
+        </button>
+        <button
+          onClick={() => setMapTypeId('hybrid')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+            mapTypeId === 'hybrid'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+          title="Satellite Imagery View"
+        >
+          <Globe className="w-3.5 h-3.5" />
+          <span>Satellite</span>
+        </button>
+      </div>
+
       {isGoogleLoaded ? (
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
           zoom={14}
+          mapTypeId={mapTypeId}
           options={{
             disableDefaultUI: true,
             zoomControl: true,
-            styles: isDark ? DARK_MAP_STYLES : LIGHT_MAP_STYLES
+            clickableIcons: false,
+            styles: mapTypeId === 'roadmap' ? (isDark ? DARK_MAP_STYLES : LIGHT_MAP_STYLES) : LIGHT_MAP_STYLES
           }}
         >
           {/* User's Current Location Pin */}
