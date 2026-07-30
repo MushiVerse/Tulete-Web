@@ -37,6 +37,11 @@ export interface Order extends BaseDocument {
   totalAmount: number;
   deliveryFee: number;
   status: OrderStatus;
+  ordersts?: string[];
+  orderststime?: string[];
+  show?: boolean;
+  deliveryDone?: boolean;
+  cancel?: boolean;
   storeId: string;
   storeName: string;
   deliveryLocation: OrderLocation;
@@ -134,7 +139,12 @@ function mapDocToOrder(id: string, data: any): Order {
     items: items,
     totalAmount: data.totalAmount ?? data.total ?? 0,
     deliveryFee: data.deliveryfee || 0,
-    status: data.status || 'Order Placed',
+    status: data.deliveryDone ? 'Delivered' : (data.cancel ? 'Cancelled' : (data.status || 'Order Placed')),
+    ordersts: Array.isArray(data.ordersts) ? data.ordersts : undefined,
+    orderststime: Array.isArray(data.orderststime) ? data.orderststime : undefined,
+    show: data.show,
+    deliveryDone: data.deliveryDone,
+    cancel: data.cancel,
     storeId: data.storeId || '',
     storeName: data.storeName || data.store || 'Tulete Store',
     deliveryLocation: data.deliveryLocation || {
@@ -143,7 +153,7 @@ function mapDocToOrder(id: string, data: any): Order {
       address: data.location || 'Location',
     },
     paymentMethod: data.paymentMethod || 'Cash',
-    paymentStatus: data.paid ? 'Paid' : 'Pending',
+    paymentStatus: data.show === false ? 'Paid' : 'Pending',
     contactPhone: data.no || data.contactPhone || '',
     notes: data.instructions || data.notes || '',
     isLaundryOrder: data.cat === 'Nguo',
@@ -291,19 +301,67 @@ class OrderService extends BaseFirestoreService<Order> {
   }
 
   /**
-   * Subscribe to real-time updates for a single order's tracking information
+   * Subscribe to real-time updates for a single order's tracking information.
+   * Listens to 'usertracking/{orderId}/tracking/{orderId}' and 'usertracking/{orderId}/tracking' subcollection
+   * (matching Flutter client and deliverer apps), with fallback to global 'tracking/{orderId}'.
    */
   subscribeToTracking(orderId: string, callback: (tracking: OrderTracking | null) => void): () => void {
-    const docRef = doc(db, 'tracking', orderId); // tracking document shares the orderId
-    return onSnapshot(docRef, (docSnap) => {
-      if (!docSnap.exists()) {
-        callback(null);
+    const userTrackingRef = doc(db, 'usertracking', orderId, 'tracking', orderId);
+    let unsubGlobal: (() => void) | null = null;
+    let unsubSubCol: (() => void) | null = null;
+
+    const handleData = (data: any, id: string) => {
+      const lat = typeof data.lat === 'number' ? data.lat : parseFloat(data.lat);
+      const lng = typeof data.long === 'number' ? data.long : (typeof data.lng === 'number' ? data.lng : parseFloat(data.long || data.lng));
+      callback({
+        id: id,
+        orderId: orderId,
+        status: data.status || 'On The Way',
+        driverName: data.dname || data.driverName || 'Delivery Attendant',
+        driverPhone: data.dphone || data.driverPhone || '',
+        driverLocation: (!isNaN(lat) && !isNaN(lng)) ? { lat, lng, bearing: data.bearing || 0 } : undefined,
+        updatedAt: data.time || data.updatedAt,
+      } as OrderTracking);
+    };
+
+    const unsubUserTracking = onSnapshot(userTrackingRef, (docSnap) => {
+      if (docSnap.exists()) {
+        handleData(docSnap.data(), docSnap.id);
       } else {
-        callback({ id: docSnap.id, ...docSnap.data() } as OrderTracking);
+        if (!unsubSubCol) {
+          const subColRef = collection(db, 'usertracking', orderId, 'tracking');
+          unsubSubCol = onSnapshot(subColRef, (colSnap) => {
+            if (!colSnap.empty) {
+              const d = colSnap.docs[0];
+              handleData(d.data(), d.id);
+            } else if (!unsubGlobal) {
+              const globalTrackingRef = doc(db, 'tracking', orderId);
+              unsubGlobal = onSnapshot(globalTrackingRef, (gSnap) => {
+                if (gSnap.exists()) {
+                  const data = gSnap.data();
+                  callback({ id: gSnap.id, ...data } as OrderTracking);
+                } else {
+                  callback(null);
+                }
+              }, (err) => {
+                console.error(`Error subscribing to global tracking ${orderId}:`, err);
+                callback(null);
+              });
+            }
+          }, (err) => {
+            console.error(`Error subscribing to usertracking subcol ${orderId}:`, err);
+          });
+        }
       }
     }, (error) => {
-      console.error(`Error subscribing to tracking ${orderId}:`, error);
+      console.error(`Error subscribing to usertracking ${orderId}:`, error);
     });
+
+    return () => {
+      unsubUserTracking();
+      if (unsubSubCol) unsubSubCol();
+      if (unsubGlobal) unsubGlobal();
+    };
   }
 
   /**
@@ -588,7 +646,7 @@ class OrderService extends BaseFirestoreService<Order> {
           vip: isVip,
           cancel: false,
           show: true,
-          paid: true,
+          paid: false,
           instructions: laundryInstructionsText,
           ordersts: ['Order Placed'],
           orderststime: [getFlutterTime()],
@@ -687,7 +745,7 @@ class OrderService extends BaseFirestoreService<Order> {
           express: false,
           cancel: false,
           show: true,
-          paid: true,
+          paid: false,
           instructions: order.notes || '',
           ordersts: ['Order Placed'],
           orderststime: [getFlutterTime()],

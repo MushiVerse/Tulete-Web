@@ -237,7 +237,7 @@ export const OrderTrackingPage = () => {
         // Tag label
         ctx.fillStyle = '#4f46e5';
         ctx.font = 'bold 10px sans-serif';
-        ctx.fillText('Mwangi (Driver)', driverX - 35, driverY - 16);
+        ctx.fillText('Tulete Rider', driverX - 35, driverY - 16);
       }
 
       animationId = requestAnimationFrame(drawMap);
@@ -334,39 +334,98 @@ export const OrderTrackingPage = () => {
           <Card className="p-6 border border-border shadow-sm bg-card">
             <h3 className="font-bold text-foreground text-base mb-6">Delivery Progress</h3>
             
-            <div className="relative pl-6 border-l border-border space-y-6">
-              {STEPS.map((step, idx) => {
-                const isCompleted = idx <= activeStepIndex && !isFinished;
-                const isCurrent = idx === activeStepIndex && !isFinished;
-                const isStepFinished = currentStatus === 'Delivered' && idx === STEPS.length - 1;
+            {(() => {
+              const firstLiveItem = liveItems && liveItems.length > 0 ? liveItems[0] : null;
+              const rawSts: string[] = firstLiveItem?.ordersts || order?.ordersts || [];
+              const rawStsTime: string[] = firstLiveItem?.orderststime || order?.orderststime || [];
 
+              const formatStatusTime = (timeStr?: string) => {
+                if (!timeStr) return '';
+                try {
+                  const d = new Date(timeStr);
+                  if (!isNaN(d.getTime())) {
+                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  }
+                } catch (_) {}
+                return timeStr.length > 16 ? timeStr.substring(11, 16) : timeStr;
+              };
+
+              if (rawSts && rawSts.length > 0) {
                 return (
-                  <div key={idx} className="relative">
-                    {/* Circle Indicator */}
-                    <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                      isCompleted || isStepFinished
-                        ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
-                        : isCurrent 
-                        ? 'bg-amber-400 border-amber-400 animate-ping'
-                        : 'bg-card border-slate-350 dark:border-slate-700'
-                    }`}>
-                      {(isCompleted || isStepFinished) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
+                  <div className="relative pl-6 border-l border-border space-y-6">
+                    {rawSts.map((stsName, idx) => {
+                      const isLatest = idx === rawSts.length - 1;
+                      const timeFormatted = formatStatusTime(rawStsTime[idx]);
 
-                    <div className="flex flex-col">
-                      <span className={`font-bold text-sm ${
-                        isCompleted || isCurrent || isStepFinished
-                          ? 'text-foreground' 
-                          : 'text-slate-400 dark:text-muted-foreground'
-                      }`}>
-                        {step.label}
-                      </span>
-                      <span className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">{step.desc}</span>
-                    </div>
+                      return (
+                        <div key={idx} className="relative">
+                          {/* Circle Indicator */}
+                          <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isLatest
+                              ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
+                              : 'bg-emerald-500 border-emerald-500'
+                          }`}>
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          </div>
+
+                          <div className="flex flex-col">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-sm text-foreground">
+                                {stsName}
+                              </span>
+                              {timeFormatted && (
+                                <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                  {timeFormatted}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground mt-0.5">
+                              {idx === 0 ? 'Order registered in system' : `Status updated to ${stsName}`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return (
+                <div className="relative pl-6 border-l border-border space-y-6">
+                  {STEPS.map((step, idx) => {
+                    const isCompleted = idx <= activeStepIndex && !isFinished;
+                    const isCurrent = idx === activeStepIndex && !isFinished;
+                    const isStepFinished = currentStatus === 'Delivered' && idx === STEPS.length - 1;
+
+                    return (
+                      <div key={idx} className="relative">
+                        {/* Circle Indicator */}
+                        <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                          isCompleted || isStepFinished
+                            ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
+                            : isCurrent 
+                            ? 'bg-amber-400 border-amber-400 animate-ping'
+                            : 'bg-card border-slate-350 dark:border-slate-700'
+                        }`}>
+                          {(isCompleted || isStepFinished) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+
+                        <div className="flex flex-col">
+                          <span className={`font-bold text-sm ${
+                            isCompleted || isCurrent || isStepFinished
+                              ? 'text-foreground' 
+                              : 'text-slate-400 dark:text-muted-foreground'
+                          }`}>
+                            {step.label}
+                          </span>
+                          <span className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">{step.desc}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </Card>
         </div>
 
@@ -424,9 +483,9 @@ export const OrderTrackingPage = () => {
               </div>
               <div className="flex justify-between border-b border-border pb-2">
                 <span className="text-muted-foreground">Payment Status:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
+                <span className={`font-semibold ${(order.show === false || (liveItems && liveItems.some(i => i.show === false))) ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'} flex items-center gap-1`}>
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  {order.paymentStatus}
+                  {(order.show === false || (liveItems && liveItems.some(i => i.show === false))) ? 'Paid' : 'Pending'}
                 </span>
               </div>
               <div className="flex justify-between">
