@@ -926,7 +926,7 @@ export const ProductDetailPage = () => {
                           <StoreIcon className="w-6 h-6" />
                         </div>
                         <div>
-                          <h3 className="font-extrabold text-sm">{displayProduct.store}</h3>
+                          <h3 className="notranslate font-extrabold text-sm" translate="no">{displayProduct.store}</h3>
                           <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mt-0.5">
                             <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-emerald-500" /> {computedDistance}</span>
                             <span className="flex items-center gap-1 text-emerald-600"><ShieldCheck className="w-3 h-3" /> Verified</span>

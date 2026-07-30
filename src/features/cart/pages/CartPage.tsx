@@ -40,8 +40,8 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
 
       {/* Item Details */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-foreground truncate text-sm sm:text-base mb-0.5">{item.name}</h3>
-        <p className="text-xs text-muted-foreground mb-1 truncate">From {item.storeName}</p>
+        <h3 className="notranslate font-semibold text-foreground truncate text-sm sm:text-base mb-0.5" translate="no">{item.name}</h3>
+        <p className="notranslate text-xs text-muted-foreground mb-1 truncate" translate="no">From {item.storeName}</p>
 
         {/* Left in stock indicator */}
         {(() => {

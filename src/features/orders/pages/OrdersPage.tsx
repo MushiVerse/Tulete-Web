@@ -492,7 +492,7 @@ export const OrdersPage = () => {
                         </div>
 
                         {/* Actual store or service provider name */}
-                        <h3 className="font-extrabold text-foreground text-lg flex items-center gap-2">
+                        <h3 className="notranslate font-extrabold text-foreground text-lg flex items-center gap-2" translate="no">
                           {order.storeName || 'Tulete Service'}
                         </h3>
                       </div>
@@ -542,7 +542,7 @@ export const OrdersPage = () => {
                                 <span className="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-500 font-extrabold text-xs flex items-center justify-center shrink-0">
                                   ×{item.qty}
                                 </span>
-                                <span className="font-bold text-xs text-foreground">{item.name}</span>
+                                <span className="notranslate font-bold text-xs text-foreground" translate="no">{item.name}</span>
                               </div>
                               <div className="flex items-center gap-1 flex-wrap justify-end">
                                 {item.services.map((srv, sIdx) => (
@@ -566,7 +566,7 @@ export const OrdersPage = () => {
                           return (
                             <div key={idx} className="flex items-center justify-between text-xs bg-card border border-border/40 p-2.5 rounded-xl shadow-2xs">
                               <div className="flex flex-col min-w-0 pr-2">
-                                <span className="font-bold text-foreground truncate">{i.name}</span>
+                                <span className="notranslate font-bold text-foreground truncate" translate="no">{i.name}</span>
                                 <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
                                   {itemEmoji} • Qty: {i.quantity}
                                 </span>

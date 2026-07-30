@@ -827,7 +827,7 @@ export const StoreDetailsPage = () => {
                   {store.availability ? 'Open' : 'Closed'}
                 </Badge>
               </div>
-              <h1 className="text-xl md:text-2xl font-extrabold text-white">{store.store}</h1>
+              <h1 className="notranslate text-xl md:text-2xl font-extrabold text-white" translate="no">{store.store}</h1>
             </div>
           </div>
 

@@ -3,11 +3,15 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AuthModal } from '../features/auth/components/AuthModal';
 import { useAuthModalStore } from '../features/auth/store/useAuthModalStore';
 import { OfflineBanner } from '../shared/components/OfflineBanner';
+import { useCurrencyLanguageStore } from '../core/config/currencyStore';
 
 export const RootLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const openModal = useAuthModalStore((state) => state.openModal);
+  
+  // Subscribe to currency/language state to trigger instant real-time price re-renders across all views
+  const currentLanguage = useCurrencyLanguageStore((state) => state.currentLanguage);
 
   useEffect(() => {
     if (location.pathname === '/login') {
@@ -20,10 +24,10 @@ export const RootLayout = () => {
   }, [location.pathname, openModal, navigate]);
 
   return (
-    <>
+    <div key={currentLanguage.code} className="w-full min-h-screen">
       <OfflineBanner />
       <Outlet />
       <AuthModal />
-    </>
+    </div>
   );
 };

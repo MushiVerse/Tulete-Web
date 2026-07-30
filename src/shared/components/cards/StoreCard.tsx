@@ -51,7 +51,7 @@ export const StoreCard = ({ store, distanceKm, onClick, viewMode = 'grid' }: Sto
 
           <div className="flex-1 flex flex-col justify-between min-w-0">
             <div className="flex justify-between items-start gap-2 mb-1">
-              <h3 className="font-extrabold text-sm sm:text-base text-foreground line-clamp-1">{store.store}</h3>
+              <h3 className="notranslate font-extrabold text-sm sm:text-base text-foreground line-clamp-1" translate="no">{store.store}</h3>
               <div className="flex items-center gap-0.5 text-yellow-500 shrink-0 bg-yellow-500/10 px-2 py-0.5 rounded-full text-xs font-bold">
                 <Star className="w-3 h-3 fill-current text-yellow-500" />
                 <span>{computedAvg.toFixed(1)}</span>
@@ -118,7 +118,7 @@ export const StoreCard = ({ store, distanceKm, onClick, viewMode = 'grid' }: Sto
 
           <div className="mt-5 flex flex-col flex-grow">
             <div className="flex justify-between items-start gap-2 mb-1">
-              <h3 className="font-semibold text-sm line-clamp-1">{store.store}</h3>
+              <h3 className="notranslate font-semibold text-sm line-clamp-1" translate="no">{store.store}</h3>
               <div className="flex items-center gap-0.5 text-yellow-500 shrink-0 bg-yellow-500/10 px-1.5 py-0.5 rounded text-[10px] font-bold">
                 <Star className="w-3 h-3 fill-current text-yellow-500" />
                 <span>{computedAvg.toFixed(1)}</span>

@@ -394,7 +394,7 @@ export const LocationPickerModal = ({
                       <div className="mt-0.5 bg-primary/10 p-1 rounded-full text-primary">
                         <MapPin className="w-3.5 h-3.5" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="notranslate flex-1 min-w-0" translate="no">
                         <p className="font-bold text-sm text-foreground truncate">
                           {loc.specificInstructions?.trim() || loc.address}
                         </p>
@@ -586,7 +586,8 @@ export const LocationPickerModal = ({
                   placeholder="e.g. Near the big mango tree, Red gate..."
                   value={specificInstructions}
                   onChange={(e) => setSpecificInstructions(e.target.value)}
-                  className="bg-card border-border/60 h-12 rounded-xl focus:ring-primary shadow-sm"
+                  className="notranslate bg-card border-border/60 h-12 rounded-xl focus:ring-primary shadow-sm"
+                  translate="no"
                 />
                 <p className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />

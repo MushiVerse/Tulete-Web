@@ -5,6 +5,7 @@ import logoImg from '../../assets/Green Modern Organic Health Food Logo_20260531
 import { APP_SETTINGS } from '../../core/config/settings';
 import { useDeviceOS } from '../../core/hooks/useDeviceOS';
 import { FacebookIcon, InstagramIcon, TikTokIcon, YoutubeIcon } from './SocialIcons';
+import { LanguageCurrencySelector } from './LanguageCurrencySelector';
 
 export const Footer = () => {
   const { showPlayBadge } = useDeviceOS();
@@ -44,7 +45,7 @@ export const Footer = () => {
                 height={48}
                 className="h-12 w-12 object-contain rounded-md bg-white p-1"
               />
-              <span className="text-2xl font-extrabold tracking-tight text-white">Tulete</span>
+              <span className="notranslate text-2xl font-extrabold tracking-tight text-white" translate="no">Tulete</span>
             </div>
             <p className="text-sm text-secondary-foreground/70 leading-relaxed font-medium pr-4">
               Your premium marketplace for laundry, food delivery, and daily essentials. Fast, reliable, and right at your doorstep. We bring the city to you.
@@ -158,6 +159,7 @@ export const Footer = () => {
             © {new Date().getFullYear()} Tulete Inc. All rights reserved.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            <LanguageCurrencySelector />
             <Link to="/privacy" className="text-sm font-medium text-secondary-foreground/50 hover:text-primary transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="text-sm font-medium text-secondary-foreground/50 hover:text-primary transition-colors">Terms of Service</Link>
             <Link to="/cookies" className="text-sm font-medium text-secondary-foreground/50 hover:text-primary transition-colors">Cookies Settings</Link>

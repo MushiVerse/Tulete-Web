@@ -26,6 +26,7 @@ import { useDynamicPrice, getDeliveryFee } from '../../location/hooks/useDynamic
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import { FacebookIcon, InstagramIcon, TikTokIcon, YoutubeIcon } from '../../../shared/components/SocialIcons';
+import { useCurrencyLanguageStore } from '../../../core/config/currencyStore';
 
 // --- Static Fallback Data ---
 const FOOD_CATEGORIES = [
@@ -149,8 +150,8 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
       </div>
 
       <div className="flex flex-col flex-1">
-        <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5">{meal.store}</p>
-        <h3 className="font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors">{meal.name}</h3>
+        <p className="notranslate text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5" translate="no">{meal.store}</p>
+        <h3 className="notranslate font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors" translate="no">{meal.name}</h3>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
           <Clock className="w-3.5 h-3.5" /> 20-30 min
         </div>
@@ -232,6 +233,7 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
 
 export const FoodPage = () => {
   const navigate = useNavigate();
+  const { currentLanguage } = useCurrencyLanguageStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -443,7 +445,7 @@ export const FoodPage = () => {
     } else if (timeA) {
       return -1;
     }
-    
+    return 0;
   });
 
   // Reset pagination when category or search query changes
@@ -778,7 +780,7 @@ export const FoodPage = () => {
                 onClick={() => window.open('https://wa.me/255764587748?text=Hello%20Tulete%20Support', '_blank')}
                 className="w-full flex items-center justify-between p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors text-xs font-extrabold text-left"
               >
-                <span>💬 WhatsApp Support (+255764587748)</span>
+                <span>💬 WhatsApp Support</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

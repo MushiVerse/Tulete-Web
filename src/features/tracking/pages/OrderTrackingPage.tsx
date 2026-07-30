@@ -471,7 +471,7 @@ export const OrderTrackingPage = () => {
             <div className="space-y-4 text-xs">
               <div className="flex justify-between border-b border-border pb-2">
                 <span className="text-muted-foreground">Store Name:</span>
-                <span className="font-bold text-slate-950 dark:text-white">{order.storeName}</span>
+                <span className="notranslate font-bold text-slate-950 dark:text-white" translate="no">{order.storeName}</span>
               </div>
               <div className="flex justify-between border-b border-border pb-2">
                 <span className="text-muted-foreground">Recipient Phone:</span>

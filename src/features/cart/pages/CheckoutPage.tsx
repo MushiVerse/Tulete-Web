@@ -288,9 +288,9 @@ export const CheckoutPage = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 pr-4">
                       <p className="font-extrabold text-sm text-foreground mb-1">Selected Destination</p>
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentLocation.address}</p>
+                      <p className="notranslate text-sm font-medium text-slate-700 dark:text-slate-300" translate="no">{currentLocation.address}</p>
                       {currentLocation.specificInstructions && (
-                        <p className="text-xs text-slate-500 mt-1 italic font-medium bg-white/50 dark:bg-black/20 p-2 rounded-md">
+                        <p className="notranslate text-xs text-slate-500 mt-1 italic font-medium bg-white/50 dark:bg-black/20 p-2 rounded-md" translate="no">
                           Note: {currentLocation.specificInstructions}
                         </p>
                       )}

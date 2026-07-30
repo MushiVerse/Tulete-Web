@@ -11,6 +11,7 @@ import { useCartStore } from '../../../features/cart/store/useCartStore';
 import { formatPrice } from '../../utils/formatPrice';
 import { APP_SETTINGS } from '../../../core/config/settings';
 import { getNormalizedRating } from '../../utils/ratingUtils';
+import { useCurrencyLanguageStore } from '../../../core/config/currencyStore';
 
 interface ProductCardProps {
   product: Product;
@@ -33,6 +34,7 @@ export const ProductCard = ({
     return null;
   }
 
+  const { currentLanguage } = useCurrencyLanguageStore();
   const { rating: normRating } = getNormalizedRating(product);
   const displayRating = (product.rating && Number(product.rating) > 0) ? Number(product.rating) : normRating;
 
@@ -47,7 +49,7 @@ export const ProductCard = ({
   const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory, product.location, undefined, itemCat) : undefined;
 
   // Format price
-  const formattedPrice = `${APP_SETTINGS.currency} ${formatPrice(magicPrice)}`;
+  const formattedPrice = `${currentLanguage.symbol} ${formatPrice(magicPrice)}`;
 
   const Wrapper = onClick ? 'div' : Link;
   const wrapperProps = onClick 
@@ -105,7 +107,7 @@ export const ProductCard = ({
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="flex items-center gap-1 min-w-0">
                     <Store className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    <span className="text-xs font-bold text-muted-foreground truncate">
+                    <span className="notranslate text-xs font-bold text-muted-foreground truncate" translate="no">
                       {product.store}
                     </span>
                   </div>
@@ -115,7 +117,7 @@ export const ProductCard = ({
                   </div>
                 </div>
 
-                <h3 className="font-extrabold text-sm sm:text-base text-foreground line-clamp-2 leading-snug mb-1 group-hover:text-primary transition-colors">
+                <h3 className="notranslate font-extrabold text-sm sm:text-base text-foreground line-clamp-2 leading-snug mb-1 group-hover:text-primary transition-colors" translate="no">
                   {product.name}
                 </h3>
               </div>
@@ -275,7 +277,7 @@ export const ProductCard = ({
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-1 flex-1 min-w-0">
                 <Store className="w-3 h-3 text-muted-foreground shrink-0" />
-                <span className="text-[11px] font-bold text-muted-foreground truncate">
+                <span className="notranslate text-[11px] font-bold text-muted-foreground truncate" translate="no">
                   {product.store}
                 </span>
               </div>
@@ -285,7 +287,7 @@ export const ProductCard = ({
               </div>
             </div>
             
-            <h3 className="font-extrabold text-sm text-foreground line-clamp-2 leading-snug mb-1 flex-grow group-hover:text-primary transition-colors">
+            <h3 className="notranslate font-extrabold text-sm text-foreground line-clamp-2 leading-snug mb-1 flex-grow group-hover:text-primary transition-colors" translate="no">
               {product.name}
             </h3>
 

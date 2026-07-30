@@ -12,6 +12,7 @@ import { APP_SETTINGS } from '../../core/config/settings';
 import { useDeviceOS } from '../../core/hooks/useDeviceOS';
 import { useLocationStore } from '../../features/location/store/useLocationStore';
 import { MapPin } from 'lucide-react';
+import { LanguageCurrencySelector } from './LanguageCurrencySelector';
 
 /** Official Google Play badge from Google's CDN */
 const PlayStoreBadge = ({ className = '' }: { className?: string }) => (
@@ -74,7 +75,7 @@ export const TopNav = () => {
               height={48}
               className="h-12 w-12 object-contain rounded-md"
             />
-            <span className="text-xl font-extrabold tracking-tight text-foreground hidden sm:block">Tulete</span>
+            <span className="notranslate text-xl font-extrabold tracking-tight text-foreground hidden sm:block" translate="no">Tulete</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
@@ -124,7 +125,7 @@ export const TopNav = () => {
             title={currentLocation ? (currentLocation.specificInstructions?.trim() || currentLocation.address) : 'Set Location'}
           >
             <MapPin className="w-4 h-4 shrink-0 group-hover:animate-bounce" />
-            <span className="text-xs font-bold truncate">
+            <span className="notranslate text-xs font-bold truncate" translate="no">
               {currentLocation
                 ? (currentLocation.specificInstructions?.trim() ||
                     (!currentLocation.address.includes('(Default)')
@@ -134,15 +135,8 @@ export const TopNav = () => {
             </span>
           </button>
 
-          {/* Language toggle (commented for now) */}
-          {/* <button
-            onClick={toggleLanguage}
-            className="relative px-2.5 py-1 text-xs font-extrabold text-muted-foreground hover:text-foreground rounded-full border border-border bg-muted/50 hover:bg-muted transition-all flex items-center gap-1 cursor-pointer"
-            title={language === 'en' ? 'Switch to Swahili' : 'Badili kwenda Kiingereza'}
-          >
-            <Globe className="w-3.5 h-3.5 text-primary" />
-            <span className="uppercase">{language === 'en' ? 'SW' : 'EN'}</span>
-          </button> */}
+          {/* Language & Currency Selector */}
+          <LanguageCurrencySelector />
 
           {/* Theme toggle */}
           <button

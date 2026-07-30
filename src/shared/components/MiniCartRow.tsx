@@ -3,7 +3,7 @@ import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { useCartStore, CartItem } from '../../features/cart/store/useCartStore';
 import { useLocationStore } from '../../features/location/store/useLocationStore';
-import { APP_SETTINGS } from '@/core/config/settings';
+import { useCurrencyLanguageStore } from '../../core/config/currencyStore';
 
 interface MiniCartRowProps {
   cartItem: CartItem;
@@ -11,8 +11,8 @@ interface MiniCartRowProps {
 }
 
 export const MiniCartRow: React.FC<MiniCartRowProps> = ({ cartItem, removeFromCart }) => {
-  // Subscribe to location so the component re-renders when location changes
   useLocationStore((state) => state.currentLocation);
+  const { currentLanguage } = useCurrencyLanguageStore();
   
   const getDynamicItemPrices = useCartStore((state) => state.getDynamicItemPrices);
   const dynamicPrices = getDynamicItemPrices();
@@ -21,11 +21,11 @@ export const MiniCartRow: React.FC<MiniCartRowProps> = ({ cartItem, removeFromCa
   return (
     <div className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
       <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
-        {cartItem.quantity}x {cartItem.name}
+        {cartItem.quantity}x <span className="notranslate" translate="no">{cartItem.name}</span>
       </span>
       <div className="flex items-center gap-1 shrink-0 ml-2">
         <span className="font-extrabold text-foreground">
-          {APP_SETTINGS.currency} {formatPrice(rowTotal)}
+          {currentLanguage.symbol} {formatPrice(rowTotal)}
         </span>
         <button
           onClick={() => removeFromCart(cartItem.productId)}

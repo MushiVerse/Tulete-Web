@@ -110,3 +110,48 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   height: 0 !important;
 }
 
+/* Hide Google Translate top banner / service bar & prevent layout displacement */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+div.goog-te-banner-frame,
+.goog-te-gadget,
+.goog-te-gadget-simple,
+#google_translate_element,
+body > .skiptranslate,
+html > .skiptranslate,
+iframe[id^=":"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  max-height: 0 !important;
+  max-width: 0 !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  z-index: -9999 !important;
+}
+
+html, body {
+  top: 0px !important;
+  position: static !important;
+  margin-top: 0px !important;
+  padding-top: 0px !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Ensure form inputs, textareas and elements with notranslate preserve original text */
+input, textarea, select, .notranslate {
+  translate: no;
+}
+
