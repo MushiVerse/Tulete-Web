@@ -266,58 +266,80 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
                 pixelOffset: typeof window !== 'undefined' && (window as any).google?.maps ? new (window as any).google.maps.Size(0, -35) : undefined,
               }}
             >
-              <div 
-                className="w-[240px] flex flex-col items-start justify-start text-left gap-2 cursor-pointer p-1.5 pb-4 text-slate-900"
-                onClick={() => handleOpenStore(activeStore)}
-              >
-                {/* Store Preview Image */}
-                <div className="w-full h-28 rounded-xl overflow-hidden relative bg-slate-100 border border-slate-200 shrink-0 group">
-                  <img 
-                    src={activeStore.imgURL || activeStore.imgUrl || activeStore.image || activeStore.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400'} 
-                    alt={activeStore.storeName} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                </div>
-
-                {/* Header Row: Category Badge (Far Left) & Availability (Far Right) */}
-                <div className="flex items-center justify-between w-full gap-2 mt-1">
-                  <span 
-                    className="text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-sm truncate max-w-[130px] text-left"
-                    style={{ backgroundColor: 'rgba(249, 148, 32, 0.15)', color: '#F99420' }}
-                  >
-                    {activeStore.cat || activeStore.category || 'Store'}
-                  </span>
-
-                  <span className={`text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full text-white shadow-sm shrink-0 ml-auto ${activeStore.availability !== false ? 'bg-emerald-500' : 'bg-slate-500'}`}>
-                    {activeStore.availability !== false ? 'OPEN' : 'CLOSED'}
-                  </span>
-                </div>
-
-                {/* Store Name & Description (High-contrast explicit text colors for InfoWindow visibility) */}
-                <div className="flex flex-col items-start justify-start text-left w-full space-y-0.5 mt-0.5">
-                  <h4 className="font-extrabold text-sm leading-tight line-clamp-1 text-slate-900 text-left w-full">
-                    {activeStore.storeName}
-                  </h4>
-
-                  <p className="text-[11px] font-medium text-slate-600 line-clamp-2 text-left w-full leading-snug">
-                    {activeStore.description || activeStore.address || 'Explore full menu, pricing, and available store items.'}
-                  </p>
-                </div>
-
-                {/* Action Button with extra top & bottom padding */}
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenStore(activeStore);
-                  }}
-                  className="w-full py-2.5 px-3.5 text-white text-xs font-extrabold rounded-xl transition-all shadow-md flex items-center justify-between mt-2 mb-2 active:scale-95 hover:opacity-90 cursor-pointer"
-                  style={{ backgroundColor: '#F99420' }}
+              <>
+                <style>{`
+                  .gm-style-iw-c {
+                    background-color: ${isDark ? '#141416' : '#ffffff'} !important;
+                    color: ${isDark ? '#F8FAFC' : '#0F172A'} !important;
+                    border: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'} !important;
+                    border-radius: 1.25rem !important;
+                    padding: 8px !important;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35) !important;
+                  }
+                  .gm-style-iw-tc::after {
+                    background-color: ${isDark ? '#141416' : '#ffffff'} !important;
+                  }
+                  .gm-ui-hover-or-focus {
+                    filter: ${isDark ? 'invert(1) brightness(200%)' : 'none'} !important;
+                  }
+                `}</style>
+                <div
+                  className={`w-[235px] flex flex-col items-start justify-start text-left gap-2 cursor-pointer p-1 pb-1.5 ${isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'
+                    }`}
+                  onClick={() => handleOpenStore(activeStore)}
                 >
-                  <span>Open Store</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-              </div>
+                  {/* Store Preview Image */}
+                  <div className={`w-full h-28 rounded-xl overflow-hidden relative border shrink-0 group ${isDark ? 'bg-[#27272A] border-[#3F3F46]' : 'bg-slate-100 border-slate-200'
+                    }`}>
+                    <img
+                      src={activeStore.imgURL || activeStore.imgUrl || activeStore.image || activeStore.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400'}
+                      alt={activeStore.storeName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                  </div>
+
+                  {/* Header Row: Category Badge (Far Left) & Availability (Far Right) */}
+                  <div className="flex items-center justify-between w-full gap-2 mt-0.5">
+                    <span
+                      className="text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-sm truncate max-w-[130px] text-left"
+                      style={{ backgroundColor: 'rgba(249, 148, 32, 0.18)', color: '#F99420' }}
+                    >
+                      {activeStore.cat || activeStore.category || 'Store'}
+                    </span>
+
+                    <span className={`text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full text-white shadow-sm shrink-0 ml-auto ${activeStore.availability !== false ? 'bg-emerald-500' : 'bg-slate-500'}`}>
+                      {activeStore.availability !== false ? 'OPEN' : 'CLOSED'}
+                    </span>
+                  </div>
+
+                  {/* Store Name & Description */}
+                  <div className="flex flex-col items-start justify-start text-left w-full space-y-0.5 mt-0.5">
+                    <h4 className={`font-extrabold text-sm leading-tight line-clamp-1 text-left w-full ${isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                      {activeStore.storeName}
+                    </h4>
+
+                    <p className={`text-[11px] font-medium line-clamp-2 text-left w-full leading-snug ${isDark ? 'text-slate-400' : 'text-slate-600'
+                      }`}>
+                      {activeStore.description || activeStore.address || 'Explore full menu, pricing, and available store items.'}
+                    </p>
+                  </div>
+
+                  {/* Action Button with adjusted padding */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenStore(activeStore);
+                    }}
+                    className="w-full py-2 px-3 text-white text-xs font-extrabold rounded-xl transition-all shadow-md flex items-center justify-between mt-1.5 mb-0.5 active:scale-95 hover:opacity-90 cursor-pointer"
+                    style={{ backgroundColor: '#F99420' }}
+                  >
+                    <span>Open Store</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </>
             </InfoWindowF>
           )}
         </GoogleMap>
@@ -326,7 +348,7 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
           title="Discovery Map Embed"
           width="100%"
           height="100%"
-          style={{ 
+          style={{
             border: 0,
             filter: isDark ? 'invert(90%) hue-rotate(180deg) contrast(120%)' : 'none'
           }}
