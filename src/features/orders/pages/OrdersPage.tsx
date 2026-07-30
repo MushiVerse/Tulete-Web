@@ -195,6 +195,95 @@ function isOrderCancelable(order: Order): boolean {
   return elapsedMs < thirtyMinutesMs;
 }
 
+export type OrderType = 'laundry' | 'product' | 'food' | 'pickup';
+
+export function getOrderCategoryDetails(order: Order): {
+  type: OrderType;
+  badgeLabel: string;
+  badgeEmoji: string;
+  badgeClass: string;
+} {
+  const catName = (order as any).cat || (order as any).category || '';
+  const catStr = String(catName).trim();
+  const catLower = catStr.toLowerCase();
+
+  const deliveryTime = String((order as any).deliverytime || '').trim().toLowerCase();
+
+  // Item-level categories
+  const itemCats = (order.items || []).map(i => String(i.cat || (i as any).category || '').toLowerCase().trim());
+
+  // 1. LAUNDRY
+  const isLaundry = 
+    catStr === 'nguo' || 
+    catLower.includes('nguo') || 
+    catLower.includes('laund') || 
+    Boolean(order.isLaundryOrder) ||
+    itemCats.some(c => c === 'nguo' || c.includes('laund'));
+
+  if (isLaundry) {
+    return {
+      type: 'laundry',
+      badgeLabel: 'Laundry Pack',
+      badgeEmoji: '✨',
+      badgeClass: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+    };
+  }
+
+  // 2. PICKUP
+  const isPickup = deliveryTime === 'pickup' || (order as any).packagepickup === true;
+
+  // 3. FOOD
+  const foodKeywords = ['food', 'chakula', 'diko', 'restaurant', 'meal', 'lunch', 'dinner', 'asap', 'mchana', 'usiku'];
+  const isExplicitFoodCat = foodKeywords.includes(catLower);
+  const isFoodDeliveryTime = ['asap', 'lunch', 'dinner', 'mchana', 'usiku'].includes(deliveryTime);
+  const hasFoodItem = itemCats.some(c => foodKeywords.includes(c));
+
+  const isFood = isExplicitFoodCat || isFoodDeliveryTime || hasFoodItem;
+
+  // 4. PRODUCT
+  const productKeywords = ['product', 'bidhaa', 'electronics', 'supermarket', 'groceries', 'pharmacy', 'cosmetics', 'beauty', 'fashion', 'hardware', 'general', 'store'];
+  const isExplicitProductCat = productKeywords.includes(catLower) || catLower === 'product';
+  const isProductDeliveryTime = deliveryTime === 'product';
+  const hasProductItem = itemCats.some(c => productKeywords.includes(c) || c === 'product');
+
+  const isProduct = isExplicitProductCat || isProductDeliveryTime || hasProductItem;
+
+  if (isPickup) {
+    return {
+      type: 'pickup',
+      badgeLabel: 'Pickup Order',
+      badgeEmoji: '📦',
+      badgeClass: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+    };
+  }
+
+  if (isProduct && !isExplicitFoodCat && !isFoodDeliveryTime) {
+    return {
+      type: 'product',
+      badgeLabel: 'Product Order',
+      badgeEmoji: '🛍️',
+      badgeClass: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+    };
+  }
+
+  if (isFood) {
+    return {
+      type: 'food',
+      badgeLabel: 'Food Order',
+      badgeEmoji: '🍕',
+      badgeClass: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+    };
+  }
+
+  // Default fallback: treat non-food, non-laundry orders as Product Order
+  return {
+    type: 'product',
+    badgeLabel: 'Product Order',
+    badgeEmoji: '🛍️',
+    badgeClass: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+  };
+}
+
 export const OrdersPage = () => {
   const navigate = useNavigate();
   const { isDark } = useThemeStore();
@@ -367,13 +456,9 @@ export const OrdersPage = () => {
                 ? new Date(order.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
-              const catName = (order as any).cat || (order as any).category || (order.items && order.items[0]?.cat) || '';
-              const catStr = String(catName).trim();
-              const catLower = catStr.toLowerCase();
-
-              const isLaundry = catStr === 'Nguo' || catLower.includes('nguo') || catLower.includes('laund') || Boolean(order.isLaundryOrder);
-              const isProduct = !isLaundry && (catStr === 'Product' || catLower === 'product');
-              const isFood = !isLaundry && !isProduct; // Any order where cat is not Product and not Nguo
+              const categoryDetails = getOrderCategoryDetails(order);
+              const isLaundry = categoryDetails.type === 'laundry';
+              const isFood = categoryDetails.type === 'food';
               const isExpanded = !!expandedOrders[order.id];
 
               // Parse laundry items if this is a laundry order pack
@@ -395,21 +480,10 @@ export const OrdersPage = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-muted-foreground">Order ID: #{order.id.slice(-8).toUpperCase()}</span>
-                          {isLaundry && (
-                            <Badge className="bg-sky-500/10 text-sky-500 border-sky-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> Laundry Pack
-                            </Badge>
-                          )}
-                          {isFood && (
-                            <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
-                              🍕 Food Order
-                            </Badge>
-                          )}
-                          {isProduct && (
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
-                              🛍️ Product Order
-                            </Badge>
-                          )}
+                          <Badge className={`${categoryDetails.badgeClass} text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1`}>
+                            {isLaundry && <Sparkles className="w-3 h-3" />}
+                            {categoryDetails.badgeEmoji} {categoryDetails.badgeLabel}
+                          </Badge>
                           {isExpress && (
                             <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
                               ⚡ Express
@@ -485,8 +559,9 @@ export const OrdersPage = () => {
                       /* Non-laundry item summary: Food and Product items treated independently */
                       <div className="bg-muted/40 border border-border/50 rounded-2xl p-3.5 mb-4 space-y-2">
                         {(order.items || []).map((i, idx) => {
-                          const itemCat = i.cat || (i as any).category || (isFood ? 'Food' : 'Product');
-                          const itemEmoji = itemCat === 'Food' ? '🍕 Food Item' : '🛍️ Product Item';
+                          const rawItemCat = String(i.cat || (i as any).category || '').toLowerCase().trim();
+                          const isItemFood = ['food', 'chakula', 'diko', 'restaurant', 'meal', 'lunch', 'dinner', 'asap', 'mchana', 'usiku'].includes(rawItemCat) || (isFood && !['product', 'bidhaa', 'electronics', 'supermarket', 'groceries', 'pharmacy', 'cosmetics', 'beauty', 'fashion', 'hardware', 'general', 'store'].includes(rawItemCat));
+                          const itemEmoji = isItemFood ? '🍕 Food Item' : '🛍️ Product Item';
 
                           return (
                             <div key={idx} className="flex items-center justify-between text-xs bg-card border border-border/40 p-2.5 rounded-xl shadow-2xs">

@@ -705,7 +705,7 @@ class OrderService extends BaseFirestoreService<Order> {
       for (const item of otherItems) {
         const rawCat = (item as any).cat || (item as any).category || '';
         const catStr = String(rawCat).toLowerCase().trim();
-        const isFood = catStr === 'food' || (item as any).deliverySlot != null || (rawCat !== 'Product' && rawCat !== 'Nguo' && rawCat !== 'product');
+        const isFood = catStr === 'food' || catStr === 'chakula' || catStr === 'diko' || ((item as any).deliverySlot != null && String((item as any).deliverySlot).trim().length > 0);
         const isPickUp = (item as any).isDeliverySelected === false || (item as any).packagepickup === true;
         const slot = (item as any).deliverySlot;
 
