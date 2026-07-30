@@ -116,9 +116,78 @@ export interface OrderTracking extends BaseDocument {
   updatedAt: any;
 }
 
+function mapDocToOrder(id: string, data: any): Order {
+  const items = data.items || [{
+    productId: data.foodId || id,
+    name: data.name || 'Item',
+    price: data.price || 0,
+    quantity: data.count || data.quantity || 1,
+    imageUrl: data.imgURL || '',
+    cat: data.cat,
+  }];
+
+  return {
+    id: id,
+    userId: data.userId || data.uid || '',
+    email: data.email || '',
+    uname: data.uname || '',
+    items: items,
+    totalAmount: data.totalAmount ?? data.total ?? 0,
+    deliveryFee: data.deliveryfee || 0,
+    status: data.status || 'Order Placed',
+    storeId: data.storeId || '',
+    storeName: data.storeName || data.store || 'Tulete Store',
+    deliveryLocation: data.deliveryLocation || {
+      lat: parseFloat((data.latlong || '').split(',')[0]) || 0,
+      lng: parseFloat((data.latlong || '').split(',')[1]) || 0,
+      address: data.location || 'Location',
+    },
+    paymentMethod: data.paymentMethod || 'Cash',
+    paymentStatus: data.paid ? 'Paid' : 'Pending',
+    contactPhone: data.no || data.contactPhone || '',
+    notes: data.instructions || data.notes || '',
+    isLaundryOrder: data.cat === 'Nguo',
+    createdAt: data.createdAt || data.time,
+    updatedAt: data.updatedAt || data.time,
+  } as Order;
+}
+
+function getTimeInMs(order: Order): number {
+  if (order.createdAt?.seconds) return order.createdAt.seconds * 1000;
+  if (typeof order.createdAt === 'string') {
+    const parsed = new Date(order.createdAt).getTime();
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
 class OrderService extends BaseFirestoreService<Order> {
   constructor() {
     super('orders');
+  }
+
+  /**
+   * Overrides base create method to ensure ONLY laundry items or laundry pack (where cat === "Nguo")
+   * are sent to the 'orders' document, while other order categories (products/food)
+   * are sent to 'newcomfirmedorders'.
+   */
+  override async create(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>, customId?: string): Promise<Order> {
+    const isLaundry = data.isLaundryOrder || (data.items && data.items.some(item => (item.cat || (item as any).category) === 'Nguo'));
+    
+    const targetCollection = isLaundry ? 'orders' : 'newcomfirmedorders';
+    
+    const docRef = customId 
+      ? doc(db, targetCollection, customId) 
+      : doc(collection(db, targetCollection));
+
+    const payload = {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    await setDoc(docRef, payload);
+    return { id: docRef.id, ...payload } as Order;
   }
 
   /**
@@ -126,66 +195,85 @@ class OrderService extends BaseFirestoreService<Order> {
    */
   subscribeToOrder(orderId: string, callback: (order: Order | null) => void): () => void {
     const docRef = doc(db, 'orders', orderId);
-    return onSnapshot(docRef, (docSnap) => {
-      if (!docSnap.exists()) {
-        callback(null);
-      } else {
+    let unsubNc: (() => void) | null = null;
+
+    const unsubMain = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
         callback({ id: docSnap.id, ...docSnap.data() } as Order);
+      } else {
+        const ncRef = doc(db, 'newcomfirmedorders', orderId);
+        if (unsubNc) unsubNc();
+        unsubNc = onSnapshot(ncRef, (ncSnap) => {
+          if (!ncSnap.exists()) {
+            callback(null);
+          } else {
+            callback(mapDocToOrder(ncSnap.id, ncSnap.data()));
+          }
+        }, (error) => {
+          console.error(`Error subscribing to newcomfirmedorder ${orderId}:`, error);
+          callback(null);
+        });
       }
     }, (error) => {
       console.error(`Error subscribing to order ${orderId}:`, error);
     });
+
+    return () => {
+      unsubMain();
+      if (unsubNc) unsubNc();
+    };
   }
 
   /**
-   * Subscribe to real-time updates for user orders list
+   * Subscribe to real-time updates for user orders list across both 'orders' (laundry)
+   * and 'newcomfirmedorders' (all categories).
    */
   subscribeToUserOrders(
     userId: string,
     callback: (orders: Order[]) => void,
     onError?: (error: Error) => void
   ): () => void {
-    const q = query(
-      collection(db, 'orders'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
+    let ordersList: Order[] = [];
+    let ncOrdersList: Order[] = [];
 
-    let unsubFallback: (() => void) | null = null;
+    const notifyCombined = () => {
+      const orderMap = new Map<string, Order>();
+      ncOrdersList.forEach((o) => orderMap.set(o.id, o));
+      ordersList.forEach((o) => orderMap.set(o.id, o));
 
-    const unsubscribePrimary = onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map((docSnap) => ({
+      const combined = Array.from(orderMap.values());
+      combined.sort((a, b) => {
+        const timeA = getTimeInMs(a);
+        const timeB = getTimeInMs(b);
+        return timeB - timeA;
+      });
+      callback(combined);
+    };
+
+    const qOrders = query(collection(db, 'orders'), where('userId', '==', userId));
+    const qNc = query(collection(db, 'newcomfirmedorders'), where('uid', '==', userId));
+
+    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
+      ordersList = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
       })) as Order[];
-      callback(orders);
+      notifyCombined();
     }, (error) => {
-      console.warn(`Primary subscription to user orders failed, trying fallback without orderBy:`, error);
-      const fallbackQuery = query(
-        collection(db, 'orders'),
-        where('userId', '==', userId)
-      );
-      unsubFallback = onSnapshot(fallbackQuery, (snapshot) => {
-        const orders = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        })) as Order[];
-        orders.sort((a, b) => {
-          const timeA = a.createdAt?.seconds || 0;
-          const timeB = b.createdAt?.seconds || 0;
-          return timeB - timeA;
-        });
-        callback(orders);
-      }, (fallbackError) => {
-        console.error(`Fallback error subscribing to user orders:`, fallbackError);
-        if (onError) onError(fallbackError);
-        else callback([]);
-      });
+      console.warn(`Subscription to orders failed:`, error);
+    });
+
+    const unsubNc = onSnapshot(qNc, (snapshot) => {
+      ncOrdersList = snapshot.docs.map((docSnap) => mapDocToOrder(docSnap.id, docSnap.data()));
+      notifyCombined();
+    }, (error) => {
+      console.warn(`Subscription to newcomfirmedorders failed:`, error);
+      if (onError) onError(error);
     });
 
     return () => {
-      unsubscribePrimary();
-      if (unsubFallback) unsubFallback();
+      unsubOrders();
+      unsubNc();
     };
   }
 
@@ -509,13 +597,34 @@ class OrderService extends BaseFirestoreService<Order> {
           webOrderId: webOrderId,
         };
 
+        const laundryOrdersPayload = {
+          Oid: laundryDocId,
+          name: combinedName,
+          imgURL: toSingleImageUrl(firstItem.imageUrl),
+          store: order.storeName || 'Tulete Dobi',
+          branch: 'Online',
+          location: resolveDeliveryLocationString(order.deliveryLocation),
+          latlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
+          cat: 'laundry',
+          no: order.contactPhone || '0000000000',
+          instructions: laundryInstructionsText,
+          status: 'received',
+          paid: true,
+          price: Math.round(totalLaundryPrice).toString(),
+          quantity: totalLaundryCount,
+          uname: order.uname || 'Web User',
+          email: order.email || 'web@tulete.net',
+          uid: uids || 'unknown_uid',
+          time: getFlutterTime(),
+        };
+
         // A. Add to global `newcomfirmedorders` (Admin/Driver feed)
         const globalRef = collection(db, 'newcomfirmedorders');
         await setDoc(doc(globalRef, laundryDocId), laundryPayload);
 
-        // B. Add to main `orders` collection (Web app main collection)
+        // B. Add to main `orders` collection (using specific 'orders' schema)
         const mainOrdersRef = doc(db, 'orders', laundryDocId);
-        await setDoc(mainOrdersRef, laundryPayload);
+        await setDoc(mainOrdersRef, laundryOrdersPayload);
 
         // C. Add to user's personal `userOrderId/{uid}/newcomfirmedorders`
         if (uids) {
@@ -524,7 +633,7 @@ class OrderService extends BaseFirestoreService<Order> {
 
           // D. Add to user's personal `userOrderId/{uid}/orders`
           const userOrdersRef = doc(db, 'userOrderId', uids, 'orders', laundryDocId);
-          await setDoc(userOrdersRef, laundryPayload);
+          await setDoc(userOrdersRef, laundryOrdersPayload);
         }
       }
 
@@ -578,16 +687,9 @@ class OrderService extends BaseFirestoreService<Order> {
         const globalRef = collection(db, 'newcomfirmedorders');
         await setDoc(doc(globalRef, itemDocId), itemPayload);
 
-        // Write to main `orders` collection
-        const mainOrdersRef = doc(db, 'orders', itemDocId);
-        await setDoc(mainOrdersRef, itemPayload);
-
         if (uids) {
           const userNewConfirmedRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', itemDocId);
           await setDoc(userNewConfirmedRef, itemPayload);
-
-          const userOrdersRef = doc(db, 'userOrderId', uids, 'orders', itemDocId);
-          await setDoc(userOrdersRef, itemPayload);
         }
       }
     } catch (e) {
@@ -603,9 +705,18 @@ class OrderService extends BaseFirestoreService<Order> {
   async cancelOrder(orderId: string): Promise<void> {
     const batch = writeBatch(db);
 
-    // 1. Update the web app's own orders document
+    // 1. Update the web app's order document (checking 'orders' or 'newcomfirmedorders')
     const orderRef = doc(db, 'orders', orderId);
-    batch.update(orderRef, { status: 'Cancelled', updatedAt: serverTimestamp() });
+    const orderSnap = await getDoc(orderRef);
+    if (orderSnap.exists()) {
+      batch.update(orderRef, { status: 'Cancelled', updatedAt: serverTimestamp() });
+    } else {
+      const ncRef = doc(db, 'newcomfirmedorders', orderId);
+      const ncSnap = await getDoc(ncRef);
+      if (ncSnap.exists()) {
+        batch.update(ncRef, { status: 'Cancelled', cancel: true, updatedAt: serverTimestamp() });
+      }
+    }
 
     // 2. Update tracking document
     const trackingRef = doc(db, 'tracking', orderId);
