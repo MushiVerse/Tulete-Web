@@ -11,6 +11,7 @@ export interface LanguageCurrencyOption {
 }
 
 export const SUPPORTED_LANGUAGES: LanguageCurrencyOption[] = [
+  { code: 'en', name: 'Default', currency: 'TZS', symbol: 'TSH', rate: 1.0 },
   { code: 'sw', name: 'Swahili (Tanzania)', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
   { code: 'en', name: 'English (US)', currency: 'USD', symbol: '$', rate: 0.000377 },
   { code: 'fr', name: 'Français (EU)', currency: 'EUR', symbol: '€', rate: 0.00035 },

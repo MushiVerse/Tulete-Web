@@ -179,8 +179,8 @@ header {
   pointer-events: auto !important;
 }
 
-/* Ensure form inputs, textareas and elements with notranslate preserve original text */
-input, textarea, select, .notranslate {
+/* Ensure form inputs, textareas, brand names and elements with notranslate preserve original text */
+input, textarea, select, .notranslate, [data-brand="tulete"], [translate="no"] {
   translate: no;
 }
 
