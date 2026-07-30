@@ -136,12 +136,15 @@ export const CheckoutPage = () => {
       const storeGroups: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof items } } = {};
       items.forEach(item => {
         const isLaundry = (item as any).cat === 'Nguo' || item.isLaundry || item.storeId === 'laundry';
-        const groupKey = isLaundry ? 'laundry_pack' : (item.storeId || item.storeName || 'general_store');
-        const sName = isLaundry ? (item.storeName || 'Laundry Services') : (item.storeName || 'Store Order');
+        const rawSId = item.storeId && item.storeId !== 'unknown' ? item.storeId : null;
+        const rawSName = item.storeName && item.storeName !== 'Unknown Store' ? item.storeName : null;
+
+        const groupKey = isLaundry ? 'laundry_pack' : (rawSId || rawSName || item.productId);
+        const sName = isLaundry ? (item.storeName || 'Laundry Services') : (rawSName || rawSId || 'Store Order');
 
         if (!storeGroups[groupKey]) {
           storeGroups[groupKey] = {
-            storeId: item.storeId || groupKey,
+            storeId: rawSId || groupKey,
             storeName: sName,
             isLaundry: isLaundry,
             items: []

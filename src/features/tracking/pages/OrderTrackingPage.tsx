@@ -1,6 +1,6 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOrderSingleRealtime, useOrderTrackingRealtime, useLiveFlutterOrderTracking } from '../../orders/hooks/useOrderRealtime';
 import { OrderStatus } from '../../orders/services/orderService';
 import { Button } from '../../../shared/components/ui/Button';
@@ -26,6 +26,9 @@ const STEPS: { status: OrderStatus; label: string; desc: string }[] = [
 export const OrderTrackingPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const shouldHideProgress = (location.state as any)?.hideProgress === true || searchParams.get('hideProgress') === 'true';
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const { order, isLoading: isOrderLoading } = useOrderSingleRealtime(id);
@@ -330,143 +333,110 @@ export const OrderTrackingPage = () => {
             </div>
           </Card>
 
-          {/* Stepper Progression */}
-          <Card className="p-6 border border-border shadow-sm bg-card">
-            <h3 className="font-bold text-foreground text-base mb-6">Delivery Progress</h3>
-            
-            {(() => {
-              const firstLiveItem = liveItems && liveItems.length > 0 ? liveItems[0] : null;
-              const rawSts: string[] = firstLiveItem?.ordersts || order?.ordersts || [];
-              const rawStsTime: string[] = firstLiveItem?.orderststime || order?.orderststime || [];
+          {/* Stepper Progression (Hidden for Laundry items or when navigated from Orders page) */}
+          {!(shouldHideProgress || order?.isLaundryOrder || order?.cat === 'Nguo' || (liveItems && liveItems.some(i => i.cat === 'Nguo' || i.cat === 'laundry'))) && (
+            <Card className="p-6 border border-border shadow-sm bg-card">
+              <h3 className="font-bold text-foreground text-base mb-6">Delivery Progress</h3>
+              
+              {(() => {
+                const firstLiveItem = liveItems && liveItems.length > 0 ? liveItems[0] : null;
+                const rawSts: string[] = firstLiveItem?.ordersts || order?.ordersts || [];
+                const rawStsTime: string[] = firstLiveItem?.orderststime || order?.orderststime || [];
 
-              const formatStatusTime = (timeStr?: string) => {
-                if (!timeStr) return '';
-                try {
-                  const d = new Date(timeStr);
-                  if (!isNaN(d.getTime())) {
-                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                  }
-                } catch (_) {}
-                return timeStr.length > 16 ? timeStr.substring(11, 16) : timeStr;
-              };
+                const formatStatusTime = (timeStr?: string) => {
+                  if (!timeStr) return '';
+                  try {
+                    const d = new Date(timeStr);
+                    if (!isNaN(d.getTime())) {
+                      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    }
+                  } catch (_) {}
+                  return timeStr.length > 16 ? timeStr.substring(11, 16) : timeStr;
+                };
 
-              if (rawSts && rawSts.length > 0) {
+                if (rawSts && rawSts.length > 0) {
+                  return (
+                    <div className="relative pl-6 border-l border-border space-y-6">
+                      {rawSts.map((stsName, idx) => {
+                        const isLatest = idx === rawSts.length - 1;
+                        const timeFormatted = formatStatusTime(rawStsTime[idx]);
+
+                        return (
+                          <div key={idx} className="relative">
+                            {/* Circle Indicator */}
+                            <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                              isLatest
+                                ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
+                                : 'bg-emerald-500 border-emerald-500'
+                            }`}>
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            </div>
+
+                            <div className="flex flex-col">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-bold text-sm text-foreground">
+                                  {stsName}
+                                </span>
+                                {timeFormatted && (
+                                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                    {timeFormatted}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground mt-0.5">
+                                {idx === 0 ? 'Order registered in system' : `Status updated to ${stsName}`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
                 return (
                   <div className="relative pl-6 border-l border-border space-y-6">
-                    {rawSts.map((stsName, idx) => {
-                      const isLatest = idx === rawSts.length - 1;
-                      const timeFormatted = formatStatusTime(rawStsTime[idx]);
+                    {STEPS.map((step, idx) => {
+                      const isCompleted = idx <= activeStepIndex && !isFinished;
+                      const isCurrent = idx === activeStepIndex && !isFinished;
+                      const isStepFinished = currentStatus === 'Delivered' && idx === STEPS.length - 1;
 
                       return (
                         <div key={idx} className="relative">
                           {/* Circle Indicator */}
                           <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                            isLatest
+                            isCompleted || isStepFinished
                               ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
-                              : 'bg-emerald-500 border-emerald-500'
+                              : isCurrent 
+                              ? 'bg-amber-400 border-amber-400 animate-ping'
+                              : 'bg-card border-slate-350 dark:border-slate-700'
                           }`}>
-                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            {(isCompleted || isStepFinished) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </div>
 
                           <div className="flex flex-col">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-bold text-sm text-foreground">
-                                {stsName}
-                              </span>
-                              {timeFormatted && (
-                                <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                                  {timeFormatted}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground mt-0.5">
-                              {idx === 0 ? 'Order registered in system' : `Status updated to ${stsName}`}
+                            <span className={`font-bold text-sm ${
+                              isCompleted || isCurrent || isStepFinished
+                                ? 'text-foreground' 
+                                : 'text-slate-400 dark:text-muted-foreground'
+                            }`}>
+                              {step.label}
                             </span>
+                            <span className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">{step.desc}</span>
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 );
-              }
-
-              return (
-                <div className="relative pl-6 border-l border-border space-y-6">
-                  {STEPS.map((step, idx) => {
-                    const isCompleted = idx <= activeStepIndex && !isFinished;
-                    const isCurrent = idx === activeStepIndex && !isFinished;
-                    const isStepFinished = currentStatus === 'Delivered' && idx === STEPS.length - 1;
-
-                    return (
-                      <div key={idx} className="relative">
-                        {/* Circle Indicator */}
-                        <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted || isStepFinished
-                            ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
-                            : isCurrent 
-                            ? 'bg-amber-400 border-amber-400 animate-ping'
-                            : 'bg-card border-slate-350 dark:border-slate-700'
-                        }`}>
-                          {(isCompleted || isStepFinished) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </div>
-
-                        <div className="flex flex-col">
-                          <span className={`font-bold text-sm ${
-                            isCompleted || isCurrent || isStepFinished
-                              ? 'text-foreground' 
-                              : 'text-slate-400 dark:text-muted-foreground'
-                          }`}>
-                            {step.label}
-                          </span>
-                          <span className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">{step.desc}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </Card>
+              })()}
+            </Card>
+          )}
         </div>
 
         {/* Info card sidepanel */}
         <div className="space-y-6">
-          {/* Driver Contact details */}
-          {tracking?.driverName && (
-            <Card className="p-5 border border-border shadow-md bg-indigo-50/40 dark:bg-indigo-950/10">
-              <h3 className="font-extrabold text-sm text-indigo-900 dark:text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <Truck className="w-4 h-4 text-primary" />
-                Delivery Attendant
-              </h3>
-              
-              <div className="flex items-center gap-3.5 mb-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center font-extrabold text-lg text-primary">
-                  {tracking.driverName.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-foreground truncate">{tracking.driverName}</p>
-                  <p className="text-xs text-muted-foreground">Attendant on Route</p>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <a 
-                  href={`tel:${tracking.driverPhone}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/95 text-white font-bold py-2.5 rounded-lg text-xs shadow-md transition-all"
-                >
-                  <Phone className="w-4 h-4" />
-                  Call Attendant
-                </a>
-                <Button 
-                  variant="outline"
-                  className="flex-shrink-0 p-2.5"
-                  onClick={() => alert('Opening live provider chat...')}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
-          )}
+          {/* Driver Contact details (Hidden for now) */}
 
           {/* Delivery Details */}
           <Card className="p-6 border border-border shadow-sm bg-card">
@@ -483,14 +453,16 @@ export const OrderTrackingPage = () => {
               </div>
               <div className="flex justify-between border-b border-border pb-2">
                 <span className="text-muted-foreground">Payment Status:</span>
-                <span className={`font-semibold ${(order.show === false || (liveItems && liveItems.some(i => i.show === false))) ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'} flex items-center gap-1`}>
+                <span className={`font-semibold ${(order?.show === false || (liveItems && liveItems.length > 0 && liveItems.some(i => i.show === false))) ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'} flex items-center gap-1`}>
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  {(order.show === false || (liveItems && liveItems.some(i => i.show === false))) ? 'Paid' : 'Pending'}
+                  {(order?.show === false || (liveItems && liveItems.length > 0 && liveItems.some(i => i.show === false))) ? 'Paid' : 'Pending'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Price:</span>
-                <span className="font-extrabold text-slate-950 dark:text-white">{formatPrice(order.totalAmount)} {APP_SETTINGS.currency}</span>
+                <span className="font-extrabold text-slate-950 dark:text-white">
+                  {formatPrice(order.totalAmount || (order as any).total || (order as any).price || (liveItems && liveItems.length > 0 ? (liveItems[0].total || liveItems[0].price || 0) : 0))} {APP_SETTINGS.currency}
+                </span>
               </div>
             </div>
           </Card>

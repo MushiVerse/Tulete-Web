@@ -52,6 +52,7 @@ export interface Order extends BaseDocument {
   notes?: string;
   // Laundry-specific fields (mirrors Flutter reorder.dart / cartsHome.dart)
   isLaundryOrder?: boolean;
+  cat?: string;
   irondelivery?: boolean;    // Iron after washing
   packagepickup?: boolean;   // Package & pickup service
   express?: boolean;         // Express 24h turnaround
@@ -137,7 +138,7 @@ function mapDocToOrder(id: string, data: any): Order {
     email: data.email || '',
     uname: data.uname || '',
     items: items,
-    totalAmount: data.totalAmount ?? data.total ?? 0,
+    totalAmount: data.totalAmount ?? data.total ?? (data.price != null ? (typeof data.price === 'number' ? data.price : (parseFloat(data.price) || 0)) : 0),
     deliveryFee: data.deliveryfee || 0,
     status: data.deliveryDone ? 'Delivered' : (data.cancel ? 'Cancelled' : (data.status || 'Order Placed')),
     ordersts: Array.isArray(data.ordersts) ? data.ordersts : undefined,
@@ -678,6 +679,8 @@ class OrderService extends BaseFirestoreService<Order> {
           status: 'received',
           paid: true,
           price: finalLaundryPrice.toString(),
+          total: finalLaundryPrice,
+          totalAmount: finalLaundryPrice,
           quantity: totalLaundryCount,
           uname: order.uname || 'Web User',
           email: order.email || 'web@tulete.net',

@@ -16,17 +16,40 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 
-const STATUS_CONFIGS: Record<string, { color: string; label: string; progress: number }> = {
-  'Order Placed': { color: 'bg-amber-500 text-white', label: 'Order Placed', progress: 15 },
-  Pending: { color: 'bg-amber-500 text-white', label: 'Pending', progress: 15 },
-  Confirmed: { color: 'bg-blue-500 text-white', label: 'Confirmed', progress: 30 },
-  Preparing: { color: 'bg-indigo-500 text-white', label: 'Preparing', progress: 50 },
-  'Picked Up': { color: 'bg-purple-500 text-white', label: 'Picked Up', progress: 70 },
-  'On The Way': { color: 'bg-pink-500 text-white', label: 'On The Way', progress: 85 },
-  Delivered: { color: 'bg-emerald-500 text-white', label: 'Delivered', progress: 100 },
-  Cancelled: { color: 'bg-rose-500 text-white', label: 'Cancelled', progress: 0 },
-  Failed: { color: 'bg-red-500 text-white', label: 'Failed', progress: 0 },
+const STATUS_CONFIGS: Record<string, { color: string; dotColor: string; label: string; progress: number }> = {
+  'Order Placed': { color: 'bg-amber-100 text-black border-amber-300 dark:bg-slate-900 dark:text-white dark:border-slate-700', dotColor: 'text-amber-500', label: 'Order Placed', progress: 15 },
+  Pending: { color: 'bg-amber-100 text-black border-amber-300 dark:bg-slate-900 dark:text-white dark:border-slate-700', dotColor: 'text-amber-500', label: 'Pending', progress: 15 },
+  Confirmed: { color: 'bg-sky-100 text-black border-sky-300 dark:bg-slate-900 dark:text-white dark:border-sky-700', dotColor: 'text-sky-500', label: 'Confirmed', progress: 30 },
+  Preparing: { color: 'bg-indigo-100 text-black border-indigo-300 dark:bg-slate-900 dark:text-white dark:border-indigo-700', dotColor: 'text-indigo-500', label: 'Preparing', progress: 50 },
+  'Picked Up': { color: 'bg-purple-100 text-black border-purple-300 dark:bg-slate-900 dark:text-white dark:border-purple-700', dotColor: 'text-purple-500', label: 'Picked Up', progress: 70 },
+  'On The Way': { color: 'bg-orange-100 text-black border-orange-300 dark:bg-slate-900 dark:text-white dark:border-orange-700', dotColor: 'text-orange-500', label: 'On The Way', progress: 85 },
+  Delivered: { color: 'bg-emerald-100 text-black border-emerald-300 dark:bg-slate-900 dark:text-white dark:border-emerald-700', dotColor: 'text-emerald-500', label: 'Delivered', progress: 100 },
+  Cancelled: { color: 'bg-rose-100 text-black border-rose-300 dark:bg-slate-900 dark:text-white dark:border-rose-700', dotColor: 'text-rose-500', label: 'Cancelled', progress: 0 },
+  Failed: { color: 'bg-red-100 text-black border-red-300 dark:bg-slate-900 dark:text-white dark:border-red-700', dotColor: 'text-red-500', label: 'Failed', progress: 0 },
 };
+
+function getStatusConfig(status: string): { color: string; dotColor: string; label: string; progress: number } {
+  if (!status) {
+    return STATUS_CONFIGS['Pending'];
+  }
+  const normalized = status.toLowerCase().trim();
+  if (normalized === 'received' || normalized === 'order placed') return STATUS_CONFIGS['Order Placed'];
+  if (normalized === 'pending') return STATUS_CONFIGS['Pending'];
+  if (normalized === 'confirmed') return STATUS_CONFIGS['Confirmed'];
+  if (normalized === 'preparing') return STATUS_CONFIGS['Preparing'];
+  if (normalized === 'picked up' || normalized === 'pickedup') return STATUS_CONFIGS['Picked Up'];
+  if (normalized === 'on the way' || normalized === 'ontheway') return STATUS_CONFIGS['On The Way'];
+  if (normalized === 'delivered') return STATUS_CONFIGS['Delivered'];
+  if (normalized === 'cancelled' || normalized === 'canceled') return STATUS_CONFIGS['Cancelled'];
+  if (normalized === 'failed') return STATUS_CONFIGS['Failed'];
+
+  return STATUS_CONFIGS[status] || {
+    color: 'bg-slate-100 text-slate-950 border-slate-300 dark:bg-slate-900 dark:text-white dark:border-slate-700',
+    dotColor: 'text-slate-500',
+    label: status,
+    progress: 0,
+  };
+}
 
 /**
  * Opens WhatsApp chat via +255757449734 with pre-filled order details
@@ -299,7 +322,7 @@ export const OrdersPage = () => {
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
             {filteredOrders.map((order) => {
-              const statusCfg = STATUS_CONFIGS[order.status] || { color: 'bg-slate-400', label: order.status, progress: 0 };
+              const statusCfg = getStatusConfig(order.status);
               const dateStr = order.createdAt?.seconds 
                 ? new Date(order.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -359,9 +382,10 @@ export const OrdersPage = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Badge className={`${statusCfg.color} font-bold px-2.5 py-0.5 rounded-full text-xs shadow-sm border-0`}>
+                        <span className={`${statusCfg.color} font-extrabold px-3 py-1 rounded-full text-xs shadow-2xs border inline-flex items-center gap-1.5 shrink-0`}>
+                          <span className={`w-2 h-2 rounded-full bg-current ${statusCfg.dotColor} animate-pulse shrink-0`} />
                           {statusCfg.label}
-                        </Badge>
+                        </span>
                       </div>
                     </div>
 
@@ -482,7 +506,7 @@ export const OrdersPage = () => {
                       <div className="flex items-center gap-2">
                         {activeTab === 'active' ? (
                           <Button
-                            onClick={() => navigate(`/tracking/${order.id}`)}
+                            onClick={() => navigate(`/tracking/${order.id}?hideProgress=true`, { state: { hideProgress: true } })}
                             size="sm"
                             className="font-bold text-xs shadow-md hover:shadow-lg flex items-center gap-1 group"
                           >

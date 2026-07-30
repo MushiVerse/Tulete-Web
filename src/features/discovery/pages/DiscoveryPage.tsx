@@ -81,6 +81,12 @@ export const DiscoveryPage = () => {
     const itemCat = product.cat || product.category || 'Product';
     const isLaundry = itemCat === 'Nguo' || itemCat === 'Laundry' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category) || product.recordType === 'cloth' || product._collection === 'cloths';
 
+    const rawStoreId = product.storeId || product.store_id || product.storeID || product.sid || product.vendorId || product.businessId;
+    const rawStoreName = product.store || product.storeName || product.store_name || product.vendorName || product.businessName;
+
+    const resolvedStoreName = rawStoreName && rawStoreName !== 'Unknown Store' ? rawStoreName : 'Store Order';
+    const resolvedStoreId = rawStoreId && rawStoreId !== 'unknown' ? rawStoreId : (rawStoreName && rawStoreName !== 'Unknown Store' ? rawStoreName : product.id);
+
     addToCart({
       productId: product.id,
       baseProductId: product.id,
@@ -88,8 +94,8 @@ export const DiscoveryPage = () => {
       price: product.price,
       basePrice: product.price,
       imageUrl: product.imgUrl || product.imageUrl || '',
-      storeId: product.storeId || 'unknown',
-      storeName: product.store || 'Unknown Store',
+      storeId: resolvedStoreId,
+      storeName: resolvedStoreName,
       cat: itemCat,
       location: product.location,
       idadi: product.quantity !== undefined ? product.quantity : product.idadi,
@@ -530,6 +536,9 @@ export const DiscoveryPage = () => {
                     }
 
                     // Product path
+                    const rawSId = item.storeId || item.store_id || item.storeID || item.sid || item.vendorId || item.businessId || '';
+                    const rawSName = item.store || item.storeName || item.store_name || item.vendorName || item.businessName || '';
+                    
                     const product = {
                       ...item,
                       id: item.objectID || item.id,
@@ -538,8 +547,8 @@ export const DiscoveryPage = () => {
                       price: item.price !== undefined ? Number(item.price) : 0,
                       oldprice: item.oldprice !== undefined ? Number(item.oldprice) : undefined,
                       imgUrl: item.imgUrl || item.imgURL || item.image || '',
-                      storeId: item.storeId || '',
-                      store: item.store || item.storeName || '',
+                      storeId: rawSId || rawSName || '',
+                      store: rawSName || rawSId || '',
                       rating: Math.round(rating * 10) / 10,
                       reviewCount,
                       category: item.category || item.cat || '',

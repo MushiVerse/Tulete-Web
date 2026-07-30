@@ -292,17 +292,20 @@ export const CartPage = () => {
 
                   items.forEach((item) => {
                     const isLaundry = (item as any).cat === 'Nguo' || item.isLaundry || item.storeId === 'laundry';
+                    const rawSId = item.storeId && item.storeId !== 'unknown' ? item.storeId : null;
+                    const rawSName = item.storeName && item.storeName !== 'Unknown Store' ? item.storeName : null;
+
                     const key = isLaundry
                       ? 'laundry_pack'
-                      : (item.storeId || item.storeName || 'general_store');
+                      : (rawSId || rawSName || item.productId);
                     
                     const storeName = isLaundry
                       ? (item.storeName || 'Laundry Services')
-                      : (item.storeName || 'Store');
+                      : (rawSName || rawSId || 'Store Order');
 
                     if (!groupedCart[key]) {
                       groupedCart[key] = {
-                        storeId: item.storeId || key,
+                        storeId: rawSId || key,
                         storeName: storeName,
                         isLaundry: isLaundry,
                         items: [],
