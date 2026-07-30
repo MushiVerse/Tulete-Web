@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { useThemeStore } from '../../../core/theme/useThemeStore';
 
 const STATUS_CONFIGS: Record<string, { color: string; dotColor: string; label: string; progress: number }> = {
   'Order Placed': { color: 'bg-amber-100 text-black border-amber-300 dark:bg-slate-900 dark:text-white dark:border-slate-700', dotColor: 'text-amber-500', label: 'Order Placed', progress: 15 },
@@ -44,10 +45,48 @@ function getStatusConfig(status: string): { color: string; dotColor: string; lab
   if (normalized === 'failed') return STATUS_CONFIGS['Failed'];
 
   return STATUS_CONFIGS[status] || {
-    color: 'bg-slate-100 text-slate-950 border-slate-300 dark:bg-slate-900 dark:text-white dark:border-slate-700',
+    color: 'bg-slate-100 text-black border-slate-300 dark:bg-slate-900 dark:text-white dark:border-slate-700',
     dotColor: 'text-slate-500',
     label: status,
     progress: 0,
+  };
+}
+
+function getStatusBadgeStyle(status: string, isDark: boolean) {
+  const cfg = getStatusConfig(status);
+  if (isDark) {
+    return {
+      className: 'bg-slate-900 text-white border-slate-700',
+      dotColor: cfg.dotColor,
+      label: cfg.label,
+      progress: cfg.progress,
+    };
+  }
+
+  let lightBg = 'bg-slate-100 text-black border-slate-300';
+  const norm = (status || '').toLowerCase().trim();
+
+  if (norm === 'received' || norm === 'order placed' || norm === 'pending') {
+    lightBg = 'bg-amber-100 text-black border-amber-300';
+  } else if (norm === 'confirmed') {
+    lightBg = 'bg-sky-100 text-black border-sky-300';
+  } else if (norm === 'preparing') {
+    lightBg = 'bg-indigo-100 text-black border-indigo-300';
+  } else if (norm === 'picked up' || norm === 'pickedup') {
+    lightBg = 'bg-purple-100 text-black border-purple-300';
+  } else if (norm === 'on the way' || norm === 'ontheway') {
+    lightBg = 'bg-orange-100 text-black border-orange-300';
+  } else if (norm === 'delivered') {
+    lightBg = 'bg-emerald-100 text-black border-emerald-300';
+  } else if (norm === 'cancelled' || norm === 'canceled' || norm === 'failed') {
+    lightBg = 'bg-rose-100 text-black border-rose-300';
+  }
+
+  return {
+    className: lightBg,
+    dotColor: cfg.dotColor,
+    label: cfg.label,
+    progress: cfg.progress,
   };
 }
 
@@ -158,6 +197,7 @@ function isOrderCancelable(order: Order): boolean {
 
 export const OrdersPage = () => {
   const navigate = useNavigate();
+  const { isDark } = useThemeStore();
   const { orders, isLoading } = useOrderListRealtime();
   const { addToCart } = useCartStore();
 
@@ -322,16 +362,18 @@ export const OrdersPage = () => {
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
             {filteredOrders.map((order) => {
-              const statusCfg = getStatusConfig(order.status);
+              const statusCfg = getStatusBadgeStyle(order.status, isDark);
               const dateStr = order.createdAt?.seconds 
                 ? new Date(order.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
               const catName = (order as any).cat || (order as any).category || (order.items && order.items[0]?.cat) || '';
-              const catLower = String(catName).toLowerCase();
-              const isLaundry = catName === 'Nguo' || catLower.includes('nguo') || catLower.includes('laund') || Boolean(order.isLaundryOrder);
-              const isFood = !isLaundry && (catName === 'Food' || catLower.includes('food') || (order.items || []).some((i: any) => String(i.cat || '').toLowerCase().includes('food')));
-              const isProduct = !isLaundry && !isFood;
+              const catStr = String(catName).trim();
+              const catLower = catStr.toLowerCase();
+
+              const isLaundry = catStr === 'Nguo' || catLower.includes('nguo') || catLower.includes('laund') || Boolean(order.isLaundryOrder);
+              const isProduct = !isLaundry && (catStr === 'Product' || catLower === 'product');
+              const isFood = !isLaundry && !isProduct; // Any order where cat is not Product and not Nguo
               const isExpanded = !!expandedOrders[order.id];
 
               // Parse laundry items if this is a laundry order pack
@@ -382,7 +424,7 @@ export const OrdersPage = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className={`${statusCfg.color} font-extrabold px-3 py-1 rounded-full text-xs shadow-2xs border inline-flex items-center gap-1.5 shrink-0`}>
+                        <span className={`${statusCfg.className} font-extrabold px-3 py-1 rounded-full text-xs shadow-2xs border inline-flex items-center gap-1.5 shrink-0`}>
                           <span className={`w-2 h-2 rounded-full bg-current ${statusCfg.dotColor} animate-pulse shrink-0`} />
                           {statusCfg.label}
                         </span>

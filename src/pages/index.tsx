@@ -21,7 +21,7 @@ export const DashboardPage = createPage('Dashboard', 'Your personal hub.');
 export { CartPage } from '../features/cart/pages/CartPage';
 export { CheckoutPage } from '../features/cart/pages/CheckoutPage';
 export { OrdersPage } from '../features/orders/pages/OrdersPage';
-export { OrderTrackingPage } from '../features/tracking/pages/OrderTrackingPage';
+export { OrderTrackingPage, OrderTrackingSkeleton } from '../features/tracking/pages/OrderTrackingPage';
 export { StoreListingPage } from '../features/stores/pages/StoreListingPage';
 export { StoreDetailsPage } from '../features/stores/pages/StoreDetailsPage';
 export { ConversationsPage as MessagesPage } from '../features/messages/pages/ConversationsPage';

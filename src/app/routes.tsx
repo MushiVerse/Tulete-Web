@@ -4,6 +4,7 @@ import { LoadingScreen } from '../shared/components/LoadingScreen';
 import { HomeSkeleton } from '../shared/components/skeletons/HomeSkeleton';
 import { GridSkeleton } from '../shared/components/skeletons/GridSkeleton';
 import { ProfileSkeleton } from '../shared/components/skeletons/ProfileSkeleton';
+import { OrderTrackingSkeleton } from '../features/tracking/pages/OrderTrackingPage';
 
 // Layouts
 import { RootLayout } from '../layouts/RootLayout';
@@ -102,7 +103,7 @@ export const router = createBrowserRouter([
           { path: 'profile', element: <Suspense fallback={<ProfileSkeleton />}><Profile /></Suspense> },
           { path: 'settings', element: <Suspense fallback={<ProfileSkeleton />}><Settings /></Suspense> },
           { path: 'checkout', element: withSuspense(Checkout) },
-          { path: 'tracking/:id', element: withSuspense(OrderTracking) },
+          { path: 'tracking/:id', element: <Suspense fallback={<OrderTrackingSkeleton />}><OrderTracking /></Suspense> },
         ],
       },
       {

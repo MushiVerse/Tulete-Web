@@ -7,6 +7,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
+import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { 
   ChevronLeft, Phone, ShieldCheck, MapPin, Truck, 
   Map, MessageSquare, AlertTriangle, CheckCircle2 
@@ -22,6 +23,41 @@ const STEPS: { status: OrderStatus; label: string; desc: string }[] = [
   { status: 'On The Way', label: 'On The Way', desc: 'Delivery is heading your way' },
   { status: 'Delivered', label: 'Delivered', desc: 'Order arrived successfully' },
 ];
+
+export function OrderTrackingSkeleton() {
+  return (
+    <PageContainer>
+      <ContentContainer size="md" className="space-y-6 pt-2">
+        {/* Top Navigation & Title Shimmer */}
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-32 rounded-lg" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-36 rounded-full" />
+              <Skeleton className="h-8 w-64 rounded-xl" />
+            </div>
+            <Skeleton className="h-7 w-28 rounded-full" />
+          </div>
+        </div>
+
+        {/* Grid Layout Shimmer */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Map Canvas Skeleton */}
+            <Skeleton className="w-full h-[360px] rounded-3xl" />
+            {/* Progress Stepper Skeleton */}
+            <Skeleton className="w-full h-[260px] rounded-3xl" />
+          </div>
+
+          {/* Request Summary Sidepanel Skeleton */}
+          <div className="space-y-6">
+            <Skeleton className="w-full h-[240px] rounded-3xl" />
+          </div>
+        </div>
+      </ContentContainer>
+    </PageContainer>
+  );
+}
 
 export const OrderTrackingPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -254,18 +290,8 @@ export const OrderTrackingPage = () => {
     };
   }, [tracking]);
 
-  if (isOrderLoading || isTrackingLoading) {
-    return (
-      <PageContainer>
-        <ContentContainer size="md" className="flex flex-col items-center justify-center min-h-[70vh] animate-pulse">
-          <div className="w-full max-w-lg space-y-4">
-            <div className="h-64 bg-slate-100 rounded-2xl"></div>
-            <div className="h-10 bg-slate-100 rounded w-1/3"></div>
-            <div className="h-6 bg-slate-100 rounded w-2/3"></div>
-          </div>
-        </ContentContainer>
-      </PageContainer>
-    );
+  if (isOrderLoading || isTrackingLoading || (isLiveLoading && !order)) {
+    return <OrderTrackingSkeleton />;
   }
 
   if (!order) {
