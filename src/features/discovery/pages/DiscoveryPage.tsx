@@ -134,7 +134,14 @@ export const DiscoveryPage = () => {
         filterStr = `recordType:store`;
       } else {
         if (category && category !== 'all') {
-          filterStr = `category:"${category}" AND NOT recordType:store AND NOT recordType:brand`;
+          const catLower = category.toLowerCase();
+          if (catLower === 'food') {
+            filterStr = `(recordType:food OR category:"Food" OR _collection:foods) AND NOT recordType:store AND NOT recordType:brand`;
+          } else if (catLower === 'product') {
+            filterStr = `(recordType:product OR category:"Product" OR _collection:products) AND NOT recordType:store AND NOT recordType:brand`;
+          } else {
+            filterStr = `category:"${category}" AND NOT recordType:store AND NOT recordType:brand`;
+          }
         } else {
           filterStr = `NOT recordType:store AND NOT recordType:brand`;
         }
@@ -188,6 +195,22 @@ export const DiscoveryPage = () => {
         return { rating, reviewCount };
       };
 
+      const getTimeValue = (item: any): number => {
+        const val = item.time ?? item.createdAt ?? item.updatedAt;
+        if (!val) return 0;
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+          const parsed = Date.parse(val);
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        if (typeof val === 'object') {
+          if (typeof val.seconds === 'number') return val.seconds * 1000;
+          if (typeof val._seconds === 'number') return val._seconds * 1000;
+          if (typeof val.toDate === 'function') return val.toDate().getTime();
+        }
+        return 0;
+      };
+
       const finalProducts = products
         .filter((item: any) => {
           if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
@@ -221,19 +244,29 @@ export const DiscoveryPage = () => {
           return true;
         })
         .sort((a: any, b: any) => {
-          const ratingA = getRating(a).rating;
-          const ratingB = getRating(b).rating;
-          
-          const ratingDiff = ratingB - ratingA;
+          // 1. Primary sort: Descending order using 'time' field (newest first)
+          const timeA = getTimeValue(a);
+          const timeB = getTimeValue(b);
+          if (timeA !== timeB) return timeB - timeA;
+
+          const strTimeA = String(a.time || a.createdAt || '');
+          const strTimeB = String(b.time || b.createdAt || '');
+          if (strTimeA !== strTimeB) {
+            if (strTimeA && strTimeB) return strTimeB.localeCompare(strTimeA);
+            if (strTimeB) return 1;
+            if (strTimeA) return -1;
+          }
+
+          // 2. Secondary sort (followed by): Highest rating filter
+          const ratingInfoA = getRating(a);
+          const ratingInfoB = getRating(b);
+
+          const ratingDiff = ratingInfoB.rating - ratingInfoA.rating;
           if (ratingDiff !== 0) return ratingDiff;
 
-          const timeA = a.time || a.createdAt || '';
-          const timeB = b.time || b.createdAt || '';
-          
-          if (timeA && timeB) return timeB.localeCompare(timeA);
-          if (timeB) return 1;
-          if (timeA) return -1;
-          
+          const reviewDiff = ratingInfoB.reviewCount - ratingInfoA.reviewCount;
+          if (reviewDiff !== 0) return reviewDiff;
+
           return 0;
         });
 

@@ -309,8 +309,42 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
                   .gm-style-iw-tc::after {
                     background-color: ${isDark ? '#141416' : '#ffffff'} !important;
                   }
-                  .gm-ui-hover-or-focus {
+                  .gm-style-iw-c > button,
+                  button.gm-ui-hover-or-focus,
+                  button[aria-label="Close"],
+                  button[title="Close"] {
+                    background-color: ${isDark ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.85)'} !important;
+                    border-radius: 9999px !important;
+                    width: 28px !important;
+                    height: 28px !important;
+                    top: 10px !important;
+                    right: 10px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+                    z-index: 9999 !important;
+                    opacity: 0.95 !important;
+                    border: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.12)'} !important;
+                  }
+                  .gm-style-iw-c > button:hover,
+                  button.gm-ui-hover-or-focus:hover,
+                  button[aria-label="Close"]:hover,
+                  button[title="Close"]:hover {
+                    opacity: 1 !important;
+                    background-color: ${isDark ? '#334155' : '#ffffff'} !important;
+                  }
+                  .gm-style-iw-c > button img,
+                  .gm-style-iw-c > button svg,
+                  .gm-style-iw-c > button span,
+                  button.gm-ui-hover-or-focus img,
+                  button.gm-ui-hover-or-focus svg,
+                  button.gm-ui-hover-or-focus span,
+                  button[aria-label="Close"] img,
+                  button[aria-label="Close"] svg,
+                  button[aria-label="Close"] span {
                     filter: ${isDark ? 'invert(1) brightness(200%)' : 'none'} !important;
+                    margin: 0 !important;
                   }
                 `}</style>
                 <div
