@@ -539,7 +539,9 @@ class OrderService extends BaseFirestoreService<Order> {
         }
 
         const firstItem = laundryItems[0];
-        const laundryDocId = `laundry_${webOrderId}`;
+        const timestamp = String(Date.now() % 100000).padStart(5, '0');
+        const randomDigits = Math.floor(Math.random() * 10);
+        const laundryDocId = `WEB-${timestamp}${randomDigits}`;
 
         // Determine instructions specifically for laundry order (cat === "Nguo")
         let laundryInstructionsText = order.instructions || '';
@@ -625,16 +627,6 @@ class OrderService extends BaseFirestoreService<Order> {
         // B. Add to main `orders` collection (using specific 'orders' schema)
         const mainOrdersRef = doc(db, 'orders', laundryDocId);
         await setDoc(mainOrdersRef, laundryOrdersPayload);
-
-        // C. Add to user's personal `userOrderId/{uid}/newcomfirmedorders`
-        if (uids) {
-          const userNewConfirmedRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', laundryDocId);
-          await setDoc(userNewConfirmedRef, laundryPayload);
-
-          // D. Add to user's personal `userOrderId/{uid}/orders`
-          const userOrdersRef = doc(db, 'userOrderId', uids, 'orders', laundryDocId);
-          await setDoc(userOrdersRef, laundryOrdersPayload);
-        }
       }
 
       // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY (matching cartsHome.dart)
@@ -686,11 +678,6 @@ class OrderService extends BaseFirestoreService<Order> {
         // Write to global `newcomfirmedorders` (matching cartsHome.dart)
         const globalRef = collection(db, 'newcomfirmedorders');
         await setDoc(doc(globalRef, itemDocId), itemPayload);
-
-        if (uids) {
-          const userNewConfirmedRef = doc(db, 'userOrderId', uids, 'newcomfirmedorders', itemDocId);
-          await setDoc(userNewConfirmedRef, itemPayload);
-        }
       }
     } catch (e) {
       console.error('Failed to create live flutter orders:', e);

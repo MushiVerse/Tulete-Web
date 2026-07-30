@@ -206,9 +206,16 @@ export const useCartStore = create<CartState>()(
         }),
 
       removeFromCart: (productId) =>
-        set((state) => ({
-          items: state.items.filter((i) => i.productId !== productId),
-        })),
+        set((state) => {
+          const newItems = state.items.filter((i) => i.productId !== productId);
+          const hasLaundry = newItems.some((i) => (i as any).cat === 'Nguo' || (i as any).category === 'Nguo');
+          return {
+            items: newItems,
+            laundryPreferences: hasLaundry
+              ? state.laundryPreferences
+              : { ...state.laundryPreferences, globalExpressSelected: false },
+          };
+        }),
 
       updateQuantity: (productId, quantity) => {
         set((state) => {
@@ -217,11 +224,17 @@ export const useCartStore = create<CartState>()(
             alert(`Cannot update quantity. Only ${item.idadi} items available in stock.`);
             return state;
           }
+          const newItems =
+            quantity <= 0
+              ? state.items.filter((i) => i.productId !== productId)
+              : state.items.map((i) => (i.productId === productId ? { ...i, quantity } : i));
+          const hasLaundry = newItems.some((i) => (i as any).cat === 'Nguo' || (i as any).category === 'Nguo');
+
           return {
-            items:
-              quantity <= 0
-                ? state.items.filter((i) => i.productId !== productId)
-                : state.items.map((i) => (i.productId === productId ? { ...i, quantity } : i)),
+            items: newItems,
+            laundryPreferences: hasLaundry
+              ? state.laundryPreferences
+              : { ...state.laundryPreferences, globalExpressSelected: false },
           };
         });
       },
@@ -238,7 +251,11 @@ export const useCartStore = create<CartState>()(
         }));
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () =>
+        set({
+          items: [],
+          laundryPreferences: { deliverytime: '', instructions: '', globalExpressSelected: false },
+        }),
 
       getTotals: () => {
         const items = get().items;
