@@ -26,6 +26,7 @@ export interface CartItem {
 
   // Food & Product Configurations
   isDeliverySelected?: boolean; // True means Delivery, False means Pickup
+  packagepickup?: boolean;
   deliverySlot?: 'Lunch' | 'Dinner' | 'ASAP' | string;
   brand?: string;
 
@@ -241,7 +242,11 @@ export const useCartStore = create<CartState>()(
 
       toggleDelivery: (productId, isDeliverySelected) => {
         set((state) => ({
-          items: state.items.map((i) => (i.productId === productId ? { ...i, isDeliverySelected } : i)),
+          items: state.items.map((i) =>
+            i.productId === productId
+              ? { ...i, isDeliverySelected, packagepickup: isDeliverySelected === false }
+              : i
+          ),
         }));
       },
 

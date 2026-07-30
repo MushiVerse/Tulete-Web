@@ -174,12 +174,12 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
               <button
                 type="button"
                 onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${item.isDeliverySelected === false
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${item.isDeliverySelected === false || (item as any).packagepickup === true
                     ? 'bg-primary border-primary text-primary-foreground scale-105'
                     : 'bg-card border-border text-muted-foreground hover:bg-muted'
                   }`}
               >
-                <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false ? 'fill-current' : ''}`} />
+                <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false || (item as any).packagepickup === true ? 'fill-current' : ''}`} />
                 Pick Up (No Delivery)
               </button>
             </div>

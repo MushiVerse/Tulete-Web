@@ -174,6 +174,12 @@ export const CheckoutPage = () => {
           items: group.items.map(item => {
             const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
             const unitPrice = item.quantity > 0 ? Math.round(rowTotal / item.quantity) : item.price;
+            
+            const hour = new Date().getHours();
+            const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
+            const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+            const slotValue = (item as any).deliverySlot || defaultFoodSlot;
+
             return {
               productId: item.productId,
               name: item.name,
@@ -181,8 +187,9 @@ export const CheckoutPage = () => {
               quantity: item.quantity,
               imageUrl: item.imageUrl || '',
               cat: item.cat || '',
-              deliverySlot: (item as any).deliverySlot || null,
+              deliverySlot: slotValue,
               isDeliverySelected: item.isDeliverySelected,
+              packagepickup: (item as any).packagepickup ?? (item.isDeliverySelected === false),
               ironingSelected: (item as any).ironingSelected || false,
               packagingSelected: (item as any).packagingSelected || false,
               vipSelected: (item as any).vipSelected || false,

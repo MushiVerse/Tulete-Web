@@ -642,17 +642,25 @@ class OrderService extends BaseFirestoreService<Order> {
 
       // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY (matching cartsHome.dart)
       for (const item of otherItems) {
-        const cat = (item as any).cat || (item as any).category || 'Product';
+        const rawCat = (item as any).cat || (item as any).category || '';
+        const catStr = String(rawCat).toLowerCase().trim();
+        const isFood = catStr === 'food' || (item as any).deliverySlot != null || (rawCat !== 'Product' && rawCat !== 'Nguo' && rawCat !== 'product');
+        const isPickUp = (item as any).isDeliverySelected === false || (item as any).packagepickup === true;
         const slot = (item as any).deliverySlot;
-        const isPickUp = (item as any).isDeliverySelected === false;
-        const isFood = String(cat).toLowerCase() === 'food';
 
         let finalDeliveryTime = 'Product';
         if (isPickUp) {
           finalDeliveryTime = 'Pickup';
         } else if (isFood) {
-          finalDeliveryTime = slot || 'ASAP';
+          if (slot && String(slot).trim().length > 0) {
+            finalDeliveryTime = slot;
+          } else {
+            const currentHour = new Date().getHours();
+            const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
+            finalDeliveryTime = bVal === 'now' ? 'ASAP' : (currentHour < 15 ? 'Lunch' : 'Dinner');
+          }
         } else {
+          // Product orders (not food nor laundry)
           finalDeliveryTime = 'Product';
         }
         const lineTotal = item.price * item.quantity;
@@ -675,7 +683,7 @@ class OrderService extends BaseFirestoreService<Order> {
           store: order.storeName || 'Tulete Store',
           total: Math.round(lineTotal || 0),
           irondelivery: false,
-          packagepickup: false,
+          packagepickup: isPickUp,
           express: false,
           cancel: false,
           show: true,
@@ -687,7 +695,7 @@ class OrderService extends BaseFirestoreService<Order> {
           email: order.email || 'web@tulete.net',
           tokOnesignal: '',
           deliverytime: finalDeliveryTime,
-          cat: cat,
+          cat: rawCat,
           showtrackbtn: false,
           deliveryDone: false,
           status: 'Order Placed',
