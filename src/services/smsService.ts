@@ -93,7 +93,7 @@ export const smsService = {
       const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const dateTimeStr = `${dateStr} ${timeStr}`;
       
-      const message = `New Order!\nDate: ${dateTimeStr}\nFrom: ${uname}\nItems: ${itemsList}\nTotal: ${totalAmount}/=\nLoc: ${deliveryLocation.address || 'N/A'}\nStore: ${storeName || 'N/A'}`;
+      const message = `New Order!\nDate: ${dateTimeStr}\nFrom: ${uname}\nItems: ${itemsList}\nTotal: ${totalAmount}/=\nLoc: ${deliveryLocation.address || 'N/A'}`;
       
       // Fetch specific phone numbers for this store from UsersandRoles
       const storePhones = await getPhonesByStore(storeName);

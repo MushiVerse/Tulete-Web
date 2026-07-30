@@ -78,19 +78,22 @@ export const DiscoveryPage = () => {
   const handleAddToCart = (product: any) => {
     // Block out-of-stock items
     if (product.availability === false) return;
-    const cat = product.category || product.recordType === 'cloth' ? 'Laundry' : 'Product';
+    const itemCat = product.cat || product.category || 'Product';
+    const isLaundry = itemCat === 'Nguo' || itemCat === 'Laundry' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category) || product.recordType === 'cloth' || product._collection === 'cloths';
+
     addToCart({
       productId: product.id,
       baseProductId: product.id,
       name: product.name,
       price: product.price,
-      imageUrl: product.imgUrl,
+      basePrice: product.price,
+      imageUrl: product.imgUrl || product.imageUrl || '',
       storeId: product.storeId || 'unknown',
       storeName: product.store || 'Unknown Store',
-      cat,
+      cat: itemCat,
       location: product.location,
-      idadi: product.idadi,
-      isLaundry: cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth' || product._collection === 'cloths'
+      idadi: product.quantity !== undefined ? product.quantity : product.idadi,
+      isLaundry
     });
   };
 

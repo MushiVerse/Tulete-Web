@@ -2,7 +2,7 @@
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
 import { useCartStore } from '../../cart/store/useCartStore';
-import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp, updateDoc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 
 export type OrderStatus = 
@@ -222,7 +222,7 @@ class OrderService extends BaseFirestoreService<Order> {
 
     const unsubMain = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        callback({ id: docSnap.id, ...docSnap.data() } as Order);
+        callback(mapDocToOrder(docSnap.id, docSnap.data()));
       } else {
         const ncRef = doc(db, 'newcomfirmedorders', orderId);
         if (unsubNc) unsubNc();
@@ -766,16 +766,71 @@ class OrderService extends BaseFirestoreService<Order> {
         // Write to global `newcomfirmedorders` (matching cartsHome.dart)
         const globalRef = collection(db, 'newcomfirmedorders');
         await setDoc(doc(globalRef, itemDocId), removeUndefinedFields(itemPayload));
+
+        // Reduce stock quantity for Food and Product items in Firestore (matching cartsHome.dart)
+        try {
+          const targetCollection = rawCat === 'Product' ? 'products' : 'foods';
+          const targetId = item.productId || (item as any).baseProductId;
+          const reduceCount = Math.round(item.quantity || 1);
+          if (targetId) {
+            const itemRef = doc(db, targetCollection, targetId);
+            const itemSnap = await getDoc(itemRef);
+            if (itemSnap.exists()) {
+              await updateDoc(itemRef, { quantity: increment(-reduceCount) });
+            }
+          }
+        } catch (stockErr) {
+          console.error('Error reducing stock quantity on order confirmation:', stockErr);
+        }
       }
     } catch (e) {
       console.error('Failed to create live flutter orders:', e);
     }
   }
   /**
+   * Restores item stock quantity when an order is cancelled.
+   * Replicates Flutter updatefoodincOverallCount for Food and Product items (excluding Laundry).
+   */
+  async restoreStockQuantity(docId: string, itemData: any): Promise<void> {
+    try {
+      const cat = itemData.cat || '';
+      // Exclude Laundry items as requested (affects only Food and Product items)
+      if (cat === 'Nguo' || cat === 'laundry' || itemData.isLaundryOrder) {
+        return;
+      }
+
+      const foodId = itemData.foodId || docId;
+      const count = Math.round(itemData.count || itemData.quantity || 1);
+
+      if (cat === 'Product') {
+        if (foodId) {
+          const prodRef = doc(db, 'products', foodId);
+          const prodSnap = await getDoc(prodRef);
+          if (prodSnap.exists()) {
+            await updateDoc(prodRef, { quantity: increment(count) });
+          }
+        }
+      } else {
+        // Food items
+        if (foodId) {
+          const foodRef = doc(db, 'foods', foodId);
+          const foodSnap = await getDoc(foodRef);
+          if (foodSnap.exists()) {
+            await updateDoc(foodRef, { quantity: increment(count) });
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`Error restoring stock quantity for doc ${docId}:`, e);
+    }
+  }
+
+  /**
    * Fully cancels an order across all Firestore collections:
-   * 1. orders/{orderId}                      — sets status to 'Cancelled'
+   * 1. orders/{orderId}                      — sets status to 'Cancelled', cancel: true, total: 0, price: '0'
    * 2. tracking/{orderId}                    — sets status to 'Cancelled'
-   * 3. newcomfirmedorders (global)           — sets cancel: true on all docs linked by webOrderId
+   * 3. newcomfirmedorders (global)           — sets cancel: true, total: 0 on all docs linked by webOrderId or docId
+   * 4. Restores item stock quantity in foods, products, or cloths collections.
    */
   async cancelOrder(orderId: string): Promise<void> {
     try {
@@ -783,35 +838,37 @@ class OrderService extends BaseFirestoreService<Order> {
       const orderRef = doc(db, 'orders', orderId);
       const orderSnap = await getDoc(orderRef);
       if (orderSnap.exists()) {
-        await setDoc(orderRef, { status: 'Cancelled', updatedAt: serverTimestamp() }, { merge: true });
+        await setDoc(orderRef, { status: 'Cancelled', cancel: true, price: '0', total: 0, updatedAt: serverTimestamp() }, { merge: true });
       }
 
       // 2. Update order document in 'newcomfirmedorders' if it exists directly by ID
       const ncRef = doc(db, 'newcomfirmedorders', orderId);
       const ncSnap = await getDoc(ncRef);
       if (ncSnap.exists()) {
-        await setDoc(ncRef, { status: 'Cancelled', cancel: true, updatedAt: serverTimestamp() }, { merge: true });
+        const ncData = ncSnap.data();
+        await setDoc(ncRef, { status: 'Cancelled', cancel: true, total: 0, updatedAt: serverTimestamp() }, { merge: true });
+        await this.restoreStockQuantity(ncSnap.id, ncData);
       }
 
-      // 3. Safely update tracking document if it exists
+      // 3. Update tracking document if it exists
       const trackingRef = doc(db, 'tracking', orderId);
       const trackingSnap = await getDoc(trackingRef);
       if (trackingSnap.exists()) {
         await setDoc(trackingRef, { status: 'Cancelled', updatedAt: serverTimestamp() }, { merge: true });
       }
 
-      // 4. Update all Flutter newcomfirmedorders docs linked by webOrderId
+      // 4. Update all Flutter newcomfirmedorders docs linked by webOrderId & restore stock
       const globalQ = query(
         collection(db, 'newcomfirmedorders'),
         where('webOrderId', '==', orderId)
       );
       const globalSnap = await getDocs(globalQ);
       if (!globalSnap.empty) {
-        const flutterBatch = writeBatch(db);
-        globalSnap.docs.forEach((d) => {
-          flutterBatch.update(d.ref, { cancel: true, status: 'Cancelled', updatedAt: serverTimestamp() });
-        });
-        await flutterBatch.commit();
+        for (const d of globalSnap.docs) {
+          const itemData = d.data();
+          await updateDoc(d.ref, { cancel: true, status: 'Cancelled', total: 0, updatedAt: serverTimestamp() });
+          await this.restoreStockQuantity(d.id, itemData);
+        }
       }
     } catch (e) {
       console.error('Failed to cancel order:', e);

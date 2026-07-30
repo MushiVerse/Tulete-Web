@@ -319,7 +319,7 @@ export const OrderTrackingPage = () => {
             <div className="bg-slate-900 dark:bg-slate-950 text-white p-4 flex justify-between items-center text-xs">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-primary" />
-                <span className="truncate max-w-[200px]">{order.deliveryLocation.address}</span>
+                <span className="truncate max-w-[200px]">{order.deliveryLocation?.address || (order as any).location || 'Location'}</span>
               </div>
               {tracking?.estimatedDeliveryTime && (
                 <div className="flex items-center gap-1">
