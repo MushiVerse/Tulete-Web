@@ -162,8 +162,8 @@ const StoreGridCard = ({
         {/* Content */}
         <div className="p-5 flex flex-col flex-1 bg-card">
           <div className="flex items-start justify-between gap-3 mb-1.5">
-            <h3 className="font-extrabold text-foreground text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors flex-1">
-              {store.store}
+            <h3 className="notranslate font-extrabold text-foreground text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors flex-1" translate="no">
+              {store.store || (store as any).name}
             </h3>
             {store.isVerified && (
               <CheckCircle2 className="w-5 h-5 text-sky-500 shrink-0" />
@@ -225,8 +225,8 @@ const StoreListCard = ({
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <h3 className="font-extrabold text-sm text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-              {store.store}
+            <h3 className="notranslate font-extrabold text-sm text-foreground line-clamp-1 group-hover:text-primary transition-colors" translate="no">
+              {store.store || (store as any).name}
             </h3>
             {store.isVerified && <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />}
           </div>
@@ -475,6 +475,9 @@ function fuzzyMatchStore(s: any, query: string): boolean {
         : 99.9,
     }))
     .filter((s) => {
+      // Exclude invalid, empty, dummy, or undefined store documents
+      if (!s || !s.id || !s.store || s.store === 'Store' || !s.store.trim() || s.store.toLowerCase() === 'undefined') return false;
+
       if (s.availability === false || (s as any).availability === 'false' || (s as any).available === false || (s as any).isAvailable === false) return false;
 
       if (currentLocation && s.location) {

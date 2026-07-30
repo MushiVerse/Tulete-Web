@@ -62,7 +62,7 @@ export const TopNav = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-sm">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-sm pointer-events-auto">
       <div className="flex h-16 w-full items-center justify-between px-4 md:px-8 max-w-[1600px] mx-auto">
 
         {/* Left: Logo & Main Links */}
@@ -78,7 +78,7 @@ export const TopNav = () => {
             <span className="notranslate text-xl font-extrabold tracking-tight text-foreground hidden sm:block" translate="no">Tulete</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="notranslate hidden md:flex items-center gap-6 relative z-10 pointer-events-auto" translate="no">
             <Link to="/" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname === '/' ? 'text-foreground' : 'text-muted-foreground'}`}>{t('home')}</Link>
             <Link to="/explore" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/explore') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('explore')}</Link>
             <Link to="/food" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/food') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('food')}</Link>

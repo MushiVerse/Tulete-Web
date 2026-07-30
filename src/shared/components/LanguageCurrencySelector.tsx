@@ -49,7 +49,7 @@ export const LanguageCurrencySelector = ({ className = "" }: { className?: strin
       }
 
       const elements = document.querySelectorAll(
-        '.goog-te-banner-frame, iframe.skiptranslate, div.skiptranslate, iframe[id^=":"]'
+        '.goog-te-banner-frame, iframe.skiptranslate, div.skiptranslate, iframe[id^=":"], #goog-gt-tt, .goog-te-balloon-frame, .goog-tooltip'
       );
       elements.forEach((el) => {
         const hEl = el as HTMLElement;
@@ -84,26 +84,33 @@ export const LanguageCurrencySelector = ({ className = "" }: { className?: strin
   };
 
   return (
-    <div className={`relative inline-flex items-center gap-1.5 ${className}`}>
+    <div className={`relative inline-flex items-center ${className}`}>
       {/* Hidden container for Google Translate Widget */}
       <div id="google_translate_element" className="hidden" />
 
-      <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted border border-border rounded-xl px-3 py-1.5 text-xs font-bold text-foreground transition-all shadow-sm">
+      <div className="relative inline-flex items-center gap-1.5 bg-muted/60 hover:bg-muted border border-border rounded-xl px-3 py-1.5 text-xs font-bold text-foreground transition-all shadow-sm group cursor-pointer max-w-full">
         <Globe className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span className="shrink-0">{currentLanguage.flag}</span>
+        
+        {/* Adaptive label that dynamically expands/contracts based on selected language and currency length */}
+        <span className="font-extrabold text-xs text-foreground whitespace-nowrap truncate max-w-[130px] sm:max-w-none">
+          {currentLanguage.name} ({currentLanguage.symbol})
+        </span>
+
+        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform group-hover:translate-y-0.5" />
+
+        {/* Overlay native select for seamless accessibility and click interaction */}
         <select 
           value={currentLanguage.code}
           onChange={handleChangeLanguage}
-          className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs font-extrabold cursor-pointer pr-4 appearance-none text-foreground"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs font-bold bg-card"
           title="Select Language & Currency"
         >
           {SUPPORTED_LANGUAGES.map(lang => (
             <option key={lang.code} value={lang.code} className="bg-card text-foreground font-semibold">
-              {lang.flag} {lang.name} ({lang.symbol})
+              {lang.name} ({lang.symbol})
             </option>
           ))}
         </select>
-        <ChevronDown className="w-3 h-3 text-muted-foreground pointer-events-none absolute right-2.5" />
       </div>
     </div>
   );

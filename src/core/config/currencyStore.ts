@@ -5,20 +5,19 @@ import { APP_SETTINGS } from './settings';
 export interface LanguageCurrencyOption {
   code: string;       // ISO language code e.g. 'sw', 'en', 'fr', 'ar', 'zh', 'de', 'es'
   name: string;       // Display Name e.g. 'Swahili', 'English', 'Français'
-  flag: string;       // Emoji flag
   currency: string;   // Currency Code e.g. 'TZS', 'USD', 'EUR', 'AED', 'CNY'
   symbol: string;     // Currency Symbol e.g. 'TZS', '$', '€', 'AED', '¥'
   rate: number;       // Exchange rate relative to 1 TZS
 }
 
 export const SUPPORTED_LANGUAGES: LanguageCurrencyOption[] = [
-  { code: 'sw', name: 'Swahili (Tanzania)', flag: '🇹🇿', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
-  { code: 'en', name: 'English (US)', flag: '🇺🇸', currency: 'USD', symbol: '$', rate: 0.000377 },
-  { code: 'fr', name: 'Français (EU)', flag: '🇫🇷', currency: 'EUR', symbol: '€', rate: 0.00035 },
-  { code: 'ar', name: 'العربية (UAE)', flag: '🇸🇦', currency: 'AED', symbol: 'AED', rate: 0.00139 },
-  { code: 'zh', name: '中文 (China)', flag: '🇨🇳', currency: 'CNY', symbol: '¥', rate: 0.00274 },
-  { code: 'de', name: 'Deutsch (Germany)', flag: '🇩🇪', currency: 'EUR', symbol: '€', rate: 0.00035 },
-  { code: 'es', name: 'Español (Spain)', flag: '🇪🇸', currency: 'EUR', symbol: '€', rate: 0.00035 },
+  { code: 'sw', name: 'Swahili (Tanzania)', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
+  { code: 'en', name: 'English (US)', currency: 'USD', symbol: '$', rate: 0.000377 },
+  { code: 'fr', name: 'Français (EU)', currency: 'EUR', symbol: '€', rate: 0.00035 },
+  { code: 'ar', name: 'العربية (UAE)', currency: 'AED', symbol: 'AED', rate: 0.00139 },
+  { code: 'zh', name: '中文 (China)', currency: 'CNY', symbol: '¥', rate: 0.00274 },
+  { code: 'de', name: 'Deutsch (Germany)', currency: 'EUR', symbol: '€', rate: 0.00035 },
+  { code: 'es', name: 'Español (Spain)', currency: 'EUR', symbol: '€', rate: 0.00035 },
 ];
 
 interface CurrencyLanguageState {

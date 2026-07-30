@@ -110,12 +110,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   height: 0 !important;
 }
 
-/* Hide Google Translate top banner / service bar & prevent layout displacement */
+/* Hide Google Translate top banner, iframe, popups & hover tooltip overlays */
 .goog-te-banner-frame,
 .goog-te-banner-frame.skiptranslate,
 iframe.goog-te-banner-frame,
 #goog-gt-tt,
+#goog-gt-tt *,
 .goog-te-balloon-frame,
+.goog-tooltip,
+.goog-tooltip:hover,
 div.goog-te-banner-frame,
 .goog-te-gadget,
 .goog-te-gadget-simple,
@@ -144,10 +147,36 @@ html, body {
   padding-top: 0px !important;
 }
 
-.goog-text-highlight {
+.goog-text-highlight,
+.goog-text-highlight:hover,
+.goog-text-highlight:focus,
+.goog-text-highlight:active,
+font.goog-text-highlight,
+font[style*="background-color"] {
   background-color: transparent !important;
+  background: transparent !important;
   box-shadow: none !important;
   border: none !important;
+  pointer-events: none !important;
+}
+
+/* Ensure TopNav header and links never show Google Translate grey hover boxes */
+header, nav, header a, nav a, header a *, nav a * {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+header a:hover font,
+nav a:hover font,
+header button:hover font {
+  background-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Ensure TopNav header has absolute pointer event priority */
+header {
+  pointer-events: auto !important;
 }
 
 /* Ensure form inputs, textareas and elements with notranslate preserve original text */
