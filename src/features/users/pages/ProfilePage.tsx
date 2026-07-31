@@ -118,8 +118,19 @@ export const ProfilePage = () => {
       <ContentContainer size="md">
         {/* Profile Hero */}
       <Card className="relative overflow-hidden mb-6 border-0 shadow-lg">
-        {/* Gradient banner */}
-        <div className="h-28 bg-gradient-to-br from-primary/80 via-indigo-600 to-purple-700" />
+        {/* Banner background */}
+        {profile.avatarUrl ? (
+          <div className="relative h-36 md:h-44 w-full overflow-hidden bg-muted">
+            <img
+              src={profile.avatarUrl}
+              alt=""
+              className="w-full h-full object-cover blur-sm scale-105 opacity-80"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-card via-black/40 to-black/20" />
+          </div>
+        ) : (
+          <div className="h-36 md:h-44 bg-gradient-to-br from-primary via-primary/90 to-primary/70" />
+        )}
 
         <div className="px-6 pb-6">
           {/* Avatar + Edit trigger */}

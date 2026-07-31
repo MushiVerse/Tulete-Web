@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { LanguageCurrencySelector } from '../../../shared/components/LanguageCurrencySelector';
 
 // ---- Toggle Row ----
 const ToggleRow = ({
@@ -184,8 +185,8 @@ export const SettingsPage = () => {
         </Card>
 
         {/* DISPLAY SECTION */}
-        <Card className="border border-border bg-card shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 bg-muted border-b border-border">
+        <Card className="border border-border bg-card shadow-sm overflow-visible relative z-20">
+          <div className="px-5 py-3.5 bg-muted border-b border-border rounded-t-xl">
             <h3 className="text-[10px] uppercase font-extrabold tracking-widest text-muted-foreground flex items-center gap-2">
               <Globe className="w-3.5 h-3.5" /> Display & Localization
             </h3>
@@ -198,13 +199,19 @@ export const SettingsPage = () => {
             value={prefs.darkMode}
             onChange={() => toggle('darkMode')}
           />
-          <SelectRow
-            icon={<Globe className="w-3.5 h-3.5 text-muted-foreground" />}
-            label="Currency Display"
-            value={prefs.currencyDisplay}
-            options={[{ label: `${APP_SETTINGS.currency} (Tanzanian Shilling)`, value: '${APP_SETTINGS.currency}' }, { label: 'USD (US Dollar)', value: 'USD' }]}
-            onChange={(v) => setVal('currencyDisplay', v)}
-          />
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border last:border-0 relative z-30">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-foreground">Language & Currency</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Select preferred language and currency display</p>
+              </div>
+            </div>
+
+            <LanguageCurrencySelector />
+          </div>
           <SelectRow
             icon={<Ruler className="w-3.5 h-3.5 text-muted-foreground" />}
             label="Distance Unit"

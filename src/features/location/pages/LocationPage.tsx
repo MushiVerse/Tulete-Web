@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocationStore } from '../hooks/useLocationStore';
+import { useLocationStore as useGlobalLocationStore } from '../store/useLocationStore';
 import { locationService, GeoLocation } from '../services/locationService';
 import { productService } from '../../products/services/productService';
 import { InteractiveMap } from '../components/InteractiveMap';
@@ -28,6 +29,14 @@ export const LocationPage = () => {
   const [isDetecting, setIsDetecting] = useState(false);
 
   const { 
+    setPickerOpen, 
+    savedLocations, 
+    removeSavedLocation, 
+    currentLocation: globalCurrentLoc,
+    setCurrentLocation
+  } = useGlobalLocationStore();
+
+  const { 
     currentLocation, 
     currentAddressString,
     addressList, 
@@ -50,26 +59,82 @@ export const LocationPage = () => {
     initialize('user_current');
   }, [initialize]);
 
+  // Combine hook addressList & global savedLocations
+  const displayAddressList = React.useMemo(() => {
+    const list = [...addressList];
+    savedLocations.forEach((savedLoc) => {
+      if (!list.some(a => a.id === savedLoc.id || a.addressLine === savedLoc.address)) {
+        list.unshift({
+          id: savedLoc.id,
+          userId: 'user_current',
+          title: savedLoc.specificInstructions?.trim() || savedLoc.address.split(',')[0] || 'Saved Location',
+          addressLine: savedLoc.address,
+          city: 'Dodoma',
+          location: { lat: savedLoc.lat, lng: savedLoc.lng },
+          isDefault: false
+        });
+      }
+    });
+    return list;
+  }, [addressList, savedLocations]);
+
   // Active address coordinates
-  const activeAddress = addressList.find((a) => a.id === selectedAddressId);
-  const activeCenter = activeAddress ? activeAddress.location : (currentLocation || { lat: -6.1630, lng: 35.7516 });
+  const activeAddress = displayAddressList.find((a) => a.id === selectedAddressId) || displayAddressList[0];
+  const activeCenter = activeAddress 
+    ? activeAddress.location 
+    : (globalCurrentLoc ? { lat: globalCurrentLoc.lat, lng: globalCurrentLoc.lng } : (currentLocation || { lat: -6.1630, lng: 35.7516 }));
+
+  // Helper to select and set active location globally
+  const handleSelectAndActivateLocation = (addrId: string) => {
+    selectAddress(addrId);
+    const target = displayAddressList.find((a) => a.id === addrId);
+    if (target) {
+      setCurrentLocation({
+        id: target.id,
+        address: target.addressLine,
+        lat: target.location.lat,
+        lng: target.location.lng,
+        specificInstructions: target.title,
+        lastUsedAt: Date.now(),
+      });
+    }
+  };
+
+  // Marker click listener
+  const handleMarkerClick = (markerId: string) => {
+    if (markerId === 'current_dot') {
+      if (globalCurrentLoc) {
+        setCurrentLocation(globalCurrentLoc);
+      }
+      return;
+    }
+
+    const addr = displayAddressList.find((a) => a.id === markerId);
+    if (addr) {
+      handleSelectAndActivateLocation(addr.id);
+    }
+  };
 
   // Map markers mapping
-  const mapMarkers = addressList.map((addr) => ({
+  const mapMarkers = displayAddressList.map((addr) => ({
     id: addr.id,
     lat: addr.location.lat,
     lng: addr.location.lng,
     label: addr.title,
+    subtitle: `${addr.addressLine}${addr.city ? `, ${addr.city}` : ''}`,
     type: (addr.id === selectedAddressId ? 'destination' : 'store') as any
   }));
 
   // Add current active browser location dot
-  if (currentLocation) {
+  if (currentLocation || globalCurrentLoc) {
+    const pos = currentLocation || { lat: globalCurrentLoc!.lat, lng: globalCurrentLoc!.lng };
+    const currAddr = currentAddressString || globalCurrentLoc?.address || 'Current GPS Position';
     mapMarkers.push({
       id: 'current_dot',
-      lat: currentLocation.lat,
-      lng: currentLocation.lng,
+      lat: pos.lat,
+      lng: pos.lng,
       label: 'Your Position',
+      subtitle: currAddr,
       type: 'user' as any
     });
   }
@@ -81,6 +146,7 @@ export const LocationPage = () => {
       lat: driverLocation.lat,
       lng: driverLocation.lng,
       label: 'Delivery Attendant (Mwangi)',
+      subtitle: 'En route with package to selected address',
       type: 'driver' as any
     });
   }
@@ -162,9 +228,9 @@ export const LocationPage = () => {
           </Button>
 
           <Button 
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => setPickerOpen(true)}
             size="sm"
-            className="font-bold text-xs shadow-md"
+            className="font-bold text-xs shadow-md cursor-pointer"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Add Address
@@ -182,7 +248,7 @@ export const LocationPage = () => {
               </h3>
               
               <span className="text-[10px] text-slate-450 font-bold">
-                {showAddForm ? '🎯 Click map to drop pin coordinates' : '📍 Visualizing Dodoma Saved Hubs'}
+                {showAddForm ? '🎯 Click map to drop pin coordinates' : '📍 Click marker to select & activate location'}
               </span>
             </div>
 
@@ -191,6 +257,7 @@ export const LocationPage = () => {
               markers={mapMarkers}
               routePath={activeRoutePath}
               onMapClick={handleMapClick}
+              onMarkerClick={handleMarkerClick}
               isLoading={isDetecting}
             />
 
@@ -351,19 +418,19 @@ export const LocationPage = () => {
           {/* SAVED ADDRESSES DIRECTORY LISTS */}
           <div className="space-y-3">
             <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
-              Address Directory ({addressList.length})
+              Address Directory ({displayAddressList.length})
             </h3>
 
-            {addressList.length === 0 ? (
+            {displayAddressList.length === 0 ? (
               <p className="text-xs text-slate-400 italic">No addresses saved in your book yet.</p>
             ) : (
-              addressList.map((addr) => {
+              displayAddressList.map((addr) => {
                 const isSelected = addr.id === selectedAddressId;
 
                 return (
                   <Card 
                     key={addr.id}
-                    onClick={() => selectAddress(addr.id)}
+                    onClick={() => handleSelectAndActivateLocation(addr.id)}
                     className={`p-4 border transition-all cursor-pointer shadow-sm ${
                       isSelected 
                         ? 'border-primary bg-primary/5' 
@@ -392,6 +459,7 @@ export const LocationPage = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteAddress(addr.id);
+                          removeSavedLocation(addr.id);
                         }}
                         className="text-slate-400 hover:text-rose-500 p-1 rounded-full transition-colors shrink-0"
                         title="Delete address"
