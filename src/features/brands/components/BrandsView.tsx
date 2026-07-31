@@ -98,7 +98,7 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                   />
                 </div>
-                <span className="text-sm font-extrabold text-center text-foreground group-hover:text-primary transition-colors line-clamp-2 px-1">
+                <span className="notranslate text-sm font-extrabold text-center text-foreground group-hover:text-primary transition-colors line-clamp-2 px-1" translate="no">
                   {brand.name}
                 </span>
               </motion.div>

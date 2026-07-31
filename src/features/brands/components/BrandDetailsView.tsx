@@ -17,8 +17,13 @@ interface BrandDetailsViewProps {
   onBack: () => void;
 }
 
-export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName, categoryParam, searchQuery, onBack }) => {
-  
+export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: rawBrandName, categoryParam, searchQuery, onBack }) => {
+  // Sanitize brandName to strip any Google Translate markup or unexpected HTML tags
+  const brandName = React.useMemo(() => {
+    if (!rawBrandName) return '';
+    return String(rawBrandName).replace(/<[^>]*>/g, '').trim();
+  }, [rawBrandName]);
+
   // Filter states
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(categoryParam === 'product' ? 4000000 : 40000);
@@ -109,7 +114,7 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName, c
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground tracking-tight line-clamp-1">
+            <h1 className="notranslate text-2xl font-extrabold text-foreground tracking-tight line-clamp-1" translate="no">
               {brandName}
             </h1>
             <span className="text-xs font-medium text-muted-foreground uppercase">{categoryParam || 'Brand'}</span>
@@ -177,7 +182,7 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName, c
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-extrabold flex items-center gap-2">
-            <Tag className="w-5 h-5 text-primary" /> Brand Items ({products.length})
+            <Tag className="w-5 h-5 text-primary" /> Brand Items <span className="notranslate font-extrabold" translate="no">({products.length})</span>
           </h2>
         </div>
         

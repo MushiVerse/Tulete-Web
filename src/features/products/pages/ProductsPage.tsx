@@ -112,8 +112,8 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
         </div>
 
         <div className="flex flex-col flex-1">
-          <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5">{product.store}</p>
-          <h3 className="font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors">{product.name}</h3>
+          <p className="notranslate text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5" translate="no">{product.store}</p>
+          <h3 className="notranslate font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors" translate="no">{product.name}</h3>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
             <Clock className="w-3.5 h-3.5" /> Next Day
           </div>
