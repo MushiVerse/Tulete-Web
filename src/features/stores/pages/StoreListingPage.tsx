@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import { HelpSafetyWidget } from '@/shared/components/HelpSafetyWidget';
 import { SocialLinksWidget } from '@/shared/components/SocialLinksWidget';
+import { PlatformStatsWidget } from '@/shared/components/PlatformStatsWidget';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
 const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; activeBg: string }> = {
@@ -84,22 +85,6 @@ const getCategoryBadgeConfig = (catName: string) => {
   return { emoji: '🏪', color: 'text-primary', bg: 'bg-primary/10 border-primary/20', activeBg: 'bg-primary text-white', Icon: StoreIcon };
 };
 
-const CATEGORIES = ['Food', 'Laundry', 'Electrical', 'Beauty'];
-
-const HUBS = [
-  { label: 'Kisasa', lat: -6.1630, lng: 35.7516 },
-  { label: 'Central Dodoma', lat: -6.1700, lng: 35.7400 },
-  { label: 'Makulu', lat: -6.1800, lng: 35.7600 },
-  { label: 'Area D', lat: -6.1550, lng: 35.7450 },
-];
-
-const STATS = [
-  { value: '200+', label: 'Providers', icon: StoreIcon },
-  { value: '4.8★', label: 'Avg Rating', icon: Star },
-  { value: '30min', label: 'Avg Delivery', icon: Clock },
-  { value: '24/7', label: 'Support', icon: Bell },
-];
-
 /* ─── Store Grid Card ──────────────────────────────────────── */
 const StoreGridCard = ({
   store, isFav, onFav, onClick
@@ -136,7 +121,7 @@ const StoreGridCard = ({
 
           {/* Status & Fav Row */}
           <div className="absolute top-3 inset-x-3 flex justify-between items-start">
-            <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md ${store.availability ? 'bg-success/90 text-primary-foreground' : 'bg-black/50 text-white'
+            <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md ${store.availability ? 'bg-emerald-600 text-white' : 'bg-black/60 text-white/80'
               }`}>
               {store.availability ? 'Open Now' : 'Closed'}
             </span>
@@ -221,7 +206,7 @@ const StoreListCard = ({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
             onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=200'; }}
           />
-          <span className={`absolute bottom-1 left-1 w-2 h-2 rounded-full border border-white ${store.availability ? 'bg-success' : 'bg-muted-foreground'}`} />
+          <span className={`absolute bottom-1 left-1 w-2 h-2 rounded-full border border-white ${store.availability ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
         </div>
 
         {/* Info */}
@@ -237,7 +222,7 @@ const StoreListCard = ({
             <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.bg} border ${cfg.color} max-w-[110px] truncate whitespace-nowrap inline-block align-middle`}>
               {cfg.emoji} {displayCat}
             </span>
-            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 ${store.availability ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 ${store.availability ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-muted text-muted-foreground'}`}>
               {store.availability ? 'Open' : 'Closed'}
             </span>
           </div>
@@ -274,13 +259,78 @@ const StoreListCard = ({
 };
 
 /* ─── Main StoreListingPage ────────────────────────────────── */
-import { useLocationStore } from '../../location/store/useLocationStore';
+import { useLocationStore as useGlobalLocationStore } from '../../location/store/useLocationStore';
+import { useLocationStore as useAddressStore } from '../../location/hooks/useLocationStore';
 import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 
 export const StoreListingPage = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { currentLocation } = useLocationStore();
+  const [searchParams] = useSearchParams();
+  const { currentLocation, savedLocations: globalSavedLocations, setCurrentLocation: setCurrentGlobalLocation } = useGlobalLocationStore();
+  const addressList = useAddressStore((state) => state.addressList);
+  const selectAddress = useAddressStore((state) => state.selectAddress);
+  const initAddressStore = useAddressStore((state) => state.initialize);
+
+  useEffect(() => {
+    initAddressStore('user_current');
+  }, [initAddressStore]);
+
+  // Compile actual locations with current active selected location first
+  const locationsList = React.useMemo(() => {
+    const list: Array<{ id: string; label: string; lat: number; lng: number; fullAddress: string }> = [];
+
+    // 1. Current active selected location from global store
+    if (currentLocation) {
+      const parts = currentLocation.address ? currentLocation.address.split(',') : [];
+      const label = currentLocation.specificInstructions?.trim() || parts[0]?.trim() || currentLocation.address || 'Current Location';
+      list.push({
+        id: currentLocation.id || 'current_loc',
+        label: label.trim(),
+        lat: currentLocation.lat,
+        lng: currentLocation.lng,
+        fullAddress: currentLocation.address || label,
+      });
+    }
+
+    // 2. Saved addresses from addressList (e.g. Home, Office, Gym)
+    if (Array.isArray(addressList) && addressList.length > 0) {
+      addressList.forEach((addr) => {
+        if (addr.id === 'addr_home' || addr.id === 'addr_office' || addr.title?.toLowerCase().includes('kisasa')) {
+          return;
+        }
+        const label = addr.title || addr.city || (addr.addressLine ? addr.addressLine.split(',')[0] : 'Saved Address');
+        const fullAddr = addr.addressLine || addr.title || label;
+        if (!list.some(existing => existing.id === addr.id || existing.fullAddress === fullAddr)) {
+          list.push({
+            id: addr.id,
+            label: label.trim(),
+            lat: addr.location?.lat ?? -6.1630,
+            lng: addr.location?.lng ?? 35.7516,
+            fullAddress: fullAddr,
+          });
+        }
+      });
+    }
+
+    // 3. Saved locations from globalSavedLocations
+    if (Array.isArray(globalSavedLocations) && globalSavedLocations.length > 0) {
+      globalSavedLocations.forEach((loc) => {
+        if (!list.some((existing) => existing.id === loc.id || existing.fullAddress === loc.address)) {
+          const parts = loc.address.split(',');
+          const label = loc.specificInstructions?.trim() || parts[0]?.trim() || loc.address;
+          list.push({
+            id: loc.id,
+            label: label.trim(),
+            lat: loc.lat,
+            lng: loc.lng,
+            fullAddress: loc.address,
+          });
+        }
+      });
+    }
+
+    return list;
+  }, [addressList, globalSavedLocations, currentLocation]);
 
   const [activeHub, setActiveHub] = useState(0);
   const [selectedMainCategory, setSelectedMainCategory] = useState<string | null>(null);
@@ -314,7 +364,7 @@ export const StoreListingPage = () => {
     return s ? JSON.parse(s) : [];
   });
 
-  const hub = HUBS[activeHub];
+  const hub = locationsList[activeHub] || locationsList[0] || { label: 'Location', lat: -6.1630, lng: 35.7516, fullAddress: '' };
 
   const toggleFav = (storeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -480,7 +530,9 @@ function fuzzyMatchStore(s: any, query: string): boolean {
       // Exclude invalid, empty, dummy, or undefined store documents
       if (!s || !s.id || !s.store || s.store === 'Store' || !s.store.trim() || s.store.toLowerCase() === 'undefined') return false;
 
-      if (s.availability === false || (s as any).availability === 'false' || (s as any).available === false || (s as any).isAvailable === false) return false;
+      // Check open status ONLY if "Open Now" switch is active
+      const isOpen = s.availability !== false && (s as any).availability !== 'false' && (s as any).available !== false && (s as any).isAvailable !== false;
+      if (onlyOpen && !isOpen) return false;
 
       if (currentLocation && s.location) {
         const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
@@ -498,7 +550,6 @@ function fuzzyMatchStore(s: any, query: string): boolean {
         if (storeMainCat !== mainLower && !storeMainCat.includes(mainLower) && !mainLower.includes(storeMainCat)) return false;
       }
 
-      if (onlyOpen && !s.availability) return false;
       if (onlyVerified && !s.isVerified) return false;
       if (searchQuery && !fuzzyMatchStore(s, searchQuery)) return false;
       return true;
@@ -613,10 +664,23 @@ function fuzzyMatchStore(s: any, query: string): boolean {
             <div>
               <h2 className="text-sm font-extrabold text-foreground mb-4 uppercase tracking-wider">Locations</h2>
               <div className="space-y-1.5">
-                {HUBS.map((h, i) => (
+                {locationsList.map((h, i) => (
                   <button
-                    key={h.label}
-                    onClick={() => setActiveHub(i)}
+                    key={h.id || h.label || i}
+                    onClick={() => {
+                      setActiveHub(i);
+                      setSortBy('distance');
+                      if (h.id && selectAddress) selectAddress(h.id);
+                      if (setCurrentGlobalLocation) {
+                        setCurrentGlobalLocation({
+                          id: h.id,
+                          address: h.fullAddress,
+                          lat: h.lat,
+                          lng: h.lng,
+                          lastUsedAt: Date.now(),
+                        });
+                      }
+                    }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left text-sm font-bold ${activeHub === i ? 'bg-success text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                   >
@@ -816,14 +880,27 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                     ))}
                   </div>
 
-                  {/* Hubs */}
+                  {/* Hubs / Locations */}
                   <div className="mt-4 pt-4 border-t border-border">
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground mb-2 block">Locations</span>
                     <div className="flex flex-wrap gap-2">
-                      {HUBS.map((h, i) => (
+                      {locationsList.map((h, i) => (
                         <button
-                          key={h.label}
-                          onClick={() => setActiveHub(i)}
+                          key={h.id || h.label || i}
+                          onClick={() => {
+                            setActiveHub(i);
+                            setSortBy('distance');
+                            if (h.id && selectAddress) selectAddress(h.id);
+                            if (setCurrentGlobalLocation) {
+                              setCurrentGlobalLocation({
+                                id: h.id,
+                                address: h.fullAddress,
+                                lat: h.lat,
+                                lng: h.lng,
+                                lastUsedAt: Date.now(),
+                              });
+                            }
+                          }}
                           className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold border transition-all ${activeHub === i
                               ? 'bg-success text-primary-foreground border-success'
                               : 'bg-muted border-border text-muted-foreground'
@@ -832,6 +909,12 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                           {h.label}
                         </button>
                       ))}
+                      <button
+                        onClick={() => navigate('/location')}
+                        className="px-3 py-1.5 rounded-full text-[11px] font-extrabold border border-dashed border-primary/40 text-primary hover:bg-primary/10 transition-all flex items-center gap-1"
+                      >
+                        + Manage
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -973,22 +1056,7 @@ function fuzzyMatchStore(s: any, query: string): boolean {
             </div>
 
             {/* TRUST STATS BAND */}
-            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
-              <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Platform Stats</h2>
-              <div className="grid grid-cols-1 gap-4">
-                {STATS.map(({ value, label, icon: Icon }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="block text-lg font-extrabold leading-tight text-foreground">{value}</span>
-                      <span className="block text-[10px] text-muted-foreground font-semibold uppercase">{label}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PlatformStatsWidget />
 
             {/* LAUNDRY PROMO BANNER */}
             <motion.div

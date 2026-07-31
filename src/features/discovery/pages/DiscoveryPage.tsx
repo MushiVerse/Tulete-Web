@@ -1,4 +1,4 @@
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, getCountFromServer } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 
 const getTimeValue = (item: any): number => {
@@ -78,6 +78,53 @@ export const DiscoveryPage = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
   const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
+
+  // Real Firestore Statistics count (foodStores for Stores, foods+cloths+products for Items)
+  const [statsCount, setStatsCount] = useState<{ stores: number | null; items: number | null }>({
+    stores: null,
+    items: null,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCounts = async () => {
+      try {
+        const [storesSnap, foodsSnap, clothsSnap, productsSnap] = await Promise.all([
+          getCountFromServer(collection(db, 'foodStores')),
+          getCountFromServer(collection(db, 'foods')),
+          getCountFromServer(collection(db, 'cloths')),
+          getCountFromServer(collection(db, 'products')),
+        ]);
+
+        if (isMounted) {
+          setStatsCount({
+            stores: storesSnap.data().count,
+            items: foodsSnap.data().count + clothsSnap.data().count + productsSnap.data().count,
+          });
+        }
+      } catch (err) {
+        try {
+          const [storesSnap, foodsSnap, clothsSnap, productsSnap] = await Promise.all([
+            getDocs(collection(db, 'foodStores')),
+            getDocs(collection(db, 'foods')),
+            getDocs(collection(db, 'cloths')),
+            getDocs(collection(db, 'products')),
+          ]);
+          if (isMounted) {
+            setStatsCount({
+              stores: storesSnap.size,
+              items: foodsSnap.size + clothsSnap.size + productsSnap.size,
+            });
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+
+    fetchCounts();
+    return () => { isMounted = false; };
+  }, []);
 
   // Cart & Auth
   const { items: cartItems, addToCart, clearCart, getTotals } = useCartStore();
@@ -436,7 +483,7 @@ export const DiscoveryPage = () => {
           <div className="w-full max-w-7xl flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar pb-24 px-4 sm:px-6 md:px-8 lg:px-12 pt-4 md:pt-6">
 
             {/* ── Location Header ── */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-1.5">
               <button
                 onClick={() => navigate('/location')}
                 className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors bg-muted/50 px-3 py-1.5 rounded-full"
@@ -449,102 +496,8 @@ export const DiscoveryPage = () => {
               </button>
             </div>
 
-            {/* ── Hero Banner ── */}
-            <div className="mb-8">
-              {/* Main orange gradient banner */}
-              <div className="relative w-full rounded-[2rem] overflow-hidden p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl mb-4"
-                style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 40%, #fb923c 70%, #f59e0b 100%)' }}>
-
-                {/* Animated floating food/product emojis */}
-                {[
-                  { emoji: '🍔', x: '78%', delay: 0, duration: 3.2 },
-                  { emoji: '🛵', x: '88%', delay: 0.8, duration: 2.8 },
-                  { emoji: '🍕', x: '68%', delay: 1.4, duration: 3.6 },
-                  { emoji: '🛒', x: '92%', delay: 0.4, duration: 3.0 },
-                  { emoji: '🥗', x: '74%', delay: 2.0, duration: 2.6 },
-                  { emoji: '📦', x: '83%', delay: 1.0, duration: 3.4 },
-                ].map((item, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute text-3xl md:text-4xl pointer-events-none select-none hidden md:block"
-                    style={{ left: item.x, top: '10%' }}
-                    animate={{ y: [0, -18, 0], rotate: [0, 6, -6, 0], opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: item.duration, delay: item.delay, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    {item.emoji}
-                  </motion.div>
-                ))}
-
-                {/* Decorative glow blobs */}
-                <div className="absolute -top-12 -left-8 w-56 h-56 rounded-full bg-yellow-300/30 blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-10 right-20 w-40 h-40 rounded-full bg-red-500/20 blur-2xl pointer-events-none" />
-
-                {/* Text side */}
-                <div className="relative z-10">
-                  <motion.span
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/25 text-white text-xs font-extrabold mb-3 backdrop-blur-sm shadow-sm"
-                  >
-                    <Zap className="w-3 h-3 fill-white" /> Today's Deals
-                  </motion.span>
-                  <motion.h2
-                    initial={{ opacity: 0, x: -16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    className="text-2xl md:text-4xl font-extrabold text-white leading-tight mb-2 drop-shadow-md"
-                  >
-                    Discover What's<br className="hidden md:block" /> Near You 🎯
-                  </motion.h2>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                    className="text-white/90 font-medium text-sm md:text-base max-w-xs drop-shadow-sm"
-                  >
-                    Fresh meals, services & products delivered fast from your neighbourhood.
-                  </motion.p>
-                </div>
-
-                {/* CTA buttons */}
-                <div className="relative z-10 flex flex-col gap-3 w-full md:w-auto">
-                  <button
-                    onClick={() => setCategory('Food')}
-                    className="flex items-center justify-between gap-3 px-5 py-3 bg-white/25 hover:bg-white/40 backdrop-blur-sm rounded-2xl text-white font-extrabold text-sm transition-all active:scale-95 w-full md:w-52 shadow-md"
-                  >
-                    <span className="flex items-center gap-2"><Flame className="w-4 h-4" /> Hot Meals</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setCategory('Product')}
-                    className="flex items-center justify-between gap-3 px-5 py-3 bg-white/25 hover:bg-white/40 backdrop-blur-sm rounded-2xl text-white font-extrabold text-sm transition-all active:scale-95 w-full md:w-52 shadow-md"
-                  >
-                    <span className="flex items-center gap-2"><Tag className="w-4 h-4" /> Trending Products</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Stores', value: '50+', icon: '🏪' },
-                  { label: 'Items', value: '500+', icon: '📦' },
-                  { label: 'Avg. Delivery', value: '25 min', icon: '🛵' },
-                ].map(stat => (
-                  <div key={stat.label} className="bg-card border border-border/50 rounded-2xl p-3 md:p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-                    <div className="text-2xl mb-1">{stat.icon}</div>
-                    <div className="font-extrabold text-lg text-foreground">{stat.value}</div>
-                    <div className="text-xs text-muted-foreground font-medium">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-
-            {/* Sticky Search & Filter Bar */}
-            <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md py-4 border-b border-border/50 mb-6 flex flex-col gap-4">
+            {/* Sticky Search Bar */}
+            <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md pt-1 pb-2 border-b border-border/50 mb-3 flex flex-col gap-2.5">
 
               {/* Tabs: Products vs Stores */}
               <div className="flex items-center gap-2 p-1 bg-muted rounded-xl w-fit">
@@ -609,29 +562,115 @@ export const DiscoveryPage = () => {
                 </div>
               </div>
 
-
-              {/* Trending Quick Filters */}
-              <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-                {TRENDING_FILTERS.map((filter) => (
-                  <button
-                    key={filter.id}
-                    onClick={() => {
-                      if (filter.id === 'all') clearAllFilters();
-                      else setCategory(filter.id);
-                    }}
-                    className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold transition-all border ${category === filter.id || (filter.id === 'all' && !category)
-                        ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
-                        : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                      }`}
-                  >
-                    {filter.icon} {filter.label}
-                  </button>
-                ))}
-              </div>
+              {/* Trending Quick Filters Chips (below search bar, hidden when Stores tab is selected) */}
+              {activeTab !== 'stores' && (
+                <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+                  {TRENDING_FILTERS.map((filter) => (
+                    <button
+                      key={filter.id}
+                      onClick={() => {
+                        if (filter.id === 'all') clearAllFilters();
+                        else setCategory(filter.id);
+                      }}
+                      className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold transition-all border ${category === filter.id || (filter.id === 'all' && !category)
+                          ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+                          : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                        }`}
+                    >
+                      {filter.icon} {filter.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* ── Hero Banner ── */}
+            <AnimatePresence>
+              {!localQuery.trim() && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                  exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  className="mb-3 overflow-hidden"
+                >
+                  {/* Main orange gradient banner */}
+                  <div className="relative w-full rounded-[2rem] overflow-hidden p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl"
+                    style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 40%, #fb923c 70%, #f59e0b 100%)' }}>
+
+                    {/* Animated floating food/product emojis */}
+                    {[
+                      { emoji: '🍔', x: '78%', delay: 0, duration: 3.2 },
+                      { emoji: '🛵', x: '88%', delay: 0.8, duration: 2.8 },
+                      { emoji: '🍕', x: '68%', delay: 1.4, duration: 3.6 },
+                      { emoji: '🛒', x: '92%', delay: 0.4, duration: 3.0 },
+                      { emoji: '🥗', x: '74%', delay: 2.0, duration: 2.6 },
+                      { emoji: '📦', x: '83%', delay: 1.0, duration: 3.4 },
+                    ].map((item, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute text-3xl md:text-4xl pointer-events-none select-none hidden md:block"
+                        style={{ left: item.x, top: '10%' }}
+                        animate={{ y: [0, -18, 0], rotate: [0, 6, -6, 0], opacity: [0.7, 1, 0.7] }}
+                        transition={{ duration: item.duration, delay: item.delay, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        {item.emoji}
+                      </motion.div>
+                    ))}
+
+                    {/* Decorative glow blobs */}
+                    <div className="absolute -top-12 -left-8 w-56 h-56 rounded-full bg-yellow-300/30 blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-10 right-20 w-40 h-40 rounded-full bg-red-500/20 blur-2xl pointer-events-none" />
+
+                    {/* Text side */}
+                    <div className="relative z-10">
+                      <motion.span
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/25 text-white text-xs font-extrabold mb-3 backdrop-blur-sm shadow-sm"
+                      >
+                        <Zap className="w-3 h-3 fill-white" /> Today's Deals
+                      </motion.span>
+                      <motion.h2
+                        initial={{ opacity: 0, x: -16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1 }}
+                        className="text-2xl md:text-4xl font-extrabold text-white leading-tight mb-2 drop-shadow-md"
+                      >
+                        Discover What's<br className="hidden md:block" /> Near You 🎯
+                      </motion.h2>
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        className="text-white/90 font-medium text-sm md:text-base max-w-xs drop-shadow-sm"
+                      >
+                        Fresh meals, services & products delivered fast from your neighbourhood.
+                      </motion.p>
+                    </div>
+
+                    {/* Embedded Stats Cards inside Hero Banner */}
+                    <div className="relative z-10 grid grid-cols-3 gap-2.5 w-full md:w-auto shrink-0">
+                      {[
+                        { label: 'Stores', value: statsCount.stores !== null ? `${statsCount.stores}+` : '...', icon: '🏪' },
+                        { label: 'Items', value: statsCount.items !== null ? `${statsCount.items}+` : '...', icon: '📦' },
+                        { label: 'Avg. Delivery', value: '25 min', icon: '🛵' },
+                      ].map(stat => (
+                        <div key={stat.label} className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/25 rounded-2xl p-3 md:p-4 text-center text-white transition-all shadow-sm">
+                          <div className="text-xl md:text-2xl mb-1">{stat.icon}</div>
+                          <div className="font-extrabold text-sm md:text-base leading-tight drop-shadow-xs">{stat.value}</div>
+                          <div className="text-[10px] md:text-xs font-semibold opacity-90 mt-0.5">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Results Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-extrabold flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-warning fill-warning" />
                 {localQuery ? 'Search Results' : 'Trending Now'}
