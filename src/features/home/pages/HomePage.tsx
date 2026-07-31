@@ -335,6 +335,9 @@ export const HomePage = () => {
   // 10-Hour Seed for data-level item randomization across all categories
   const homeSeed = useMemo(() => get10HourSeed(), []);
 
+  // Limit state for "Stores near me" section (initial 20, opens next 20)
+  const [storeLimit, setStoreLimit] = useState(20);
+
   // ── Firestore Subscriptions for userViewed & userfavorites ──
   const [userViewedItems, setUserViewedItems] = useState<Product[]>([]);
   const [userFavoritesItems, setUserFavoritesItems] = useState<Product[]>([]);
@@ -527,7 +530,7 @@ export const HomePage = () => {
   const { data: storesData, isLoading: isStoresLoading } = useFirestoreQuery(
     ['stores', 'home'],
     storeService,
-    { limit: 40 }
+    { limit: 60 }
   );
 
   const processItems = (items: any[], type: 'food' | 'product', seedOffset: number = 0) => {
@@ -561,6 +564,10 @@ export const HomePage = () => {
 
   const stores = storesData?.data || [];
   const validStores = stores.filter(s => {
+    if (!s || !s.id || s.id === 'undefined' || s.id === 'null') return false;
+    const storeName = (s.store || s.name || '').trim();
+    if (!storeName || storeName === 'undefined' || storeName === 'null' || storeName === 'Store') return false;
+    if (storeName.toLowerCase().includes('dummy') || storeName.toLowerCase().includes('test store')) return false;
     if (s.availability === false) return false;
     if (currentLocation && s.location) {
       const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
@@ -1060,8 +1067,8 @@ export const HomePage = () => {
                   </div>
                 ))}
               </HorizontalCarousel>
-            ) : filterValue !== 'food' && openStores
-              .filter((store) => {
+            ) : (() => {
+              const filteredStoresNearMe = openStores.filter((store) => {
                 const getStoreCategoryGroup = (store: any) => {
                   const text = `${store.store} ${store.name || ''} ${store.description || ''}`.toLowerCase();
                   if (text.match(/laundry|cloth|suit|wash|bedding|dryclean|iron|fashion|fits|boutique|wear|shoes|apparel/)) return 'laundry';
@@ -1075,43 +1082,57 @@ export const HomePage = () => {
 
                 const actualCategory = getStoreCategoryGroup(store);
                 if (!filterValue) return true;
+                if (filterValue === 'food') return actualCategory === 'food';
                 if (filterValue === 'product') return actualCategory === 'product';
                 if (filterValue === 'laundry') return actualCategory === 'laundry';
                 return true;
-              })
-              .length > 0 && (
-              <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
-                {openStores
-                  .filter((store) => {
-                    const getStoreCategoryGroup = (store: any) => {
-                      const text = `${store.store} ${store.name || ''} ${store.description || ''}`.toLowerCase();
-                      if (text.match(/laundry|cloth|suit|wash|bedding|dryclean|iron|fashion|fits|boutique|wear|shoes|apparel/)) return 'laundry';
-                      if (text.match(/food|meal|platter|restaurant|bakery|meat|pizza|burger|kitchen|cafe|dine/)) return 'food';
-                      
-                      if (store.category === 'Food') return 'food';
-                      if (store.category === 'Laundry') return 'laundry';
-                      
-                      return 'product';
-                    };
+              });
 
-                    const actualCategory = getStoreCategoryGroup(store);
-                    if (!filterValue) return true;
-                    if (filterValue === 'product') return actualCategory === 'product';
-                    if (filterValue === 'laundry') return actualCategory === 'laundry';
-                    return true;
-                  })
-                  .slice(0, 20).map((store) => (
-                  <div key={`store-${store.id}`} className="w-[280px] sm:w-[320px] shrink-0">
-                    <FeaturedStoreCard
-                      store={store}
-                      onClick={() => navigate(`/store/${store.id}`)}
-                      isFav={favorites.includes(store.id)}
-                      onFav={(e) => toggleFav(store.id, e)}
-                    />
-                  </div>
-                ))}
-              </HorizontalCarousel>
-            )}
+              if (filteredStoresNearMe.length === 0) return null;
+
+              const visibleStores = filteredStoresNearMe.slice(0, storeLimit);
+              const hasMoreStores = filteredStoresNearMe.length > storeLimit;
+
+              return (
+                <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
+                  {visibleStores.map((store) => (
+                    <div key={`store-${store.id}`} className="w-[280px] sm:w-[320px] shrink-0">
+                      <FeaturedStoreCard
+                        store={store}
+                        onClick={() => navigate(`/store/${store.id}`)}
+                        isFav={favorites.includes(store.id)}
+                        onFav={(e) => toggleFav(store.id, e)}
+                      />
+                    </div>
+                  ))}
+
+                  {hasMoreStores ? (
+                    <div className="w-[200px] shrink-0 flex items-center justify-center">
+                      <button
+                        onClick={() => setStoreLimit((prev) => prev + 20)}
+                        className="w-full h-full min-h-[160px] rounded-3xl border-2 border-dashed border-primary/40 hover:border-primary bg-primary/5 hover:bg-primary/10 flex flex-col items-center justify-center p-4 transition-all group cursor-pointer"
+                      >
+                        <div className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mb-2 shadow-md group-hover:scale-110 transition-transform">
+                          <ChevronRight className="w-6 h-6" />
+                        </div>
+                        <span className="font-extrabold text-sm text-foreground text-center">Open Next 20 Stores</span>
+                        <span className="text-xs text-muted-foreground mt-1">({filteredStoresNearMe.length - storeLimit} remaining)</span>
+                      </button>
+                    </div>
+                  ) : storeLimit > 20 ? (
+                    <div className="w-[180px] shrink-0 flex items-center justify-center">
+                      <button
+                        onClick={() => setStoreLimit(20)}
+                        className="w-full h-full min-h-[160px] rounded-3xl border border-border hover:border-muted-foreground/50 bg-card hover:bg-muted flex flex-col items-center justify-center p-4 transition-all group cursor-pointer"
+                      >
+                        <span className="font-extrabold text-xs text-muted-foreground text-center">Show First 20</span>
+                      </button>
+                    </div>
+                  ) : null}
+                </HorizontalCarousel>
+              );
+            })()}
+
 
             {/* 3.5 Products near me */}
             {productsNearMe.length > 0 && (
