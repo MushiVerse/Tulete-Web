@@ -42,18 +42,27 @@ export const useLocationStore = create<LocationStore>()(
 
       initialize: (_userId) => {
         const currentList = get().addressList;
-        // Clean out any legacy mock/dummy addresses
-        const cleanList = currentList.filter(a =>
-          a.id !== 'addr_home' &&
-          a.id !== 'addr_office' &&
-          !a.title?.toLowerCase().includes('kisasa') &&
-          !a.title?.toLowerCase().includes('central office') &&
-          !a.city?.toLowerCase().includes('nairobi') &&
-          !a.addressLine?.toLowerCase().includes('nairobi') &&
-          !a.addressLine?.toLowerCase().includes('kilimani')
-        );
+        // Clean out legacy dummy addresses & fix Map Selection Pin titles to actual address values
+        let hasChanges = false;
+        const cleanList = currentList
+          .filter(a =>
+            a.id !== 'addr_home' &&
+            a.id !== 'addr_office' &&
+            !a.title?.toLowerCase().includes('kisasa') &&
+            !a.title?.toLowerCase().includes('central office') &&
+            !a.city?.toLowerCase().includes('nairobi') &&
+            !a.addressLine?.toLowerCase().includes('nairobi')
+          )
+          .map(a => {
+            if (a.title?.toLowerCase().includes('map selection')) {
+              hasChanges = true;
+              const actualVal = a.addressLine?.split(',')[0].trim() || a.city || 'Location';
+              return { ...a, title: actualVal };
+            }
+            return a;
+          });
 
-        if (cleanList.length !== currentList.length) {
+        if (cleanList.length !== currentList.length || hasChanges) {
           set({
             addressList: cleanList,
             selectedAddressId: cleanList[0]?.id || null,
