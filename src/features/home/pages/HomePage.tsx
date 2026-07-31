@@ -33,6 +33,7 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { useNotificationsRealtime } from '../../notifications/hooks/useNotificationsRealtime';
+import { HelpSafetyWidget } from '../../../shared/components/HelpSafetyWidget';
 
 
 /*  Shared Configs  */
@@ -1397,6 +1398,9 @@ export const HomePage = () => {
                   ))}
                 </div>
               </div>
+
+              {/* HELP & SAFETY WIDGET */}
+              <HelpSafetyWidget />
 
               {/* LAUNDRY PROMO BANNER */}
               <motion.div

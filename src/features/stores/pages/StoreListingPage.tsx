@@ -19,6 +19,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
+import { HelpSafetyWidget } from '../../../shared/components/HelpSafetyWidget';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
 const CAT_CONFIG: Record<string, { emoji: string; color: string; bg: string; activeBg: string }> = {
@@ -987,6 +988,9 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                 ))}
               </div>
             </div>
+
+            {/* HELP & SAFETY WIDGET */}
+            <HelpSafetyWidget />
 
             {/* LAUNDRY PROMO BANNER */}
             <motion.div

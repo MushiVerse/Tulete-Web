@@ -92,29 +92,16 @@ export const TopNav = () => {
         {/* Right Side Actions */}
         <div className="flex items-center gap-2 sm:gap-3 md:gap-5">
 
-          {/* Google Play Badge — compact on tablet (Android only) */}
+          {/* Google Play Badge */}
           {showPlayBadge && (
             <a
               href={APP_SETTINGS.playStoreUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:flex lg:hidden items-center justify-center shrink-0 active:scale-95 transition-transform"
+              className="flex items-center justify-center shrink-0 active:scale-95 transition-transform hover:-translate-y-0.5 duration-200"
               title="Download on Google Play"
             >
-              <PlayStoreBadge className="h-9 w-auto object-contain" />
-            </a>
-          )}
-
-          {/* Google Play Badge — full size on desktop */}
-          {showPlayBadge && (
-            <a
-              href={APP_SETTINGS.playStoreUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden lg:flex items-center active:scale-95 transition-transform hover:-translate-y-0.5 duration-200"
-              title="Download on Google Play"
-            >
-              <PlayStoreBadge className="h-10 w-auto object-contain" />
+              <PlayStoreBadge className="h-7 sm:h-9 lg:h-10 w-auto object-contain" />
             </a>
           )}
 
