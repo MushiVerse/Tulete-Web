@@ -147,7 +147,7 @@ export const LanguageCurrencySelector = ({ className = "" }: { className?: strin
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute right-0 mt-2 w-64 rounded-2xl bg-card border border-border/80 shadow-2xl p-2 z-50 overflow-hidden backdrop-blur-xl"
+            className="absolute right-0 mt-2 w-64 rounded-2xl bg-card border border-border/80 shadow-2xl p-2 z-[100] overflow-hidden backdrop-blur-xl"
           >
             <div className="px-3 py-2 border-b border-border/60 mb-1 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">

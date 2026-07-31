@@ -33,6 +33,8 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { useNotificationsRealtime } from '../../notifications/hooks/useNotificationsRealtime';
+import { HelpSafetyWidget } from '@/shared/components/HelpSafetyWidget';
+import { SocialLinksWidget } from '@/shared/components/SocialLinksWidget';
 
 
 /*  Shared Configs  */
@@ -1422,6 +1424,12 @@ export const HomePage = () => {
                   </div>
                 </div>
               </motion.div>
+
+              {/* HELP & SAFETY WIDGET */}
+              <HelpSafetyWidget />
+
+              {/* FOLLOW US WIDGET */}
+              <SocialLinksWidget />
 
           </div>
         </div>
