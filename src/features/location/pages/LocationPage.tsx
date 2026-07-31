@@ -165,8 +165,9 @@ export const LocationPage = () => {
     if (!showAddForm) {
       // Find matching address string
       const addrStr = await locationService.reverseGeocode(coords.lat, coords.lng);
+      const cleanTitle = addrStr ? addrStr.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').replace(/interchange/gi, '').split(',')[0].trim() : '';
       saveAddress('user_current', {
-        title: 'Map Selection Pin',
+        title: cleanTitle || addrStr || 'Location',
         addressLine: addrStr,
         city: 'Dodoma',
         location: coords,

@@ -129,7 +129,7 @@ export const TopNav = () => {
               {currentLocation
                 ? (currentLocation.specificInstructions?.trim() ||
                     (!currentLocation.address.includes('(Default)')
-                      ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').split(',')[0]
+                      ? (currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').replace(/interchange/gi, '').split(',')[0].trim() || currentLocation.address.split(',')[0].trim())
                       : 'Set Location'))
                 : 'Set Location'}
             </span>
