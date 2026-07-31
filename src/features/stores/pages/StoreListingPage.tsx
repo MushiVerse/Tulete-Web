@@ -521,62 +521,62 @@ export const StoreListingPage = () => {
     return Array.from(catsSet);
   }, [allStores]);
 
-function levenshteinDistance(a: string, b: string): number {
-  if (a === b) return 0;
-  if (a.length === 0) return b.length;
-  if (b.length === 0) return a.length;
+  function levenshteinDistance(a: string, b: string): number {
+    if (a === b) return 0;
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
 
-  const matrix: number[][] = [];
-  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    const matrix: number[][] = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
 
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
       }
     }
+    return matrix[b.length][a.length];
   }
-  return matrix[b.length][a.length];
-}
 
-function fuzzyMatchStore(s: any, query: string): boolean {
-  if (!query || !query.trim()) return true;
-  const q = query.toLowerCase().trim();
+  function fuzzyMatchStore(s: any, query: string): boolean {
+    if (!query || !query.trim()) return true;
+    const q = query.toLowerCase().trim();
 
-  const targets = [
-    s.store || '',
-    s.name || '',
-    s.description || '',
-    s.address || '',
-    s.cat || '',
-    s.category || '',
-    s.mainCategory || '',
-    s.subCategory || '',
-  ].map(t => String(t).toLowerCase().trim());
+    const targets = [
+      s.store || '',
+      s.name || '',
+      s.description || '',
+      s.address || '',
+      s.cat || '',
+      s.category || '',
+      s.mainCategory || '',
+      s.subCategory || '',
+    ].map(t => String(t).toLowerCase().trim());
 
-  if (targets.some(t => t.includes(q))) return true;
+    if (targets.some(t => t.includes(q))) return true;
 
-  const qTokens = q.split(/\s+/).filter(Boolean);
-  return qTokens.every(qToken => {
-    return targets.some(target => {
-      if (target.includes(qToken)) return true;
+    const qTokens = q.split(/\s+/).filter(Boolean);
+    return qTokens.every(qToken => {
+      return targets.some(target => {
+        if (target.includes(qToken)) return true;
 
-      const words = target.split(/\s+/).filter(Boolean);
-      return words.some(word => {
-        if (qToken.length <= 3) return word === qToken;
-        const maxDist = qToken.length <= 5 ? 1 : 2;
-        return levenshteinDistance(qToken, word) <= maxDist;
+        const words = target.split(/\s+/).filter(Boolean);
+        return words.some(word => {
+          if (qToken.length <= 3) return word === qToken;
+          const maxDist = qToken.length <= 5 ? 1 : 2;
+          return levenshteinDistance(qToken, word) <= maxDist;
+        });
       });
     });
-  });
-}
+  }
 
   const processedStores = (Array.isArray(allStores) ? allStores : [])
     .map((s) => ({
@@ -707,8 +707,8 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                         setSelectedSubCategory(null);
                       }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-sm font-bold border cursor-pointer ${isMainActive
-                          ? `${cfg.activeBg} border-transparent shadow-sm`
-                          : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
+                        ? `${cfg.activeBg} border-transparent shadow-sm`
+                        : 'bg-card text-foreground border-border hover:bg-muted hover:border-primary/30'
                         }`}
                     >
                       <span className="text-base w-6 text-center shrink-0">{cfg.emoji || '🏪'}</span>
@@ -819,8 +819,8 @@ function fuzzyMatchStore(s: any, query: string): boolean {
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`lg:hidden relative flex items-center gap-1.5 px-4 py-3 rounded-xl border font-bold text-xs transition-all ${showFilters || activeFiltersCount > 0
-                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                  : 'bg-card border-border text-foreground hover:border-primary/30 shadow-sm'
+                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                : 'bg-card border-border text-foreground hover:border-primary/30 shadow-sm'
                 }`}
             >
               <SlidersHorizontal className="w-4 h-4" />
@@ -854,8 +854,8 @@ function fuzzyMatchStore(s: any, query: string): boolean {
             <button
               onClick={() => { setSelectedMainCategory(null); setSelectedSubCategory(null); }}
               className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all ${!selectedMainCategory && !selectedSubCategory
-                  ? 'bg-primary text-primary-foreground border-primary shadow-md'
-                  : 'bg-card border-border text-muted-foreground hover:border-primary/30'
+                ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                : 'bg-card border-border text-muted-foreground hover:border-primary/30'
                 }`}
             >
               <span className="text-xs shrink-0">🏪</span>
@@ -872,8 +872,8 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                     setSelectedSubCategory(null);
                   }}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition-all max-w-[130px] whitespace-nowrap ${isActive
-                      ? `${cfg.activeBg} border-transparent shadow-md`
-                      : `bg-card border-border ${cfg.color} hover:border-primary/30`
+                    ? `${cfg.activeBg} border-transparent shadow-md`
+                    : `bg-card border-border ${cfg.color} hover:border-primary/30`
                     }`}
                 >
                   <span className="text-xs shrink-0">{cfg.emoji || '🏪'}</span>
@@ -896,8 +896,8 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                   key={value}
                   onClick={() => setSortBy(value as any)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shadow-sm ${sortBy === value
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card border-border text-muted-foreground hover:border-primary/30'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card border-border text-muted-foreground hover:border-primary/30'
                     }`}
                 >
                   {label}
@@ -970,8 +970,8 @@ function fuzzyMatchStore(s: any, query: string): boolean {
                               }
                             }}
                             className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold border transition-all ${isSelected
-                                ? 'bg-success text-primary-foreground border-success'
-                                : 'bg-muted border-border text-muted-foreground'
+                              ? 'bg-success text-primary-foreground border-success'
+                              : 'bg-muted border-border text-muted-foreground'
                               }`}
                           >
                             {h.label}
