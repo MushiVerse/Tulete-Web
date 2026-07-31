@@ -308,29 +308,10 @@ class LocationService {
   }
 
   /**
-   * Mock initial address book for offline-first cached layout testing
+   * Return user addresses (mock addresses disabled to allow actual locations only)
    */
-  getMockAddresses(userId: string): AddressItem[] {
-    return [
-      {
-        id: 'addr_home',
-        userId,
-        title: 'Home (Kisasa)',
-        addressLine: 'Kisasa Housing Estate, Block B',
-        city: 'Dodoma, Tanzania',
-        location: { lat: -6.1630, lng: 35.7516 },
-        isDefault: true,
-      },
-      {
-        id: 'addr_office',
-        userId,
-        title: 'Central Office',
-        addressLine: 'Central Dodoma Business Plaza',
-        city: 'Dodoma, Tanzania',
-        location: { lat: -6.1700, lng: 35.7400 },
-        isDefault: false,
-      }
-    ];
+  getMockAddresses(_userId: string): AddressItem[] {
+    return [];
   }
 }
 

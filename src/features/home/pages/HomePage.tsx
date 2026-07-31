@@ -35,6 +35,7 @@ import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/u
 import { useNotificationsRealtime } from '../../notifications/hooks/useNotificationsRealtime';
 import { HelpSafetyWidget } from '@/shared/components/HelpSafetyWidget';
 import { SocialLinksWidget } from '@/shared/components/SocialLinksWidget';
+import { PlatformStatsWidget } from '@/shared/components/PlatformStatsWidget';
 
 
 /*  Shared Configs  */
@@ -251,15 +252,6 @@ const PROMOS = [
     gradient: 'from-purple-600/90 via-violet-500/80 to-purple-700/90 text-white',
     category: 'product'
   }
-];
-
-
-
-const STATS = [
-  { value: '200+', label: 'Providers', icon: StoreIcon },
-  { value: '4.8⭐', label: 'Avg Rating', icon: Star },
-  { value: '30min', label: 'Avg Delivery', icon: Clock },
-  { value: '24/7', label: 'Support', icon: Bell },
 ];
 
 /*  Store Card  */
@@ -1383,25 +1375,7 @@ export const HomePage = () => {
               )}
 
               {/* TRUST STATS BAND */}
-              <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
-                <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Platform Stats</h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {STATS.map(({ value, label, icon: Icon }) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span className="block text-lg font-extrabold leading-tight text-foreground">{value}</span>
-                        <span className="block text-[10px] text-muted-foreground font-semibold uppercase">{label}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* HELP & SAFETY WIDGET */}
-              <HelpSafetyWidget />
+              <PlatformStatsWidget />
 
               {/* LAUNDRY PROMO BANNER */}
               <motion.div

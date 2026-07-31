@@ -753,9 +753,6 @@ export const FoodPage = () => {
               </div>
             </div>
 
-            {/* HELP & POLICIES WIDGET */}
-            <HelpSafetyWidget />
-
             {/* SOCIAL MEDIA WIDGET WITH ICONS */}
             <div className="bg-card border border-border rounded-3xl p-5 shadow-sm space-y-3">
               <h2 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground mb-2">Follow Us</h2>

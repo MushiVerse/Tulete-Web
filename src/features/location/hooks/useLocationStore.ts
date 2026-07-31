@@ -40,27 +40,23 @@ export const useLocationStore = create<LocationStore>()(
       trackingStepIndex: 0,
       isSimulating: false,
 
-      initialize: (userId) => {
+      initialize: (_userId) => {
         const currentList = get().addressList;
-        const currentAddrStr = get().currentAddressString || '';
-        const hasOldCachedData = currentList.some((a) => 
-          a.city?.toLowerCase().includes('nairobi') || 
-          a.addressLine?.toLowerCase().includes('nairobi') ||
-          a.addressLine?.toLowerCase().includes('kilimani') ||
-          a.addressLine?.toLowerCase().includes('waiyaki') ||
-          a.addressLine?.toLowerCase().includes('wood avenue') ||
-          a.city?.toLowerCase().includes('dar es salaam')
-        ) || currentAddrStr.toLowerCase().includes('nairobi') || currentAddrStr.toLowerCase().includes('kilimani') || currentAddrStr.toLowerCase().includes('dar es salaam');
+        // Clean out any legacy mock/dummy addresses
+        const cleanList = currentList.filter(a =>
+          a.id !== 'addr_home' &&
+          a.id !== 'addr_office' &&
+          !a.title?.toLowerCase().includes('kisasa') &&
+          !a.title?.toLowerCase().includes('central office') &&
+          !a.city?.toLowerCase().includes('nairobi') &&
+          !a.addressLine?.toLowerCase().includes('nairobi') &&
+          !a.addressLine?.toLowerCase().includes('kilimani')
+        );
 
-        if (currentList.length === 0 || hasOldCachedData) {
-          const mockAddrs = locationService.getMockAddresses(userId);
-          const defaultAddr = mockAddrs.find((a) => a.isDefault);
-          
+        if (cleanList.length !== currentList.length) {
           set({
-            addressList: mockAddrs,
-            selectedAddressId: defaultAddr ? defaultAddr.id : (mockAddrs[0]?.id || null),
-            currentLocation: { lat: -6.1630, lng: 35.7516 },
-            currentAddressString: 'Central Dodoma, Tanzania',
+            addressList: cleanList,
+            selectedAddressId: cleanList[0]?.id || null,
           });
         }
       },
