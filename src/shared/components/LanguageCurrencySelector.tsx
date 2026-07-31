@@ -121,7 +121,7 @@ export const LanguageCurrencySelector = ({ className = "" }: { className?: strin
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative inline-flex items-center gap-2 bg-card/80 hover:bg-card border border-border/80 hover:border-primary/40 rounded-xl px-3 py-1.5 text-xs font-extrabold text-foreground transition-all shadow-xs hover:shadow-md cursor-pointer max-w-full backdrop-blur-md active:scale-95 group"
+        className="relative inline-flex items-center gap-1.5 sm:gap-2 bg-card/80 hover:bg-card border border-border/80 hover:border-primary/40 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-extrabold text-foreground transition-all shadow-xs hover:shadow-md cursor-pointer max-w-full backdrop-blur-md active:scale-95 group shrink-0"
         title="Select Language & Currency"
       >
         <div className="w-5 h-5 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -129,8 +129,11 @@ export const LanguageCurrencySelector = ({ className = "" }: { className?: strin
         </div>
         
         {/* Adaptive text label */}
-        <span className="notranslate font-extrabold text-xs text-foreground whitespace-nowrap truncate max-w-[130px] sm:max-w-none tracking-tight" translate="no">
+        <span className="notranslate font-extrabold text-xs text-foreground whitespace-nowrap truncate hidden sm:inline tracking-tight" translate="no">
           {currentLanguage.name} ({currentLanguage.symbol})
+        </span>
+        <span className="notranslate font-extrabold text-xs text-foreground whitespace-nowrap truncate sm:hidden tracking-tight" translate="no">
+          {currentLanguage.symbol}
         </span>
 
         <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-primary' : 'group-hover:translate-y-0.5'}`} />

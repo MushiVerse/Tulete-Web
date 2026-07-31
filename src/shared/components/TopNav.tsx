@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Menu, User, ShoppingBag, Heart, Settings, LogOut, Sun, Moon, Globe } from 'lucide-react';
+import { Bell, Menu, User, ShoppingBag, ShoppingCart, Heart, Settings, LogOut, Sun, Moon, Globe } from 'lucide-react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../core/auth/useAuthStore';
@@ -90,15 +90,15 @@ export const TopNav = () => {
         </div>
 
         {/* Right Side Actions */}
-        <div className="flex items-center gap-3 md:gap-5">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-5">
 
-          {/* Google Play Badge — compact on mobile (Android only) */}
+          {/* Google Play Badge — compact on tablet (Android only) */}
           {showPlayBadge && (
             <a
               href={APP_SETTINGS.playStoreUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="lg:hidden flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+              className="hidden sm:flex lg:hidden items-center justify-center shrink-0 active:scale-95 transition-transform"
               title="Download on Google Play"
             >
               <PlayStoreBadge className="h-9 w-auto object-contain" />
@@ -158,15 +158,15 @@ export const TopNav = () => {
           {/* Cart Icon / Counter */}
           <Link
             to="/cart"
-            className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+            className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors hidden sm:block"
             title="Cart"
           >
-            <ShoppingBag className="size-5" />
+            <ShoppingCart className="size-5" />
           </Link>
 
           {/* User Menu / Sign In */}
           {isAuthenticated ? (
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 p-1.5 rounded-full hover:bg-muted transition-colors border border-border cursor-pointer"
@@ -239,7 +239,7 @@ export const TopNav = () => {
           <button
             id="mobile-menu-button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-muted transition-colors cursor-pointer"
+            className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-muted transition-colors cursor-pointer shrink-0"
           >
             <Menu className="size-6" />
           </button>
@@ -265,6 +265,8 @@ export const TopNav = () => {
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/products" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/products') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Products</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/stores" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/stores') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Providers</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/orders" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/orders') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>My Orders</Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/cart" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/cart') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>My Cart</Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/favorites" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/favorites') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Favorites</Link>
 
               {!isAuthenticated && (
                 <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-border">
