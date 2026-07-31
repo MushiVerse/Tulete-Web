@@ -29,10 +29,23 @@ interface CurrencyLanguageState {
 export const useCurrencyLanguageStore = create<CurrencyLanguageState>()(
   persist(
     (set) => ({
-      currentLanguage: SUPPORTED_LANGUAGES[0], // Default starting language is Default (TZ)
+      currentLanguage: (() => {
+        try {
+          const savedCode = localStorage.getItem('tulete_selected_language');
+          if (savedCode) {
+            return SUPPORTED_LANGUAGES.find(l => l.code === savedCode) || SUPPORTED_LANGUAGES[0];
+          }
+        } catch (e) {}
+        return SUPPORTED_LANGUAGES[0];
+      })(),
       setLanguage: (langCode: string) => {
         const target = SUPPORTED_LANGUAGES.find(l => l.code === langCode) || SUPPORTED_LANGUAGES[0];
         set({ currentLanguage: target });
+
+        // Save explicitly to localStorage
+        try {
+          localStorage.setItem('tulete_selected_language', target.code);
+        } catch (e) {}
 
         // Update APP_SETTINGS currency symbol dynamically
         APP_SETTINGS.currency = target.symbol;
@@ -82,12 +95,14 @@ export function useCurrency() {
 export function applyGoogleTranslate(langCode: string) {
   try {
     const domain = window.location.hostname;
-    const isOriginal = !langCode || langCode === 'default';
+    // Both 'default' and 'sw' (Swahili) represent the site's original base language
+    const isOriginal = !langCode || langCode === 'default' || langCode === 'sw';
 
     if (isOriginal) {
-      // Clear translation cookies to restore original Swahili page text
+      // Completely clear Google Translate cookies so Google Translate restores the original Swahili DOM text!
       document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain}`;
       document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain}`;
       document.cookie = `googtrans=/auto/sw; path=/; domain=${domain}`;
       document.cookie = `googtrans=/auto/sw; path=/;`;
     } else {
