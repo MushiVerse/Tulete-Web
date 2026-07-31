@@ -628,8 +628,76 @@ export const HomePage = () => {
   const wishlistProducts = currentItems.slice(0, 20); // Fallback slice from 0 if there are fewer than 3 items
   const productsNearMe = shuffleWithSeed(currentItems, homeSeed + 600).slice(0, 20);
 
-  const dailyMeals = foods;
-  const dailyDeals = products.filter(p => p.oldprice && p.oldprice > p.price);
+  const parseTimestamp = (val: any): number => {
+    if (val === null || val === undefined || val === '') return 0;
+    if (typeof val === 'object') {
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.toDate === 'function') return val.toDate().getTime();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      if (typeof val._seconds === 'number') return val._seconds * 1000;
+    }
+    if (typeof val === 'number') {
+      if (isNaN(val)) return 0;
+      return val < 10000000000 ? val * 1000 : val;
+    }
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (!trimmed) return 0;
+      if (/^\d+$/.test(trimmed)) {
+        const num = Number(trimmed);
+        if (!isNaN(num) && num > 0) {
+          return num < 10000000000 ? num * 1000 : num;
+        }
+      }
+      const parsedDate = new Date(trimmed).getTime();
+      if (!isNaN(parsedDate) && parsedDate > 0) return parsedDate;
+      const formatted = trimmed.replace(' ', 'T');
+      const parsedFormatted = new Date(formatted).getTime();
+      if (!isNaN(parsedFormatted) && parsedFormatted > 0) return parsedFormatted;
+    }
+    return 0;
+  };
+
+  const sortItemsByTimeDesc = <T extends Record<string, any>>(items: T[]): T[] => {
+    return [...items].sort((a, b) => {
+      const rawA = a.time || a.time1 || a.timestamp || a.createdAt || a.updatedAt || a.date;
+      const rawB = b.time || b.time1 || b.timestamp || b.createdAt || b.updatedAt || b.date;
+
+      const timeA = parseTimestamp(rawA);
+      const timeB = parseTimestamp(rawB);
+
+      if (timeA > 0 && timeB > 0) {
+        if (timeB !== timeA) return timeB - timeA;
+      } else if (timeB > 0) {
+        return 1;
+      } else if (timeA > 0) {
+        return -1;
+      }
+
+      const strA = String(rawA || '');
+      const strB = String(rawB || '');
+      return strB.localeCompare(strA);
+    });
+  };
+
+  const dailyMeals = useMemo(() => {
+    const valid = (foodsData?.data || []).filter(item => item.availability !== false && item.available !== false && item.isAvailable !== false);
+    return sortItemsByTimeDesc(valid);
+  }, [foodsData?.data]);
+
+  const dailyShoppingDeals = useMemo(() => {
+    const rawProducts = (productsData?.data || []).filter(item => item.availability !== false && item.available !== false && item.isAvailable !== false);
+    const deals = rawProducts.filter(p => (p.oldprice && p.oldprice > p.price) || p.tags?.includes('Super Saver'));
+    const listToUse = deals.length >= 2 ? deals : rawProducts;
+    return sortItemsByTimeDesc(listToUse);
+  }, [productsData?.data]);
+
+  const dailyDeals = useMemo(() => {
+    const rawProducts = (productsData?.data || []).filter(item => item.availability !== false && item.available !== false && item.isAvailable !== false);
+    const deals = rawProducts.filter(p => p.oldprice && p.oldprice > p.price);
+    return sortItemsByTimeDesc(deals);
+  }, [productsData?.data]);
+
   const laundryClean = cloths;
 
   const filteredPromos = PROMOS.filter(p => !filterValue || p.category === filterValue);
@@ -769,7 +837,7 @@ export const HomePage = () => {
             <div>
               <p className="text-sm font-semibold text-muted-foreground">{greeting}</p>
               <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
-                Hi, <span className="text-primary">{firstName}</span>!
+                Hi, <span className="notranslate text-primary" translate="no">{firstName}</span>!
               </h1>
               <p className="text-base text-muted-foreground mt-1">{t('greetingSub')}</p>
             </div>
@@ -1126,12 +1194,9 @@ export const HomePage = () => {
             ))}
 
             {/* NEW SECTION: Daily Shopping Deals (from products document collection) */}
-            {(!filterValue || filterValue === 'product') && products.length > 0 && (
+            {(!filterValue || filterValue === 'product') && dailyShoppingDeals.length > 0 && (
               <HorizontalCarousel title="Daily Shopping Deals" icon={<ShoppingBag className="w-5 h-5 text-emerald-500" />} actionLink="/products?deals=true" autoScrollSpeed={0.35}>
-                {(products.filter(p => (p.oldprice && p.oldprice > p.price) || p.tags?.includes('Super Saver')).length >= 2
-                  ? products.filter(p => (p.oldprice && p.oldprice > p.price) || p.tags?.includes('Super Saver'))
-                  : products
-                ).slice(0, 20).map(product => (
+                {dailyShoppingDeals.slice(0, 20).map(product => (
                   <div key={`daily-shopping-deal-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
                       product={product} 

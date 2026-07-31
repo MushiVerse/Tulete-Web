@@ -121,10 +121,10 @@ export const TopNav = () => {
           {/* Current Location Display / Trigger */}
           <button
             onClick={() => setPickerOpen(true)}
-            className="hidden md:flex items-center gap-2 max-w-[200px] px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer group"
+            className="flex items-center gap-1.5 sm:gap-2 max-w-[120px] xs:max-w-[160px] sm:max-w-[200px] px-2.5 sm:px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer group"
             title={currentLocation ? (currentLocation.specificInstructions?.trim() || currentLocation.address) : 'Set Location'}
           >
-            <MapPin className="w-4 h-4 shrink-0 group-hover:animate-bounce" />
+            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 group-hover:animate-bounce" />
             <span className="notranslate text-xs font-bold truncate" translate="no">
               {currentLocation
                 ? (currentLocation.specificInstructions?.trim() ||
@@ -135,8 +135,10 @@ export const TopNav = () => {
             </span>
           </button>
 
-          {/* Language & Currency Selector */}
-          <LanguageCurrencySelector />
+          {/* Language & Currency Selector (Desktop TopNav) */}
+          <div className="hidden md:block">
+            <LanguageCurrencySelector />
+          </div>
 
           {/* Theme toggle */}
           <button
@@ -255,7 +257,7 @@ export const TopNav = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden absolute top-full left-0 right-0 border-t border-border bg-card shadow-2xl overflow-hidden z-50"
+            className="md:hidden absolute top-full left-0 right-0 border-t border-border bg-card shadow-2xl overflow-visible z-50 max-h-[calc(100vh-4rem)] overflow-y-auto"
           >
             <nav className="flex flex-col p-4 gap-2">
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname === '/' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Home</Link>
@@ -285,27 +287,11 @@ export const TopNav = () => {
                 </div>
               )}
 
-              {/* Current Location Display / Trigger for Mobile */}
-              <button
-                onClick={() => { setIsMobileMenuOpen(false); setPickerOpen(true); }}
-                className="w-full mt-2 flex items-center justify-between px-4 py-3 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <MapPin className="w-5 h-5 shrink-0" />
-                  <div className="flex flex-col items-start truncate">
-                    <span className="text-xs font-semibold text-primary/70">Delivering to</span>
-                    <span className="text-sm font-bold truncate max-w-[200px]">
-                      {currentLocation
-                        ? (currentLocation.specificInstructions?.trim() ||
-                            (!currentLocation.address.includes('(Default)')
-                              ? currentLocation.address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '')
-                              : 'Set Location'))
-                        : 'Set Location'}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-xs font-bold bg-primary text-primary-foreground px-2 py-1 rounded-md">Change</span>
-              </button>
+              {/* Language & Currency Selector for Mobile Drawer */}
+              <div className="flex items-center justify-between px-4 py-3 mt-2 border-t border-border">
+                <span className="text-sm font-bold text-muted-foreground">Language & Currency</span>
+                <LanguageCurrencySelector />
+              </div>
 
               {/* Google Play badge in mobile menu — Android only */}
               {showPlayBadge && (

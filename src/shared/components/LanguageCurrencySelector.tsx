@@ -26,7 +26,7 @@ export const LanguageCurrencySelector = ({ className = "" }: { className?: strin
         if (window.google && window.google.translate) {
           new window.google.translate.TranslateElement(
             { 
-              pageLanguage: 'sw', 
+              pageLanguage: 'en', 
               includedLanguages: 'sw,en,fr,ar,zh-CN,de,es', 
               autoDisplay: false 
             }, 

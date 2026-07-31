@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { APP_SETTINGS } from './settings';
+import { useLanguageStore } from '../i18n/useLanguageStore';
 
 export interface LanguageCurrencyOption {
   code: string;       // ISO language code e.g. 'sw', 'en', 'fr', 'ar', 'zh', 'de', 'es'
@@ -33,7 +34,12 @@ export const useCurrencyLanguageStore = create<CurrencyLanguageState>()(
         try {
           const savedCode = localStorage.getItem('tulete_selected_language');
           if (savedCode) {
-            return SUPPORTED_LANGUAGES.find(l => l.code === savedCode) || SUPPORTED_LANGUAGES[0];
+            const found = SUPPORTED_LANGUAGES.find(l => l.code === savedCode);
+            if (found) {
+              const i18nLang = found.code === 'sw' ? 'sw' : 'en';
+              useLanguageStore.getState().setLanguage(i18nLang);
+              return found;
+            }
           }
         } catch (e) {}
         return SUPPORTED_LANGUAGES[0];
@@ -46,6 +52,10 @@ export const useCurrencyLanguageStore = create<CurrencyLanguageState>()(
         try {
           localStorage.setItem('tulete_selected_language', target.code);
         } catch (e) {}
+
+        // Sync internal React i18n store
+        const i18nLang = target.code === 'sw' ? 'sw' : 'en';
+        useLanguageStore.getState().setLanguage(i18nLang);
 
         // Update APP_SETTINGS currency symbol dynamically
         APP_SETTINGS.currency = target.symbol;
@@ -62,6 +72,8 @@ export const useCurrencyLanguageStore = create<CurrencyLanguageState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.currentLanguage) {
           APP_SETTINGS.currency = state.currentLanguage.symbol;
+          const i18nLang = state.currentLanguage.code === 'sw' ? 'sw' : 'en';
+          useLanguageStore.getState().setLanguage(i18nLang);
           applyGoogleTranslate(state.currentLanguage.code);
         }
       }
@@ -95,26 +107,25 @@ export function useCurrency() {
 export function applyGoogleTranslate(langCode: string) {
   try {
     const domain = window.location.hostname;
-    // Both 'default' and 'sw' (Swahili) represent the site's original base language
-    const isOriginal = !langCode || langCode === 'default' || langCode === 'sw';
+    // 'default' and 'en' represent the site's original base language
+    const isOriginal = !langCode || langCode === 'default' || langCode === 'en';
+    const targetCode = langCode === 'zh' ? 'zh-CN' : langCode;
 
-    if (isOriginal) {
-      // Completely clear Google Translate cookies so Google Translate restores the original Swahili DOM text!
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain}`;
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain}`;
-      document.cookie = `googtrans=/auto/sw; path=/; domain=${domain}`;
-      document.cookie = `googtrans=/auto/sw; path=/;`;
-    } else {
-      document.cookie = `googtrans=/auto/${langCode}; path=/; domain=${domain}`;
-      document.cookie = `googtrans=/auto/${langCode}; path=/;`;
-      document.cookie = `googtrans=/sw/${langCode}; path=/; domain=${domain}`;
-      document.cookie = `googtrans=/sw/${langCode}; path=/;`;
+    // Completely clear Google Translate cookies first
+    document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain}`;
+    document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain}`;
+
+    if (!isOriginal) {
+      document.cookie = `googtrans=/auto/${targetCode}; path=/; domain=${domain}`;
+      document.cookie = `googtrans=/auto/${targetCode}; path=/;`;
+      document.cookie = `googtrans=/en/${targetCode}; path=/; domain=${domain}`;
+      document.cookie = `googtrans=/en/${targetCode}; path=/;`;
     }
 
     const selectElem = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
     if (selectElem) {
-      selectElem.value = isOriginal ? 'sw' : langCode;
+      selectElem.value = isOriginal ? '' : targetCode;
       selectElem.dispatchEvent(new Event('change', { bubbles: true }));
     }
   } catch (err) {

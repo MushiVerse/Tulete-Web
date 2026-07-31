@@ -39,7 +39,9 @@ export interface Product extends BaseDocument {
   LBrand?: string;
   isBrandNow?: boolean | string;
   tags: string[]; // e.g. "Most Popular", "Super Saver"
-  availability: boolean;
+  availability?: boolean | string;
+  available?: boolean | string;
+  isAvailable?: boolean | string;
   idadi?: number;
   quantity?: number;
   location?: { lat: number; lng: number };
@@ -133,11 +135,13 @@ class ProductService extends BaseFirestoreService<Product> {
       LBrand: data.LBrand,
       isBrandNow: data.isBrandNow,
       tags: data.tags || [],
-      availability: data.availability !== undefined ? !!data.availability : true,
+      availability: data.availability !== undefined ? data.availability : (data.available !== undefined ? data.available : (data.isAvailable !== undefined ? data.isAvailable : true)),
+      available: data.available,
+      isAvailable: data.isAvailable,
       idadi: data.idadi !== undefined ? (typeof data.idadi === 'number' ? data.idadi : parseInt(data.idadi, 10)) : undefined,
       quantity: data.quantity !== undefined ? (typeof data.quantity === 'number' ? data.quantity : parseInt(data.quantity, 10)) : undefined,
       location: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
-      time: data.time,
+      time: data.time || data.time1 || data.timestamp || data.createdAt || data.updatedAt || data.date || data.time_stamp || '',
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };
