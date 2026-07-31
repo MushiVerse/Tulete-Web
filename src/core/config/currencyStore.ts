@@ -12,7 +12,7 @@ export interface LanguageCurrencyOption {
 
 export const SUPPORTED_LANGUAGES: LanguageCurrencyOption[] = [
   { code: 'default', name: 'Default (TZ)', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
-  { code: 'sw', name: 'Swahili', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
+  { code: 'sw', name: 'Swahili (TZ)', currency: 'TZS', symbol: 'TZS', rate: 1.0 },
   { code: 'en', name: 'English (US)', currency: 'USD', symbol: '$', rate: 0.000377 },
   { code: 'fr', name: 'Français (EU)', currency: 'EUR', symbol: '€', rate: 0.00035 },
   { code: 'ar', name: 'العربية (UAE)', currency: 'AED', symbol: 'AED', rate: 0.00139 },

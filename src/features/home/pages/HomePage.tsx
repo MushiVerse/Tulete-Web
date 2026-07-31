@@ -210,7 +210,7 @@ const PROMOS = [
     badge: ' Beauty Bar',
     title: 'Top Beauty & Cosmetics',
     subtitle: 'Skincare, makeup, and hair essentials',
-    image: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?q=80&w=800&auto=format&fit=crop',
+    image: 'https://static.vecteezy.com/system/resources/thumbnails/033/332/622/small_2x/flat-lay-of-skincare-and-makeup-products-beauty-and-selfcare-concept-with-copy-space-photo.jpg',
     cta: 'Shop Beauty',
     href: '/products',
     gradient: 'from-pink-600/90 via-rose-500/80 to-pink-700/90 text-white',
