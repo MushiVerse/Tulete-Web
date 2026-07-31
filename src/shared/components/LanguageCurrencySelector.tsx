@@ -104,6 +104,12 @@ export const LanguageCurrencySelector = ({ className = "" }: { className?: strin
   const handleSelectLanguage = (langCode: string) => {
     setLanguage(langCode);
     setIsOpen(false);
+    // Apply cookies immediately
+    applyGoogleTranslate(langCode);
+    // Fast seamless reload so Google Translate renders 100% translated page instantly on boot
+    setTimeout(() => {
+      window.location.reload();
+    }, 50);
   };
 
   return (

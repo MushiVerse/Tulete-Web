@@ -78,7 +78,7 @@ export const TopNav = () => {
             <span className="notranslate text-xl font-extrabold tracking-tight text-foreground hidden sm:block" translate="no">Tulete</span>
           </Link>
 
-          <nav className="notranslate hidden md:flex items-center gap-6 relative z-10 pointer-events-auto" translate="no">
+          <nav className="hidden md:flex items-center gap-6 relative z-10 pointer-events-auto">
             <Link to="/" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname === '/' ? 'text-foreground' : 'text-muted-foreground'}`}>{t('home')}</Link>
             <Link to="/explore" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/explore') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('explore')}</Link>
             <Link to="/food" className={`text-sm font-bold transition-colors hover:text-foreground ${pathname.startsWith('/food') ? 'text-foreground' : 'text-muted-foreground'}`}>{t('food')}</Link>

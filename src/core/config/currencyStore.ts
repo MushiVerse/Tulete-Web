@@ -78,24 +78,29 @@ export function useCurrency() {
   };
 }
 
-// Helper to trigger Google Translate Web Widget for instant real-time response
+// Helper to trigger Google Translate Web Widget for instant startup parsing
 export function applyGoogleTranslate(langCode: string) {
   try {
-    const targetCode = (langCode === 'default' || !langCode) ? 'sw' : langCode;
     const domain = window.location.hostname;
+    const isOriginal = !langCode || langCode === 'default';
 
-    // Instantly set cookies for Google Translate widget
-    document.cookie = `googtrans=/auto/${targetCode}; path=/; domain=${domain}`;
-    document.cookie = `googtrans=/auto/${targetCode}; path=/;`;
-    document.cookie = `googtrans=/sw/${targetCode}; path=/; domain=${domain}`;
-    document.cookie = `googtrans=/sw/${targetCode}; path=/;`;
+    if (isOriginal) {
+      // Clear translation cookies to restore original Swahili page text
+      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain}`;
+      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      document.cookie = `googtrans=/auto/sw; path=/; domain=${domain}`;
+      document.cookie = `googtrans=/auto/sw; path=/;`;
+    } else {
+      document.cookie = `googtrans=/auto/${langCode}; path=/; domain=${domain}`;
+      document.cookie = `googtrans=/auto/${langCode}; path=/;`;
+      document.cookie = `googtrans=/sw/${langCode}; path=/; domain=${domain}`;
+      document.cookie = `googtrans=/sw/${langCode}; path=/;`;
+    }
 
-    // Immediately trigger Google Translate select element if present in DOM
     const selectElem = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
     if (selectElem) {
-      selectElem.value = targetCode;
-      selectElem.dispatchEvent(new Event('change'));
-      selectElem.dispatchEvent(new Event('input'));
+      selectElem.value = isOriginal ? 'sw' : langCode;
+      selectElem.dispatchEvent(new Event('change', { bubbles: true }));
     }
   } catch (err) {
     console.error("Google Translate widget error:", err);
