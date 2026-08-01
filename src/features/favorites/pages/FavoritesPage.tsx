@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useFavoritesStore } from '../hooks/useFavoritesStore';
 import { useCartStore } from '../../cart/store/useCartStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
-import { getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
+import { getItemPriceWithDelivery, useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { productService } from '../../products/services/productService';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
@@ -20,6 +20,175 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { resolveImageUrl } from '../../../shared/utils/productPayload';
+
+const FavoriteCardItem = ({
+  fav,
+  onRemove,
+  onAddToCart,
+  onQuickView,
+  onNavigate,
+}: {
+  fav: any;
+  onRemove: (itemId: string, type: 'store' | 'product' | 'service', name: string) => void;
+  onAddToCart: (fav: any, finalPrice: number) => void;
+  onQuickView: (fav: any) => void;
+  onNavigate: (fav: any) => void;
+}) => {
+  const itemCat = fav.cat || fav.category || 'Product';
+  const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(fav.category);
+  const dynamicPrice = useDynamicPrice(
+    fav.price || 0,
+    fav.storeId || fav.store,
+    isLaundry,
+    fav.location,
+    undefined,
+    itemCat
+  );
+
+  return (
+    <Card 
+      onClick={() => onNavigate(fav)}
+      className="p-4 border border-border bg-card shadow-sm flex gap-4 items-center relative overflow-hidden group cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+    >
+      <img 
+        src={resolveImageUrl(fav.imageUrl || fav)} 
+        alt={fav.name} 
+        className="w-20 h-20 rounded-xl object-cover bg-muted flex-shrink-0"
+      />
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Badge className="bg-primary/10 text-primary border-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0">
+            {fav.type}
+          </Badge>
+          {fav.rating && (
+            <span className="text-[10px] font-bold text-foreground flex items-center gap-0.5">
+              <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
+              {fav.rating}
+            </span>
+          )}
+        </div>
+
+        <h3 className="font-extrabold text-sm text-foreground truncate mb-0.5 group-hover:text-primary transition-colors">
+          {fav.name}
+        </h3>
+        <p className="text-[11px] text-muted-foreground line-clamp-1 mb-2">
+          {fav.description || 'Saved service shortcut'}
+        </p>
+
+        <div className="flex justify-between items-center">
+          {fav.price ? (
+            <span className="font-extrabold text-xs text-foreground">
+              {formatPrice(dynamicPrice)} {APP_SETTINGS.currency}
+            </span>
+          ) : (
+            <span className="text-[10px] font-semibold text-emerald-500">
+              Dodoma Hub Verified
+            </span>
+          )}
+
+          <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {/* Quick navigation shortcut */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickView(fav);
+              }}
+              className="p-2 bg-muted dark:bg-slate-800 text-muted-foreground hover:text-primary rounded-full transition-colors"
+              title="View details"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Quick Cart button */}
+            {fav.type !== 'store' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToCart(fav, dynamicPrice);
+                }}
+                className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-all"
+                title="Add to cart"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Remove Bookmark */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(fav.itemId, fav.type, fav.name);
+              }}
+              className="p-1.5 sm:p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full transition-all shrink-0"
+              title="Remove favorite"
+            >
+              <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const RecommendationCardItem = ({
+  rec,
+  onBookmark,
+  onAddToCart,
+}: {
+  rec: any;
+  onBookmark: (rec: any) => void;
+  onAddToCart: (rec: any, finalPrice: number) => void;
+}) => {
+  const itemCat = rec.cat || rec.category || 'Product';
+  const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(rec.category);
+  const dynamicPrice = useDynamicPrice(
+    rec.price || 0,
+    rec.storeId || rec.store,
+    isLaundry,
+    rec.location,
+    undefined,
+    itemCat
+  );
+
+  return (
+    <Card className="p-3 bg-card border border-border flex flex-col justify-between h-full group">
+      <div>
+        <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-3">
+          <img src={resolveImageUrl(rec.imgUrl || rec)} alt={rec.name} className="w-full h-full object-cover" />
+        </div>
+
+        <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
+        <h4 className="font-extrabold text-xs text-foreground mt-1 group-hover:text-primary transition-colors line-clamp-1">
+          {rec.name}
+        </h4>
+        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{rec.description}</p>
+      </div>
+
+      <div className="flex justify-between items-center mt-3 pt-2 border-t border-border">
+        <span className="font-extrabold text-xs text-foreground">{formatPrice(dynamicPrice)} {APP_SETTINGS.currency}</span>
+        
+        <div className="flex gap-1">
+          <button
+            onClick={() => onBookmark(rec)}
+            className="p-1.5 text-muted-foreground hover:text-red-500 rounded-full"
+          >
+            <Heart className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={() => onAddToCart(rec, dynamicPrice)}
+            className="p-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-colors"
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 export const FavoritesPage = () => {
   const navigate = useNavigate();
@@ -76,7 +245,7 @@ export const FavoritesPage = () => {
               type: data.type || (data.category === 'Store' ? 'store' : 'product'),
               name: data.name || data.nam1 || 'Favorite Item',
               description: data.description || data.desc || '',
-              imageUrl: data.imgURL || data.img1 || data.imgUrl || '',
+              imageUrl: resolveImageUrl(data),
               price: Number(data.price || data.price1 || 0),
               rating: Number(data.rating || 4.8),
               reviewCount: Number(data.reviewCount || 1),
@@ -332,111 +501,52 @@ export const FavoritesPage = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       layout
                     >
-                      <Card className="p-4 border border-border bg-card shadow-sm flex gap-4 items-center relative overflow-hidden group">
-                        <img 
-                          src={fav.imageUrl} 
-                          alt={fav.name} 
-                          className="w-20 h-20 rounded-xl object-cover bg-muted flex-shrink-0"
-                        />
+                      <FavoriteCardItem 
+                        fav={fav}
+                        onRemove={handleRemove}
+                        onQuickView={(f) => {
+                          if (f.type === 'store') {
+                            navigate(`/store/${f.itemId}`);
+                          } else {
+                            const catalog = productService.getMockProducts('all');
+                            const item = catalog.find((c) => c.id === f.itemId);
+                            if (item) {
+                              setQuickViewProduct(item);
+                            } else {
+                              navigate(`/product/${encodeURIComponent(f.itemId)}`);
+                            }
+                          }
+                        }}
+                        onNavigate={(f) => {
+                          if (f.type === 'store') {
+                            navigate(`/store/${f.itemId}`);
+                          } else {
+                            navigate(`/product/${encodeURIComponent(f.itemId)}`);
+                          }
+                        }}
+                        onAddToCart={(f, finalPrice) => {
+                          const catalog = productService.getMockProducts('all');
+                          const item = catalog.find((c) => c.id === f.itemId);
+                          const cat = (item as any)?.cat || f.cat || f.category || '';
+                          const isLaundry = cat === 'Nguo' || f.category === 'Laundry' || f.category?.toLowerCase().includes('cloth') || (item as any)?._collection === 'cloths';
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <Badge className="bg-primary/10 text-primary border-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0">
-                              {fav.type}
-                            </Badge>
-                            {fav.rating && (
-                              <span className="text-[10px] font-bold text-foreground flex items-center gap-0.5">
-                                <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
-                                {fav.rating}
-                              </span>
-                            )}
-                          </div>
-
-                          <h3 className="font-extrabold text-sm text-foreground truncate mb-0.5">
-                            {fav.name}
-                          </h3>
-                          <p className="text-[11px] text-muted-foreground line-clamp-1 mb-2">
-                            {fav.description || 'Saved service shortcut'}
-                          </p>
-
-                          <div className="flex justify-between items-center">
-                            {fav.price ? (
-                              <span className="font-extrabold text-xs text-foreground">
-                                {formatPrice(fav.price)} {APP_SETTINGS.currency}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-semibold text-emerald-500">
-                                Dodoma Hub Verified
-                              </span>
-                            )}
-
-                            <div className="flex gap-1.5">
-                              {/* Quick navigation shortcut */}
-                              <button
-                                onClick={() => {
-                                  if (fav.type === 'store') {
-                                    navigate(`/store/${fav.itemId}`);
-                                  } else {
-                                    const catalog = productService.getMockProducts('all');
-                                    const item = catalog.find((c) => c.id === fav.itemId);
-                                    if (item) {
-                                      setQuickViewProduct(item);
-                                    } else {
-                                      navigate(`/product/${fav.itemId}`);
-                                    }
-                                  }
-                                }}
-                                className="p-2 bg-muted dark:bg-slate-800 text-muted-foreground hover:text-primary rounded-full transition-colors"
-                                title="View details"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
-
-                              {/* Quick Cart button */}
-                              {fav.type !== 'store' && (
-                                <button
-                                  onClick={() => {
-                                    const catalog = productService.getMockProducts('all');
-                                    const item = catalog.find((c) => c.id === fav.itemId);
-                                    const cat = (item as any)?.cat || item?.category || '';
-                                    const isLaundry = cat === 'Nguo' || item?.category === 'Laundry' || item?.category?.toLowerCase().includes('cloth') || (item as any)?._collection === 'cloths';
-                                    const baseItemPrice = fav.price || item?.price || 0;
-
-                                    addToCart({
-                                      productId: fav.itemId,
-                                      baseProductId: fav.itemId,
-                                      name: fav.name,
-                                      price: baseItemPrice,
-                                      basePrice: baseItemPrice,
-                                      imageUrl: fav.imageUrl,
-                                      storeId: item?.storeId || 's1', 
-                                      storeName: item?.store || 'Verified Partner',
-                                      cat,
-                                      location: item?.location,
-                                      idadi: item?.idadi,
-                                      isLaundry
-                                    });
-                                    alert(`${fav.name} added to cart!`);
-                                  }}
-                                  className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-all"
-                                  title="Add to cart"
-                                >
-                                  <ShoppingCart className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* Remove Bookmark */}
-                              <button
-                                onClick={() => handleRemove(fav.itemId, fav.type, fav.name)}
-                                className="p-1.5 sm:p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full transition-all shrink-0"
-                                title="Remove favorite"
-                              >
-                                <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
+                          addToCart({
+                            productId: f.itemId,
+                            baseProductId: f.itemId,
+                            name: f.name,
+                            price: finalPrice,
+                            basePrice: f.price || finalPrice,
+                            imageUrl: resolveImageUrl(f.imageUrl || item?.imgUrl),
+                            storeId: f.storeId || item?.storeId || 's1',
+                            storeName: f.store || item?.store || 'Verified Partner',
+                            cat,
+                            location: f.location || item?.location,
+                            idadi: item?.idadi,
+                            isLaundry
+                          });
+                          alert(`${f.name} added to cart!`);
+                        }}
+                      />
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -549,65 +659,39 @@ export const FavoritesPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {recommendations.map((rec) => (
-              <Card key={rec.id} className="p-3 bg-card border border-border flex flex-col justify-between h-full group">
-                <div>
-                  <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-3">
-                    <img src={rec.imgUrl} alt={rec.name} className="w-full h-full object-cover" />
-                  </div>
-
-                  <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
-                  <h4 className="font-extrabold text-xs text-foreground mt-1 group-hover:text-primary transition-colors line-clamp-1">
-                    {rec.name}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{rec.description}</p>
-                </div>
-
-                <div className="flex justify-between items-center mt-3 pt-2 border-t border-border">
-                  <span className="font-extrabold text-xs text-foreground">{formatPrice(rec.price)} {APP_SETTINGS.currency}</span>
-                  
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => {
-                        toggleFavorite('user_current', {
-                          itemId: rec.id,
-                          type: 'product',
-                          name: rec.name,
-                          description: rec.description,
-                          imageUrl: rec.imgUrl,
-                          price: rec.price,
-                          rating: rec.rating,
-                        });
-                        alert(`Bookmarked ${rec.name}!`);
-                      }}
-                      className="p-1.5 text-muted-foreground hover:text-red-500 rounded-full"
-                    >
-                      <Heart className="w-3.5 h-3.5" />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        addToCart({
-                          productId: rec.id,
-                          baseProductId: rec.id,
-                          name: rec.name,
-                          price: rec.price,
-                          imageUrl: rec.imgUrl,
-                          storeId: rec.storeId,
-                          storeName: rec.store,
-                          cat: rec.category || '',
-                          location: rec.location,
-                          idadi: rec.idadi,
-                          isLaundry: rec.category === 'Laundry' || rec.category === 'Nguo' || rec.category?.toLowerCase().includes('cloth') || (rec as any)._collection === 'cloths'
-                        });
-                        alert(`${rec.name} added to cart!`);
-                      }}
-                      className="p-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-colors"
-                    >
-                      <ShoppingCart className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </Card>
+              <RecommendationCardItem
+                key={rec.id}
+                rec={rec}
+                onBookmark={(item) => {
+                  toggleFavorite('user_current', {
+                    itemId: item.id,
+                    type: 'product',
+                    name: item.name,
+                    description: item.description,
+                    imageUrl: item.imgUrl,
+                    price: item.price,
+                    rating: item.rating,
+                  });
+                  alert(`Bookmarked ${item.name}!`);
+                }}
+                onAddToCart={(item, finalPrice) => {
+                  addToCart({
+                    productId: item.id,
+                    baseProductId: item.id,
+                    name: item.name,
+                    price: finalPrice,
+                    basePrice: item.price,
+                    imageUrl: item.imgUrl,
+                    storeId: item.storeId,
+                    storeName: item.store,
+                    cat: item.category || '',
+                    location: item.location,
+                    idadi: item.idadi,
+                    isLaundry: item.category === 'Laundry' || item.category === 'Nguo' || item.category?.toLowerCase().includes('cloth') || (item as any)._collection === 'cloths'
+                  });
+                  alert(`${item.name} added to cart!`);
+                }}
+              />
             ))}
           </div>
         </div>
@@ -693,7 +777,7 @@ export const FavoritesPage = () => {
               className="relative w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
             >
               <div className="relative h-64 sm:h-72 bg-muted shrink-0">
-                 <img src={quickViewProduct.imgUrl} alt={quickViewProduct.name} className="w-full h-full object-cover" />
+                 <img src={resolveImageUrl(quickViewProduct.imgUrl || quickViewProduct)} alt={quickViewProduct.name} className="w-full h-full object-cover" />
                  <button onClick={() => setQuickViewProduct(null)} className="absolute top-4 right-4 bg-black/50 text-white hover:bg-black/70 transition-colors rounded-full p-2 backdrop-blur-md">
                    <X className="w-5 h-5" />
                  </button>

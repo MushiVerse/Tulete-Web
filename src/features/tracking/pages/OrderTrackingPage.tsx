@@ -15,15 +15,6 @@ import {
 import { motion } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 
-const STEPS: { status: OrderStatus; label: string; desc: string }[] = [
-  { status: 'Pending', label: 'Order Placed', desc: 'Awaiting store confirmation' },
-  { status: 'Confirmed', label: 'Confirmed', desc: 'Store has accepted request' },
-  { status: 'Preparing', label: 'Preparing', desc: 'Your service/items are readying' },
-  { status: 'Picked Up', label: 'Picked Up', desc: 'Driver has retrieved package' },
-  { status: 'On The Way', label: 'On The Way', desc: 'Delivery is heading your way' },
-  { status: 'Delivered', label: 'Delivered', desc: 'Order arrived successfully' },
-];
-
 export function OrderTrackingSkeleton() {
   return (
     <PageContainer>
@@ -71,48 +62,35 @@ export const OrderTrackingPage = () => {
   const { tracking, isLoading: isTrackingLoading } = useOrderTrackingRealtime(id);
   const { liveItems, isLoading: isLiveLoading } = useLiveFlutterOrderTracking(order?.userId, id);
 
-  let currentStatus = order?.status || 'Pending';
+  const firstLiveItem = liveItems && liveItems.length > 0 ? liveItems[0] : null;
+  const rawStatus = firstLiveItem?.status || (firstLiveItem?.cancel ? 'Cancelled' : null) || order?.status || 'Pending';
+  const isDone = Boolean(firstLiveItem?.deliveryDone || order?.deliveryDone);
+  const isCanceled = Boolean(firstLiveItem?.cancel || order?.cancel || String(rawStatus).toLowerCase().includes('cancel'));
 
-  if (liveItems && liveItems.length > 0) {
-    if (liveItems.some(item => item.cancel)) {
-      currentStatus = 'Cancelled';
-    } else {
-      const flutterToWebStatus = (flutterStatus: string, deliveryDone: boolean): OrderStatus => {
-        if (deliveryDone) return 'Delivered';
-        switch (flutterStatus?.toLowerCase()) {
-          case 'order placed': return 'Pending';
-          case 'confirmed': return 'Confirmed';
-          case 'preparing': return 'Preparing';
-          case 'picked up': return 'Picked Up';
-          case 'on the way': return 'On The Way';
-          case 'delivered': return 'Delivered';
-          case 'cancelled': return 'Cancelled';
-          default: return 'Pending';
-        }
-      };
+  const normalizeStatus = (statusStr: string, deliveryDone: boolean, cancel: boolean): OrderStatus => {
+    if (cancel) return 'Cancelled';
+    if (deliveryDone) return 'Delivered';
+    const norm = (statusStr || '').toLowerCase().trim();
+    if (norm === 'received' || norm === 'dobi received' || norm === 'order placed' || norm === 'pending') return 'Pending';
+    if (norm === 'confirmed') return 'Confirmed';
+    if (norm === 'preparing' || norm === 'washing' || norm === 'ironing' || norm === 'ready') return 'Preparing';
+    if (norm === 'picked up' || norm === 'pickedup') return 'Picked Up';
+    if (norm === 'on the way' || norm === 'ontheway') return 'On The Way';
+    if (norm === 'delivered') return 'Delivered';
+    if (norm === 'cancelled' || norm === 'canceled') return 'Cancelled';
+    if (norm === 'failed') return 'Failed';
+    return 'Pending';
+  };
 
-      let minStepIndex = 999;
-      let minStatus: OrderStatus = 'Pending';
-      
-      liveItems.forEach(item => {
-        const itemStatus = flutterToWebStatus(item.status, item.deliveryDone);
-        const stepIdx = STEPS.findIndex(s => s.status === itemStatus);
-        if (stepIdx !== -1 && stepIdx < minStepIndex) {
-          minStepIndex = stepIdx;
-          minStatus = itemStatus;
-        }
-      });
-      
-      if (minStepIndex !== 999) {
-        currentStatus = minStatus;
-      }
-    }
-  }
+  const getRawFirestoreStatus = (statusStr: string, deliveryDone: boolean, cancel: boolean): string => {
+    if (cancel) return 'Cancelled';
+    if (deliveryDone) return 'Delivered';
+    return statusStr || 'Pending';
+  };
 
+  const currentStatus = normalizeStatus(rawStatus, isDone, isCanceled);
+  const statusBadgeText = getRawFirestoreStatus(rawStatus, isDone, isCanceled);
   const isFinished = currentStatus === 'Delivered' || currentStatus === 'Cancelled' || currentStatus === 'Failed';
-
-  // Get active step index
-  const activeStepIndex = STEPS.findIndex((s) => s.status === currentStatus);
 
   // Canvas Vector Map Rendering & Driver Physics Simulation
   useEffect(() => {
@@ -140,7 +118,19 @@ export const OrderTrackingPage = () => {
     const userNode = { x: canvas.width - padding, y: padding, label: 'You' };
 
     const drawMap = () => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (rect && rect.width > 0 && rect.height > 0) {
+        if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+          canvas.width = Math.floor(rect.width);
+          canvas.height = Math.floor(rect.height);
+        }
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const padding = 50;
+      const storeNode = { x: padding, y: canvas.height - padding, label: 'Store' };
+      const userNode = { x: Math.max(padding + 50, canvas.width - padding), y: padding, label: 'You' };
       
       // Draw gridlines (sleek HUD design)
       ctx.strokeStyle = '#f1f5f9';
@@ -219,7 +209,6 @@ export const OrderTrackingPage = () => {
       // Render Driver Location if they are active
       if (tracking?.driverLocation) {
         // Map driver GPS coords ratio to canvas
-        // Standard coordinates: Store: lat: -1.2635, lng: 36.8049 | User: lat: -1.2894, lng: 36.7909
         const storeGPS = { lat: -1.2635, lng: 36.8049 };
         const userGPS = { lat: -1.2894, lng: 36.7909 };
 
@@ -288,7 +277,7 @@ export const OrderTrackingPage = () => {
       window.removeEventListener('resize', resizeCanvas);
       cancelAnimationFrame(animationId);
     };
-  }, [tracking]);
+  }, [tracking, order, isOrderLoading, isTrackingLoading]);
 
   if (isOrderLoading || isTrackingLoading || (isLiveLoading && !order)) {
     return <OrderTrackingSkeleton />;
@@ -328,9 +317,11 @@ export const OrderTrackingPage = () => {
           </h1>
         </div>
 
-        <Badge className={`${currentStatus === 'Delivered' ? 'bg-emerald-500' : 'bg-primary'} text-white font-extrabold px-4 py-1.5 text-sm rounded-full shadow-md border-0`}>
-          {currentStatus}
-        </Badge>
+        {statusBadgeText.toLowerCase().trim() !== 'tap to track' && (order?.status || '').toLowerCase().trim() !== 'tap to track' && (
+          <Badge className={`${currentStatus === 'Delivered' ? 'bg-emerald-500' : 'bg-primary'} text-white font-extrabold px-4 py-1.5 text-sm rounded-full shadow-md border-0 uppercase tracking-wide`}>
+            {statusBadgeText}
+          </Badge>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -359,15 +350,27 @@ export const OrderTrackingPage = () => {
             </div>
           </Card>
 
-          {/* Stepper Progression (Hidden for Laundry items or when navigated from Orders page) */}
-          {!(shouldHideProgress || order?.isLaundryOrder || order?.cat === 'Nguo' || (liveItems && liveItems.some(i => i.cat === 'Nguo' || i.cat === 'laundry'))) && (
-            <Card className="p-6 border border-border shadow-sm bg-card">
-              <h3 className="font-bold text-foreground text-base mb-6">Delivery Progress</h3>
+          {/* Stepper Progression */}
+          <Card className="p-6 border border-border shadow-sm bg-card">
+            <h3 className="font-bold text-foreground text-base mb-6">Delivery Progress</h3>
               
               {(() => {
                 const firstLiveItem = liveItems && liveItems.length > 0 ? liveItems[0] : null;
-                const rawSts: string[] = firstLiveItem?.ordersts || order?.ordersts || [];
-                const rawStsTime: string[] = firstLiveItem?.orderststime || order?.orderststime || [];
+
+                let rawSts: string[] = [];
+                let rawStsTime: string[] = [];
+
+                if (firstLiveItem?.ordersts && Array.isArray(firstLiveItem.ordersts) && firstLiveItem.ordersts.length > 0) {
+                  rawSts = firstLiveItem.ordersts;
+                  rawStsTime = Array.isArray(firstLiveItem.orderststime) ? firstLiveItem.orderststime : [];
+                } else if (order?.ordersts && Array.isArray(order.ordersts) && order.ordersts.length > 0) {
+                  rawSts = order.ordersts;
+                  rawStsTime = Array.isArray(order.orderststime) ? order.orderststime : [];
+                } else {
+                  const docSts = (firstLiveItem?.status || order?.status || 'Order Placed').trim();
+                  rawSts = [docSts];
+                  rawStsTime = [firstLiveItem?.time || order?.createdAt || ''];
+                }
 
                 const formatStatusTime = (timeStr?: string) => {
                   if (!timeStr) return '';
@@ -380,75 +383,37 @@ export const OrderTrackingPage = () => {
                   return timeStr.length > 16 ? timeStr.substring(11, 16) : timeStr;
                 };
 
-                if (rawSts && rawSts.length > 0) {
-                  return (
-                    <div className="relative pl-6 border-l border-border space-y-6">
-                      {rawSts.map((stsName, idx) => {
-                        const isLatest = idx === rawSts.length - 1;
-                        const timeFormatted = formatStatusTime(rawStsTime[idx]);
-
-                        return (
-                          <div key={idx} className="relative">
-                            {/* Circle Indicator */}
-                            <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                              isLatest
-                                ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
-                                : 'bg-emerald-500 border-emerald-500'
-                            }`}>
-                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                            </div>
-
-                            <div className="flex flex-col">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-bold text-sm text-foreground">
-                                  {stsName}
-                                </span>
-                                {timeFormatted && (
-                                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                                    {timeFormatted}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground mt-0.5">
-                                {idx === 0 ? 'Order registered in system' : `Status updated to ${stsName}`}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                }
-
                 return (
                   <div className="relative pl-6 border-l border-border space-y-6">
-                    {STEPS.map((step, idx) => {
-                      const isCompleted = idx <= activeStepIndex && !isFinished;
-                      const isCurrent = idx === activeStepIndex && !isFinished;
-                      const isStepFinished = currentStatus === 'Delivered' && idx === STEPS.length - 1;
+                    {rawSts.map((stsName, idx) => {
+                      const isLatest = idx === rawSts.length - 1;
+                      const timeFormatted = formatStatusTime(rawStsTime[idx]);
 
                       return (
                         <div key={idx} className="relative">
                           {/* Circle Indicator */}
                           <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                            isCompleted || isStepFinished
+                            isLatest
                               ? 'bg-primary border-primary shadow-md shadow-primary/30 scale-110' 
-                              : isCurrent 
-                              ? 'bg-amber-400 border-amber-400 animate-ping'
-                              : 'bg-card border-slate-350 dark:border-slate-700'
+                              : 'bg-emerald-500 border-emerald-500'
                           }`}>
-                            {(isCompleted || isStepFinished) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
                           </div>
 
                           <div className="flex flex-col">
-                            <span className={`font-bold text-sm ${
-                              isCompleted || isCurrent || isStepFinished
-                                ? 'text-foreground' 
-                                : 'text-slate-400 dark:text-muted-foreground'
-                            }`}>
-                              {step.label}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-sm text-foreground">
+                                {stsName}
+                              </span>
+                              {timeFormatted && (
+                                <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                  {timeFormatted}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground mt-0.5">
+                              {idx === 0 ? 'Order registered in system' : `Status updated to ${stsName}`}
                             </span>
-                            <span className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">{step.desc}</span>
                           </div>
                         </div>
                       );
@@ -457,7 +422,6 @@ export const OrderTrackingPage = () => {
                 );
               })()}
             </Card>
-          )}
         </div>
 
         {/* Info card sidepanel */}

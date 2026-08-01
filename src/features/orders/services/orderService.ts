@@ -677,6 +677,8 @@ class OrderService extends BaseFirestoreService<Order> {
           no: order.contactPhone || '0000000000',
           instructions: laundryInstructionsText,
           status: 'received',
+          ordersts: ['Order Placed'],
+          orderststime: [getFlutterTime()],
           paid: true,
           price: finalLaundryPrice.toString(),
           total: finalLaundryPrice,

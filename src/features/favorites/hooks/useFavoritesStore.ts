@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { favoriteService, FavoriteItem, WishlistCollection } from '../services/favoriteService';
 import { db } from '../../../core/firebase/config';
 import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { buildCompleteProductPayload, resolveImageUrl } from '../../../shared/utils/productPayload';
 
 interface FavoritesStore {
   favorites: FavoriteItem[];
@@ -58,10 +59,15 @@ export const useFavoritesStore = create<FavoritesStore>()(
                     itemId: targetId,
                     name: data.name || data.nam1 || 'Favorite Item',
                     description: data.description || '',
-                    imageUrl: data.imgURL || data.imageUrl || data.imgUrl || '',
+                    imageUrl: resolveImageUrl(data),
                     price: Number(data.price || 0),
                     rating: Number(data.rating || 0),
                     reviewCount: Number(data.reviewCount || 0),
+                    location: data.location || data.productloc || '',
+                    cat: data.cat || data.specCat || data.category || '',
+                    category: data.category || data.cate || data.cat || '',
+                    storeId: data.storeId || data.store || data.brand || '',
+                    store: data.store || data.brand || '',
                     createdAt: data.time ? new Date(data.time) : new Date(),
                     updatedAt: data.time ? new Date(data.time) : new Date(),
                     ...(data as any),
@@ -128,21 +134,8 @@ export const useFavoritesStore = create<FavoritesStore>()(
           if (userId && userId !== 'guest_user') {
             try {
               const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
-              await setDoc(favDocRef, {
-                foodId: targetItemId,
-                name: item.name || '',
-                price: item.price || 0,
-                imgURL: item.imageUrl || item.imgURL || item.imgUrl || '',
-                brand: item.brand || item.store || '',
-                location: item.location || '',
-                description: item.description || '',
-                category: item.category || item.cat || '',
-                cat: item.cat || item.category || '',
-                store: item.store || item.brand || '',
-                fav: true,
-                time: new Date().toISOString(),
-                userId,
-              }, { merge: true });
+              const favPayload = buildCompleteProductPayload(item, userId, { foodId: targetItemId, fav: true });
+              await setDoc(favDocRef, favPayload, { merge: true });
             } catch (err) {
               console.error('Error adding favorite to Firestore userfavorites:', err);
             }

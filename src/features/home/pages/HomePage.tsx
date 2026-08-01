@@ -15,12 +15,13 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useCartStore } from '../../cart/store/useCartStore';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { HorizontalCarousel } from '../../../shared/components/ui/HorizontalCarousel';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { productService, Product } from '../../products/services/productService';
+import { buildCompleteProductPayload, resolveImageUrl } from '../../../shared/utils/productPayload';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { BrandsView } from '../../brands/components/BrandsView';
 import { StoreCard } from '../../../shared/components/cards/StoreCard';
@@ -352,12 +353,14 @@ export const HomePage = () => {
             name: data.name || data.nam1 || 'Viewed Item',
             price: Number(data.price || data.price1 || 0),
             oldprice: data.oldprice ? Number(data.oldprice) : undefined,
-            imgUrl: data.imgURL || data.img1 || data.imgUrl || '',
+            imgUrl: resolveImageUrl(data),
             storeId: data.storeId || data.store || data.brand || '',
             store: data.store || data.brand || 'Tulete Store',
             rating: Number(data.rating || 4.8),
             reviewCount: Number(data.reviewCount || 1),
             category: data.category || data.cate || data.cat || 'Product',
+            cat: data.cat || data.specCat || data.category || 'Product',
+            location: data.location || data.productloc || '',
             description: data.description || data.desc || '',
             availability: data.availability !== false,
             subCat: data.subCat || data.subCategory || data.speccat || '',
@@ -400,12 +403,14 @@ export const HomePage = () => {
               name: data.name || data.nam1 || 'Favorite Item',
               price: Number(data.price || data.price1 || 0),
               oldprice: data.oldprice ? Number(data.oldprice) : undefined,
-              imgUrl: data.imgURL || data.img1 || data.imgUrl || '',
+              imgUrl: resolveImageUrl(data),
               storeId: data.storeId || data.store || data.brand || '',
               store: data.store || data.brand || 'Tulete Store',
               rating: Number(data.rating || 4.8),
               reviewCount: Number(data.reviewCount || 1),
               category: data.category || data.cate || data.cat || 'Product',
+              cat: data.cat || data.specCat || data.category || 'Product',
+              location: data.location || data.productloc || '',
               description: data.description || data.desc || '',
               availability: data.availability !== false,
               time: data.time || data.updatedAt || data.createdAt || '',
@@ -493,7 +498,24 @@ export const HomePage = () => {
     });
   };
 
+  const saveToUserViewed = (product: any) => {
+    if (!isAuthenticated || !user?.id || !product?.id) return;
+    const itemCat = (product as any)?.cat || product?.category || '';
+    const isLaundry = itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat);
+    if (isLaundry) return;
+
+    const docRef = doc(db, 'userViewed', user.id, 'recentlyViewed', product.id);
+    const userViewedPayload = buildCompleteProductPayload(product, user.id);
+    setDoc(docRef, userViewedPayload, { merge: true }).catch(() => {});
+  };
+
+  const handleProductClick = (p: Product) => {
+    saveToUserViewed(p);
+    navigate(`/product/${encodeURIComponent(p.id)}`);
+  };
+
   const handleAddToCart = (p: Product) => {
+    saveToUserViewed(p);
     let cat = (p as any).cat || 'Product';
     const collection = (p as Product & { _collection?: string })._collection;
     if (collection === 'foods' || foods.some(f => f.id === p.id)) cat = 'Food';
@@ -1141,6 +1163,7 @@ export const HomePage = () => {
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}
@@ -1157,6 +1180,7 @@ export const HomePage = () => {
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}
@@ -1173,6 +1197,7 @@ export const HomePage = () => {
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}
@@ -1189,6 +1214,7 @@ export const HomePage = () => {
                       isFavorite={true}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}
@@ -1202,6 +1228,7 @@ export const HomePage = () => {
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}
@@ -1218,6 +1245,7 @@ export const HomePage = () => {
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}
@@ -1234,6 +1262,7 @@ export const HomePage = () => {
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}
@@ -1250,6 +1279,7 @@ export const HomePage = () => {
                       isFavorite={isFavorited(product.id)}
                       onToggleFavorite={handleProductFav}
                       onAddToCart={handleAddToCart}
+                      onClick={handleProductClick}
                     />
                   </div>
                 ))}

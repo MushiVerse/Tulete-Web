@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { orderService, Order, OrderTracking } from '../services/orderService';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { db } from '../../../core/firebase/config';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 
 export const useOrderListRealtime = () => {
   const { user } = useAuthStore();
@@ -99,31 +99,58 @@ export const useLiveFlutterOrderTracking = (userId: string | undefined, webOrder
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId || !webOrderId) {
+    if (!webOrderId) {
       setLiveItems([]);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    // Note: This listens to the global newcomfirmedorders collection
-    // where the Flutter Admin App makes its live updates.
+    let itemsFromQuery: any[] = [];
+    let itemFromDoc: any = null;
+
+    const updateMerged = () => {
+      const mergedMap = new Map<string, any>();
+      if (itemFromDoc) {
+        mergedMap.set(itemFromDoc.id, itemFromDoc);
+      }
+      itemsFromQuery.forEach((i) => mergedMap.set(i.id, i));
+      setLiveItems(Array.from(mergedMap.values()));
+      setIsLoading(false);
+    };
+
+    // 1. Query by webOrderId
     const q = query(
       collection(db, 'newcomfirmedorders'),
-      where('uid', '==', userId),
       where('webOrderId', '==', webOrderId)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setLiveItems(items);
-      setIsLoading(false);
+    const unsubQuery = onSnapshot(q, (snapshot) => {
+      itemsFromQuery = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      updateMerged();
     }, (err) => {
-      console.error('Error fetching live flutter orders:', err);
+      console.error('Error fetching live flutter orders query:', err);
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    // 2. Direct document listener by doc ID
+    const docRef = doc(db, 'newcomfirmedorders', webOrderId);
+    const unsubDoc = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        itemFromDoc = { id: docSnap.id, ...docSnap.data() };
+      } else {
+        itemFromDoc = null;
+      }
+      updateMerged();
+    }, (err) => {
+      console.error('Error fetching live flutter order doc:', err);
+      setIsLoading(false);
+    });
+
+    return () => {
+      unsubQuery();
+      unsubDoc();
+    };
   }, [userId, webOrderId]);
 
   return { liveItems, isLoading };

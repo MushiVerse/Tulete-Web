@@ -34,10 +34,10 @@ function getStatusConfig(status: string): { color: string; dotColor: string; lab
     return STATUS_CONFIGS['Pending'];
   }
   const normalized = status.toLowerCase().trim();
-  if (normalized === 'received' || normalized === 'order placed') return STATUS_CONFIGS['Order Placed'];
+  if (normalized === 'received' || normalized === 'order placed' || normalized === 'dobi received') return STATUS_CONFIGS['Order Placed'];
   if (normalized === 'pending') return STATUS_CONFIGS['Pending'];
   if (normalized === 'confirmed') return STATUS_CONFIGS['Confirmed'];
-  if (normalized === 'preparing') return STATUS_CONFIGS['Preparing'];
+  if (normalized === 'preparing' || normalized === 'washing' || normalized === 'ironing' || normalized === 'ready') return STATUS_CONFIGS['Preparing'];
   if (normalized === 'picked up' || normalized === 'pickedup') return STATUS_CONFIGS['Picked Up'];
   if (normalized === 'on the way' || normalized === 'ontheway') return STATUS_CONFIGS['On The Way'];
   if (normalized === 'delivered') return STATUS_CONFIGS['Delivered'];
@@ -498,10 +498,12 @@ export const OrdersPage = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className={`${statusCfg.className} font-extrabold px-3 py-1 rounded-full text-xs shadow-2xs border inline-flex items-center gap-1.5 shrink-0`}>
-                          <span className={`w-2 h-2 rounded-full bg-current ${statusCfg.dotColor} animate-pulse shrink-0`} />
-                          {statusCfg.label}
-                        </span>
+                        {statusCfg.label.toLowerCase().trim() !== 'tap to track' && (order.status || '').toLowerCase().trim() !== 'tap to track' && (
+                          <span className={`${statusCfg.className} font-extrabold px-3 py-1 rounded-full text-xs shadow-2xs border inline-flex items-center gap-1.5 shrink-0`}>
+                            <span className={`w-2 h-2 rounded-full bg-current ${statusCfg.dotColor} animate-pulse shrink-0`} />
+                            {statusCfg.label}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -623,7 +625,7 @@ export const OrdersPage = () => {
                       <div className="flex items-center gap-2">
                         {activeTab === 'active' ? (
                           <Button
-                            onClick={() => navigate(`/tracking/${order.id}?hideProgress=true`, { state: { hideProgress: true } })}
+                            onClick={() => navigate(`/tracking/${order.id}`)}
                             size="sm"
                             className="font-bold text-xs shadow-md hover:shadow-lg flex items-center gap-1 group"
                           >

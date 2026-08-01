@@ -105,19 +105,27 @@ export function getDeliveryFee(
     return 0;
   }
 
+  // Fallback to default Dodoma center coordinates if user location is null
+  const effectiveUserLocation = currentLocation || { lat: -6.18541, lng: 35.7671293 };
   let targetLocation = productLocation;
 
-  if (!targetLocation && storeId) {
-    const allStores = storeService.getMockStores();
-    const store = allStores.find((s) => s.id === storeId);
-    if (store && store.location) {
-      targetLocation = store.location;
+  // If productLocation is missing or invalid text string without lat,lng coordinates
+  if (!targetLocation || (typeof targetLocation === 'string' && targetLocation.split(',').length < 2)) {
+    if (storeId) {
+      const allStores = storeService.getMockStores();
+      const store = allStores.find((s) => s.id === storeId || s.name?.toLowerCase() === storeId.toLowerCase());
+      if (store && store.location) {
+        targetLocation = store.location;
+      }
     }
   }
 
-  if (!targetLocation || !currentLocation) return 0;
+  // Default fallback to Dodoma hub coordinates if target location is still not GPS coordinates
+  if (!targetLocation || (typeof targetLocation === 'string' && targetLocation.split(',').length < 2)) {
+    targetLocation = "-6.18541, 35.7671293";
+  }
 
-  return calculateDeliveryFeeAlgorithm(targetLocation, currentLocation, deliveryRation, category, isLaundry);
+  return calculateDeliveryFeeAlgorithm(targetLocation, effectiveUserLocation, deliveryRation, category, isLaundry);
 }
 
 export function getItemPriceWithDelivery(
