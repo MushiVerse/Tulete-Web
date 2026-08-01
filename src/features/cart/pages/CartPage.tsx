@@ -6,7 +6,7 @@ import { useLocationStore } from '../../location/store/useLocationStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Switch } from '../../../shared/components/ui/Switch';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle, MapPin } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle, MapPin, Shirt, AlertCircle, AlertTriangle } from 'lucide-react';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
@@ -92,30 +92,47 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         </div>
 
         {/* Per-Item Laundry Customization */}
-        {(item as any).cat === 'Nguo' && (
-          <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
-            {[
-              { key: 'iron', label: 'Iron', prop: 'ironingSelected', icon: Flame },
-              { key: 'pack', label: 'Package', prop: 'packagingSelected', icon: Package },
-              { key: 'vip', label: 'VIP', prop: 'vipSelected', icon: Sparkles }
-            ].map(({ key, label, prop, icon: Icon }) => {
-              const isSelected = item[prop as keyof typeof item];
-              return (
-                <button
-                  key={key}
-                  onClick={() => updateLaundryItemConfig(item.productId, { [prop]: !isSelected })}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${isSelected
-                      ? 'bg-primary border-primary text-primary-foreground scale-105'
-                      : 'bg-card border-border text-muted-foreground hover:bg-muted'
+        {((item as any).cat === 'Nguo' || item.isLaundry) && (() => {
+          const isWash = item.washingSelected !== false;
+          const isIron = Boolean(item.ironingSelected);
+          const isPack = Boolean(item.packagingSelected);
+          const isVip = Boolean(item.vipSelected);
+          const hasAnyService = isWash || isIron || isPack || isVip;
+
+          return (
+            <div className="mt-4 pt-3 border-t border-border/50">
+              <div className="flex items-center flex-wrap gap-2">
+                {[
+                  { key: 'wash', label: 'Wash', prop: 'washingSelected', isSelected: isWash, icon: Shirt },
+                  { key: 'iron', label: 'Iron', prop: 'ironingSelected', isSelected: isIron, icon: Flame },
+                  { key: 'pack', label: 'Package', prop: 'packagingSelected', isSelected: isPack, icon: Package },
+                  { key: 'vip', label: 'VIP', prop: 'vipSelected', isSelected: isVip, icon: Sparkles }
+                ].map(({ key, label, prop, isSelected, icon: Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => updateLaundryItemConfig(item.productId, { [prop]: !isSelected })}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                      isSelected
+                        ? 'bg-primary border-primary text-primary-foreground scale-105'
+                        : 'bg-card border-border text-muted-foreground hover:bg-muted'
                     }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        )}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {!hasAnyService && (
+                <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 mt-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                  <span>Please select at least one service (Wash, Iron, Package, or VIP)</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
         {(item as any).cat !== 'Nguo' && (() => {
@@ -242,8 +259,23 @@ export const CartPage = () => {
   }, [setLaundryPreferences]);
 
   const { subtotal, deliveryFee, expressFee, pickupFee, serviceFee, total, itemCount } = getTotals();
+  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo' || i.isLaundry);
+  const hasActiveLaundryService = items.some(item =>
+    ((item as any).cat === 'Nguo' || item.isLaundry) &&
+    (item.washingSelected !== false || item.ironingSelected || item.packagingSelected || item.vipSelected)
+  );
 
-  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo');
+  const handleProceedToCheckout = () => {
+    const unselectedLaundryItem = items.find(item =>
+      ((item as any).cat === 'Nguo' || item.isLaundry) &&
+      (item.washingSelected === false && !item.ironingSelected && !item.packagingSelected && !item.vipSelected)
+    );
+    if (unselectedLaundryItem) {
+      alert(`Please select at least one service (Wash, Iron, Package, or VIP) for "${unselectedLaundryItem.name}" before proceeding.`);
+      return;
+    }
+    navigate('/checkout');
+  };
 
   if (items.length === 0) {
     return (
@@ -407,8 +439,9 @@ export const CartPage = () => {
                               <XCircle className="w-3 h-3" /> Reset Services
                             </button>
                           </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                             {[
+                              { key: 'wash', label: 'Washing', prop: 'washingSelected', icon: Shirt },
                               { key: 'iron', label: 'Ironing', prop: 'ironingSelected', icon: Flame },
                               { key: 'pack', label: 'Packaging', prop: 'packagingSelected', icon: Package },
                               { key: 'vip', label: 'VIP', prop: 'vipSelected', icon: Sparkles },
@@ -432,36 +465,43 @@ export const CartPage = () => {
                       {/* Inputs */}
                       <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 ${isLaundryOrder ? 'pt-5 border-t border-border/50' : ''}`}>
                         {isLaundryOrder && (
-                          <div className="space-y-2">
-                            <label htmlFor="deliverytime" className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">
-                              <Clock className="w-4 h-4 text-primary" />
-                              Preferred Pickup Time
-                            </label>
-                            <div className="relative flex items-center">
-                              <input
-                                id="deliverytime"
-                                type="datetime-local"
-                                value={laundryPreferences.deliverytime}
-                                onChange={(e) => setLaundryPreferences({ deliverytime: e.target.value })}
-                                min={new Date().toISOString().slice(0, 16)}
-                                style={{ colorScheme: isDark ? 'dark' : 'light' }}
-                                className="w-full h-12 rounded-xl border border-border bg-card px-4 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm"
-                              />
-                              {laundryPreferences.deliverytime && (
-                                <button
-                                  type="button"
-                                  onClick={() => setLaundryPreferences({ deliverytime: '' })}
-                                  title="Clear preferred pickup time"
-                                  className="absolute right-3 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              )}
+                          hasActiveLaundryService ? (
+                            <div className="space-y-2">
+                              <label htmlFor="deliverytime" className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">
+                                <Clock className="w-4 h-4 text-primary" />
+                                Preferred Pickup Time
+                              </label>
+                              <div className="relative flex items-center">
+                                <input
+                                  id="deliverytime"
+                                  type="datetime-local"
+                                  value={laundryPreferences.deliverytime}
+                                  onChange={(e) => setLaundryPreferences({ deliverytime: e.target.value })}
+                                  min={new Date().toISOString().slice(0, 16)}
+                                  style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                                  className="w-full h-12 rounded-xl border border-border bg-card px-4 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-sm"
+                                />
+                                {laundryPreferences.deliverytime && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLaundryPreferences({ deliverytime: '' })}
+                                    title="Clear preferred pickup time"
+                                    className="absolute right-3 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="md:col-span-2 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-2.5">
+                              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                              <span>Select at least one laundry service (Wash, Iron, Package, or VIP) for your item(s) to enable Preferred Pickup Time and Express Service.</span>
+                            </div>
+                          )
                         )}
 
-                        <div className={`space-y-2 ${!isLaundryOrder ? 'md:col-span-2' : ''}`}>
+                        <div className={`space-y-2 ${!isLaundryOrder || !hasActiveLaundryService ? 'md:col-span-2' : ''}`}>
                           <label htmlFor="laundry-instructions" className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">
                             <FileText className="w-4 h-4 text-primary" />
                             Special Instructions
@@ -476,7 +516,7 @@ export const CartPage = () => {
                           />
                         </div>
 
-                        {isLaundryOrder && (
+                        {isLaundryOrder && hasActiveLaundryService && (
                           <div className="space-y-2 md:col-span-2">
                             <button
                               onClick={() => setLaundryPreferences({ globalExpressSelected: !laundryPreferences.globalExpressSelected })}
@@ -551,7 +591,7 @@ export const CartPage = () => {
 
 
               <Button
-                onClick={() => navigate('/checkout')}
+                onClick={handleProceedToCheckout}
                 className="w-full py-6 text-base font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 group"
               >
                 Proceed to Checkout

@@ -46,26 +46,40 @@ export interface LaundryRatios {
 }
 
 export const calculateItemTotal = (item: CartItem, ratios?: LaundryRatios): number => {
-  const itemBaseSubtotal = item.price * item.quantity;
-  let itemTotal = 0;
+  const washPrice = ((item as any).basePrice || item.price) * item.quantity;
 
-  if (item.isLaundry || item.cat === 'Nguo') {
-    itemTotal = itemBaseSubtotal;
-    if (ratios) {
-      if (item.ironingSelected) itemTotal += itemBaseSubtotal * (ratios.iron - ratios.wash);
-      if (item.packagingSelected) itemTotal += itemBaseSubtotal * (ratios.package - ratios.wash);
-      if (item.vipSelected) itemTotal += itemBaseSubtotal * (ratios.vip - ratios.wash);
-    } else {
-      if (item.ironingSelected) itemTotal += itemBaseSubtotal * (150 / 100);
-      if (item.packagingSelected) itemTotal += itemBaseSubtotal * (300 / 100);
-      if (item.vipSelected) itemTotal += itemBaseSubtotal * (400 / 100);
+  if (item.isLaundry || (item as any).cat === 'Nguo') {
+    const isWash = item.washingSelected !== false; // Wash defaults to true unless turned off
+    const isIron = Boolean(item.ironingSelected);
+    const isPack = Boolean(item.packagingSelected);
+    const isVip = Boolean(item.vipSelected);
+
+    let itemTotal = 0;
+
+    // 1. Include wash price if wash service is ON
+    if (isWash) {
+      itemTotal += washPrice;
     }
-  } else {
-    // Non-laundry items: price already incorporates combined delivery fee
-    itemTotal = itemBaseSubtotal;
+
+    // 2. Use washPrice as the reference to calculate other selected service values
+    if (ratios) {
+      const ironFactor = ratios.iron - ratios.wash;
+      const packFactor = ratios.package - ratios.wash;
+      const vipFactor = ratios.vip - ratios.wash;
+
+      if (isIron) itemTotal += washPrice * (ironFactor > 0 ? ironFactor : ratios.iron);
+      if (isPack) itemTotal += washPrice * (packFactor > 0 ? packFactor : ratios.package);
+      if (isVip) itemTotal += washPrice * (vipFactor > 0 ? vipFactor : ratios.vip);
+    } else {
+      if (isIron) itemTotal += washPrice * 1.5;
+      if (isPack) itemTotal += washPrice * 3.0;
+      if (isVip) itemTotal += washPrice * 4.0;
+    }
+
+    return Math.round(itemTotal);
   }
 
-  return Math.round(itemTotal);
+  return Math.round(washPrice);
 };
 
 export interface LaundryPreferences {
@@ -80,9 +94,10 @@ interface CartState {
   setLaundryPreferences: (prefs: Partial<LaundryPreferences>) => void;
   updateLaundryItemConfig: (
     productId: string,
-    config: { ironingSelected?: boolean; packagingSelected?: boolean; vipSelected?: boolean }
+    config: { washingSelected?: boolean; ironingSelected?: boolean; packagingSelected?: boolean; vipSelected?: boolean }
   ) => void;
   applyLaundryServicesToAll: (config: {
+    washingSelected?: boolean;
     ironingSelected?: boolean;
     packagingSelected?: boolean;
     vipSelected?: boolean;
