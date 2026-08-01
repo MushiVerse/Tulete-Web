@@ -111,20 +111,22 @@ export const HelpCenterPage = () => {
           </p>
 
           {/* Search Box */}
-          <div className="relative flex items-center w-full bg-white text-foreground rounded-2xl shadow-lg p-2">
-            <Search className="w-5 h-5 text-muted-foreground ml-3 shrink-0" />
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for answers e.g. delivery fee, refunds, tracking..."
-              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium px-3 placeholder:text-muted-foreground py-2"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-xs text-muted-foreground hover:text-foreground font-bold px-3">
-                Clear
-              </button>
-            )}
+          <div className="sticky top-0 z-20 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl rounded-2xl">
+            <div className="relative flex items-center w-full bg-card/90 dark:bg-card/75 backdrop-blur-xl text-foreground rounded-2xl shadow-lg p-2 border border-border/80">
+              <Search className="w-5 h-5 text-muted-foreground ml-3 shrink-0" />
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for answers e.g. delivery fee, refunds, tracking..."
+                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium px-3 placeholder:text-muted-foreground py-2"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-xs text-muted-foreground hover:text-foreground font-bold px-3">
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

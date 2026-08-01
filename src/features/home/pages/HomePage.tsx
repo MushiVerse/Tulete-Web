@@ -6,7 +6,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { 
   Search, MapPin, Star, Heart, Flame, 
   Utensils, Store as StoreIcon, Tag, ArrowRight, 
-  Sparkles, Bell, CheckCircle2, Clock, ShoppingBag, ChevronRight, LayoutGrid, Trash2 
+  Sparkles, Bell, CheckCircle2, Clock, ShoppingBag, ChevronRight, LayoutGrid, Trash2, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
@@ -855,62 +855,74 @@ export const HomePage = () => {
         <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
 
           {/*  HEADER SECTION  */}
-        <div className="pt-2 pb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground">{greeting}</p>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
-                Hi, <span className="notranslate text-primary" translate="no">{firstName}</span>!
-              </h1>
-              <p className="text-base text-muted-foreground mt-1">{t('greetingSub')}</p>
+          <div className="pt-2 pb-2">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">{greeting}</p>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
+                  Hi, <span className="notranslate text-primary" translate="no">{firstName}</span>!
+                </h1>
+                <p className="text-base text-muted-foreground mt-1">{t('greetingSub')}</p>
+              </div>
+              <button
+                onClick={() => navigate('/notifications')}
+                className="relative w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm cursor-pointer"
+                title="Notifications"
+              >
+                <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-primary text-primary-foreground text-[11px] font-extrabold rounded-full flex items-center justify-center shadow-md animate-in zoom-in duration-200 border-2 border-background">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
             </div>
-            <button
-              onClick={() => navigate('/notifications')}
-              className="relative w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm cursor-pointer"
-              title="Notifications"
-            >
-              <Bell className="w-6 h-6" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-primary text-primary-foreground text-[11px] font-extrabold rounded-full flex items-center justify-center shadow-md animate-in zoom-in duration-200 border-2 border-background">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
+          </div>
+
+          {/* Search Row */}
+          <div className="sticky top-0 z-20 flex gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+            <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
+              <Search 
+                className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" 
+              />
+              
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  // On mobile (window width < 1024px) open full-screen overlay
+                  if (window.innerWidth < 1024) setIsMobileSearchOpen(true);
+                }}
+                placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : t('searchPlaceholder')}
+                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
+              />
+
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-muted-foreground hover:text-foreground shrink-0 mr-2"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               )}
-            </button>
-          </div>
 
-          <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14">
-            <Search 
-              className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" 
-            />
-            
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => {
-                // On mobile (window width < 1024px) open full-screen overlay
-                if (window.innerWidth < 1024) setIsMobileSearchOpen(true);
-              }}
-              placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : t('searchPlaceholder')}
-              className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
-            />
-
-            {/* Tag / Badge */}
-            <div 
-              onClick={() => {
-                const filters: ('food' | 'product' | 'laundry' | 'brands' | null)[] = [null, 'food', 'product', 'laundry', 'brands'];
-                const currentIndex = filters.indexOf(filterValue);
-                const nextIndex = (currentIndex + 1) % filters.length;
-                const nextFilter = filters[nextIndex];
-                setFilterValue(nextFilter);
-                if (nextFilter !== 'brands') setSelectedBrand(null);
-              }}
-              className="flex items-center gap-1.5 ml-3 mr-2 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0 cursor-pointer hover:bg-primary/20 transition-colors select-none"
-            >
-              {selectedBrand ? selectedBrand.name : filterValue === 'brands' ? 'Brands' : filterValue === 'food' ? 'Food' : filterValue === 'product' ? 'Shopping' : filterValue === 'laundry' ? 'Laundry' : 'All'}
+              {/* Tag / Badge */}
+              <div 
+                onClick={() => {
+                  const filters: ('food' | 'product' | 'laundry' | 'brands' | null)[] = [null, 'food', 'product', 'laundry', 'brands'];
+                  const currentIndex = filters.indexOf(filterValue);
+                  const nextIndex = (currentIndex + 1) % filters.length;
+                  const nextFilter = filters[nextIndex];
+                  setFilterValue(nextFilter);
+                  if (nextFilter !== 'brands') setSelectedBrand(null);
+                }}
+                className="flex items-center gap-1.5 ml-3 mr-2 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0 cursor-pointer hover:bg-primary/20 transition-colors select-none"
+              >
+                {selectedBrand ? selectedBrand.name : filterValue === 'brands' ? 'Brands' : filterValue === 'food' ? 'Food' : filterValue === 'product' ? 'Shopping' : filterValue === 'laundry' ? 'Laundry' : 'All'}
+              </div>
             </div>
           </div>
-        </div>
 
           {/*  FILTER CHIPS (Mobile Only)  */}
           <div className="lg:hidden -mx-4 px-4 flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">

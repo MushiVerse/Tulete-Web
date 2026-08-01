@@ -418,14 +418,14 @@ export const FavoritesPage = () => {
 
       {/* Filter / Search HUD Bar (only for Favorites tab) */}
       {activeTab === 'favorites' && (
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="sticky top-0 z-20 flex flex-col md:flex-row gap-4 mb-6 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search saved items or stores..."
-              className="pl-10 bg-card border-border text-xs"
+              className="pl-10 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md text-xs"
             />
           </div>
 

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
   MapPin, Star, Plus, Minus, Trash2, ShieldCheck, 
-  ShoppingBag, Flame, Clock, Navigation, Phone, Heart
+  ShoppingBag, Flame, Clock, Navigation, Phone, Heart, X
 } from 'lucide-react';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useQuery } from '@tanstack/react-query';
@@ -539,14 +539,17 @@ export const FoodPage = () => {
         {/* ── CENTER/MAIN COLUMN ── */}
         <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
           
-          {/* Header & Search */}
+          {/* Header */}
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight mb-2">
               Craving something? 🍕
             </h1>
-            <p className="text-sm text-muted-foreground mb-6">Discover the best food and drinks near you.</p>
-            
-            <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14">
+            <p className="text-sm text-muted-foreground">Discover the best food and drinks near you.</p>
+          </div>
+
+          {/* Search Row */}
+          <div className="sticky top-0 z-20 flex gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+            <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
               <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" />
               <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
                 Food
@@ -558,6 +561,14 @@ export const FoodPage = () => {
                 placeholder="Search for meals, restaurants, or cuisines..."
                 className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-muted-foreground hover:text-foreground shrink-0 mr-2"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 

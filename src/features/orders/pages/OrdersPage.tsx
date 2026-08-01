@@ -367,14 +367,16 @@ export const OrdersPage = () => {
         </div>
 
         {/* Search */}
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by store or ID..."
-            className="pl-9 bg-card border-border focus-visible:ring-primary focus-visible:ring-1"
-          />
+        <div className="sticky top-0 z-20 w-full md:w-72 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl rounded-2xl">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by store or ID..."
+              className="pl-9 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md focus-visible:ring-primary focus-visible:ring-1"
+            />
+          </div>
         </div>
       </div>
 

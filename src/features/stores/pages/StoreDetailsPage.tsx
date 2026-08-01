@@ -951,14 +951,14 @@ export const StoreDetailsPage = () => {
             ) : (
               <>
                 {/* Store search bar & categories horizontal filter */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="sticky top-0 z-20 flex flex-col sm:flex-row gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       placeholder="Search item, clean package..."
-                      className="pl-10 bg-card border-border"
+                      className="pl-10 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md"
                     />
                   </div>
 

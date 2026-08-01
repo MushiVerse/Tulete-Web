@@ -796,14 +796,14 @@ export const StoreListingPage = () => {
           </div>
 
           {/* ── Search + Controls Row ─────────────────────────── */}
-          <div className="flex gap-3">
+          <div className="sticky top-0 z-20 flex gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search stores, food, beauty..."
-                className="w-full pl-10 pr-10 py-3 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all shadow-sm"
+                className="w-full pl-10 pr-10 py-3 bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all shadow-md"
               />
               {searchQuery && (
                 <button
@@ -818,9 +818,9 @@ export const StoreListingPage = () => {
             {/* Mobile Filter button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`lg:hidden relative flex items-center gap-1.5 px-4 py-3 rounded-xl border font-bold text-xs transition-all ${showFilters || activeFiltersCount > 0
+              className={`lg:hidden relative flex items-center gap-1.5 px-4 py-3 rounded-2xl border font-bold text-xs transition-all ${showFilters || activeFiltersCount > 0
                 ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                : 'bg-card border-border text-foreground hover:border-primary/30 shadow-sm'
+                : 'bg-card/75 dark:bg-card/60 border-border text-foreground hover:border-primary/30 shadow-sm'
                 }`}
             >
               <SlidersHorizontal className="w-4 h-4" />

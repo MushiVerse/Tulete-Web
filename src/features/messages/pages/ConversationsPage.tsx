@@ -65,14 +65,16 @@ export const ConversationsPage = () => {
       </div>
 
       {/* Search Input */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search conversation thread or attendant..."
-          className="pl-10 py-5 bg-card border-border"
-        />
+      <div className="sticky top-0 z-20 mb-6 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search conversation thread or attendant..."
+            className="pl-10 py-5 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md"
+          />
+        </div>
       </div>
 
       {/* Tabs Row */}
