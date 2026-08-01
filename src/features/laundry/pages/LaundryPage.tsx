@@ -497,7 +497,7 @@ export const LaundryPage = () => {
             <div ref={adsRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory scroll-smooth">
               {ads.map((ad, i) => (
                 <div key={i} className="snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[50%] xl:w-[45%]">
-                  <div className="relative h-64 sm:h-52 lg:h-56 rounded-3xl overflow-hidden cursor-pointer group shadow-md hover:shadow-xl transition-all border border-border/50">
+                  <div className="relative h-64 rounded-3xl overflow-hidden cursor-pointer group shadow-md hover:shadow-xl transition-all border border-border/50">
                     <img src={ad.imgURL} alt={ad.store} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                     <div className="absolute bottom-5 left-5">
