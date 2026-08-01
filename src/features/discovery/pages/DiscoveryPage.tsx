@@ -34,7 +34,7 @@ const getTimeValue = (item: any): number => {
 };
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Filter, Grid, List as ListIcon, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map as MapIcon, Store, Heart, ExternalLink } from 'lucide-react';
+import { Filter, Grid, List, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map as MapIcon, Store, Heart, ExternalLink } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { useFilterStore } from '../store/useFilterStore';
@@ -473,14 +473,14 @@ export const DiscoveryPage = () => {
 
   return (
     <PageWrapper className="min-h-screen bg-background">
-      <div className="flex h-full">
+      <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
         {/* Sidebar Filters */}
         <FilterSidebar isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} />
 
         {/* Main Content Area */}
-        <div className="flex-1 w-full overflow-hidden flex flex-col items-center">
+        <div className="flex-auto min-w-0 max-w-full w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto hide-scrollbar flex flex-col items-center">
 
-          <div className="w-full max-w-7xl flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar pb-24 px-4 sm:px-6 md:px-8 lg:px-12 pt-4 md:pt-6">
+          <div className="w-full max-w-7xl pb-24 px-4 sm:px-6 md:px-8 lg:px-12 pt-4 md:pt-6">
 
             {/* ── Location Header ── */}
             <div className="flex items-center justify-between mb-1.5">
@@ -496,26 +496,45 @@ export const DiscoveryPage = () => {
               </button>
             </div>
 
-            {/* Sticky Search Bar */}
-            <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md pt-1 pb-2 border-b border-border/50 mb-3 flex flex-col gap-2.5">
+            {/* Sticky Floating Search & Filter Bar */}
+            <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl pt-2 pb-3 border-b border-border/50 shadow-sm mb-3 flex flex-col gap-2.5 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-12 lg:px-12 transition-all">
 
               {/* Tabs: Products vs Stores */}
-              <div className="flex items-center gap-2 p-1 bg-muted rounded-xl w-fit">
-                <button
-                  onClick={() => setActiveTab('products')}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'products' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  Products & Services
-                </button>
-                <button
-                  onClick={() => setActiveTab('stores')}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'stores' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  Stores
-                </button>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 p-1 bg-muted rounded-xl w-fit">
+                  <button
+                    onClick={() => setActiveTab('products')}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'products' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Products & Services
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('stores')}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'stores' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Stores
+                  </button>
+                </div>
+
+                {/* Grid / List toggle */}
+                <div className="hidden sm:flex items-center p-1 bg-muted rounded-xl border border-border shrink-0">
+                  <button
+                    onClick={() => { setViewMode('grid'); setShowMap(false); }}
+                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' && !showMap ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <Grid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setViewMode('list'); setShowMap(false); }}
+                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' && !showMap ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              <div className="relative flex items-center w-full bg-card border border-border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary px-3 h-14 gap-2">
+              {/* Search Bar Input */}
+              <div className="relative flex items-center w-full bg-card/85 dark:bg-card/70 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14 gap-2">
                 <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-1" />
 
                 <input
@@ -526,6 +545,15 @@ export const DiscoveryPage = () => {
                   placeholder="Search for anything near you..."
                   className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-2 placeholder:text-muted-foreground h-full"
                 />
+
+                {localQuery && (
+                  <button
+                    onClick={() => setLocalQuery('')}
+                    className="text-muted-foreground hover:text-foreground shrink-0 mr-1 p-1"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
 
                 {/* Filter button */}
                 <button
@@ -544,27 +572,11 @@ export const DiscoveryPage = () => {
                   <MapIcon className="w-4 h-4" />
                   <span className="hidden sm:inline">Map</span>
                 </button>
-
-                {/* Grid / List toggle */}
-                <div className="hidden sm:flex items-center p-1 bg-muted rounded-xl border border-border shrink-0">
-                  <button
-                    onClick={() => { setViewMode('grid'); setShowMap(false); }}
-                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' && !showMap ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <Grid className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => { setViewMode('list'); setShowMap(false); }}
-                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' && !showMap ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <ListIcon className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
 
               {/* Trending Quick Filters Chips (below search bar, hidden when Stores tab is selected) */}
               {activeTab !== 'stores' && (
-                <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+                <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pt-0.5 pb-1">
                   {TRENDING_FILTERS.map((filter) => (
                     <button
                       key={filter.id}
