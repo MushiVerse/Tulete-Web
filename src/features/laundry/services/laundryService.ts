@@ -16,6 +16,7 @@ export interface LaundryItem extends BaseDocument {
   quantity: number;          // > 0 means service available
   idadi?: number;
   category: string;          // "Nguo" for laundry items
+  cat?: string;              // Alternative category field in some documents
   store: string;
   description?: string;
   rating?: number;           // computed average from `rate` array

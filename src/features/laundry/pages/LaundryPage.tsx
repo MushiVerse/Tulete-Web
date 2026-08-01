@@ -274,17 +274,59 @@ export const LaundryPage = () => {
     return () => unsub();
   }, []);
 
-  // Filter and sort items by time (descending)
+  // Filter and sort items by accuracy, relevance, and time
   const filteredItems = items.filter(item => {
     if ((item as any).availability === false || (item as any).availability === 'false' || (item as any).available === false || (item as any).isAvailable === false) return false;
+    
+    // Category filter
+    if (selectedCategory !== 'All Services') {
+      const catLower = selectedCategory.toLowerCase();
+      const itemCat = String(item.category || item.cat || item.brand || '').toLowerCase();
+      const itemName = String(item.name || '').toLowerCase();
+      const itemDesc = String(item.description || '').toLowerCase();
+
+      let matchCat = itemCat.includes(catLower) || itemName.includes(catLower) || itemDesc.includes(catLower);
+      if (selectedCategory === 'Wash & Fold') {
+        matchCat = matchCat || itemCat.includes('wash') || itemName.includes('wash') || itemCat.includes('nguo') || itemCat.includes('fold');
+      } else if (selectedCategory === 'Dry Cleaning') {
+        matchCat = matchCat || itemCat.includes('dry') || itemName.includes('dry') || itemDesc.includes('dry');
+      } else if (selectedCategory === 'Ironing') {
+        matchCat = matchCat || itemCat.includes('iron') || itemName.includes('iron') || itemCat.includes('pasi') || itemName.includes('pasi');
+      } else if (selectedCategory === 'Duvets') {
+        matchCat = matchCat || itemCat.includes('duvet') || itemName.includes('duvet') || itemCat.includes('blanket') || itemName.includes('blanket') || itemName.includes('mashuka');
+      }
+      if (!matchCat) return false;
+    }
+
     if (searchQuery.trim()) {
-      if (!isItemFuzzyMatch(searchQuery, item, ['name', 'brand', 'store', 'category', 'description'])) {
+      if (!isItemFuzzyMatch(searchQuery, item, ['name', 'brand', 'store', 'category', 'cat', 'description', 'title'])) {
         return false;
       }
     }
     return true;
   }).sort((a, b) => {
-    // Primary sort: time (descending - newest first)
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      // Search Relevance Scoring
+      const getScore = (item: LaundryItem) => {
+        const name = (item.name || '').toLowerCase();
+        const brand = (item.brand || '').toLowerCase();
+        const store = (item.store || '').toLowerCase();
+        const desc = (item.description || '').toLowerCase();
+
+        if (name === q) return 1000;
+        if (name.startsWith(q)) return 800;
+        if (name.includes(q)) return 600;
+        if (brand.includes(q) || store.includes(q)) return 400;
+        if (desc.includes(q)) return 200;
+        return 50;
+      };
+      const scoreA = getScore(a);
+      const scoreB = getScore(b);
+      if (scoreA !== scoreB) return scoreB - scoreA;
+    }
+
+    // Secondary sort: time (descending - newest first)
     const timeA = (a as any).time || (a as any).createdAt || '';
     const timeB = (b as any).time || (b as any).createdAt || '';
     if (timeA && timeB) {
@@ -424,12 +466,38 @@ export const LaundryPage = () => {
             </p>
           </div>
 
-          {/* Ad Banners */}
-          {ads.length > 0 && (
+          {/* Search Row (Brought to the top above Promo Cards) */}
+          <div className="sticky top-0 z-20 flex gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+            <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
+              <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" />
+              <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
+                Laundry
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => { if (window.innerWidth < 1024) setIsMobileSearchOpen(true); }}
+                placeholder="Search services, items..."
+                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-muted-foreground hover:text-foreground shrink-0 mr-2"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Ad Banners (Promo Cards - hidden when user types search query) */}
+          {!searchQuery.trim() && ads.length > 0 && (
             <div ref={adsRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory scroll-smooth">
               {ads.map((ad, i) => (
                 <div key={i} className="snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[50%] xl:w-[45%]">
-                  <div className="relative h-72 rounded-3xl overflow-hidden cursor-pointer group shadow-md hover:shadow-xl transition-all border border-border/50">
+                  <div className="relative h-64 sm:h-52 lg:h-56 rounded-3xl overflow-hidden cursor-pointer group shadow-md hover:shadow-xl transition-all border border-border/50">
                     <img src={ad.imgURL} alt={ad.store} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                     <div className="absolute bottom-5 left-5">
@@ -459,32 +527,6 @@ export const LaundryPage = () => {
                 {cat}
               </button>
             ))}
-          </div>
-
-          {/* Search Row */}
-          <div className="sticky top-0 z-20 flex gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
-            <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
-              <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" />
-              <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
-                Laundry
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => { if (window.innerWidth < 1024) setIsMobileSearchOpen(true); }}
-                placeholder="Search services, items..."
-                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="text-muted-foreground hover:text-foreground shrink-0 mr-2"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
           </div>
 
           {/* Items List */}
