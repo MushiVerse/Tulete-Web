@@ -111,10 +111,10 @@ export const useLiveFlutterOrderTracking = (userId: string | undefined, webOrder
 
     const updateMerged = () => {
       const mergedMap = new Map<string, any>();
-      if (itemFromDoc) {
+      itemsFromQuery.forEach((i) => mergedMap.set(i.id, i));
+      if (itemFromDoc && !mergedMap.has(itemFromDoc.id)) {
         mergedMap.set(itemFromDoc.id, itemFromDoc);
       }
-      itemsFromQuery.forEach((i) => mergedMap.set(i.id, i));
       setLiveItems(Array.from(mergedMap.values()));
       setIsLoading(false);
     };

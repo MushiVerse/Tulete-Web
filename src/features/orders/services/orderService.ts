@@ -204,8 +204,12 @@ class OrderService extends BaseFirestoreService<Order> {
       ? doc(db, targetCollection, customId) 
       : doc(collection(db, targetCollection));
 
+    const nowTimeStr = getFlutterTime();
     const payload = removeUndefinedFields({
       ...data,
+      status: data.status && data.status !== 'Pending' ? data.status : 'Order Placed',
+      ordersts: data.ordersts || ['Order Placed'],
+      orderststime: data.orderststime || [nowTimeStr],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

@@ -62,8 +62,10 @@ export const OrderTrackingPage = () => {
   const { tracking, isLoading: isTrackingLoading } = useOrderTrackingRealtime(id);
   const { liveItems, isLoading: isLiveLoading } = useLiveFlutterOrderTracking(order?.userId, id);
 
-  const firstLiveItem = liveItems && liveItems.length > 0 ? liveItems[0] : null;
-  const rawStatus = firstLiveItem?.status || (firstLiveItem?.cancel ? 'Cancelled' : null) || order?.status || 'Pending';
+  const firstLiveItem = liveItems?.find(i => i.ordersts && Array.isArray(i.ordersts) && i.ordersts.length > 0)
+    || liveItems?.find(i => i.status && i.status.toLowerCase() !== 'pending')
+    || (liveItems && liveItems.length > 0 ? liveItems[0] : null);
+  const rawStatus = firstLiveItem?.status || (firstLiveItem?.cancel ? 'Cancelled' : null) || order?.status || 'Order Placed';
   const isDone = Boolean(firstLiveItem?.deliveryDone || order?.deliveryDone);
   const isCanceled = Boolean(firstLiveItem?.cancel || order?.cancel || String(rawStatus).toLowerCase().includes('cancel'));
 
@@ -372,15 +374,29 @@ export const OrderTrackingPage = () => {
                   rawStsTime = [firstLiveItem?.time || order?.createdAt || ''];
                 }
 
-                const formatStatusTime = (timeStr?: string) => {
+                const formatStatusTime = (timeStr?: any): string => {
                   if (!timeStr) return '';
                   try {
-                    const d = new Date(timeStr);
-                    if (!isNaN(d.getTime())) {
-                      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    if (typeof timeStr === 'string') {
+                      const d = new Date(timeStr);
+                      if (!isNaN(d.getTime())) {
+                        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      }
+                      return timeStr.length > 16 ? timeStr.substring(11, 16) : timeStr;
+                    }
+                    if (typeof timeStr === 'number') {
+                      return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    }
+                    if (typeof timeStr === 'object' && timeStr !== null) {
+                      if (typeof timeStr.toDate === 'function') {
+                        return timeStr.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      }
+                      if (typeof timeStr.seconds === 'number') {
+                        return new Date(timeStr.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      }
                     }
                   } catch (_) {}
-                  return timeStr.length > 16 ? timeStr.substring(11, 16) : timeStr;
+                  return '';
                 };
 
                 return (
@@ -403,7 +419,7 @@ export const OrderTrackingPage = () => {
                           <div className="flex flex-col">
                             <div className="flex items-center justify-between gap-2">
                               <span className="font-bold text-sm text-foreground">
-                                {stsName}
+                                {typeof stsName === 'string' ? stsName : String(stsName || '')}
                               </span>
                               {timeFormatted && (
                                 <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
