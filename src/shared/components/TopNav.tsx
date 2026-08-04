@@ -13,6 +13,7 @@ import { useDeviceOS } from '../../core/hooks/useDeviceOS';
 import { useLocationStore } from '../../features/location/store/useLocationStore';
 import { MapPin } from 'lucide-react';
 import { LanguageCurrencySelector } from './LanguageCurrencySelector';
+import { useCartStore } from '../../features/cart/store/useCartStore';
 
 /** Official Google Play badge from Google's CDN */
 const PlayStoreBadge = ({ className = '' }: { className?: string }) => (
@@ -39,6 +40,8 @@ export const TopNav = () => {
   const { language, toggleLanguage, t } = useLanguageStore();
   const { showPlayBadge } = useDeviceOS();
   const { currentLocation, setPickerOpen } = useLocationStore();
+  const { items: cartItems } = useCartStore();
+  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -151,6 +154,14 @@ export const TopNav = () => {
             title="Cart"
           >
             <ShoppingCart className="size-5" />
+            {cartItemCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 text-white text-[9px] font-extrabold w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-md animate-in zoom-in duration-300 pointer-events-none"
+                style={{ backgroundColor: '#F99420', color: '#FFFFFF' }}
+              >
+                {cartItemCount > 99 ? '99+' : cartItemCount}
+              </span>
+            )}
           </Link>
 
           {/* User Menu / Sign In */}
@@ -254,7 +265,14 @@ export const TopNav = () => {
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/products" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/products') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Products</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/stores" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/stores') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Providers</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/orders" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/orders') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>My Orders</Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/cart" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/cart') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>My Cart</Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/cart" className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/cart') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+                <span>My Cart</span>
+                {cartItemCount > 0 && (
+                  <span className="bg-primary text-primary-foreground text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                )}
+              </Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/favorites" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/favorites') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Favorites</Link>
 
               {!isAuthenticated && (

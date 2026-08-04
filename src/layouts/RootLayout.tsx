@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AuthModal } from '../features/auth/components/AuthModal';
 import { useAuthModalStore } from '../features/auth/store/useAuthModalStore';
-import { OfflineBanner } from '../shared/components/OfflineBanner';
 import { useCurrencyLanguageStore } from '../core/config/currencyStore';
 
 export const RootLayout = () => {
@@ -25,7 +24,6 @@ export const RootLayout = () => {
 
   return (
     <div key={currentLanguage.code} className="w-full min-h-screen">
-      <OfflineBanner />
       <Outlet />
       <AuthModal />
     </div>

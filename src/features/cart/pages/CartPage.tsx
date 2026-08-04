@@ -92,7 +92,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         </div>
 
         {/* Per-Item Laundry Customization */}
-        {((item as any).cat === 'Nguo' || item.isLaundry) && (() => {
+        {(item as any).cat === 'Nguo' && (() => {
           const isWash = item.washingSelected !== false;
           const isIron = Boolean(item.ironingSelected);
           const isPack = Boolean(item.packagingSelected);
@@ -258,16 +258,15 @@ export const CartPage = () => {
     };
   }, [setLaundryPreferences]);
 
-  const { subtotal, deliveryFee, expressFee, pickupFee, serviceFee, total, itemCount } = getTotals();
-  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo' || i.isLaundry);
+  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo');
   const hasActiveLaundryService = items.some(item =>
-    ((item as any).cat === 'Nguo' || item.isLaundry) &&
+    (item as any).cat === 'Nguo' &&
     (item.washingSelected !== false || item.ironingSelected || item.packagingSelected || item.vipSelected)
   );
 
   const handleProceedToCheckout = () => {
     const unselectedLaundryItem = items.find(item =>
-      ((item as any).cat === 'Nguo' || item.isLaundry) &&
+      (item as any).cat === 'Nguo' &&
       (item.washingSelected === false && !item.ironingSelected && !item.packagingSelected && !item.vipSelected)
     );
     if (unselectedLaundryItem) {
@@ -337,7 +336,7 @@ export const CartPage = () => {
                   const groupedCart: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof items } } = {};
 
                   items.forEach((item) => {
-                    const isLaundry = (item as any).cat === 'Nguo' || item.isLaundry || item.storeId === 'laundry';
+                    const isLaundry = (item as any).cat === 'Nguo';
                     const rawSId = item.storeId && item.storeId !== 'unknown' ? item.storeId : null;
                     const rawSName = item.storeName && item.storeName !== 'Unknown Store' ? item.storeName : null;
 

@@ -42,8 +42,7 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
   const product = { ...rawProduct, rating: rawProduct.rating || normRating };
 
   const itemCat = (product as any)?.cat || product.category || 'Product';
-  const isLaundryCategory = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
-  const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location, undefined, itemCat);
+  const magicPrice = useDynamicPrice(product.price, product.storeId, false, product.location, undefined, itemCat);
   const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
   const isFav = isFavorited(product.id);
 
@@ -158,7 +157,6 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
                     storeName: product.store,
                     cat: itemCat,
                     location: product.location,
-                    isLaundry: isLaundryCategory,
                     idadi: product.quantity !== undefined ? product.quantity : product.idadi,
                     maxQuantity: product.quantity !== undefined ? product.quantity : product.idadi,
                   });

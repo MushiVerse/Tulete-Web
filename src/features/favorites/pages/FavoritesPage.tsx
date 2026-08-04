@@ -12,7 +12,7 @@ import { Input } from '../../../shared/components/ui/Input';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { 
-  Heart, HeartCrack, Search, FolderHeart, Plus, 
+  Heart, HeartCrack, Search, FolderHeart, Plus, Minus,
   Trash2, ShoppingCart, Star, Eye, ExternalLink, Sparkles, X, Store as StoreIcon, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,19 +24,23 @@ import { resolveImageUrl } from '../../../shared/utils/productPayload';
 
 const FavoriteCardItem = ({
   fav,
+  cartItems,
+  updateQuantity,
   onRemove,
   onAddToCart,
   onQuickView,
   onNavigate,
 }: {
   fav: any;
+  cartItems: any[];
+  updateQuantity: (id: string, qty: number) => void;
   onRemove: (itemId: string, type: 'store' | 'product' | 'service', name: string) => void;
   onAddToCart: (fav: any, finalPrice: number) => void;
   onQuickView: (fav: any) => void;
   onNavigate: (fav: any) => void;
 }) => {
   const itemCat = fav.cat || fav.category || 'Product';
-  const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(fav.category);
+  const isLaundry = itemCat === 'Nguo';
   const dynamicPrice = useDynamicPrice(
     fav.price || 0,
     fav.storeId || fav.store,
@@ -45,6 +49,8 @@ const FavoriteCardItem = ({
     undefined,
     itemCat
   );
+
+  const cartItem = cartItems.find((i: any) => i.productId === fav.itemId || i.baseProductId === fav.itemId);
 
   return (
     <Card 
@@ -101,18 +107,46 @@ const FavoriteCardItem = ({
               <Eye className="w-3.5 h-3.5" />
             </button>
 
-            {/* Quick Cart button */}
+            {/* Quick Cart button / Increment-Decrement controls */}
             {fav.type !== 'store' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddToCart(fav, dynamicPrice);
-                }}
-                className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-all"
-                title="Add to cart"
-              >
-                <ShoppingCart className="w-3.5 h-3.5" />
-              </button>
+              cartItem && cartItem.quantity > 0 ? (
+                <div className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded-full border border-border shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateQuantity(cartItem.productId, cartItem.quantity - 1);
+                    }}
+                    className="w-5 h-5 flex items-center justify-center rounded-full bg-card text-foreground shadow-xs hover:bg-destructive hover:text-white transition-colors"
+                    title="Decrease quantity"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="font-extrabold text-xs px-1 text-foreground min-w-[1rem] text-center">{cartItem.quantity}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateQuantity(cartItem.productId, cartItem.quantity + 1);
+                    }}
+                    className="w-5 h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors"
+                    title="Increase quantity"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCart(fav, dynamicPrice);
+                  }}
+                  className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-all"
+                  title="Add to cart"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                </button>
+              )
             )}
 
             {/* Remove Bookmark */}
@@ -135,15 +169,19 @@ const FavoriteCardItem = ({
 
 const RecommendationCardItem = ({
   rec,
+  cartItems,
+  updateQuantity,
   onBookmark,
   onAddToCart,
 }: {
   rec: any;
+  cartItems: any[];
+  updateQuantity: (id: string, qty: number) => void;
   onBookmark: (rec: any) => void;
   onAddToCart: (rec: any, finalPrice: number) => void;
 }) => {
   const itemCat = rec.cat || rec.category || 'Product';
-  const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(rec.category);
+  const isLaundry = itemCat === 'Nguo';
   const dynamicPrice = useDynamicPrice(
     rec.price || 0,
     rec.storeId || rec.store,
@@ -152,6 +190,8 @@ const RecommendationCardItem = ({
     undefined,
     itemCat
   );
+
+  const cartItem = cartItems.find((i: any) => i.productId === rec.id || i.baseProductId === rec.id);
 
   return (
     <Card className="p-3 bg-card border border-border flex flex-col justify-between h-full group">
@@ -178,12 +218,40 @@ const RecommendationCardItem = ({
             <Heart className="w-3.5 h-3.5" />
           </button>
 
-          <button
-            onClick={() => onAddToCart(rec, dynamicPrice)}
-            className="p-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-colors"
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-          </button>
+          {cartItem && cartItem.quantity > 0 ? (
+            <div className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded-full border border-border shrink-0" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateQuantity(cartItem.productId, cartItem.quantity - 1);
+                }}
+                className="w-5 h-5 flex items-center justify-center rounded-full bg-card text-foreground shadow-xs hover:bg-destructive hover:text-white transition-colors"
+                title="Decrease quantity"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="font-extrabold text-xs px-1 text-foreground min-w-[1rem] text-center">{cartItem.quantity}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateQuantity(cartItem.productId, cartItem.quantity + 1);
+                }}
+                className="w-5 h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors"
+                title="Increase quantity"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => onAddToCart(rec, dynamicPrice)}
+              className="p-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-colors"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </Card>
@@ -218,7 +286,7 @@ export const FavoritesPage = () => {
     removeFromWishlist 
   } = useFavoritesStore();
 
-  const { items: cartItems, addToCart, clearCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
 
@@ -509,6 +577,8 @@ export const FavoritesPage = () => {
                     >
                       <FavoriteCardItem 
                         fav={fav}
+                        cartItems={cartItems}
+                        updateQuantity={updateQuantity}
                         onRemove={handleRemove}
                         onQuickView={(f) => {
                           if (f.type === 'store') {
@@ -534,7 +604,7 @@ export const FavoritesPage = () => {
                           const catalog = productService.getMockProducts('all');
                           const item = catalog.find((c) => c.id === f.itemId);
                           const cat = (item as any)?.cat || f.cat || f.category || '';
-                          const isLaundry = cat === 'Nguo' || f.category === 'Laundry' || f.category?.toLowerCase().includes('cloth') || (item as any)?._collection === 'cloths';
+                          const isLaundry = cat === 'Nguo';
 
                           addToCart({
                             productId: f.itemId,
@@ -550,7 +620,6 @@ export const FavoritesPage = () => {
                             idadi: item?.idadi,
                             isLaundry
                           });
-                          alert(`${f.name} added to cart!`);
                         }}
                       />
                     </motion.div>
@@ -600,6 +669,7 @@ export const FavoritesPage = () => {
                           const catalog = productService.getMockProducts('all');
                           const item = catalog.find((c) => c.id === itemId);
                           if (!item) return null;
+                          const cartItem = cartItems.find((i: any) => i.productId === item.id || i.baseProductId === item.id);
 
                           return (
                             <div key={itemId} className="flex items-center justify-between gap-4 p-2 bg-muted rounded-lg text-xs">
@@ -611,28 +681,49 @@ export const FavoritesPage = () => {
                               <div className="flex items-center gap-2">
                                 <span className="font-extrabold text-foreground shrink-0">{formatPrice(item.price)} {APP_SETTINGS.currency}</span>
                                 
-                                <button
-                                  onClick={() => {
-                                    addToCart({
-                                      productId: item.id,
-                                      baseProductId: item.id,
-                                      name: item.name,
-                                      price: item.price,
-                                      basePrice: item.price,
-                                      imageUrl: item.imgUrl,
-                                      storeId: item.storeId,
-                                      storeName: item.store,
-                                      cat: item.category || '',
-                                      location: item.location,
-                                      idadi: item.idadi,
-                                      isLaundry: item.category === 'Laundry' || item.category === 'Nguo' || item.category?.toLowerCase().includes('cloth') || (item as any)._collection === 'cloths'
-                                    });
-                                    alert(`${item.name} added to cart!`);
-                                  }}
-                                  className="p-1.5 text-primary hover:bg-primary/10 rounded-full"
-                                >
-                                  <ShoppingCart className="w-3.5 h-3.5" />
-                                </button>
+                                {cartItem && cartItem.quantity > 0 ? (
+                                  <div className="flex items-center gap-1 bg-card px-1.5 py-0.5 rounded-full border border-border shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateQuantity(cartItem.productId, cartItem.quantity - 1)}
+                                      className="w-5 h-5 flex items-center justify-center rounded-full bg-muted text-foreground shadow-xs hover:bg-destructive hover:text-white transition-colors"
+                                      title="Decrease quantity"
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="font-extrabold text-xs px-1 text-foreground min-w-[1rem] text-center">{cartItem.quantity}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateQuantity(cartItem.productId, cartItem.quantity + 1)}
+                                      className="w-5 h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors"
+                                      title="Increase quantity"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      addToCart({
+                                        productId: item.id,
+                                        baseProductId: item.id,
+                                        name: item.name,
+                                        price: item.price,
+                                        basePrice: item.price,
+                                        imageUrl: item.imgUrl,
+                                        storeId: item.storeId,
+                                        storeName: item.store,
+                                        cat: item.category || '',
+                                        location: item.location,
+                                        idadi: item.idadi,
+                                        isLaundry: item.category === 'Laundry' || item.category === 'Nguo' || item.category?.toLowerCase().includes('cloth') || (item as any)._collection === 'cloths'
+                                      });
+                                    }}
+                                    className="p-1.5 text-primary hover:bg-primary/10 rounded-full"
+                                  >
+                                    <ShoppingCart className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
 
                                 <button
                                   onClick={() => removeFromWishlist(wish.id, itemId)}
@@ -668,6 +759,8 @@ export const FavoritesPage = () => {
               <RecommendationCardItem
                 key={rec.id}
                 rec={rec}
+                cartItems={cartItems}
+                updateQuantity={updateQuantity}
                 onBookmark={(item) => {
                   toggleFavorite('user_current', {
                     itemId: item.id,
@@ -695,7 +788,6 @@ export const FavoritesPage = () => {
                     idadi: item.idadi,
                     isLaundry: item.category === 'Laundry' || item.category === 'Nguo' || item.category?.toLowerCase().includes('cloth') || (item as any)._collection === 'cloths'
                   });
-                  alert(`${item.name} added to cart!`);
                 }}
               />
             ))}

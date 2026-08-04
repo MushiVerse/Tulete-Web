@@ -442,11 +442,10 @@ export const ProductDetailPage = () => {
   };
 
   const itemCat = (displayProduct as any)?.cat || displayProduct.category || 'Product';
-  const isLaundryCategory = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(displayProduct.category);
   
   // Execute ALL hooks unconditionally BEFORE any early return
-  const magicPrice = useDynamicPrice(displayProduct.price || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location, undefined, itemCat);
-  const calcOldPrice = useDynamicPrice(displayProduct.oldprice || 0, displayProduct.storeId, isLaundryCategory, (displayProduct as any).location, undefined, itemCat);
+  const magicPrice = useDynamicPrice(displayProduct.price || 0, displayProduct.storeId, false, (displayProduct as any).location, undefined, itemCat);
+  const calcOldPrice = useDynamicPrice(displayProduct.oldprice || 0, displayProduct.storeId, false, (displayProduct as any).location, undefined, itemCat);
   const magicOldPrice = displayProduct.oldprice ? calcOldPrice : undefined;
 
   const handleCheckout = () => {
@@ -815,7 +814,6 @@ export const ProductDetailPage = () => {
                               storeId: displayProduct.storeId,
                               storeName: displayProduct.store,
                               cat: itemCat,
-                              isLaundry: isLaundryCategory,
                               location: displayProduct.location,
                               idadi: qty,
                               maxQuantity: qty,

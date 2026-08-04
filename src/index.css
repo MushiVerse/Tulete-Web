@@ -161,7 +161,7 @@ font[style*="background-color"] {
 }
 
 /* Ensure TopNav header and links never show Google Translate grey hover boxes */
-header, nav, header a, nav a, header a *, nav a * {
+header font, nav font, header a font, nav a font {
   background-color: transparent;
   box-shadow: none;
 }

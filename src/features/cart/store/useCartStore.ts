@@ -48,7 +48,7 @@ export interface LaundryRatios {
 export const calculateItemTotal = (item: CartItem, ratios?: LaundryRatios): number => {
   const washPrice = ((item as any).basePrice || item.price) * item.quantity;
 
-  if (item.isLaundry || (item as any).cat === 'Nguo') {
+  if ((item as any).cat === 'Nguo') {
     const isWash = item.washingSelected !== false; // Wash defaults to true unless turned off
     const isIron = Boolean(item.ironingSelected);
     const isPack = Boolean(item.packagingSelected);
@@ -236,7 +236,7 @@ export const useCartStore = create<CartState>()(
       removeFromCart: (productId) =>
         set((state) => {
           const newItems = state.items.filter((i) => i.productId !== productId);
-          const hasLaundry = newItems.some((i) => (i as any).cat === 'Nguo' || (i as any).category === 'Nguo');
+          const hasLaundry = newItems.some((i) => (i as any).cat === 'Nguo');
           return {
             items: newItems,
             laundryPreferences: hasLaundry
@@ -260,7 +260,7 @@ export const useCartStore = create<CartState>()(
             finalQty <= 0
               ? state.items.filter((i) => i.productId !== productId)
               : state.items.map((i) => (i.productId === productId ? { ...i, quantity: finalQty } : i));
-          const hasLaundry = newItems.some((i) => (i as any).cat === 'Nguo' || (i as any).category === 'Nguo');
+          const hasLaundry = newItems.some((i) => (i as any).cat === 'Nguo');
 
           return {
             items: newItems,
@@ -317,7 +317,7 @@ export const useCartStore = create<CartState>()(
         let laundrySubtotal = 0;
         const ratios = get().laundryRatios;
         items.forEach((item) => {
-          const itemIsLaundry = (item as any).cat === 'Nguo' || item.isLaundry === true;
+          const itemIsLaundry = (item as any).cat === 'Nguo';
           if (itemIsLaundry) hasLaundry = true;
 
           let itemTotal = calculateItemTotal(item, ratios || undefined);
@@ -416,7 +416,7 @@ export const useCartStore = create<CartState>()(
 
         const ratios = get().laundryRatios;
         items.forEach((item) => {
-          const itemIsLaundry = (item as any).cat === 'Nguo' || item.isLaundry === true;
+          const itemIsLaundry = (item as any).cat === 'Nguo';
           let itemTotal = calculateItemTotal(item, ratios || undefined);
 
           if (!itemIsLaundry && userLocation && item.isDeliverySelected !== false) {

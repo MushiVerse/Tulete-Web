@@ -36,7 +36,7 @@ export const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
 
   const handleAddToCart = (product: any) => {
     const cat = product.cat || product.category || (product.recordType === 'cloth' ? 'Nguo' : 'Product');
-    const isLaundry = cat === 'Nguo' || cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth' || product._collection === 'cloths';
+    const isLaundry = cat === 'Nguo';
     const baseItemPrice = product.price ?? 0;
     addToCart({
       productId: product.id || product.objectID,

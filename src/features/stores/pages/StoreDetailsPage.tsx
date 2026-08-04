@@ -37,7 +37,7 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
 
   const productId = prod.id || prod.objectID || prod._id || prod.productId;
   const itemCat = (prod as any)?.cat || prod.category || store.category || 'Product';
-  const isLaundry = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(prod.category);
+  const isLaundry = itemCat === 'Nguo';
   const dynamicPrice = useDynamicPrice(
     prod.price, 
     store.id, 

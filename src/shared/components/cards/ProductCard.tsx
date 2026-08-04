@@ -44,7 +44,7 @@ export const ProductCard = ({
   const isSoldOut = (product.quantity !== undefined && product.quantity <= 0) || (product.idadi !== undefined && product.idadi <= 0);
   
   const itemCat = (product as any)?.cat || product.category || 'Product';
-  const isLaundryCategory = itemCat === 'Nguo' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category);
+  const isLaundryCategory = itemCat === 'Nguo';
   const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location, undefined, itemCat);
   const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory, product.location, undefined, itemCat) : undefined;
 
