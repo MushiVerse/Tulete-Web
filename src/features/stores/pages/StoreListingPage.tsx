@@ -781,11 +781,11 @@ export const StoreListingPage = () => {
         </div>
 
         {/* ── CENTER/MAIN COLUMN ── */}
-        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-28 px-4 lg:px-8 xl:px-10 space-y-6">
+        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-4 pb-28 px-4 lg:px-8 xl:px-10 space-y-4 lg:space-y-5">
 
           {/* ── Header ───────────────────────────────────────── */}
-          <div className="mb-2">
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight mb-1">
+          <div className="mb-1">
+            <h1 className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight mb-0.5">
               Explore Providers
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -796,7 +796,7 @@ export const StoreListingPage = () => {
           </div>
 
           {/* ── Search + Controls Row ─────────────────────────── */}
-          <div className="sticky top-0 z-40 !mt-0 flex gap-3 py-3 -mx-2 px-2 bg-background/95 backdrop-blur-2xl border-b border-border/60 shadow-md transition-all">
+          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex gap-3 py-3 -mx-2 px-2 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input

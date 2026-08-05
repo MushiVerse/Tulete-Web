@@ -24,19 +24,17 @@ export const MainLayout = () => {
   });
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex min-h-screen w-full flex-col bg-background">
+      {/* Top Navigation */}
+      <TopNav />
+      
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden w-full">
-        <TopNav />
-        
-        {/* Scrollable Main Area */}
-        <main className="flex-1 overflow-y-auto pb-32 md:pb-0 flex flex-col">
-          <div className="w-full flex-1">
-            {React.cloneElement(outlet as React.ReactElement, { key: location.pathname })}
-          </div>
-          <Footer />
-        </main>
-      </div>
+      <main className="flex-1 w-full pb-24 md:pb-0">
+        {React.cloneElement(outlet as React.ReactElement, { key: location.pathname })}
+      </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />

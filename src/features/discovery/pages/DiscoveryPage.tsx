@@ -497,7 +497,7 @@ export const DiscoveryPage = () => {
             </div>
 
             {/* Sticky Floating Search & Filter Bar */}
-            <div className="sticky top-0 z-40 !mt-0 bg-background/95 backdrop-blur-2xl py-3 border-b border-border/60 shadow-md mb-4 flex flex-col gap-2.5 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-12 lg:px-12 transition-all">
+            <div className="sticky top-16 lg:top-0 z-40 !mt-0 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 py-3 border-b border-border/30 mb-4 flex flex-col gap-2.5 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-12 lg:px-12 transition-all">
 
               {/* Tabs: Products vs Stores */}
               <div className="flex items-center justify-between gap-2">

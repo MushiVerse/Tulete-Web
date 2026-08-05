@@ -429,7 +429,7 @@ export const OrdersPage = () => {
         </div>
 
         {/* Search */}
-        <div className="sticky top-0 z-40 !mt-0 w-full md:w-72 py-2 -mx-2 px-2 bg-background/95 backdrop-blur-2xl border border-border/60 shadow-md rounded-2xl">
+        <div className="sticky top-16 md:top-0 z-40 !mt-0 w-full md:w-72 py-2 -mx-2 px-2 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border border-border/30 rounded-2xl">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input

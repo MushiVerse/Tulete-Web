@@ -852,17 +852,17 @@ export const HomePage = () => {
         </div>
 
         {/*  CENTER/MAIN COLUMN  */}
-        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
+        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-4 pb-28 px-4 lg:px-8 xl:px-10 space-y-4 lg:space-y-5">
 
           {/*  HEADER SECTION  */}
-          <div className="pt-2 pb-2">
-            <div className="flex items-center justify-between mb-4">
+          <div className="pt-1 pb-0">
+            <div className="flex items-center justify-between mb-1.5">
               <div>
                 <p className="text-sm font-semibold text-muted-foreground">{greeting}</p>
                 <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
                   Hi, <span className="notranslate text-primary" translate="no">{firstName}</span>!
                 </h1>
-                <p className="text-base text-muted-foreground mt-1">{t('greetingSub')}</p>
+                <p className="text-base text-muted-foreground mt-0.5">{t('greetingSub')}</p>
               </div>
               <button
                 onClick={() => navigate('/notifications')}
@@ -880,7 +880,7 @@ export const HomePage = () => {
           </div>
 
           {/* Search Row */}
-          <div className="sticky top-0 z-40 !mt-0 flex gap-3 py-3 -mx-4 px-4 sm:-mx-8 sm:px-8 bg-background/95 backdrop-blur-2xl border-b border-border/60 shadow-md transition-all">
+          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex gap-3 py-3 -mx-4 px-4 sm:-mx-8 sm:px-8 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
             <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
               <Search 
                 className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" 
