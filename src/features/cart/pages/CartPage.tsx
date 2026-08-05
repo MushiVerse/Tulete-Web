@@ -437,37 +437,41 @@ export const CartPage = () => {
 
               {/* Quick Destination Options Chips (Always Visible to let customer change quickly) */}
               {(savedLocations.length > 0 || currentLocation) && (
-                <div className="mt-2.5 pt-2 border-t border-border/50 flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-                  <span className="text-[10px] font-extrabold text-muted-foreground shrink-0 mr-1 uppercase tracking-wider">Quick Select:</span>
-                  
-                  {savedLocations.map((loc) => {
-                    const isSelected = currentLocation?.id === loc.id || currentLocation?.address === loc.address;
-                    return (
-                      <button
-                        key={loc.id}
-                        type="button"
-                        onClick={() => setCurrentLocation(loc)}
-                        className={`notranslate text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all border shrink-0 flex items-center gap-1.5 max-w-[160px] truncate ${
-                          isSelected
-                            ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-                            : 'bg-muted/60 text-muted-foreground hover:bg-muted border-border'
-                        }`}
-                        translate="no"
-                      >
-                        <MapPin className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{loc.address.split(',')[0]}</span>
-                      </button>
-                    );
-                  })}
+                <div className="mt-2.5 pt-2 border-t border-border/50 space-y-1.5">
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                    <span className="text-[10px] font-extrabold text-muted-foreground shrink-0 mr-1 uppercase tracking-wider">Quick Select:</span>
+                    
+                    {savedLocations.map((loc) => {
+                      const isSelected = currentLocation?.id === loc.id || currentLocation?.address === loc.address;
+                      const labelText = loc.specificInstructions || loc.address.split(',')[0];
+                      return (
+                        <button
+                          key={loc.id}
+                          type="button"
+                          onClick={() => setCurrentLocation(loc)}
+                          title={loc.address}
+                          className={`notranslate text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all border shrink-0 flex items-center gap-1.5 max-w-[200px] truncate ${
+                            isSelected
+                              ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                              : 'bg-muted/60 text-muted-foreground hover:bg-muted border-border'
+                          }`}
+                          translate="no"
+                        >
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{labelText}</span>
+                        </button>
+                      );
+                    })}
 
-                  <button
-                    type="button"
-                    onClick={() => setIsLocationModalOpen(true)}
-                    className="text-[11px] font-bold px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-primary/20 shrink-0 flex items-center gap-1"
-                  >
-                    <Search className="w-3 h-3" />
-                    <span>More...</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsLocationModalOpen(true)}
+                      className="text-[11px] font-bold px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-primary/20 shrink-0 flex items-center gap-1"
+                    >
+                      <Search className="w-3 h-3" />
+                      <span>More...</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -778,7 +782,7 @@ export const CartPage = () => {
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
                 </div>
-                {serviceFee > 0 && (
+                {isLaundryOrder && serviceFee > 0 && (
                   <div className="flex justify-between text-primary font-bold">
                     <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> Service Charge</span>
                     <span>+{formatPrice(serviceFee)} {APP_SETTINGS.currency}</span>

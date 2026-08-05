@@ -84,7 +84,8 @@ export function calculateDeliveryFeeAlgorithm(
         2;
 
     const distanceRatio = 12742 * Math.asin(Math.sqrt(a));
-    const deliveryFee = roundUp(Math.round(distanceRatio) * deliveryRation);
+    const km = distanceRatio <= 0.05 ? 0 : Math.ceil(distanceRatio);
+    const deliveryFee = roundUp(km * deliveryRation);
     return deliveryFee;
   } catch (e) {
     console.error('shida iko', e);
@@ -180,7 +181,9 @@ export function useDynamicPrice(
   }, [
     basePrice,
     storeId,
-    currentLocation,
+    currentLocation?.lat,
+    currentLocation?.lng,
+    currentLocation?.address,
     isLaundry,
     typeof productLocation === 'string'
       ? productLocation

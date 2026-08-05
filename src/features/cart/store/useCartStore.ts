@@ -338,7 +338,6 @@ export const useCartStore = create<CartState>()(
         const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
         let subtotal = 0;
-        let deliveryFee = 0;
         let globalExpressFee = 0;
         let pickupFee = 0;
         let serviceFee = 0;
@@ -372,7 +371,6 @@ export const useCartStore = create<CartState>()(
           const itemTotalWithDelivery = baseItemTotal + totalDeliveryFee;
 
           subtotal += itemTotalWithDelivery;
-          deliveryFee += totalDeliveryFee;
           if (unitDeliveryFee > maxRoundedFee) maxRoundedFee = unitDeliveryFee;
 
           if (itemIsLaundry) {
@@ -389,17 +387,18 @@ export const useCartStore = create<CartState>()(
           ? String(get().laundryPreferences.deliverytime).trim()
           : '';
         if (hasLaundry && deliveryTimeStr.length > 0) {
-          const baseFeeForPickup = deliveryFee > 0 ? deliveryFee : maxRoundedFee > 0 ? maxRoundedFee : 2000;
+          const baseFeeForPickup = maxRoundedFee > 0 ? maxRoundedFee : 2000;
           pickupFee = baseFeeForPickup * 2;
         }
 
-        // Calculate 5% Service Charge specifically for Laundry items
-        serviceFee = hasLaundry && laundrySubtotal > 0 ? Math.round(laundrySubtotal * 0.05) : 0;
+        // Calculate 5% Service Charge specifically for Laundry items (cat === 'Nguo')
+        const hasLaundryNguo = items.some((i) => (i as any).cat === 'Nguo');
+        serviceFee = hasLaundryNguo && laundrySubtotal > 0 ? Math.round(laundrySubtotal * 0.05) : 0;
         const total = subtotal + globalExpressFee + pickupFee + serviceFee;
 
         return {
           subtotal: Math.round(subtotal),
-          deliveryFee: Math.round(deliveryFee),
+          deliveryFee: 0, // Delivery fee is inclusive in item prices as on Home Page
           expressFee: Math.round(globalExpressFee),
           pickupFee: Math.round(pickupFee),
           serviceFee: Math.round(serviceFee),

@@ -393,7 +393,7 @@ export const CheckoutPage = () => {
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
                 </div>
-                {serviceFee > 0 && (
+                {isLaundryOrder && serviceFee > 0 && (
                   <div className="flex justify-between text-primary font-bold text-xs">
                     <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> Service Charge (5%)</span>
                     <span>+{formatPrice(serviceFee)} {APP_SETTINGS.currency}</span>
@@ -407,7 +407,7 @@ export const CheckoutPage = () => {
                 )}
                 {pickupFee > 0 && (
                   <div className="flex justify-between text-primary font-bold text-xs">
-                    <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-primary" /> Preferred Pickup Charge</span>
+                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-primary" /> Preferred Pickup Charge</span>
                     <span>+{formatPrice(pickupFee)} {APP_SETTINGS.currency}</span>
                   </div>
                 )}
