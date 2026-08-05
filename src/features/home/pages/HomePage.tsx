@@ -813,7 +813,7 @@ export const HomePage = () => {
             onClose={() => { setIsMobileSearchOpen(false); setSearchQuery(''); setMobileResults([]); }}
             loading={mobileLoading}
             results={mobileResults}
-            placeholder={filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry...'}
+            placeholder={filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry, products...'}
           />
         )}
       </AnimatePresence>

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
@@ -34,7 +36,7 @@
 */
 @layer base {
   :root {
-    --background: #F8FAFC;
+    --background: #FFFFFF;
     --foreground: #0F172A;
     --card: #FFFFFF;
     --card-foreground: #0F172A;

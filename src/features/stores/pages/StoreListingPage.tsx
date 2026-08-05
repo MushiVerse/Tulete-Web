@@ -802,7 +802,7 @@ export const StoreListingPage = () => {
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search stores, food, beauty..."
+                placeholder="Search stores, categories..."
                 className="w-full pl-10 pr-10 py-3 bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all shadow-md"
               />
               {searchQuery && (
