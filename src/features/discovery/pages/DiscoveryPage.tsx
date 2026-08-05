@@ -316,6 +316,67 @@ export const DiscoveryPage = () => {
         }
       }
 
+      // --- Subcategory: query Firestore directly ---
+      // Algolia cannot reliably filter by subcategory fields (subCat, ecommerceSubCategory,
+      // foodSubCategory, etc.) because they are not configured as facets in the index.
+      // Fetching only 200 items broadly and filtering client-side misses too many results.
+      // The correct approach: hit Firestore directly for the foods + products collections,
+      // then match subcategory client-side across all known field names.
+      const isSubcategoryFilter =
+        category && category !== 'all' &&
+        catLower !== 'food' && catLower !== 'product' &&
+        catLower !== 'laundry' && catLower !== 'nguo';
+
+      if (isSubcategoryFilter) {
+        try {
+          const [foodsSnap, productsSnap] = await Promise.all([
+            getDocs(collection(db, 'foods')),
+            getDocs(collection(db, 'products')),
+          ]);
+
+          const allItems: any[] = [
+            ...foodsSnap.docs.map(d => ({ id: d.id, objectID: d.id, recordType: 'food', _collection: 'foods', ...d.data() })),
+            ...productsSnap.docs.map(d => ({ id: d.id, objectID: d.id, recordType: 'product', _collection: 'products', ...d.data() })),
+          ];
+
+          // Exact subcategory match across all known field names
+          const catTarget = catLower;
+          const matched = allItems.filter(item => {
+            const fields = [
+              item.subCat, item.subCategory, item.subcat, item.subsubCat,
+              item.ecommerceSubCategory, item.foodSubCategory, item.scat, item.speccat,
+              item.category, item.cat, item.mainCategory,
+            ]
+              .filter(Boolean)
+              .map((v: any) => String(v).toLowerCase().trim());
+
+            return fields.some(f => f === catTarget);
+          });
+
+          // Apply text search on top if user is typing
+          const textFiltered = localQuery.trim()
+            ? matched.filter(item => {
+                const q = localQuery.toLowerCase().trim();
+                return (
+                  String(item.name || '').toLowerCase().includes(q) ||
+                  String(item.description || '').toLowerCase().includes(q) ||
+                  String(item.store || '').toLowerCase().includes(q)
+                );
+              })
+            : matched;
+
+          if (!controller.signal.aborted) {
+            setProducts(textFiltered);
+            setLoading(false);
+          }
+        } catch (err) {
+          console.warn('Firestore subcategory query failed:', err);
+          if (!controller.signal.aborted) setLoading(false);
+        }
+        return;
+      }
+
+      // --- Standard path: Algolia for food / product / all / stores ---
       let filterStr: string | undefined = undefined;
 
       if (activeTab === 'stores') {
@@ -326,18 +387,13 @@ export const DiscoveryPage = () => {
             filterStr = `(recordType:food OR category:"Food" OR _collection:foods) AND NOT recordType:store AND NOT recordType:brand`;
           } else if (catLower === 'product') {
             filterStr = `(recordType:product OR category:"Product" OR _collection:products) AND NOT recordType:store AND NOT recordType:brand`;
-          } else {
-            filterStr = `category:"${category}" AND NOT recordType:store AND NOT recordType:brand`;
           }
         } else {
           filterStr = `NOT recordType:store AND NOT recordType:brand`;
         }
       }
 
-      if (isAvailableOnly) {
-        filterStr += ` AND availability:true`;
-      }
-
+      // Only apply price as numeric filter (reliably indexed in Algolia)
       const numericFilters: string[] = [];
       if (minPrice !== null) numericFilters.push(`price >= ${minPrice}`);
       if (maxPrice !== null) numericFilters.push(`price <= ${maxPrice}`);
@@ -376,28 +432,57 @@ export const DiscoveryPage = () => {
       rating = Number(item.rating);
       reviewCount = item.reviewCount ? Number(item.reviewCount) : 1;
     }
-    if (rating === 0 || reviewCount === 0) {
-      rating = 4.5 + ((item.name?.length || item.store?.length || 5) % 5) / 10;
-    }
+    // No fake fallback — return real data only
     return { rating, reviewCount };
   };
 
   const isLaundryCategory = category && (category.toLowerCase() === 'laundry' || category.toLowerCase() === 'nguo');
+  // Derive catLower at component scope so finalProducts filter can use it
+  const catLower = (category || '').toLowerCase().trim();
 
   const finalProducts = products
     .filter((item: any) => {
+      // --- Availability ---
       if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
 
-      const itemCat = String(item.category || item.cat || '').toLowerCase().trim();
-      const itemSubCat = String(item.subCategory || item.subCat || item.subsubCat || '').toLowerCase().trim();
-      const isLaundryItem = itemCat === 'nguo' || itemSubCat === 'nguo' || itemCat === 'laundry' || item.recordType === 'cloth' || item.recordType === 'laundry' || item._collection === 'cloths';
+      // --- In-Stock Only (quantity > 0) ---
+      // Check all known quantity field names across foods, products, and cloths collections.
+      if (isAvailableOnly) {
+        const rawQty = item.quantity ?? item.idadi ?? item.count ?? item.quanty ?? item.stock ?? item.inStock;
+        if (rawQty !== undefined && rawQty !== null && rawQty !== '') {
+          const numQty = Number(rawQty);
+          // If quantity is a valid number and it's 0 or below, exclude the item
+          if (!isNaN(numQty) && numQty <= 0) return false;
+        }
+        // If no quantity field found at all, item is assumed to be in stock (don't exclude)
+      }
+
+      // --- Price range (client-side safety net on top of Algolia numeric filters) ---
+      const price = Number(item.price ?? item.bei ?? item.presi ?? 0);
+      if (minPrice !== null && price < minPrice) return false;
+      if (maxPrice !== null && price > maxPrice) return false;
+
+      const itemCat = String(item.category || item.cat || item.mainCategory || '').toLowerCase().trim();
+      // Gather ALL possible subcategory field values into one searchable string
+      const itemSubFields = [
+        item.subCat, item.subCategory, item.subcat, item.subsubCat,
+        item.ecommerceSubCategory, item.foodSubCategory, item.scat, item.speccat
+      ]
+        .filter(Boolean)
+        .map((v: any) => String(v).toLowerCase().trim());
+
+      const isLaundryItem = itemCat === 'nguo' || itemSubFields.includes('nguo') ||
+        itemCat === 'laundry' || item.recordType === 'cloth' ||
+        item.recordType === 'laundry' || item._collection === 'cloths';
 
       if (isLaundryCategory) {
         if (!isLaundryItem) return false;
       } else {
-        if (itemCat === 'nguo' || itemSubCat === 'nguo' || item.recordType === 'cloth' || item._collection === 'cloths') return false;
+        if (itemCat === 'nguo' || itemSubFields.includes('nguo') || item.recordType === 'cloth' || item._collection === 'cloths') return false;
       }
 
+
+      // --- Delivery radius check ---
       let location: { lat: number; lng: number } | undefined;
       if (item.location && typeof item.location === 'string') {
         const parts = item.location.split(',');
@@ -412,11 +497,11 @@ export const DiscoveryPage = () => {
 
       if (location && currentLocation) {
         const fee = getDeliveryFee(currentLocation, location, item.storeId || item.id || '', false, true);
-        const isFood = item.recordType === 'food' || item.category === 'Food';
-
+        const isFood = item.recordType === 'food' || itemCat === 'food';
         if (isFood && fee > 1600) return false;
-        if (!isFood && fee > 10000) return false; // This covers products, stores, brands, etc.
+        if (!isFood && fee > 10000) return false;
       }
+
       return true;
     })
     .sort((a: any, b: any) => {
