@@ -65,7 +65,7 @@ export const ConversationsPage = () => {
       </div>
 
       {/* Search Input */}
-      <div className="sticky top-0 z-20 mb-6 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-30 mb-6 py-2 -mx-2 px-2 bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input

@@ -817,7 +817,7 @@ export const HomePage = () => {
           />
         )}
       </AnimatePresence>
-      <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
+      <div className="flex w-full bg-background relative items-stretch lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
 
         {/*  LEFT SIDEBAR (FILTERS)  */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-hidden px-6 pt-6 pb-8">
@@ -880,7 +880,7 @@ export const HomePage = () => {
           </div>
 
           {/* Search Row */}
-          <div className="sticky top-0 z-20 flex gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+          <div className="sticky top-0 z-40 !mt-0 flex gap-3 py-3 -mx-4 px-4 sm:-mx-8 sm:px-8 bg-background/95 backdrop-blur-2xl border-b border-border/60 shadow-md transition-all">
             <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
               <Search 
                 className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" 

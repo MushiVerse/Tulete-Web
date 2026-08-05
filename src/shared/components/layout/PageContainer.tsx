@@ -2,9 +2,9 @@ import React from 'react';
 import { motion, Transition } from 'framer-motion';
 
 const pageVariants = {
-  initial: { opacity: 0, y: 10 },
-  in: { opacity: 1, y: 0 },
-  out: { opacity: 0, y: -10 },
+  initial: { opacity: 0 },
+  in: { opacity: 1 },
+  out: { opacity: 0 },
 };
 
 const pageTransition: Transition = {
@@ -25,15 +25,10 @@ interface PageContainerProps {
  */
 export const PageContainer = ({ children, className = '', isPublic = false }: PageContainerProps) => {
   return (
-    <motion.div
-      initial="initial"
-      animate="in"
-      exit="out"
-      variants={pageVariants}
-      transition={pageTransition}
+    <div
       className={`w-full flex flex-col min-h-screen bg-background ${isPublic ? '' : 'pb-24 md:pb-0'} ${className}`}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };

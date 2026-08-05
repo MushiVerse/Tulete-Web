@@ -735,8 +735,8 @@ export const StoreDetailsPage = () => {
 
   return (
     <PageContainer>
-      <div className="flex w-full bg-background h-[calc(100vh-4rem)] overflow-hidden relative justify-start items-start">
-        <div className="w-full flex h-full overflow-hidden relative justify-start items-start">
+      <div className="flex w-full bg-background relative lg:h-[calc(100vh-4rem)] items-stretch overflow-visible lg:overflow-hidden justify-start">
+        <div className="w-full flex h-full overflow-visible lg:overflow-hidden relative justify-start items-stretch">
         
         {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
         <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-none px-6 pt-6 pb-28">
@@ -778,7 +778,7 @@ export const StoreDetailsPage = () => {
         </div>
 
         {/* ── CENTER COLUMN ── */}
-        <div className="flex-auto min-w-0 max-w-full h-full overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
+        <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
           {/* Mobile Back & Actions */}
           <div className="lg:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between py-3 mb-6">
             <button onClick={() => navigate('/explore?map=true', { state: { showMap: true } })} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
@@ -951,7 +951,7 @@ export const StoreDetailsPage = () => {
             ) : (
               <>
                 {/* Store search bar & categories horizontal filter */}
-                <div className="sticky top-0 z-20 flex flex-col sm:flex-row gap-3 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl">
+                <div className="sticky top-0 z-40 !mt-0 flex flex-col sm:flex-row gap-3 py-3 -mx-2 px-2 bg-background/95 backdrop-blur-2xl border-b border-border/60 shadow-md transition-all">
                   <div className="relative flex-1">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input

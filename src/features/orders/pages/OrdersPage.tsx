@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useOrderListRealtime } from '../hooks/useOrderRealtime';
 import { orderService, Order, OrderStatus } from '../services/orderService';
 import { useCartStore } from '../../cart/store/useCartStore';
+import { productService } from '../../products/services/productService';
+import { storeService } from '../../stores/services/storeService';
+import { useLocationStore } from '../../location/store/useLocationStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
@@ -334,14 +337,73 @@ export const OrdersPage = () => {
   };
 
   const handleReorder = (order: Order) => {
+    const allProducts = productService.getMockProducts('all');
+    const allStores = storeService.getMockStores();
+
+    // 1. Restore exact delivery location from previous order
+    if (order.deliveryLocation && (order.deliveryLocation.address || order.deliveryLocation.lat)) {
+      useLocationStore.getState().setCurrentLocation({
+        id: Date.now().toString(),
+        address: order.deliveryLocation.address || 'Delivery Location',
+        lat: order.deliveryLocation.lat || 0,
+        lng: order.deliveryLocation.lng || 0,
+        specificInstructions: order.deliveryLocation.specificInstructions || order.notes || order.instructions || '',
+        lastUsedAt: Date.now(),
+      });
+    }
+
+    // 2. Restore global laundry & order preferences from previous order
+    useCartStore.getState().setLaundryPreferences({
+      deliverytime: order.deliverytime || '',
+      instructions: order.notes || order.instructions || '',
+      globalExpressSelected: Boolean(order.express),
+    });
+
+    // 3. Add items with previous subservices carried over
     (order.items || []).forEach((item) => {
+      const targetId = item.productId || (item as any).id || '';
+      const matchedProd = allProducts.find((p) => p.id === targetId);
+      const matchedStore = allStores.find(
+        (s) => s.id === order.storeId || s.id === (item as any).storeId || s.id === matchedProd?.storeId
+      );
+
+      const resolvedStoreId = matchedProd?.storeId || matchedStore?.id || order.storeId || 's1';
+      let resolvedStoreName =
+        matchedProd?.store ||
+        matchedStore?.name ||
+        (order.storeName && order.storeName !== 'Verified Partner' ? order.storeName : '') ||
+        (order as any).store ||
+        '';
+
+      if (!resolvedStoreName || resolvedStoreName === 'Verified Partner') {
+        const lookup = allStores.find((s) => s.id === resolvedStoreId);
+        resolvedStoreName = lookup?.name || 'Tulete Partner Store';
+      }
+
+      const itemCat = item.cat || (matchedProd as any)?.cat || matchedProd?.category || 'Product';
+      const isLaundry = itemCat === 'Nguo';
+
       addToCart({
-        productId: item.productId,
+        productId: targetId,
+        baseProductId: targetId,
         name: item.name,
         price: item.price,
-        imageUrl: item.imageUrl,
-        storeId: order.storeId,
-        storeName: order.storeName,
+        basePrice: item.price,
+        imageUrl: item.imageUrl || matchedProd?.imgUrl || '',
+        storeId: resolvedStoreId,
+        storeName: resolvedStoreName,
+        cat: itemCat,
+        isLaundry: isLaundry,
+        // Carry over previous laundry subservices settings
+        washingSelected: isLaundry ? ((item as any).washingSelected !== false) : undefined,
+        ironingSelected: isLaundry ? Boolean((item as any).ironingSelected || order.irondelivery) : undefined,
+        packagingSelected: isLaundry ? Boolean((item as any).packagingSelected || order.packagepickup) : undefined,
+        vipSelected: isLaundry ? Boolean((item as any).vipSelected) : undefined,
+        // Carry over food slot / subservice
+        deliverySlot: (item as any).deliverySlot || (order as any).deliverySlot || '',
+        isDeliverySelected: true,
+        packagepickup: false,
+        isReordered: true,
       });
     });
     navigate('/cart');
@@ -367,7 +429,7 @@ export const OrdersPage = () => {
         </div>
 
         {/* Search */}
-        <div className="sticky top-0 z-20 w-full md:w-72 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl rounded-2xl">
+        <div className="sticky top-0 z-40 !mt-0 w-full md:w-72 py-2 -mx-2 px-2 bg-background/95 backdrop-blur-2xl border border-border/60 shadow-md rounded-2xl">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input

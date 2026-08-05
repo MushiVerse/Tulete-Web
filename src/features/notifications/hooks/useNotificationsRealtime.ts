@@ -38,8 +38,7 @@ export const useNotificationsRealtime = () => {
     const ordersRef = collection(db, 'newcomfirmedorders');
     const q = query(
       ordersRef,
-      where('uid', '==', user.id),
-      where('show', '==', true)
+      where('uid', '==', user.id)
     );
 
     const unsubscribe = onSnapshot(
@@ -49,6 +48,24 @@ export const useNotificationsRealtime = () => {
 
         snapshot.docs.forEach((docSnap) => {
           const data = docSnap.data();
+
+          // Check if show is false (boolean false or string "false") or if order is cancelled
+          const isShowFalse = data.show === false || String(data.show).toLowerCase() === 'false' || data.cancel === true;
+          const isShowTrue = data.show === true || String(data.show).toLowerCase() === 'true';
+
+          // If order is completed / hidden from active order list (show === false or "false"),
+          // set notiOpened to true in Firestore so unopened notifications don't linger, and exclude from active notifications
+          if (isShowFalse) {
+            if (data.notiOpened !== true) {
+              updateDoc(docSnap.ref, { notiOpened: true }).catch(() => {});
+            }
+            return;
+          }
+
+          // Skip if show is explicitly set to anything other than true
+          if (data.show !== undefined && !isShowTrue) {
+            return;
+          }
 
           const ordersts: string[] = Array.isArray(data.ordersts) ? data.ordersts : [];
           const orderststime: string[] = Array.isArray(data.orderststime) ? data.orderststime : [];

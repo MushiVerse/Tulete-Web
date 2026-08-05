@@ -473,14 +473,14 @@ export const DiscoveryPage = () => {
 
   return (
     <PageWrapper className="min-h-screen bg-background">
-      <div className="flex w-full bg-background relative items-start lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
+      <div className="flex w-full bg-background relative items-stretch lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
         {/* Sidebar Filters */}
         <FilterSidebar isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} />
 
         {/* Main Content Area */}
-        <div className="flex-auto min-w-0 max-w-full w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto hide-scrollbar flex flex-col items-center">
+        <div className="flex-auto min-w-0 max-w-full w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none flex flex-col">
 
-          <div className="w-full max-w-7xl pb-24 px-4 sm:px-6 md:px-8 lg:px-12 pt-4 md:pt-6">
+          <div className="w-full max-w-7xl mx-auto pb-24 px-4 sm:px-6 md:px-8 lg:px-12 pt-4 md:pt-6">
 
             {/* ── Location Header ── */}
             <div className="flex items-center justify-between mb-1.5">
@@ -497,7 +497,7 @@ export const DiscoveryPage = () => {
             </div>
 
             {/* Sticky Floating Search & Filter Bar */}
-            <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl pt-2 pb-3 border-b border-border/50 shadow-sm mb-3 flex flex-col gap-2.5 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-12 lg:px-12 transition-all">
+            <div className="sticky top-0 z-40 !mt-0 bg-background/95 backdrop-blur-2xl py-3 border-b border-border/60 shadow-md mb-4 flex flex-col gap-2.5 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-12 lg:px-12 transition-all">
 
               {/* Tabs: Products vs Stores */}
               <div className="flex items-center justify-between gap-2">

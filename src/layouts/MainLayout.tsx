@@ -31,18 +31,9 @@ export const MainLayout = () => {
         
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto pb-32 md:pb-0 flex flex-col">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="w-full flex-1"
-            >
-              {React.cloneElement(outlet as React.ReactElement, { key: location.pathname })}
-            </motion.div>
-          </AnimatePresence>
+          <div className="w-full flex-1">
+            {React.cloneElement(outlet as React.ReactElement, { key: location.pathname })}
+          </div>
           <Footer />
         </main>
       </div>

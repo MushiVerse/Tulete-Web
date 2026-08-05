@@ -111,7 +111,7 @@ export const HelpCenterPage = () => {
           </p>
 
           {/* Search Box */}
-          <div className="sticky top-0 z-20 py-2 -mx-2 px-2 bg-background/80 backdrop-blur-xl rounded-2xl">
+          <div className="sticky top-0 z-30 py-2 -mx-2 px-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border/40 shadow-sm transition-all">
             <div className="relative flex items-center w-full bg-card/90 dark:bg-card/75 backdrop-blur-xl text-foreground rounded-2xl shadow-lg p-2 border border-border/80">
               <Search className="w-5 h-5 text-muted-foreground ml-3 shrink-0" />
               <input 

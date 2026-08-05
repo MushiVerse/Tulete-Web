@@ -1,19 +1,24 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCartStore, calculateItemTotal } from '../store/useCartStore';
+import { useCartStore, calculateItemTotal, getStoreDeliveryFee } from '../store/useCartStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Switch } from '../../../shared/components/ui/Switch';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle, MapPin, Shirt, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle, MapPin, Shirt, AlertCircle, AlertTriangle, RotateCcw, ChevronDown, ChevronUp, Navigation, Search } from 'lucide-react';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { useLanguageStore } from '../../../core/i18n/useLanguageStore';
 import { useFirestoreDocument } from '../../../core/hooks/useFirestoreQuery';
 import { productService } from '../../products/services/productService';
+import { storeService } from '../../stores/services/storeService';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
+import { LocationPickerModal, GOOGLE_MAPS_LIBRARIES } from '../../location/components/LocationPickerModal';
+import { MiniMapPreview } from '../../location/components/MiniMapPreview';
+import { useJsApiLoader } from '@react-google-maps/api';
+import { locationService } from '../../location/services/locationService';
 
 const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig }: any) => {
   // Subscribe to location so re-renders happen on location change
@@ -91,131 +96,141 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
           </div>
         </div>
 
-        {/* Per-Item Laundry Customization */}
-        {(item as any).cat === 'Nguo' && (() => {
-          const isWash = item.washingSelected !== false;
-          const isIron = Boolean(item.ironingSelected);
-          const isPack = Boolean(item.packagingSelected);
-          const isVip = Boolean(item.vipSelected);
-          const hasAnyService = isWash || isIron || isPack || isVip;
+        {/* Reordered Item Notice (Hides subservices & pickup button, uses previous settings) */}
+        {item.isReordered ? (
+          <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <RotateCcw className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span>Reordered item — using previous order settings & delivery point</span>
+          </div>
+        ) : (
+          <>
+            {/* Per-Item Laundry Customization */}
+            {(item as any).cat === 'Nguo' && (() => {
+              const isWash = item.washingSelected !== false;
+              const isIron = Boolean(item.ironingSelected);
+              const isPack = Boolean(item.packagingSelected);
+              const isVip = Boolean(item.vipSelected);
+              const hasAnyService = isWash || isIron || isPack || isVip;
 
-          return (
-            <div className="mt-4 pt-3 border-t border-border/50">
-              <div className="flex items-center flex-wrap gap-2">
-                {[
-                  { key: 'wash', label: 'Wash', prop: 'washingSelected', isSelected: isWash, icon: Shirt },
-                  { key: 'iron', label: 'Iron', prop: 'ironingSelected', isSelected: isIron, icon: Flame },
-                  { key: 'pack', label: 'Package', prop: 'packagingSelected', isSelected: isPack, icon: Package },
-                  { key: 'vip', label: 'VIP', prop: 'vipSelected', isSelected: isVip, icon: Sparkles }
-                ].map(({ key, label, prop, isSelected, icon: Icon }) => (
+              return (
+                <div className="mt-4 pt-3 border-t border-border/50">
+                  <div className="flex items-center flex-wrap gap-2">
+                    {[
+                      { key: 'wash', label: 'Wash', prop: 'washingSelected', isSelected: isWash, icon: Shirt },
+                      { key: 'iron', label: 'Iron', prop: 'ironingSelected', isSelected: isIron, icon: Flame },
+                      { key: 'pack', label: 'Package', prop: 'packagingSelected', isSelected: isPack, icon: Package },
+                      { key: 'vip', label: 'VIP', prop: 'vipSelected', isSelected: isVip, icon: Sparkles }
+                    ].map(({ key, label, prop, isSelected, icon: Icon }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => updateLaundryItemConfig(item.productId, { [prop]: !isSelected })}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
+                          isSelected
+                            ? 'bg-primary border-primary text-primary-foreground scale-105'
+                            : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <Icon className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {!hasAnyService && (
+                    <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 mt-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                      <span>Please select at least one service (Wash, Iron, Package, or VIP)</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
+            {(item as any).cat !== 'Nguo' && (() => {
+              const isFoodItem = (item.cat && item.cat.toLowerCase() === 'food') ||
+                ((item as any).category && (item as any).category.toLowerCase() === 'food') ||
+                (fetchedDoc as any)?.cat === 'Food' ||
+                (fetchedDoc as any)?._collection === 'foods';
+
+              return (
+                <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
+                  {/* Food Specific Delivery Slots (ONLY for Food items) */}
+                  {isFoodItem && (() => {
+                    const hour = new Date().getHours();
+                    const bVal = String(item.brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
+                    const isBrandNow = bVal === 'now';
+                    const updateFoodItemSlot = useCartStore.getState().updateFoodItemSlot;
+                    const currentSlot = item.deliverySlot || (isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner'));
+
+                    return (
+                      <div className="flex items-center flex-wrap gap-2">
+                        <span className="text-xs font-bold text-muted-foreground mr-1">Delivery Time:</span>
+
+                        {/* ASAP Option (Show when brand === "now") */}
+                        {isBrandNow && (
+                          <button
+                            type="button"
+                            onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'ASAP' ? '' : 'ASAP')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'ASAP'
+                                ? 'bg-amber-500 border-amber-500 text-white scale-105 shadow-amber-500/20'
+                                : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                              }`}
+                          >
+                            <Zap className="w-3.5 h-3.5 fill-current" />
+                            ASAP
+                          </button>
+                        )}
+
+                        {/* Lunch Option (visible before 15:00) */}
+                        {hour < 15 && (
+                          <button
+                            type="button"
+                            onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Lunch' ? '' : 'Lunch')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'Lunch'
+                                ? 'bg-orange-500 border-orange-500 text-white scale-105 shadow-orange-500/20'
+                                : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                              }`}
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            Lunch
+                          </button>
+                        )}
+
+                        {/* Dinner Option (visible both before and after 15:00) */}
+                        <button
+                          type="button"
+                          onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Dinner' ? '' : 'Dinner')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'Dinner'
+                              ? 'bg-indigo-500 border-indigo-500 text-white scale-105 shadow-indigo-500/20'
+                              : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                            }`}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          Dinner
+                        </button>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Pick Up Toggle */}
                   <button
-                    key={key}
                     type="button"
-                    onClick={() => updateLaundryItemConfig(item.productId, { [prop]: !isSelected })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
-                      isSelected
+                    onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${item.isDeliverySelected === false || (item as any).packagepickup === true
                         ? 'bg-primary border-primary text-primary-foreground scale-105'
                         : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                    }`}
+                      }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
-                    {label}
+                    <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false || (item as any).packagepickup === true ? 'fill-current' : ''}`} />
+                    Pick Up (No Delivery)
                   </button>
-                ))}
-              </div>
-
-              {!hasAnyService && (
-                <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 mt-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span>Please select at least one service (Wash, Iron, Package, or VIP)</span>
                 </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
-        {(item as any).cat !== 'Nguo' && (() => {
-          const isFoodItem = (item.cat && item.cat.toLowerCase() === 'food') ||
-            ((item as any).category && (item as any).category.toLowerCase() === 'food') ||
-            (fetchedDoc as any)?.cat === 'Food' ||
-            (fetchedDoc as any)?._collection === 'foods';
-
-          return (
-            <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
-              {/* Food Specific Delivery Slots (ONLY for Food items) */}
-              {isFoodItem && (() => {
-                const hour = new Date().getHours();
-                const bVal = String(item.brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
-                const isBrandNow = bVal === 'now';
-                const updateFoodItemSlot = useCartStore.getState().updateFoodItemSlot;
-                const currentSlot = item.deliverySlot || (isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner'));
-
-                return (
-                  <div className="flex items-center flex-wrap gap-2">
-                    <span className="text-xs font-bold text-muted-foreground mr-1">Delivery Time:</span>
-
-                    {/* ASAP Option (Show when brand === "now") */}
-                    {isBrandNow && (
-                      <button
-                        type="button"
-                        onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'ASAP' ? '' : 'ASAP')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'ASAP'
-                            ? 'bg-amber-500 border-amber-500 text-white scale-105 shadow-amber-500/20'
-                            : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                          }`}
-                      >
-                        <Zap className="w-3.5 h-3.5 fill-current" />
-                        ASAP
-                      </button>
-                    )}
-
-                    {/* Lunch Option (visible before 15:00) */}
-                    {hour < 15 && (
-                      <button
-                        type="button"
-                        onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Lunch' ? '' : 'Lunch')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'Lunch'
-                            ? 'bg-orange-500 border-orange-500 text-white scale-105 shadow-orange-500/20'
-                            : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                          }`}
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        Lunch
-                      </button>
-                    )}
-
-                    {/* Dinner Option (visible both before and after 15:00) */}
-                    <button
-                      type="button"
-                      onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Dinner' ? '' : 'Dinner')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'Dinner'
-                          ? 'bg-indigo-500 border-indigo-500 text-white scale-105 shadow-indigo-500/20'
-                          : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                        }`}
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      Dinner
-                    </button>
-                  </div>
-                );
-              })()}
-
-              {/* Pick Up Toggle */}
-              <button
-                type="button"
-                onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${item.isDeliverySelected === false || (item as any).packagepickup === true
-                    ? 'bg-primary border-primary text-primary-foreground scale-105'
-                    : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                  }`}
-              >
-                <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false || (item as any).packagepickup === true ? 'fill-current' : ''}`} />
-                Pick Up (No Delivery)
-              </button>
-            </div>
-          );
-        })()}
+              );
+            })()}
+          </>
+        )}
       </div>
 
       {/* Delete button — revealed on row hover */}
@@ -236,8 +251,33 @@ export const CartPage = () => {
   const { isDark } = useThemeStore();
   const t = useLanguageStore((state) => state.t);
   const { items, updateQuantity, removeFromCart, clearCart, getTotals, toggleDelivery, laundryPreferences, setLaundryPreferences, updateLaundryItemConfig, applyLaundryServicesToAll, clearAllLaundryServices } = useCartStore();
-  const { currentLocation } = useLocationStore();
+  const { currentLocation, savedLocations, setCurrentLocation, addSavedLocation } = useLocationStore();
   const [totals, setTotals] = useState(getTotals());
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isLocationExpanded, setIsLocationExpanded] = useState(false);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+
+  const handleDetectGps = async () => {
+    setIsDetectingGps(true);
+    try {
+      const detected = await locationService.detectUserLocation();
+      addSavedLocation({
+        address: detected.address,
+        lat: detected.lat,
+        lng: detected.lng,
+      });
+    } catch (err) {
+      console.error('GPS detection error:', err);
+    } finally {
+      setIsDetectingGps(false);
+    }
+  };
+
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
 
   // Recalculate totals whenever location, items, express selection, or delivery time change
   useEffect(() => {
@@ -258,6 +298,7 @@ export const CartPage = () => {
     };
   }, [setLaundryPreferences]);
 
+  const { subtotal, deliveryFee, expressFee, pickupFee, serviceFee, total, itemCount } = getTotals();
   const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo');
   const hasActiveLaundryService = items.some(item =>
     (item as any).cat === 'Nguo' &&
@@ -265,6 +306,10 @@ export const CartPage = () => {
   );
 
   const handleProceedToCheckout = () => {
+    if (!currentLocation) {
+      setIsLocationModalOpen(true);
+      return;
+    }
     const unselectedLaundryItem = items.find(item =>
       (item as any).cat === 'Nguo' &&
       (item.washingSelected === false && !item.ironingSelected && !item.packagingSelected && !item.vipSelected)
@@ -329,6 +374,162 @@ export const CartPage = () => {
               </div>
             </div>
 
+            {/* Minimized & Expandable Delivery Location Section */}
+            <Card className="p-3.5 sm:p-4 border border-border shadow-sm shrink-0 transition-all rounded-2xl">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-foreground">Delivery Location</span>
+                      {currentLocation && (
+                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-300/60 shrink-0">
+                          ✓ Set
+                        </span>
+                      )}
+                    </div>
+                    <p className="notranslate text-xs text-muted-foreground font-medium truncate mt-0.5" translate="no">
+                      {currentLocation ? currentLocation.address : 'No destination set — required for checkout'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Direct Action Options */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* GPS Quick Detect Button */}
+                  <button
+                    type="button"
+                    onClick={handleDetectGps}
+                    disabled={isDetectingGps}
+                    title="Detect Current GPS Location"
+                    className="p-2 rounded-xl bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all border border-border flex items-center justify-center cursor-pointer"
+                  >
+                    <Navigation className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin text-primary' : ''}`} />
+                  </button>
+
+                  {/* Change / Set Location Button */}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="font-bold shadow-xs text-xs px-3 py-1.5 h-8 whitespace-nowrap"
+                  >
+                    {currentLocation ? 'Change' : 'Set Location'}
+                  </Button>
+
+                  {/* Expand / Collapse Map Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsLocationExpanded(!isLocationExpanded)}
+                    title={isLocationExpanded ? "Hide Map & Details" : "Show Map & Details"}
+                    className="p-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-all border border-border flex items-center justify-center cursor-pointer"
+                  >
+                    {isLocationExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-primary" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Destination Options Chips (Always Visible to let customer change quickly) */}
+              {(savedLocations.length > 0 || currentLocation) && (
+                <div className="mt-2.5 pt-2 border-t border-border/50 flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                  <span className="text-[10px] font-extrabold text-muted-foreground shrink-0 mr-1 uppercase tracking-wider">Quick Select:</span>
+                  
+                  {savedLocations.map((loc) => {
+                    const isSelected = currentLocation?.id === loc.id || currentLocation?.address === loc.address;
+                    return (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => setCurrentLocation(loc)}
+                        className={`notranslate text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all border shrink-0 flex items-center gap-1.5 max-w-[160px] truncate ${
+                          isSelected
+                            ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                            : 'bg-muted/60 text-muted-foreground hover:bg-muted border-border'
+                        }`}
+                        translate="no"
+                      >
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{loc.address.split(',')[0]}</span>
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="text-[11px] font-bold px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-primary/20 shrink-0 flex items-center gap-1"
+                  >
+                    <Search className="w-3 h-3" />
+                    <span>More...</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Expandable Details & Map View */}
+              <AnimatePresence>
+                {isLocationExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 pt-3 border-t border-border space-y-3">
+                      {currentLocation ? (
+                        <div className="border border-primary/30 bg-primary/5 p-3 sm:p-4 rounded-xl relative overflow-hidden">
+                          <div className="mb-2">
+                            <p className="font-extrabold text-xs text-foreground mb-0.5">Selected Destination</p>
+                            <p className="notranslate text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300" translate="no">
+                              {currentLocation.address}
+                            </p>
+                            {currentLocation.specificInstructions && (
+                              <p className="notranslate text-xs text-slate-500 mt-1 italic font-medium bg-background/60 p-2 rounded-md" translate="no">
+                                Note: {currentLocation.specificInstructions}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Visual Map Preview */}
+                          <MiniMapPreview
+                            isLoaded={isMapLoaded}
+                            lat={currentLocation.lat}
+                            lng={currentLocation.lng}
+                            address={currentLocation.address}
+                          />
+                        </div>
+                      ) : (
+                        <div className="bg-muted p-4 rounded-xl text-center border border-dashed border-border">
+                          <MapPin className="w-7 h-7 mx-auto text-muted-foreground mb-2 opacity-50" />
+                          <p className="text-xs text-foreground font-medium mb-3">No delivery location set</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => setIsLocationModalOpen(true)}
+                            className="font-bold shadow-md text-xs"
+                          >
+                            Set Delivery Location
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {!currentLocation && (
+                <p className="text-xs text-destructive font-semibold flex justify-center mt-2">
+                  * A delivery location is required
+                </p>
+              )}
+            </Card>
+
             {/* Scrollable Cart Items Container Grouped by Store */}
             <div className="flex-1 lg:overflow-y-auto scrollbar-none space-y-6 min-h-0 pr-1 pb-4">
               <AnimatePresence>
@@ -338,16 +539,28 @@ export const CartPage = () => {
                   items.forEach((item) => {
                     const isLaundry = (item as any).cat === 'Nguo';
                     const rawSId = item.storeId && item.storeId !== 'unknown' ? item.storeId : null;
-                    const rawSName = item.storeName && item.storeName !== 'Unknown Store' ? item.storeName : null;
+                    let resolvedSName = item.storeName && item.storeName !== 'Unknown Store' && item.storeName !== 'Verified Partner' ? item.storeName : null;
+
+                    if (!resolvedSName) {
+                      const matchedStore = storeService.getMockStores().find((s) => s.id === rawSId || s.id === item.storeId);
+                      if (matchedStore && matchedStore.name) {
+                        resolvedSName = matchedStore.name;
+                      } else {
+                        const matchedProd = productService.getMockProducts('all').find((p) => p.id === item.productId || p.id === item.baseProductId);
+                        if (matchedProd && matchedProd.store) {
+                          resolvedSName = matchedProd.store;
+                        }
+                      }
+                    }
+
+                    const storeName = isLaundry
+                      ? (item.storeName || 'Laundry Services')
+                      : (resolvedSName || 'Store Order');
 
                     const key = isLaundry
                       ? 'laundry_pack'
-                      : (rawSId || rawSName || item.productId);
+                      : (rawSId || storeName);
                     
-                    const storeName = isLaundry
-                      ? (item.storeName || 'Laundry Services')
-                      : (rawSName || rawSId || 'Store Order');
-
                     if (!groupedCart[key]) {
                       groupedCart[key] = {
                         storeId: rawSId || key,
@@ -359,50 +572,55 @@ export const CartPage = () => {
                     groupedCart[key].items.push(item);
                   });
 
-                  return Object.values(groupedCart).map((group) => (
-                    <div key={group.storeId} className="space-y-3">
-                      {/* Store / Laundry Pack Header */}
-                      <div className="flex items-center justify-between p-3.5 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border shadow-xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
-                            group.isLaundry ? 'bg-sky-500/10 text-sky-500' : 'bg-primary/10 text-primary'
-                          }`}>
-                            {group.isLaundry ? <Sparkles className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                  return Object.values(groupedCart).map((group) => {
+                    const storeFee = getStoreDeliveryFee(group.items, currentLocation);
+
+                    return (
+                      <div key={group.storeId} className="space-y-3">
+                        {/* Store / Laundry Pack Header */}
+                        <div className="flex items-center justify-between p-3.5 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
+                              group.isLaundry ? 'bg-sky-500/10 text-sky-500' : 'bg-primary/10 text-primary'
+                            }`}>
+                              {group.isLaundry ? <Sparkles className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                            </div>
+                            <div>
+                              <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                                {group.isLaundry ? `Laundry Pack (${group.storeName})` : group.storeName}
+                              </h3>
+                              <p className="text-[11px] text-muted-foreground font-semibold">
+                                {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
-                              {group.isLaundry ? `Laundry Pack (${group.storeName})` : group.storeName}
-                            </h3>
-                            <p className="text-[11px] text-muted-foreground font-semibold">
-                              {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
-                            </p>
-                          </div>
+
+                        </div>
+
+                        {/* Store Items */}
+                        <div className="space-y-3 pl-1 sm:pl-2">
+                          {group.items.map((item) => (
+                            <motion.div
+                              key={item.productId}
+                              layout
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 50 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <CartItemCard
+                                item={item}
+                                updateQuantity={updateQuantity}
+                                removeFromCart={removeFromCart}
+                                toggleDelivery={toggleDelivery}
+                                updateLaundryItemConfig={updateLaundryItemConfig}
+                              />
+                            </motion.div>
+                          ))}
                         </div>
                       </div>
-
-                      {/* Store Items */}
-                      <div className="space-y-3 pl-1 sm:pl-2">
-                        {group.items.map((item) => (
-                          <motion.div
-                            key={item.productId}
-                            layout
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 50 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <CartItemCard
-                              item={item}
-                              updateQuantity={updateQuantity}
-                              removeFromCart={removeFromCart}
-                              toggleDelivery={toggleDelivery}
-                              updateLaundryItemConfig={updateLaundryItemConfig}
-                            />
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  ));
+                    );
+                  });
                 })()}
               </AnimatePresence>
 
@@ -560,7 +778,6 @@ export const CartPage = () => {
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)} {APP_SETTINGS.currency}</span>
                 </div>
-                {/* Delivery Fee hidden per request, total calculation remains identical */}
                 {serviceFee > 0 && (
                   <div className="flex justify-between text-primary font-bold">
                     <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> Service Charge</span>
@@ -588,7 +805,6 @@ export const CartPage = () => {
                 </div>
               </div>
 
-
               <Button
                 onClick={handleProceedToCheckout}
                 className="w-full py-6 text-base font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 group"
@@ -599,6 +815,11 @@ export const CartPage = () => {
             </Card>
           </div>
         </div>
+        <LocationPickerModal
+          isOpen={isLocationModalOpen}
+          onClose={() => setIsLocationModalOpen(false)}
+          isLoaded={isMapLoaded}
+        />
       </ContentContainer>
     </PageContainer>
   );

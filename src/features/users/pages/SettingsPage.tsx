@@ -273,7 +273,7 @@ export const SettingsPage = () => {
 
         {/* App version footer */}
         <div className="text-center text-[9px] text-muted-foreground font-bold py-2 uppercase tracking-widest">
-          Tulete App v2.0.0 — Dodoma, Tanzania 🇹🇿
+          Tulete App v2.1.0 — Dodoma, Tanzania 🇹🇿
         </div>
       </div>
 

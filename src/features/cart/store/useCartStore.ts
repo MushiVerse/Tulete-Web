@@ -5,7 +5,7 @@ import { storeService } from '../../stores/services/storeService';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
-import { calculateDeliveryFeeAlgorithm } from '../../location/hooks/useDynamicPrice';
+import { calculateDeliveryFeeAlgorithm, getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 
 export interface CartItem {
   productId: string; // Composite ID for the cart (e.g., id-iron-pack)
@@ -35,6 +35,7 @@ export interface CartItem {
   location?: { lat: number; lng: number };
   idadi?: number;
   maxQuantity?: number;
+  isReordered?: boolean;
 }
 
 export interface LaundryRatios {
@@ -122,6 +123,45 @@ interface CartState {
   };
   getDynamicItemPrices: () => Record<string, number>;
 }
+
+export const getStoreDeliveryFee = (
+  storeItems: CartItem[],
+  userLocation: { lat: number; lng: number } | null | string,
+  deliveryRation: number = 1000
+): number => {
+  if (!userLocation || !storeItems || storeItems.length === 0) return 0;
+
+  const isLaundry = storeItems.some((i) => (i as any).cat === 'Nguo' || i.isLaundry);
+  if (isLaundry) return 0;
+
+  const needsDelivery = storeItems.some((i) => i.isDeliverySelected !== false);
+  if (!needsDelivery) return 0;
+
+  const firstItem = storeItems[0];
+  let targetLocation: { lat: number; lng: number } | string | undefined = firstItem.location;
+  if (!targetLocation) {
+    const allStores = storeService.getMockStores();
+    const rawSId = firstItem.storeId && firstItem.storeId !== 'unknown' ? firstItem.storeId : null;
+    const store = allStores.find(
+      (s) => (rawSId && s.id === rawSId) || s.id === firstItem.storeId || s.name?.toLowerCase() === firstItem.storeName?.toLowerCase()
+    );
+    if (store && store.location) {
+      targetLocation = store.location;
+    }
+  }
+
+  if (!targetLocation) {
+    targetLocation = "-6.18541, 35.7671293";
+  }
+
+  return calculateDeliveryFeeAlgorithm(
+    targetLocation,
+    userLocation,
+    deliveryRation,
+    (firstItem as any).cat,
+    false
+  );
+};
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -306,70 +346,37 @@ export const useCartStore = create<CartState>()(
         let hasLaundry = false;
 
         let userLocation = null;
-        let allStores: any[] = [];
         try {
           userLocation = useLocationStore.getState().currentLocation;
-          allStores = storeService.getMockStores();
         } catch (e) {
           console.warn('Could not load location/store service for dynamic pricing');
         }
 
         let laundrySubtotal = 0;
         const ratios = get().laundryRatios;
+
         items.forEach((item) => {
-          const itemIsLaundry = (item as any).cat === 'Nguo';
+          const itemIsLaundry = (item as any).cat === 'Nguo' || item.isLaundry;
           if (itemIsLaundry) hasLaundry = true;
 
-          let itemTotal = calculateItemTotal(item, ratios || undefined);
+          const baseItemTotal = calculateItemTotal(item, ratios || undefined);
+          const unitDeliveryFee = getDeliveryFee(
+            userLocation,
+            item.location,
+            item.storeId,
+            itemIsLaundry,
+            item.isDeliverySelected,
+            (item as any).cat
+          );
+          const totalDeliveryFee = unitDeliveryFee * item.quantity;
+          const itemTotalWithDelivery = baseItemTotal + totalDeliveryFee;
 
-          // For non-laundry items, automatically adjust item unit total to include distance delivery fee UNLESS Pick Up (isDeliverySelected === false) is selected
-          if (!itemIsLaundry && userLocation && item.isDeliverySelected !== false) {
-            let targetLocation = item.location;
-            if (!targetLocation && allStores.length > 0) {
-              const store = allStores.find((s) => s.id === item.storeId);
-              if (store && store.location) {
-                targetLocation = store.location;
-              }
-            }
+          subtotal += itemTotalWithDelivery;
+          deliveryFee += totalDeliveryFee;
+          if (unitDeliveryFee > maxRoundedFee) maxRoundedFee = unitDeliveryFee;
 
-            if (targetLocation) {
-              const fee = calculateDeliveryFeeAlgorithm(
-                targetLocation,
-                userLocation,
-                1000,
-                (item as any).cat,
-                false
-              );
-              const basePrice = (item as any).basePrice || item.price;
-              itemTotal = (basePrice + fee) * item.quantity;
-            }
-          }
-
-          subtotal += itemTotal;
           if (itemIsLaundry) {
-            laundrySubtotal += itemTotal;
-          }
-
-          if (userLocation && itemIsLaundry && item.isDeliverySelected !== false) {
-            let targetLocation = item.location;
-            if (!targetLocation && allStores.length > 0) {
-              const store = allStores.find((s) => s.id === item.storeId);
-              if (store && store.location) {
-                targetLocation = store.location;
-              }
-            }
-
-            if (targetLocation) {
-              const fee = calculateDeliveryFeeAlgorithm(
-                targetLocation,
-                userLocation,
-                1000,
-                (item as any).cat,
-                true
-              );
-              if (fee > maxRoundedFee) maxRoundedFee = fee;
-              deliveryFee += fee * item.quantity;
-            }
+            laundrySubtotal += baseItemTotal;
           }
         });
 
@@ -388,7 +395,7 @@ export const useCartStore = create<CartState>()(
 
         // Calculate 5% Service Charge specifically for Laundry items
         serviceFee = hasLaundry && laundrySubtotal > 0 ? Math.round(laundrySubtotal * 0.05) : 0;
-        const total = subtotal + deliveryFee + globalExpressFee + pickupFee + serviceFee;
+        const total = subtotal + globalExpressFee + pickupFee + serviceFee;
 
         return {
           subtotal: Math.round(subtotal),
@@ -404,44 +411,28 @@ export const useCartStore = create<CartState>()(
       getDynamicItemPrices: () => {
         const items = get().items;
         const result: Record<string, number> = {};
+        const ratios = get().laundryRatios;
 
         let userLocation = null;
-        let allStores: any[] = [];
         try {
           userLocation = useLocationStore.getState().currentLocation;
-          allStores = storeService.getMockStores();
         } catch (e) {
-          console.warn('Could not load location/store for dynamic item prices');
+          console.warn('Could not load location/store service for dynamic pricing');
         }
 
-        const ratios = get().laundryRatios;
         items.forEach((item) => {
-          const itemIsLaundry = (item as any).cat === 'Nguo';
-          let itemTotal = calculateItemTotal(item, ratios || undefined);
-
-          if (!itemIsLaundry && userLocation && item.isDeliverySelected !== false) {
-            let targetLocation = item.location;
-            if (!targetLocation && allStores.length > 0) {
-              const store = allStores.find((s) => s.id === item.storeId);
-              if (store && store.location) {
-                targetLocation = store.location;
-              }
-            }
-
-            if (targetLocation) {
-              const fee = calculateDeliveryFeeAlgorithm(
-                targetLocation,
-                userLocation,
-                1000,
-                (item as any).cat,
-                false
-              );
-              const basePrice = (item as any).basePrice || item.price;
-              itemTotal = (basePrice + fee) * item.quantity;
-            }
-          }
-
-          result[item.productId] = Math.round(itemTotal);
+          const baseItemTotal = calculateItemTotal(item, ratios || undefined);
+          const itemIsLaundry = (item as any).cat === 'Nguo' || item.isLaundry;
+          const unitDeliveryFee = getDeliveryFee(
+            userLocation,
+            item.location,
+            item.storeId,
+            itemIsLaundry,
+            item.isDeliverySelected,
+            (item as any).cat
+          );
+          const totalDeliveryFee = unitDeliveryFee * item.quantity;
+          result[item.productId] = Math.round(baseItemTotal + totalDeliveryFee);
         });
 
         return result;

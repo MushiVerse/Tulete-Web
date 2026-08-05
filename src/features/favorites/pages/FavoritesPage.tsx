@@ -433,119 +433,127 @@ export const FavoritesPage = () => {
 
   return (
     <PageContainer>
-      <ContentContainer size="md" className="flex flex-col min-h-[85vh]">
-      {/* Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
-            Personal Space
-          </span>
-          <h1 className="text-2xl font-extrabold text-foreground mt-3">
-            Favorites & Saved Wishlists
-          </h1>
-        </div>
-
-        {activeTab === 'wishlists' && (
-          <Button 
-            onClick={() => setShowCreateModal(true)}
-            size="sm"
-            className="font-bold text-xs shadow-md self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Create Collection
-          </Button>
-        )}
-      </div>
-
-      {/* Main Tab Navigation */}
-      <div className="flex border-b border-border gap-6 mb-6 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveTab('favorites')}
-          className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
-            activeTab === 'favorites' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Saved Favorites ({favorites.length})
-          {activeTab === 'favorites' && (
-            <motion.div 
-              layoutId="favoritesTabIndicator" 
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
-            />
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('wishlists')}
-          className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
-            activeTab === 'wishlists' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Custom Wishlists ({wishlists.length})
-          {activeTab === 'wishlists' && (
-            <motion.div 
-              layoutId="favoritesTabIndicator" 
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
-            />
-          )}
-        </button>
-      </div>
-
-      {/* Filter / Search HUD Bar (only for Favorites tab) */}
-      {activeTab === 'favorites' && (
-        <div className="sticky top-0 z-30 flex flex-col md:flex-row gap-3 md:gap-4 mb-6 py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 bg-background/90 backdrop-blur-xl border-b border-border/50 shadow-sm transition-all">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search saved items or stores..."
-              className="pl-10 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md text-xs"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            {/* Type selector */}
-            <div className="flex border border-border rounded-lg p-0.5 bg-muted text-[10px] font-bold">
-              <button
-                onClick={() => setFavoriteTypeFilter('all')}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  favoriteTypeFilter === 'all' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFavoriteTypeFilter('store')}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  favoriteTypeFilter === 'store' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Stores
-              </button>
-              <button
-                onClick={() => setFavoriteTypeFilter('item')}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  favoriteTypeFilter === 'item' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Items
-              </button>
+      {/* Top Header & Tab Navigation */}
+      <div className="w-full bg-background pt-6">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8">
+          {/* Title Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <span className="text-xs uppercase font-extrabold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
+                Personal Space
+              </span>
+              <h1 className="text-2xl font-extrabold text-foreground mt-3">
+                Favorites & Saved Wishlists
+              </h1>
             </div>
 
-            {/* Sorting Select */}
-            <select
-              value={sortBy}
-              onChange={(e: any) => setSortBy(e.target.value)}
-              className="bg-card border border-border rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-foreground cursor-pointer"
+            {activeTab === 'wishlists' && (
+              <Button 
+                onClick={() => setShowCreateModal(true)}
+                size="sm"
+                className="font-bold text-xs shadow-md self-start sm:self-auto"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Create Collection
+              </Button>
+            )}
+          </div>
+
+          {/* Main Tab Navigation */}
+          <div className="flex border-b border-border gap-6 overflow-x-auto scrollbar-none">
+            <button
+              onClick={() => setActiveTab('favorites')}
+              className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
+                activeTab === 'favorites' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <option value="recent">Recently Added</option>
-              <option value="rating">Top Rated First</option>
-              <option value="price_low">Price: Low to High</option>
-              <option value="price_high">Price: High to Low</option>
-            </select>
+              Saved Favorites ({favorites.length})
+              {activeTab === 'favorites' && (
+                <motion.div 
+                  layoutId="favoritesTabIndicator" 
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+                />
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('wishlists')}
+              className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition-all whitespace-nowrap ${
+                activeTab === 'wishlists' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Custom Wishlists ({wishlists.length})
+              {activeTab === 'wishlists' && (
+                <motion.div 
+                  layoutId="favoritesTabIndicator" 
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter / Search HUD Bar (Sticky Floating Header in both Desktop & Mobile views) */}
+      {activeTab === 'favorites' && (
+        <div className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-2xl border-b border-border/60 shadow-md py-3.5 transition-all my-2">
+          <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search saved items or stores..."
+                className="pl-10 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md text-xs w-full"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center w-full md:w-auto justify-between md:justify-end">
+              {/* Type selector */}
+              <div className="flex border border-border rounded-lg p-0.5 bg-muted text-[10px] font-bold">
+                <button
+                  onClick={() => setFavoriteTypeFilter('all')}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    favoriteTypeFilter === 'all' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setFavoriteTypeFilter('store')}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    favoriteTypeFilter === 'store' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  Stores
+                </button>
+                <button
+                  onClick={() => setFavoriteTypeFilter('item')}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    favoriteTypeFilter === 'item' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  Items
+                </button>
+              </div>
+
+              {/* Sorting Select */}
+              <select
+                value={sortBy}
+                onChange={(e: any) => setSortBy(e.target.value)}
+                className="bg-card border border-border rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-foreground cursor-pointer"
+              >
+                <option value="recent">Recently Added</option>
+                <option value="rating">Top Rated First</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="price_high">Price: High to Low</option>
+              </select>
+            </div>
           </div>
         </div>
       )}
+
+      <ContentContainer size="md" className="flex flex-col min-h-[70vh] pt-4">
 
       {/* Tab Panels */}
       <div className="flex-1">

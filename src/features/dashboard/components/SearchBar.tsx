@@ -6,7 +6,7 @@ export const SearchBar = () => {
   const { openSearch } = useSearchStore();
 
   return (
-    <div className="sticky top-0 z-20 px-4 md:px-6 py-2 bg-background/80 backdrop-blur-xl">
+    <div className="sticky top-0 z-30 px-4 md:px-6 py-2 bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all">
       <div 
         className="relative flex items-center w-full cursor-pointer group"
         onClick={openSearch}

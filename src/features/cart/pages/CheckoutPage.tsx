@@ -1,7 +1,7 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCartStore } from '../store/useCartStore';
+import { useCartStore, getStoreDeliveryFee } from '../store/useCartStore';
 import { orderService, Order } from '../../orders/services/orderService';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
@@ -40,10 +40,6 @@ const CheckoutItemRow = ({ item }: { item: any }) => {
   );
 };
 
-import { LocationPickerModal, GOOGLE_MAPS_LIBRARIES } from '../../location/components/LocationPickerModal';
-import { MiniMapPreview } from '../../location/components/MiniMapPreview';
-import { useJsApiLoader } from '@react-google-maps/api';
-
 // Default mock center if no location is selected
 const DEFAULT_CENTER = { lat: -6.1630, lng: 35.7516, address: 'Dodoma, Tanzania' };
 
@@ -59,17 +55,10 @@ export const CheckoutPage = () => {
   // Phone state with UX for edit vs view
   const [phoneNumber, setPhoneNumber] = useState(savedPhoneNumber || '');
   const [isEditingPhone, setIsEditingPhone] = useState(!savedPhoneNumber);
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const { currentLocation } = useLocationStore();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deliveryRation, setDeliveryRation] = React.useState<number>(1000);
-
-  const { isLoaded: isMapLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
 
   // Fetch delivery ration on mount
   React.useEffect(() => {
@@ -166,7 +155,9 @@ export const CheckoutPage = () => {
           return sum + rowTotal;
         }, 0);
 
-        const groupDeliveryFee = Math.round(computedDeliveryFee / numGroups);
+        const groupDeliveryFee = isLaundryGroup
+          ? Math.round(computedDeliveryFee / numGroups)
+          : getStoreDeliveryFee(group.items, selectedLocation);
         const groupExtraLaundryCharges = isLaundryGroup ? (expressFee + pickupFee + serviceFee) : 0;
         const groupTotalAmount = Math.round(groupSubtotal + groupDeliveryFee + groupExtraLaundryCharges);
 
@@ -276,58 +267,6 @@ export const CheckoutPage = () => {
 
         <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-8">
           <div className="flex-1 space-y-6">
-            {/* Delivery Location Section */}
-            <Card className="p-6 border border-border shadow-sm">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
-                <MapPin className="w-5 h-5 text-primary" />
-                Delivery Location
-              </h2>
-
-              {currentLocation ? (
-                <div className="border border-primary bg-primary/5 p-4 rounded-xl mb-4 relative overflow-hidden">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 pr-4">
-                      <p className="font-extrabold text-sm text-foreground mb-1">Selected Destination</p>
-                      <p className="notranslate text-sm font-medium text-slate-700 dark:text-slate-300" translate="no">{currentLocation.address}</p>
-                      {currentLocation.specificInstructions && (
-                        <p className="notranslate text-xs text-slate-500 mt-1 italic font-medium bg-white/50 dark:bg-black/20 p-2 rounded-md" translate="no">
-                          Note: {currentLocation.specificInstructions}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setIsLocationModalOpen(true)}
-                      className="font-bold shadow-sm whitespace-nowrap"
-                    >
-                      Change
-                    </Button>
-                  </div>
-
-                  {/* Visual Map Preview */}
-                  <MiniMapPreview isLoaded={isMapLoaded} lat={currentLocation.lat} lng={currentLocation.lng} address={currentLocation.address} />
-                </div>
-              ) : (
-                <div className="bg-muted p-6 rounded-xl text-center border border-dashed border-border mb-4">
-                  <MapPin className="w-8 h-8 mx-auto text-muted-foreground mb-3 opacity-50" />
-                  <p className="text-sm text-foreground font-medium mb-4">No delivery location set</p>
-                  <Button
-                    type="button"
-                    onClick={() => setIsLocationModalOpen(true)}
-                    className="font-bold shadow-md"
-                  >
-                    Set Delivery Location
-                  </Button>
-                </div>
-              )}
-
-              {!currentLocation && (
-                <p className="text-xs text-destructive font-semibold flex justify-center">
-                  * A delivery location is required
-                </p>
-              )}
-            </Card>
 
             {/* Contact Details */}
             <Card className="p-6 border border-border shadow-sm">
@@ -490,11 +429,6 @@ export const CheckoutPage = () => {
             </Card>
           </div>
         </form>
-        <LocationPickerModal
-          isOpen={isLocationModalOpen}
-          onClose={() => setIsLocationModalOpen(false)}
-          isLoaded={isMapLoaded}
-        />
       </ContentContainer>
     </PageContainer>
   );
