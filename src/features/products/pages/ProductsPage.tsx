@@ -1,6 +1,6 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
@@ -221,6 +221,7 @@ const PROMOS = [
 
 export const ProductsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
   const [expandedDepartments, setExpandedDepartments] = useState<Record<string, boolean>>({});
@@ -229,6 +230,21 @@ export const ProductsPage = () => {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [mobileResults, setMobileResults] = useState<any[]>([]);
   const [mobileLoading, setMobileLoading] = useState(false);
+
+  // Sync category and subCategory from URL parameters on page load / URL change
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const catParam = params.get('category');
+    const subCatParam = params.get('subCategory') || params.get('subcat');
+
+    if (subCatParam) {
+      setActiveSubCategory(subCatParam);
+      setActiveCategory('all');
+    } else if (catParam) {
+      setActiveCategory(catParam);
+      setActiveSubCategory(null);
+    }
+  }, [location.search]);
 
   // Pagination state (20 items initially, loads +20 on scroll)
   const [visibleCount, setVisibleCount] = useState(20);
@@ -372,9 +388,22 @@ export const ProductsPage = () => {
       const targetSub = activeSubCategory.toLowerCase().trim();
       if (itemSub !== targetSub && !itemSub.includes(targetSub)) return false;
     } else if (activeCategory && activeCategory !== 'all') {
-      const itemCat = (item.category || (item as any).subCat || (item as any).mainCategory || (item as any).cat || '').toLowerCase().trim();
       const targetCat = activeCategory.toLowerCase().trim();
-      if (itemCat !== targetCat && !itemCat.includes(targetCat) && !targetCat.includes(itemCat)) return false;
+      const fields = [
+        (item as any).subCat,
+        (item as any).subcat,
+        (item as any).subCategory,
+        (item as any).ecommerceSubCategory,
+        (item as any).speccat,
+        item.category,
+        (item as any).mainCategory,
+        (item as any).cat,
+      ]
+        .filter(Boolean)
+        .map((v: any) => String(v).toLowerCase().trim());
+
+      const matched = fields.some(f => f === targetCat || f.includes(targetCat) || targetCat.includes(f));
+      if (!matched) return false;
     }
 
     const matchesSearch = isItemFuzzyMatch(searchQuery, item, ['name', 'store', 'brand', 'category', 'description']);
@@ -475,7 +504,7 @@ export const ProductsPage = () => {
 
             {/* Dynamic main product categories */}
             {hierarchicalDepartments.map((cat) => {
-              const isMainActive = activeCategory === cat.name;
+              const isMainActive = activeCategory && cat.name && activeCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
 
               return (
                 <button

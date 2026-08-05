@@ -1,6 +1,6 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
@@ -234,12 +234,28 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
 
 export const FoodPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentLanguage } = useCurrencyLanguageStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Sync category and subCategory from URL parameters on page load / URL change
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const catParam = params.get('category');
+    const subCatParam = params.get('subCategory') || params.get('subcat');
+
+    if (subCatParam) {
+      setActiveSubCategory(subCatParam);
+      setActiveCategory('all');
+    } else if (catParam) {
+      setActiveCategory(catParam);
+      setActiveSubCategory(null);
+    }
+  }, [location.search]);
 
   // Pagination state (20 items initially, loads +20 on scroll)
   const [visibleCount, setVisibleCount] = useState(20);
@@ -297,9 +313,9 @@ export const FoodPage = () => {
   const hierarchicalFoodCategories = React.useMemo(() => {
     const categoryMap = new Map<string, { id: string; name: string; icon: string; subCategoriesMap: Map<string, { id: string; name: string; emoji: string }> }>();
 
-    // 1. Process foodCategory documents
-    foodCats.forEach((doc: any) => {
-      const rawName = doc.name || doc.category || doc.title;
+    // 1. Process foodSubCategory documents using the "subCat" field first (matching ProductDetailPage.tsx)
+    foodSubCats.forEach((doc: any) => {
+      const rawName = doc.subCat || doc.subcat || doc.name || doc.category;
       if (!rawName || typeof rawName !== 'string') return;
       const catName = rawName.trim();
       if (!catName) return;
@@ -309,15 +325,15 @@ export const FoodPage = () => {
         categoryMap.set(normKey, {
           id: doc.id || normKey,
           name: catName,
-          icon: getCategoryEmoji(catName, doc.icon || doc.emoji),
+          icon: getCategoryEmoji(catName, doc.icon || doc.emoji || '🍲'),
           subCategoriesMap: new Map(),
         });
       }
     });
 
-    // 2. Process foodSubCategory documents using the "name" field
-    foodSubCats.forEach((doc: any) => {
-      const rawName = doc.name || doc.subCat || doc.category;
+    // 2. Process foodCategory documents
+    foodCats.forEach((doc: any) => {
+      const rawName = doc.name || doc.subCat || doc.category || doc.title;
       if (!rawName || typeof rawName !== 'string') return;
       const catName = rawName.trim();
       if (!catName) return;
@@ -422,9 +438,24 @@ export const FoodPage = () => {
       const targetSub = activeSubCategory.toLowerCase().trim();
       if (mealSub !== targetSub && !mealSub.includes(targetSub)) return false;
     } else if (activeCategory && activeCategory !== 'all') {
-      const mealCat = (meal.category || (meal as any).subCat || (meal as any).mainCategory || (meal as any).cat || '').toLowerCase().trim();
       const targetCat = activeCategory.toLowerCase().trim();
-      if (mealCat !== targetCat && !mealCat.includes(targetCat) && !targetCat.includes(mealCat)) return false;
+      const fields = [
+        (meal as any).subCat,
+        (meal as any).subcat,
+        (meal as any).subCategory,
+        (meal as any).foodSubCategory,
+        (meal as any).foodSubCat,
+        (meal as any).subsubCat,
+        (meal as any).speccat,
+        meal.category,
+        (meal as any).mainCategory,
+        (meal as any).cat,
+      ]
+        .filter(Boolean)
+        .map((v: any) => String(v).toLowerCase().trim());
+
+      const matched = fields.some(f => f === targetCat || f.includes(targetCat) || targetCat.includes(f));
+      if (!matched) return false;
     }
 
     const matchesSearch = meal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -513,7 +544,7 @@ export const FoodPage = () => {
 
             {/* Dynamic main food categories */}
             {hierarchicalFoodCategories.map((cat) => {
-              const isMainActive = activeCategory === cat.name;
+              const isMainActive = activeCategory && cat.name && activeCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
 
               return (
                 <button
