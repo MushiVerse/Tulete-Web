@@ -10,7 +10,7 @@ import { Label } from '../../../shared/components/ui/Label';
 import { Textarea } from '../../../shared/components/ui/Textarea';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
-import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck, Sparkles, Zap } from 'lucide-react';
+import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck, Sparkles, Zap, Clock } from 'lucide-react';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
 import { useLocationStore } from '../../location/store/useLocationStore';
