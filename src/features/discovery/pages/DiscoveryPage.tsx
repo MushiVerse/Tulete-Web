@@ -69,7 +69,7 @@ export const DiscoveryPage = () => {
 
   const {
     category, setCategory, clearAllFilters,
-    minPrice, maxPrice, isAvailableOnly
+    minPrice, maxPrice, isAvailableOnly, sortBy
   } = useFilterStore();
 
   const [localQuery, setLocalQuery] = useState('');
@@ -442,6 +442,11 @@ export const DiscoveryPage = () => {
 
   const finalProducts = products
     .filter((item: any) => {
+      // Discard items with no identity and no name — these are incomplete records
+      const hasId = !!(item.objectID || item.id);
+      const hasName = !!(item.name || item.title);
+      if (!hasId && !hasName) return false;
+
       // --- Availability ---
       if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
 
@@ -505,52 +510,58 @@ export const DiscoveryPage = () => {
       return true;
     })
     .sort((a: any, b: any) => {
-      // Under "Laundry Deals", sort strictly in descending order using 'time' field in the data without any other conditions
+      // Laundry always sorts by time desc regardless of sortBy
       if (isLaundryCategory) {
         const timeA = getTimeValue(a);
         const timeB = getTimeValue(b);
+        if (timeA > 0 && timeB > 0 && timeA !== timeB) return timeB - timeA;
+        if (timeB > 0) return 1;
+        if (timeA > 0) return -1;
+        const strA = String(a.time || a.createdAt || a.id || '');
+        const strB = String(b.time || b.createdAt || b.id || '');
+        if (strA && strB) return strB.localeCompare(strA);
+        return 0;
+      }
 
-        if (timeA > 0 && timeB > 0) {
-          if (timeA !== timeB) return timeB - timeA;
-        } else if (timeB > 0) {
-          return 1;
-        } else if (timeA > 0) {
-          return -1;
-        }
+      // Price: Low to High
+      if (sortBy === 'price_asc') {
+        const pA = Number(a.price ?? 0);
+        const pB = Number(b.price ?? 0);
+        return pA - pB;
+      }
 
-        const strA = String(a.time || a.createdAt || a.updatedAt || a.created_at || a.timestamp || a.date || a.id || a.objectID || '');
-        const strB = String(b.time || b.createdAt || b.updatedAt || b.created_at || b.timestamp || b.date || b.id || b.objectID || '');
+      // Price: High to Low
+      if (sortBy === 'price_desc') {
+        const pA = Number(a.price ?? 0);
+        const pB = Number(b.price ?? 0);
+        return pB - pA;
+      }
+
+      // Newest Arrivals — sort by time desc
+      if (sortBy === 'newest') {
+        const timeA = getTimeValue(a);
+        const timeB = getTimeValue(b);
+        if (timeA !== timeB) return timeB - timeA;
+        // String-based fallback for items without numeric timestamps
+        const strA = String(a.time || a.createdAt || a.created_at || '');
+        const strB = String(b.time || b.createdAt || b.created_at || '');
         if (strA && strB) return strB.localeCompare(strA);
         if (strB) return 1;
         if (strA) return -1;
         return 0;
       }
 
-      // For other categories (Hot Meals, Trending Products, etc.):
-      // 1. Primary sort: Descending order using 'time' field (newest first)
-      const timeA = getTimeValue(a);
-      const timeB = getTimeValue(b);
-      if (timeA !== timeB) return timeB - timeA;
-
-      const strTimeA = String(a.time || a.createdAt || '');
-      const strTimeB = String(b.time || b.createdAt || '');
-      if (strTimeA !== strTimeB) {
-        if (strTimeA && strTimeB) return strTimeB.localeCompare(strTimeA);
-        if (strTimeB) return 1;
-        if (strTimeA) return -1;
-      }
-
-      // 2. Secondary sort (followed by): Highest rating filter
+      // Most Popular (default) — highest rating first, then most reviews, then newest
       const ratingInfoA = getRating(a);
       const ratingInfoB = getRating(b);
-
       const ratingDiff = ratingInfoB.rating - ratingInfoA.rating;
       if (ratingDiff !== 0) return ratingDiff;
-
       const reviewDiff = ratingInfoB.reviewCount - ratingInfoA.reviewCount;
       if (reviewDiff !== 0) return reviewDiff;
-
-      return 0;
+      // Tiebreak: newer items first
+      const timeA = getTimeValue(a);
+      const timeB = getTimeValue(b);
+      return timeB - timeA;
     });
 
   const displayedProducts = finalProducts.slice(0, visibleCount);
@@ -824,6 +835,12 @@ export const DiscoveryPage = () => {
                   ) : (
                     <>
                       {displayedProducts.map((item: any) => {
+                        // Skip items with no usable identity or content — these show as blank/undefined cards
+                        const itemId = item.objectID || item.id;
+                        const itemName = item.name || item.title || '';
+                        const itemPrice = item.price !== undefined ? Number(item.price) : undefined;
+                        if (!itemId || (!itemName && itemPrice === undefined)) return null;
+
                         // Shared normalization
                         const { rating, reviewCount } = getRating(item);
 
