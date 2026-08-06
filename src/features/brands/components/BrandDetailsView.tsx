@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowLeft, SlidersHorizontal, Tag, ShoppingBag } from 'lucide-react';
+import { Search, ArrowLeft, SlidersHorizontal, Tag, ShoppingBag, Loader2 } from 'lucide-react';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { Product } from '../../products/services/productService';
@@ -32,14 +32,32 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
   
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Pagination & infinite scroll state (20 items initially, loads +20 on scroll)
+  const [visibleCount, setVisibleCount] = useState(20);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset visibleCount whenever filters or brand change
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [brandName, searchQuery, minPrice, maxPrice, showAvailable]);
 
   React.useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
-      // We can use the searchQuery, and optionally a filter if faceting is enabled
-      const results = await searchTuleteItems(searchQuery, `brand:"${brandName}"`);
+      // Fetch up to 200 hits for the brand from Algolia so we can paginate locally in batches of 20
+      let results = await searchTuleteItems(searchQuery, {
+        filters: `brand:"${brandName}"`,
+        hitsPerPage: 200
+      });
       
-      // Local filtering for price and availability
+      // Fallback if faceting isn't configured in Algolia yet
+      if (!results || results.length === 0) {
+        const fallbackResults = await searchTuleteItems(searchQuery, { hitsPerPage: 200 });
+        results = fallbackResults;
+      }
+      
+      // Local filtering for price, availability, and brand match
       const filtered = results.filter((item: any) => {
         if (item.price < minPrice || item.price > maxPrice) return false;
         if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
@@ -67,6 +85,36 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
 
     fetchProducts();
   }, [brandName, searchQuery, minPrice, maxPrice, showAvailable]);
+
+  // Infinite scroll observer to load 20 more items on scroll down
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const sentinel = loadMoreRef.current;
+    const scrollParent = sentinel.closest('.overflow-y-auto') || null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < products.length) {
+          setVisibleCount((prev) => prev + 20);
+        }
+      },
+      {
+        root: scrollParent,
+        rootMargin: '200px',
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.unobserve(sentinel);
+    };
+  }, [products.length, visibleCount]);
+
+  const displayedProducts = products.slice(0, visibleCount);
+  const hasMore = visibleCount < products.length;
 
   const { addToCart } = useCartStore();
   const { user } = useAuthStore();
@@ -182,13 +230,16 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-extrabold flex items-center gap-2">
-            <Tag className="w-5 h-5 text-primary" /> Brand Items <span className="notranslate font-extrabold" translate="no">({products.length})</span>
+            <Tag className="w-5 h-5 text-primary" /> Brand Items{' '}
+            <span className="notranslate font-extrabold" translate="no">
+              ({products.length})
+            </span>
           </h2>
         </div>
         
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5, 6].map(i => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
               <Skeleton key={i} className="h-[250px] w-full rounded-2xl" />
             ))}
           </div>
@@ -201,30 +252,47 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-stretch">
-            <AnimatePresence>
-              {products.map((product: any) => (
-                <motion.div
-                  key={product.objectID || product.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="h-full"
-                >
-                  <ProductCard 
-                    product={product}
-                    isFavorite={isFavorited(product.id)}
-                    onToggleFavorite={handleProductFav}
-                    onAddToCart={handleAddToCart}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-stretch">
+              <AnimatePresence>
+                {displayedProducts.map((product: any) => (
+                  <motion.div
+                    key={product.objectID || product.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="h-full"
+                  >
+                    <ProductCard 
+                      product={product}
+                      isFavorite={isFavorited(product.id)}
+                      onToggleFavorite={handleProductFav}
+                      onAddToCart={handleAddToCart}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Scroll Sentinel & Loading / Completion status */}
+            <div ref={loadMoreRef} className="py-8 flex flex-col items-center justify-center">
+              {hasMore ? (
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground bg-card border border-border px-4 py-2 rounded-full shadow-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  Loading more 20 items...
+                </div>
+              ) : products.length > 20 ? (
+                <p className="text-xs text-muted-foreground font-medium">
+                  Showing all {products.length} products for {brandName}
+                </p>
+              ) : null}
+            </div>
+          </>
         )}
       </div>
 
     </div>
   );
 };
+
