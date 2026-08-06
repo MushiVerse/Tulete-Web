@@ -26,7 +26,7 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
 
   // Filter states
   const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(categoryParam === 'product' ? 4000000 : 40000);
+  const [maxPrice, setMaxPrice] = useState<number>(40000000);
   const [showAvailable, setShowAvailable] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
@@ -45,35 +45,54 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
   React.useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
+      const escapedBrand = brandName.replace(/"/g, '\\"');
       // Fetch up to 200 hits for the brand from Algolia so we can paginate locally in batches of 20
       let results = await searchTuleteItems(searchQuery, {
-        filters: `brand:"${brandName}"`,
+        filters: `brand:"${escapedBrand}"`,
         hitsPerPage: 200
       });
       
       // Fallback if faceting isn't configured in Algolia yet
       if (!results || results.length === 0) {
-        const fallbackResults = await searchTuleteItems(searchQuery, { hitsPerPage: 200 });
+        const queryToUse = searchQuery || brandName;
+        const fallbackResults = await searchTuleteItems(queryToUse, { hitsPerPage: 200 });
         results = fallbackResults;
       }
       
-      // Local filtering for price, availability, and brand match
+      // Strict local filtering for valid product data, price, availability, and brand match
       const filtered = results.filter((item: any) => {
-        if (item.price < minPrice || item.price > maxPrice) return false;
-        if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
-        // Verify brand locally just in case faceting isn't configured in Algolia yet
-        const bVal = String(item.brand || item.pbrand || item.FBrand || item.LBrand || item.store || '').toLowerCase().trim();
+        // Exclude dummy or invalid items missing essential fields
+        const itemName = String(item.name || item.title || '').trim();
+        const itemId = item.objectID || item.id;
+        if (!itemId || !itemName) return false;
+
+        // Price range filtering
+        const numPrice = Number(item.price);
+        if (isNaN(numPrice)) return false;
+        if (minPrice > 0 && numPrice < minPrice) return false;
+        if (maxPrice > 0 && numPrice > maxPrice) return false;
+
+        // Availability filtering (when toggled on)
+        if (showAvailable && (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false)) {
+          return false;
+        }
+
+        // Strict brand matching: item must explicitly belong to brandName
         const tVal = brandName.toLowerCase().trim();
-        if (bVal && tVal && !bVal.includes(tVal) && !tVal.includes(bVal)) return false;
+        if (tVal) {
+          const bVal = String(item.brand || item.pbrand || item.FBrand || item.LBrand || item.store || item.brandName || '').toLowerCase().trim();
+          if (!bVal || (!bVal.includes(tVal) && !tVal.includes(bVal))) return false;
+        }
+
         return true;
       }).map((item: any) => {
         const { rating, reviewCount } = getNormalizedRating(item);
-        const resolvedImg = item.imgUrl || item.imgURL || item.image || item.imageUrl || (Array.isArray(item.images) ? item.images[0] : '') || (Array.isArray(item.imgURL) ? item.imgURL[0] : '') || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
+        const resolvedImg = item.imgUrl || item.imgURL || item.image || item.imageUrl || (Array.isArray(item.images) ? item.images[0] : '') || (Array.isArray(item.imgURL) ? item.imgURL[0] : '') || '';
         return {
           ...item,
           id: item.objectID || item.id,
-          name: item.name || item.title || 'Brand Item',
-          imgUrl: typeof resolvedImg === 'string' ? resolvedImg : (Array.isArray(resolvedImg) ? resolvedImg[0] : ''),
+          name: String(item.name || item.title).trim(),
+          imgUrl: typeof resolvedImg === 'string' ? resolvedImg.trim() : (Array.isArray(resolvedImg) ? String(resolvedImg[0] || '').trim() : ''),
           rating,
           reviewCount
         };
