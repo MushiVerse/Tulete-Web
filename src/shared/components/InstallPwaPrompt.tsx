@@ -11,6 +11,9 @@ export const InstallPwaPrompt: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
+    // Clear any previously stored dismissal so prompt opens on every visit
+    localStorage.removeItem('tulete_pwa_dismissed');
+
     // 1. Check if already running in standalone mode (installed)
     const isStandalone = 
       window.matchMedia('(display-mode: standalone)').matches ||
@@ -22,24 +25,16 @@ export const InstallPwaPrompt: React.FC = () => {
       return;
     }
 
-    // 2. Check if user previously dismissed
-    const dismissed = localStorage.getItem('tulete_pwa_dismissed');
-    if (dismissed === 'true') {
-      setIsDismissed(true);
-    }
-
-    // 3. Detect iOS Safari
+    // 2. Detect iOS Safari
     const ua = window.navigator.userAgent;
     const isIosDevice = /iphone|ipad|ipod/i.test(ua) && !(window as any).MSStream;
     setIsIOS(isIosDevice);
 
-    // 4. Handle Chrome/Android/Desktop beforeinstallprompt event
+    // 3. Handle Chrome/Android/Desktop beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      if (dismissed !== 'true') {
-        setShowPrompt(true);
-      }
+      setShowPrompt(true);
     };
 
     const handleAppInstalled = () => {
@@ -51,15 +46,13 @@ export const InstallPwaPrompt: React.FC = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // If iOS and not standalone and not dismissed, show prompt after small delay
-    if (isIosDevice && !isStandalone && dismissed !== 'true') {
-      const timer = setTimeout(() => {
-        setShowPrompt(true);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
+    // Show prompt after a brief delay every time the site is opened
+    const timer = setTimeout(() => {
+      setShowPrompt(true);
+    }, 1000);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
@@ -80,10 +73,9 @@ export const InstallPwaPrompt: React.FC = () => {
   const handleDismiss = () => {
     setIsDismissed(true);
     setShowPrompt(false);
-    localStorage.setItem('tulete_pwa_dismissed', 'true');
   };
 
-  if (isInstalled || isDismissed || (!showPrompt && !deferredPrompt && !isIOS)) {
+  if (isInstalled || isDismissed || !showPrompt) {
     return null;
   }
 
@@ -110,7 +102,7 @@ export const InstallPwaPrompt: React.FC = () => {
               {/* Content */}
               <div className="flex-1 min-w-0 pr-2">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h4 className="font-extrabold text-sm text-foreground">Install Tulete App</h4>
+                  <h4 className="font-extrabold text-sm text-foreground">Install Tulete</h4>
                   <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">Free</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-snug">
