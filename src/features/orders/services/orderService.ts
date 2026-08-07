@@ -29,6 +29,7 @@ export interface OrderLocation {
   lng: number;
   address: string;
   specificInstructions?: string;
+  locationImgUrl?: string;
 }
 
 export interface Order extends BaseDocument {
@@ -45,6 +46,7 @@ export interface Order extends BaseDocument {
   storeId: string;
   storeName: string;
   deliveryLocation: OrderLocation;
+  locationImgUrl?: string;
   paymentMethod: 'M-Pesa' | 'Cash';
   paymentStatus: 'Pending' | 'Paid' | 'Failed';
   contactPhone?: string;
@@ -148,10 +150,12 @@ function mapDocToOrder(id: string, data: any): Order {
     cancel: data.cancel,
     storeId: data.storeId || '',
     storeName: data.storeName || data.store || 'Tulete Store',
+    locationImgUrl: data.locationImgUrl || data.deliveryLocation?.locationImgUrl || '',
     deliveryLocation: data.deliveryLocation || {
       lat: parseFloat((data.latlong || '').split(',')[0]) || 0,
       lng: parseFloat((data.latlong || '').split(',')[1]) || 0,
       address: data.location || 'Location',
+      locationImgUrl: data.locationImgUrl || '',
     },
     paymentMethod: data.paymentMethod || 'Cash',
     paymentStatus: data.show === false ? 'Paid' : 'Pending',
@@ -642,6 +646,7 @@ class OrderService extends BaseFirestoreService<Order> {
           chose: true,
           quantity: 100,
           location: resolveDeliveryLocationString(order.deliveryLocation),
+          locationImgUrl: order.locationImgUrl || order.deliveryLocation?.locationImgUrl || '',
           count: totalLaundryCount,
           store: order.storeName || 'Tulete Laundry',
           total: finalLaundryPrice,
@@ -676,6 +681,7 @@ class OrderService extends BaseFirestoreService<Order> {
           store: order.storeName || 'Tulete Dobi',
           branch: 'Online',
           location: resolveDeliveryLocationString(order.deliveryLocation),
+          locationImgUrl: order.locationImgUrl || order.deliveryLocation?.locationImgUrl || '',
           latlong: `${order.deliveryLocation?.lat || 0}, ${order.deliveryLocation?.lng || 0}`,
           cat: 'laundry',
           no: order.contactPhone || '0000000000',
@@ -746,6 +752,7 @@ class OrderService extends BaseFirestoreService<Order> {
           chose: true,
           quantity: 100,
           location: resolveDeliveryLocationString(order.deliveryLocation),
+          locationImgUrl: order.locationImgUrl || order.deliveryLocation?.locationImgUrl || '',
           count: Math.round(item.quantity || 1),
           store: order.storeName || 'Tulete Store',
           total: Math.round(lineTotal || 0),

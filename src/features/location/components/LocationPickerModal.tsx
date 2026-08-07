@@ -347,6 +347,7 @@ export const LocationPickerModal = ({
       lat: newLocation.lat,
       lng: newLocation.lng,
       specificInstructions: newLocation.specificInstructions,
+      imageUrl: newLocation.imageUrl,
       lastUsedAt: Date.now(),
     });
 
