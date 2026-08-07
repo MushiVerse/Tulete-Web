@@ -14,6 +14,7 @@ interface FavoritesStore {
   // Actions
   initialize: (userId: string) => void;
   toggleFavorite: (userId: string, item: any) => Promise<void>;
+  removeFavorite: (userId: string, item: any) => Promise<void>;
   isFavorited: (itemId: string) => boolean;
   createWishlist: (userId: string, name: string, description?: string) => void;
   addToWishlist: (wishlistId: string, itemId: string) => void;
@@ -139,6 +140,33 @@ export const useFavoritesStore = create<FavoritesStore>()(
             } catch (err) {
               console.error('Error adding favorite to Firestore userfavorites:', err);
             }
+          }
+        }
+      },
+
+      removeFavorite: async (userId, item: any) => {
+        const current = get().favorites;
+        const targetItemId = typeof item === 'string' ? item : (item?.itemId || item?.id || item?.foodId || item?.docId || '');
+        const docId = typeof item === 'string' ? item : (item?.id || item?.docId || targetItemId);
+
+        set({
+          favorites: current.filter(
+            (f) => f.itemId !== targetItemId && f.id !== targetItemId && f.id !== docId && f.itemId !== docId && (f as any).foodId !== targetItemId
+          ),
+        });
+
+        if (userId && userId !== 'guest_user') {
+          try {
+            const possibleIds = Array.from(new Set([targetItemId, docId, item?.id, item?.itemId, item?.docId].filter(Boolean)));
+            for (const idToDelete of possibleIds) {
+              if (!idToDelete) continue;
+              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', idToDelete);
+              await deleteDoc(favDocRef).catch(async () => {
+                await updateDoc(favDocRef, { fav: false }).catch(() => {});
+              });
+            }
+          } catch (err) {
+            console.error('Error removing favorite from Firestore userfavorites:', err);
           }
         }
       },

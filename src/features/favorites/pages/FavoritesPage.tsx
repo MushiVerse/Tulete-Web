@@ -34,13 +34,15 @@ const FavoriteCardItem = ({
   fav: any;
   cartItems: any[];
   updateQuantity: (id: string, qty: number) => void;
-  onRemove: (itemId: string, type: 'store' | 'product' | 'service', name: string) => void;
+  onRemove: (fav: any) => void;
   onAddToCart: (fav: any, finalPrice: number) => void;
   onQuickView: (fav: any) => void;
   onNavigate: (fav: any) => void;
 }) => {
-  const itemCat = fav.cat || fav.category || 'Product';
-  const isLaundry = itemCat === 'Nguo';
+  const isLaundry = isLaundryItem(fav);
+  const isFood = isFoodItem(fav);
+  const itemCat = isLaundry ? 'Nguo' : (isFood ? (fav.cat || fav.category || 'Food') : (fav.cat || fav.category || 'Product'));
+
   const dynamicPrice = useDynamicPrice(
     fav.price || 0,
     fav.storeId || fav.store,
@@ -51,6 +53,18 @@ const FavoriteCardItem = ({
   );
 
   const cartItem = cartItems.find((i: any) => i.productId === fav.itemId || i.baseProductId === fav.itemId);
+
+  const badgeLabel = fav.type === 'store' 
+    ? 'Store' 
+    : (isLaundry ? 'Nguo' : (isFood ? 'Food' : 'Product'));
+
+  const badgeStyle = badgeLabel === 'Nguo' 
+    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+    : badgeLabel === 'Food' 
+    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
+    : badgeLabel === 'Store' 
+    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' 
+    : 'bg-primary/10 text-primary';
 
   return (
     <Card 
@@ -65,8 +79,8 @@ const FavoriteCardItem = ({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
-          <Badge className="bg-primary/10 text-primary border-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0">
-            {fav.type}
+          <Badge className={`border-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0 ${badgeStyle}`}>
+            {badgeLabel}
           </Badge>
           {fav.rating && (
             <span className="text-[10px] font-bold text-foreground flex items-center gap-0.5">
@@ -153,7 +167,7 @@ const FavoriteCardItem = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onRemove(fav.itemId, fav.type, fav.name);
+                onRemove(fav);
               }}
               className="p-1.5 sm:p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full transition-all shrink-0"
               title="Remove favorite"
@@ -281,6 +295,7 @@ export const FavoritesPage = () => {
     wishlists, 
     initialize, 
     toggleFavorite, 
+    removeFavorite,
     createWishlist, 
     deleteWishlist,
     removeFromWishlist 
@@ -296,8 +311,8 @@ export const FavoritesPage = () => {
 
   // Initialize store
   useEffect(() => {
-    initialize('user_current');
-  }, [initialize]);
+    initialize(user?.id || 'guest_user');
+  }, [initialize, user?.id]);
 
   // Live Firestore subscription for userfavorites collection
   useEffect(() => {
@@ -353,14 +368,12 @@ export const FavoritesPage = () => {
   const activeFavorites = (isAuthenticated && firestoreFavorites.length > 0) ? firestoreFavorites : favorites;
 
   // Handle toggle remove
-  const handleRemove = (itemId: string, type: 'store' | 'product' | 'service', name: string) => {
-    toggleFavorite('user_current', {
-      itemId,
-      type,
-      name,
-      description: '',
-      imageUrl: '',
-    });
+  const handleRemove = (favItem: any) => {
+    const activeUid = user?.id || 'guest_user';
+    setFirestoreFavorites((prev) => 
+      prev.filter((f) => f.id !== favItem.id && f.itemId !== favItem.itemId && (favItem.docId ? f.docId !== favItem.docId : true))
+    );
+    removeFavorite(activeUid, favItem);
   };
 
   // Filter & Sort favorites
@@ -569,7 +582,14 @@ export const FavoritesPage = () => {
                 </p>
                 <div className="flex justify-center gap-3">
                   <Button onClick={() => navigate('/explore')} size="sm">Explore Services</Button>
-                  <Button onClick={() => navigate('/explore?category=Food')} variant="outline" size="sm" className="bg-white">Hot Meals 🔥</Button>
+                  <Button 
+                    onClick={() => navigate('/explore?category=Food')} 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-primary text-primary hover:bg-primary/10 font-bold shadow-xs transition-all"
+                  >
+                    Hot Meals 🔥
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -611,22 +631,24 @@ export const FavoritesPage = () => {
                         onAddToCart={(f, finalPrice) => {
                           const catalog = productService.getMockProducts('all');
                           const item = catalog.find((c) => c.id === f.itemId);
-                          const cat = (item as any)?.cat || f.cat || f.category || '';
-                          const isLaundry = isLaundryItem(item || f);
-                          const isFood = isFoodItem(item || f);
+                          const combined = { ...item, ...f };
+                          const isLaundry = isLaundryItem(combined);
+                          const isFood = isFoodItem(combined);
+                          const cat = isLaundry ? 'Nguo' : (isFood ? (f.cat || f.category || item?.cat || item?.category || 'Food') : 'Product');
 
                           addToCart({
                             productId: f.itemId,
                             baseProductId: f.itemId,
-                            name: f.name,
+                            name: f.name || item?.name || 'Favorite Item',
                             price: finalPrice,
                             basePrice: f.price || finalPrice,
-                            imageUrl: resolveImageUrl(f.imageUrl || item?.imgUrl),
+                            imageUrl: resolveImageUrl(f.imageUrl || item?.imgUrl || f),
                             storeId: f.storeId || item?.storeId || 's1',
                             storeName: f.store || item?.store || 'Verified Partner',
+                            brand: f.brand || f.pbrand || item?.brand || item?.pbrand || '',
                             cat,
                             location: f.location || item?.location,
-                            idadi: item?.idadi,
+                            idadi: item?.idadi || f.idadi,
                             isLaundry,
                             isFood
                           });
@@ -772,7 +794,8 @@ export const FavoritesPage = () => {
                 cartItems={cartItems}
                 updateQuantity={updateQuantity}
                 onBookmark={(item) => {
-                  toggleFavorite('user_current', {
+                  const activeUid = user?.id || 'guest_user';
+                  toggleFavorite(activeUid, {
                     itemId: item.id,
                     type: 'product',
                     name: item.name,

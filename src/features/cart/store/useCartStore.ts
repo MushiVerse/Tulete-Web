@@ -25,6 +25,7 @@ export interface CartItem {
   vipSelected?: boolean;
 
   // Food & Product Configurations
+  isFood?: boolean;
   isDeliverySelected?: boolean; // True means Delivery, False means Pickup
   packagepickup?: boolean;
   deliverySlot?: 'Lunch' | 'Dinner' | 'ASAP' | string;
