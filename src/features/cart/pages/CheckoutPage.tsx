@@ -13,7 +13,7 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck, Sparkles, Zap, Clock } from 'lucide-react';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
-import { useLocationStore } from '../../location/store/useLocationStore';
+import { useLocationStore, SavedLocation } from '../../location/store/useLocationStore';
 import { smsService } from '../../../services/smsService';
 
 const CheckoutItemRow = ({ item }: { item: any }) => {
@@ -41,7 +41,7 @@ const CheckoutItemRow = ({ item }: { item: any }) => {
 };
 
 // Default mock center if no location is selected
-const DEFAULT_CENTER = { lat: -6.1630, lng: 35.7516, address: 'Dodoma, Tanzania' };
+const DEFAULT_CENTER: SavedLocation = { id: 'default', lat: -6.1630, lng: 35.7516, address: 'Dodoma, Tanzania', lastUsedAt: Date.now() };
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -194,11 +194,13 @@ export const CheckoutPage = () => {
           status: 'Pending',
           storeId: group.storeId,
           storeName: group.storeName,
+          locationImgUrl: selectedLocation.imageUrl || '',
           deliveryLocation: {
             address: selectedLocation.address,
             lat: selectedLocation.lat,
             lng: selectedLocation.lng,
-            specificInstructions: (selectedLocation as any).specificInstructions,
+            specificInstructions: selectedLocation.specificInstructions,
+            locationImgUrl: selectedLocation.imageUrl || '',
           },
           paymentMethod: 'Cash',
           paymentStatus: 'Pending',
