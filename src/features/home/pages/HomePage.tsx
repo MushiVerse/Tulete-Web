@@ -14,7 +14,7 @@ import { storeService, Store } from '../../stores/services/storeService';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isLaundryItem, isFoodItem } from '../../cart/store/useCartStore';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { APP_SETTINGS } from '@/core/config/settings';
@@ -486,7 +486,13 @@ export const HomePage = () => {
   }, [user?.id, initFavs]);
 
   const handleProductFav = (p: Product) => {
+    const collection = (p as Product & { _collection?: string })._collection;
+    const isLnd = isLaundryItem(p) || collection === 'cloths' || cloths.some(c => c.id === p.id);
+    const isFd = !isLnd && (isFoodItem(p) || collection === 'foods' || foods.some(f => f.id === p.id));
+    const cat = isLnd ? 'Nguo' : (isFd ? ((p as any).cat || p.category || 'Food') : ((p as any).cat || p.category || 'Product'));
+
     toggleProductFavorite(user?.id || 'guest_user', {
+      ...p,
       type: 'product',
       itemId: p.id,
       name: p.name,
@@ -495,6 +501,10 @@ export const HomePage = () => {
       price: p.price,
       rating: p.rating,
       reviewCount: p.reviewCount,
+      category: cat,
+      cat: cat,
+      isLaundry: isLnd,
+      isFood: isFd,
     });
   };
 

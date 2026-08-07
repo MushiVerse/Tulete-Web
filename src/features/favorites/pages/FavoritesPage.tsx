@@ -59,12 +59,14 @@ const FavoriteCardItem = ({
 
   const badgeLabel = fav.type === 'store' 
     ? 'Store' 
-    : (!isGenericProd 
-        ? String(specificCat)
-        : (isLaundry ? 'Nguo' : (isFood ? 'Food' : 'Product')));
+    : (isLaundry || specificCat === 'Nguo' || String(specificCat).toLowerCase().includes('laundry') || String(specificCat).toLowerCase().includes('nguo')
+        ? 'Laundry'
+        : (!isGenericProd 
+            ? String(specificCat)
+            : (isFood ? 'Food' : 'Product')));
 
-  const badgeStyle = (badgeLabel === 'Nguo' || badgeLabel.toLowerCase().includes('laundry'))
-    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+  const badgeStyle = (badgeLabel === 'Laundry' || badgeLabel === 'Nguo' || badgeLabel.toLowerCase().includes('laundry') || isLaundry)
+    ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20' 
     : (badgeLabel === 'Food' || badgeLabel.toLowerCase().includes('food') || isFood)
     ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
     : badgeLabel === 'Store' 
@@ -199,8 +201,8 @@ const RecommendationCardItem = ({
   onBookmark: (rec: any) => void;
   onAddToCart: (rec: any, finalPrice: number) => void;
 }) => {
-  const itemCat = rec.cat || rec.category || 'Product';
-  const isLaundry = itemCat === 'Nguo';
+  const isLaundry = isLaundryItem(rec);
+  const itemCat = isLaundry ? 'Nguo' : (rec.cat || rec.category || 'Product');
   const dynamicPrice = useDynamicPrice(
     rec.price || 0,
     rec.storeId || rec.store,
@@ -769,7 +771,7 @@ export const FavoritesPage = () => {
                                         cat: item.category || '',
                                         location: item.location,
                                         idadi: item.idadi,
-                                        isLaundry: item.category === 'Laundry' || item.category === 'Nguo' || item.category?.toLowerCase().includes('cloth') || (item as any)._collection === 'cloths'
+                                        isLaundry: isLaundryItem(item)
                                       });
                                     }}
                                     className="p-1.5 text-primary hover:bg-primary/10 rounded-full"
@@ -840,7 +842,7 @@ export const FavoritesPage = () => {
                     cat: item.category || '',
                     location: item.location,
                     idadi: item.idadi,
-                    isLaundry: item.category === 'Laundry' || item.category === 'Nguo' || item.category?.toLowerCase().includes('cloth') || (item as any)._collection === 'cloths'
+                    isLaundry: isLaundryItem(item)
                   });
                 }}
               />
@@ -980,7 +982,7 @@ export const FavoritesPage = () => {
                           cat: quickViewProduct.category || '',
                           location: quickViewProduct.location,
                           idadi: quickViewProduct.idadi,
-                          isLaundry: quickViewProduct.category === 'Laundry' || quickViewProduct.category === 'Nguo' || quickViewProduct.category?.toLowerCase().includes('cloth') || quickViewProduct._collection === 'cloths'
+                          isLaundry: isLaundryItem(quickViewProduct)
                         });
                        setQuickViewProduct(null); 
                      }} 
