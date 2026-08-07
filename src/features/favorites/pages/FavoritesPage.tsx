@@ -54,13 +54,18 @@ const FavoriteCardItem = ({
 
   const cartItem = cartItems.find((i: any) => i.productId === fav.itemId || i.baseProductId === fav.itemId);
 
+  const specificCat = fav.category || fav.cat || fav.specCat || fav.subCat;
+  const isGenericProd = !specificCat || String(specificCat).toLowerCase() === 'product';
+
   const badgeLabel = fav.type === 'store' 
     ? 'Store' 
-    : (isLaundry ? 'Nguo' : (isFood ? 'Food' : 'Product'));
+    : (!isGenericProd 
+        ? String(specificCat)
+        : (isLaundry ? 'Nguo' : (isFood ? 'Food' : 'Product')));
 
-  const badgeStyle = badgeLabel === 'Nguo' 
+  const badgeStyle = (badgeLabel === 'Nguo' || badgeLabel.toLowerCase().includes('laundry'))
     ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
-    : badgeLabel === 'Food' 
+    : (badgeLabel === 'Food' || badgeLabel.toLowerCase().includes('food') || isFood)
     ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
     : badgeLabel === 'Store' 
     ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' 
@@ -330,6 +335,7 @@ export const FavoritesPage = () => {
             list.push({
               id: docSnap.id,
               itemId: data.foodId || data.id || docSnap.id,
+              docId: docSnap.id,
               userId: user.id,
               type: data.type || (data.category === 'Store' ? 'store' : 'product'),
               name: data.name || data.nam1 || 'Favorite Item',
@@ -339,6 +345,7 @@ export const FavoritesPage = () => {
               rating: Number(data.rating || 4.8),
               reviewCount: Number(data.reviewCount || 1),
               time: data.time || data.updatedAt || data.createdAt || '',
+              ...(data as any),
             });
           }
         });
@@ -634,23 +641,37 @@ export const FavoritesPage = () => {
                           const combined = { ...item, ...f };
                           const isLaundry = isLaundryItem(combined);
                           const isFood = isFoodItem(combined);
-                          const cat = isLaundry ? 'Nguo' : (isFood ? (f.cat || f.category || item?.cat || item?.category || 'Food') : 'Product');
+                          
+                          const rawCat = combined.category || combined.cat || combined.specCat;
+                          const cat = (rawCat && String(rawCat).toLowerCase() !== 'product')
+                            ? String(rawCat)
+                            : (isLaundry ? 'Nguo' : (isFood ? 'Food' : 'Product'));
+
+                          const finalStoreId = combined.storeId || combined.store || combined.brand || item?.storeId || 's1';
+                          const finalStoreName = combined.storeName || combined.store || combined.brand || item?.store || 'Verified Partner';
 
                           addToCart({
-                            productId: f.itemId,
-                            baseProductId: f.itemId,
-                            name: f.name || item?.name || 'Favorite Item',
+                            productId: combined.itemId || combined.id || f.itemId,
+                            baseProductId: combined.itemId || combined.id || f.itemId,
+                            name: combined.name || 'Favorite Item',
                             price: finalPrice,
-                            basePrice: f.price || finalPrice,
-                            imageUrl: resolveImageUrl(f.imageUrl || item?.imgUrl || f),
-                            storeId: f.storeId || item?.storeId || 's1',
-                            storeName: f.store || item?.store || 'Verified Partner',
-                            brand: f.brand || f.pbrand || item?.brand || item?.pbrand || '',
+                            basePrice: combined.price || finalPrice,
+                            imageUrl: resolveImageUrl(combined.imageUrl || combined.imgUrl || combined),
+                            storeId: finalStoreId,
+                            storeName: finalStoreName,
+                            brand: combined.brand || combined.pbrand || item?.brand || '',
                             cat,
-                            location: f.location || item?.location,
-                            idadi: item?.idadi || f.idadi,
+                            location: combined.location || item?.location,
+                            idadi: combined.idadi || item?.idadi,
                             isLaundry,
-                            isFood
+                            isFood,
+                            washingSelected: combined.washingSelected ?? true,
+                            ironingSelected: combined.ironingSelected ?? false,
+                            packagingSelected: combined.packagingSelected ?? false,
+                            vipSelected: combined.vipSelected ?? false,
+                            deliverySlot: combined.deliverySlot || 'ASAP',
+                            isDeliverySelected: combined.isDeliverySelected ?? true,
+                            packagepickup: combined.packagepickup ?? false,
                           });
                         }}
                       />

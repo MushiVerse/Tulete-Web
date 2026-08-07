@@ -4,7 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { storeService, Store } from '../services/storeService';
 import { productService, Product } from '../../products/services/productService';
 import { useLocationStore } from '../../location/store/useLocationStore';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isFoodItem, isLaundryItem } from '../../cart/store/useCartStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Input } from '../../../shared/components/ui/Input';
@@ -54,6 +54,7 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
     e.stopPropagation();
     e.preventDefault();
     toggleFavorite(user?.id || 'guest_user', {
+      ...prod,
       type: 'product',
       itemId: productId,
       name: prod.name || prod.title || 'Item',
@@ -62,10 +63,14 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
       price: prod.price || 0,
       rating: prod.rating,
       reviewCount: prod.reviewCount,
-      category: itemCat,
-      cat: itemCat,
-      store: store.store || '',
+      category: itemCat || prod.category || prod.cat || 'Product',
+      cat: prod.cat || itemCat || prod.category || 'Product',
+      storeId: store.id || prod.storeId || store.store || '',
+      storeName: store.name || store.store || prod.store || '',
+      store: store.name || store.store || prod.store || '',
       location: prod.location || store.location || '',
+      isLaundry: isLaundryItem(prod),
+      isFood: isFoodItem(prod),
     });
   };
 

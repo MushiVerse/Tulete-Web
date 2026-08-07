@@ -228,12 +228,25 @@ export const DiscoveryPage = () => {
   const handleToggleFavorite = (product: any) => {
     if (!isAuthenticated) { openModal('login'); return; }
     toggleFavorite(user!.id, {
+      ...product,
       itemId: product.id,
       type: 'product' as const,
       name: product.name,
       description: product.description || '',
       imageUrl: product.imgUrl || '',
       price: product.price,
+      category: product.category || product.cat || 'Product',
+      cat: product.cat || product.category || 'Product',
+      storeId: product.storeId || product.store || '',
+      storeName: product.storeName || product.store || '',
+      store: product.store || product.storeName || '',
+      isLaundry: isLaundryItem(product),
+      isFood: isFoodItem(product),
+      washingSelected: product.washingSelected ?? true,
+      ironingSelected: product.ironingSelected ?? false,
+      packagingSelected: product.packagingSelected ?? false,
+      vipSelected: product.vipSelected ?? false,
+      deliverySlot: product.deliverySlot || 'ASAP',
     });
   };
 

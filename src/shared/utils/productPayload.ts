@@ -74,6 +74,20 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const uids = String(userId || product.userId || product.uid || extraFields.userId || 'guest_user');
   const timeStr = new Date().toISOString();
 
+  const storeId = String(product.storeId || extraFields.storeId || product.store || store || 's1');
+  const storeName = String(product.storeName || extraFields.storeName || product.store || store || 'Verified Partner');
+  const isLaundry = Boolean(product.isLaundry || extraFields.isLaundry || category === 'Nguo' || category === 'Laundry' || itemCat === 'Nguo' || itemCat === 'Laundry');
+  const isFood = Boolean(product.isFood || extraFields.isFood || category === 'Food' || itemCat === 'Food');
+  
+  const washingSelected = product.washingSelected ?? extraFields.washingSelected ?? true;
+  const ironingSelected = product.ironingSelected ?? extraFields.ironingSelected ?? false;
+  const packagingSelected = product.packagingSelected ?? extraFields.packagingSelected ?? false;
+  const vipSelected = product.vipSelected ?? extraFields.vipSelected ?? false;
+  
+  const deliverySlot = String(product.deliverySlot || extraFields.deliverySlot || 'ASAP');
+  const isDeliverySelected = product.isDeliverySelected ?? extraFields.isDeliverySelected ?? true;
+  const packagepickup = product.packagepickup ?? extraFields.packagepickup ?? false;
+
   return {
     foodId,
     name,
@@ -87,6 +101,17 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
     subCat,
     subSubCat,
     store,
+    storeId,
+    storeName,
+    isLaundry,
+    isFood,
+    washingSelected,
+    ironingSelected,
+    packagingSelected,
+    vipSelected,
+    deliverySlot,
+    isDeliverySelected,
+    packagepickup,
     quantity,
     availability,
     rate: rates,

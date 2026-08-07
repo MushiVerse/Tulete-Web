@@ -13,7 +13,7 @@ import { db } from '../../../core/firebase/config';
 import { PageContainer } from '../../../shared/components/layout';
 import { HomeSearchResultsView } from '../../home/components/HomeSearchResultsView';
 import { Button } from '../../../shared/components/ui/Button';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isLaundryItem, isFoodItem } from '../../cart/store/useCartStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
@@ -50,6 +50,7 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
     e.stopPropagation();
     e.preventDefault();
     toggleFavorite(user?.id || 'guest_user', {
+      ...product,
       type: 'product',
       itemId: product.id,
       name: product.name,
@@ -58,10 +59,18 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
       price: product.price,
       rating: product.rating,
       reviewCount: product.reviewCount,
-      category: itemCat,
-      cat: itemCat,
-      store: product.store || '',
-      location: product.location || '',
+      category: product.category || product.cat || itemCat || 'Product',
+      cat: product.cat || product.category || itemCat || 'Product',
+      storeId: product.storeId || product.store || '',
+      storeName: product.storeName || product.store || '',
+      store: product.store || product.storeName || '',
+      isLaundry: isLaundryItem(product),
+      isFood: isFoodItem(product),
+      washingSelected: product.washingSelected ?? true,
+      ironingSelected: product.ironingSelected ?? false,
+      packagingSelected: product.packagingSelected ?? false,
+      vipSelected: product.vipSelected ?? false,
+      deliverySlot: product.deliverySlot || 'ASAP',
     });
   };
 

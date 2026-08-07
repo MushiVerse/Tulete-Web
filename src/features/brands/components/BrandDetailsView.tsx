@@ -4,7 +4,7 @@ import { Search, ArrowLeft, SlidersHorizontal, Tag, ShoppingBag, Loader2 } from 
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { Product } from '../../products/services/productService';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isLaundryItem, isFoodItem } from '../../cart/store/useCartStore';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
@@ -140,7 +140,10 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
   const { isFavorited, toggleFavorite: toggleProductFavorite } = useFavoritesStore();
 
   const handleProductFav = (p: Product) => {
+    const isLnd = isLaundryItem(p);
+    const isFd = isFoodItem(p);
     toggleProductFavorite(user?.id || 'guest_user', {
+      ...p,
       type: 'product',
       itemId: p.id,
       name: p.name,
@@ -149,6 +152,12 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
       price: p.price,
       rating: p.rating,
       reviewCount: p.reviewCount,
+      category: p.category || (p as any).cat || 'Product',
+      cat: (p as any).cat || p.category || 'Product',
+      storeId: p.storeId || (p as any).store || '',
+      storeName: (p as any).storeName || (p as any).store || '',
+      isLaundry: isLnd,
+      isFood: isFd,
     });
   };
 

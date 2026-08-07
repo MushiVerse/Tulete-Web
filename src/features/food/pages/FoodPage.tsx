@@ -90,6 +90,7 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
     e.stopPropagation();
     e.preventDefault();
     toggleFavorite(user?.id || 'guest_user', {
+      ...meal,
       type: 'product',
       itemId: meal.id,
       name: meal.name,
@@ -98,10 +99,15 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
       price: meal.price,
       rating: meal.rating,
       reviewCount: meal.reviewCount,
-      category: mealCat,
-      cat: mealCat,
-      store: meal.store || '',
-      location: meal.location || '',
+      category: meal.category || meal.cat || 'Food',
+      cat: meal.cat || meal.category || 'Food',
+      storeId: meal.storeId || meal.store || '',
+      storeName: meal.storeName || meal.store || '',
+      store: meal.store || meal.storeName || '',
+      isFood: true,
+      deliverySlot: meal.deliverySlot || 'ASAP',
+      isDeliverySelected: meal.isDeliverySelected ?? true,
+      packagepickup: meal.packagepickup ?? false,
     });
   };
 
