@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isLaundryItem, isFoodItem, isProductItem } from '../../cart/store/useCartStore';
 import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp, updateDoc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 
@@ -200,7 +200,7 @@ class OrderService extends BaseFirestoreService<Order> {
    * are sent to 'newcomfirmedorders'.
    */
   override async create(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>, customId?: string): Promise<Order> {
-    const isLaundry = data.isLaundryOrder || (data.items && data.items.some(item => (item.cat || (item as any).category) === 'Nguo'));
+    const isLaundry = data.isLaundryOrder || (data.items && data.items.some(item => isLaundryItem(item)));
     
     const targetCollection = isLaundry ? 'orders' : 'newcomfirmedorders';
     
@@ -570,12 +570,6 @@ class OrderService extends BaseFirestoreService<Order> {
         return String(img);
       };
 
-      // Helper to strictly identify laundry items (cat === "Nguo")
-      const isLaundryItem = (item: any): boolean => {
-        const cat = item.cat || item.category || '';
-        return cat === 'Nguo';
-      };
-      
       const laundryItems = order.items.filter(item => isLaundryItem(item));
       const otherItems = order.items.filter(item => !isLaundryItem(item));
 
@@ -715,17 +709,16 @@ class OrderService extends BaseFirestoreService<Order> {
 
       // 2. PROCESS ALL OTHER NON-LAUNDRY ITEMS INDIVIDUALLY (matching cartsHome.dart)
       for (const item of otherItems) {
-        const rawCat = (item as any).cat || (item as any).category || '';
-        const catStr = String(rawCat).toLowerCase().trim();
-        const isFood = catStr === 'food' || catStr === 'chakula' || catStr === 'diko' || ((item as any).deliverySlot != null && String((item as any).deliverySlot).trim().length > 0);
         const isPickUp = (item as any).isDeliverySelected === false || (item as any).packagepickup === true;
+        const isFd = isFoodItem(item);
+        const isProd = isProductItem(item);
         const slot = (item as any).deliverySlot;
 
         let finalDeliveryTime = 'Product';
         if (isPickUp) {
           finalDeliveryTime = 'Pickup';
-        } else if (isFood) {
-          if (slot && String(slot).trim().length > 0) {
+        } else if (isFd) {
+          if (slot && String(slot).trim().length > 0 && slot !== 'Product') {
             finalDeliveryTime = slot;
           } else {
             const currentHour = new Date().getHours();
@@ -738,6 +731,7 @@ class OrderService extends BaseFirestoreService<Order> {
         }
         const lineTotal = item.price * item.quantity;
         const itemDocId = `${item.productId || 'item'}_${webOrderId}`;
+        const rawCat = (item as any).cat || (item as any).category || '';
 
         const itemPayload = {
           uid: uids || 'unknown_uid',
@@ -769,7 +763,7 @@ class OrderService extends BaseFirestoreService<Order> {
           email: order.email || 'web@tulete.net',
           tokOnesignal: '',
           deliverytime: finalDeliveryTime,
-          cat: rawCat,
+          cat: isProd ? 'Product' : rawCat,
           showtrackbtn: false,
           deliveryDone: false,
           status: 'Order Placed',

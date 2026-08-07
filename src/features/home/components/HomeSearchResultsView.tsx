@@ -58,8 +58,9 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
   }, [query, filterValue]);
 
   const handleAddToCart = (product: any) => {
-    const cat = product.cat || product.category || (product.recordType === 'cloth' ? 'Nguo' : 'Product');
-    const isLaundry = cat === 'Nguo' || cat === 'Laundry' || product.category === 'Laundry' || product.recordType === 'cloth';
+    const rawCat = product.cat || product.category;
+    const cat = rawCat === 'Nguo' || product.recordType === 'cloth' ? 'Nguo' : (rawCat === 'Food' || product.recordType === 'food' ? 'Food' : 'Product');
+    const isLaundry = cat === 'Nguo';
     const baseItemPrice = product.price || 0;
     addToCart({
       productId: product.objectID || product.id,

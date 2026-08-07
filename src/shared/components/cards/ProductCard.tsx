@@ -7,7 +7,7 @@ import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useDynamicPrice } from '../../../features/location/hooks/useDynamicPrice';
-import { useCartStore } from '../../../features/cart/store/useCartStore';
+import { useCartStore, isFoodItem, isLaundryItem } from '../../../features/cart/store/useCartStore';
 import { formatPrice } from '../../utils/formatPrice';
 import { APP_SETTINGS } from '../../../core/config/settings';
 import { getNormalizedRating } from '../../utils/ratingUtils';
@@ -184,6 +184,8 @@ export const ProductCard = ({
                           cat: itemCat,
                           idadi: stockVal,
                           location: product.location,
+                          isLaundry: isLaundryItem(product),
+                          isFood: isFoodItem(product),
                         });
                       }
                     }}
@@ -355,7 +357,8 @@ export const ProductCard = ({
                         storeName: product.store,
                         cat: itemCat,
                         location: product.location,
-                        isLaundry: isLaundryCategory,
+                        isLaundry: isLaundryItem(product),
+                        isFood: isFoodItem(product),
                         idadi: stockVal,
                         maxQuantity: stockVal,
                       });

@@ -1,7 +1,7 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCartStore, calculateItemTotal, getStoreDeliveryFee } from '../store/useCartStore';
+import { useCartStore, calculateItemTotal, getStoreDeliveryFee, isLaundryItem, isFoodItem, isProductItem } from '../store/useCartStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
@@ -148,16 +148,15 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
             })()}
 
             {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
-            {(item as any).cat !== 'Nguo' && (() => {
-              const isFoodItem = (item.cat && item.cat.toLowerCase() === 'food') ||
-                ((item as any).category && (item as any).category.toLowerCase() === 'food') ||
+            {!isLaundryItem(item) && (() => {
+              const isFood = isFoodItem(item) ||
                 (fetchedDoc as any)?.cat === 'Food' ||
                 (fetchedDoc as any)?._collection === 'foods';
 
               return (
                 <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
                   {/* Food Specific Delivery Slots (ONLY for Food items) */}
-                  {isFoodItem && (() => {
+                  {isFood && (() => {
                     const hour = new Date().getHours();
                     const bVal = String(item.brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
                     const isBrandNow = bVal === 'now';
@@ -318,6 +317,12 @@ export const CartPage = () => {
       alert(`Please select at least one service (Wash, Iron, Package, or VIP) for "${unselectedLaundryItem.name}" before proceeding.`);
       return;
     }
+    // Ensure all Product items carry 'Product' as their deliverySlot
+    items.forEach(item => {
+      if (isProductItem(item)) {
+        useCartStore.getState().updateFoodItemSlot(item.productId, 'Product');
+      }
+    });
     navigate('/checkout');
   };
 

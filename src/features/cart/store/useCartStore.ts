@@ -46,10 +46,44 @@ export interface LaundryRatios {
   expressClient: number;
 }
 
+export function isLaundryItem(item: any): boolean {
+  if (!item) return false;
+  const cat = String(item.cat || item.category || '').toLowerCase().trim();
+  const coll = String(item._collection || '').toLowerCase().trim();
+  return cat === 'nguo' || cat === 'laundry' || coll === 'cloths';
+}
+
+export function isFoodItem(item: any): boolean {
+  if (!item || isLaundryItem(item)) return false;
+  if (item.isFood === true) return true;
+  
+  const cat = String(item.cat || item.category || '').toLowerCase().trim();
+  const coll = String(item._collection || '').toLowerCase().trim();
+  const slot = String(item.deliverySlot || '').toLowerCase().trim();
+
+  if (coll === 'foods' || item.recordType === 'food') return true;
+  if (['lunch', 'dinner', 'asap', 'mchana', 'usiku'].includes(slot)) return true;
+
+  const foodKeywords = [
+    'food', 'chakula', 'diko', 'restaurant', 'meal', 'meals', 
+    'fast food', 'burgers', 'burger', 'pizza', 'breakfast', 'lunch', 
+    'dinner', 'swahili', 'nyama choma', 'beverages', 'drinks', 'drink',
+    'juice', 'smoothie', 'smoothies', 'snacks', 'snack', 'desserts', 
+    'dessert', 'bakery', 'cakes', 'cake', 'chicken', 'chips', 'combo', 
+    'local', 'healthy', 'coffee', 'tea'
+  ];
+
+  return foodKeywords.some(k => cat.includes(k));
+}
+
+export function isProductItem(item: any): boolean {
+  return !isLaundryItem(item) && !isFoodItem(item);
+}
+
 export const calculateItemTotal = (item: CartItem, ratios?: LaundryRatios): number => {
   const washPrice = ((item as any).basePrice || item.price) * item.quantity;
 
-  if ((item as any).cat === 'Nguo') {
+  if (isLaundryItem(item)) {
     const isWash = item.washingSelected !== false; // Wash defaults to true unless turned off
     const isIron = Boolean(item.ironingSelected);
     const isPack = Boolean(item.packagingSelected);
@@ -270,7 +304,33 @@ export const useCartStore = create<CartState>()(
             return state;
           }
 
-          return { items: [...state.items, { ...item, price: basePrice, basePrice, quantity: 1, maxQuantity: stock }] };
+          const isLaundry = isLaundryItem(item);
+          const isFd = isFoodItem(item);
+          const isProd = !isLaundry && !isFd;
+
+          const hour = new Date().getHours();
+          const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
+          const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+
+          const defaultSlot = isProd ? 'Product' : (item.deliverySlot || (isFd ? defaultFoodSlot : undefined));
+          const catValue = isProd ? 'Product' : (isFd ? (item.cat || (item as any).category || 'Food') : (item.cat || (item as any).category));
+
+          return { 
+            items: [
+              ...state.items, 
+              { 
+                ...item, 
+                cat: catValue, 
+                isLaundry, 
+                isFood: isFd, 
+                deliverySlot: defaultSlot, 
+                price: basePrice, 
+                basePrice, 
+                quantity: 1, 
+                maxQuantity: stock 
+              }
+            ] 
+          };
         }),
 
       removeFromCart: (productId) =>

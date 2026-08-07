@@ -1,7 +1,7 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCartStore, getStoreDeliveryFee } from '../store/useCartStore';
+import { useCartStore, getStoreDeliveryFee, isLaundryItem, isFoodItem, isProductItem } from '../store/useCartStore';
 import { orderService, Order } from '../../orders/services/orderService';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
@@ -124,7 +124,7 @@ export const CheckoutPage = () => {
       // Group items by store / laundry pack
       const storeGroups: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof items } } = {};
       items.forEach(item => {
-        const isLaundry = (item as any).cat === 'Nguo' || item.isLaundry || item.storeId === 'laundry';
+        const isLaundry = isLaundryItem(item) || item.storeId === 'laundry';
         const rawSId = item.storeId && item.storeId !== 'unknown' ? item.storeId : null;
         const rawSName = item.storeName && item.storeName !== 'Unknown Store' ? item.storeName : null;
 
@@ -169,10 +169,23 @@ export const CheckoutPage = () => {
             const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
             const unitPrice = item.quantity > 0 ? Math.round(rowTotal / item.quantity) : item.price;
             
-            const hour = new Date().getHours();
-            const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
-            const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
-            const slotValue = (item as any).deliverySlot || defaultFoodSlot;
+            const isPickUp = item.isDeliverySelected === false || (item as any).packagepickup === true;
+            const isFd = isFoodItem(item);
+            const isProd = isProductItem(item);
+
+            let slotValue: string;
+            if (isPickUp) {
+              slotValue = 'Pickup';
+            } else if (isProd) {
+              slotValue = 'Product';
+            } else if (isFd) {
+              const hour = new Date().getHours();
+              const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
+              const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+              slotValue = (item as any).deliverySlot || defaultFoodSlot;
+            } else {
+              slotValue = 'Product';
+            }
 
             return {
               productId: item.productId,
@@ -180,7 +193,7 @@ export const CheckoutPage = () => {
               price: unitPrice,
               quantity: item.quantity,
               imageUrl: item.imageUrl || '',
-              cat: item.cat || '',
+              cat: isProd ? 'Product' : (item.cat || (item as any).category || ''),
               deliverySlot: slotValue,
               isDeliverySelected: item.isDeliverySelected,
               packagepickup: (item as any).packagepickup ?? (item.isDeliverySelected === false),
@@ -206,7 +219,19 @@ export const CheckoutPage = () => {
           paymentStatus: 'Pending',
           contactPhone: activePhone,
           notes: notes,
-          deliverytime: isLaundryGroup ? 'Pickup' : 'ASAP',
+          deliverytime: (() => {
+            if (isLaundryGroup) return 'Pickup';
+            const isAllPickup = group.items.every(item => item.isDeliverySelected === false || (item as any).packagepickup === true);
+            if (isAllPickup) return 'Pickup';
+            
+            const hasFoodItemInGroup = group.items.some(item => isFoodItem(item));
+            if (hasFoodItemInGroup) {
+              const foodItem = group.items.find(item => isFoodItem(item));
+              return foodItem?.deliverySlot || 'ASAP';
+            }
+
+            return 'Product';
+          })(),
           no: activePhone,
           ...(isLaundryGroup && {
             isLaundryOrder: true,

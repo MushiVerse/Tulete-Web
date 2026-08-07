@@ -12,7 +12,7 @@ import { productService } from '../../products/services/productService';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { SectionWrapper } from '../../dashboard/components/SectionWrapper';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isFoodItem, isLaundryItem } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
@@ -815,6 +815,8 @@ export const ProductDetailPage = () => {
                               storeName: displayProduct.store,
                               cat: itemCat,
                               location: displayProduct.location,
+                              isLaundry: isLaundryItem(displayProduct),
+                              isFood: isFoodItem(displayProduct),
                               idadi: qty,
                               maxQuantity: qty,
                             });

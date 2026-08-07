@@ -42,7 +42,7 @@ import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { StoreCard } from '../../../shared/components/cards/StoreCard';
 import { Skeleton, ProductCardSkeleton, StoreCardSkeleton, StoreListCardSkeleton } from '../../../shared/components/ui/Skeleton';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isFoodItem, isLaundryItem } from '../../cart/store/useCartStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { APP_SETTINGS } from '../../../core/config/settings';
@@ -197,8 +197,10 @@ export const DiscoveryPage = () => {
   const handleAddToCart = (product: any) => {
     // Block out-of-stock items
     if (product.availability === false) return;
-    const itemCat = product.cat || product.category || 'Product';
-    const isLaundry = itemCat === 'Nguo' || itemCat === 'Laundry' || ['Laundry', 'Suits', 'Bag Wash', 'Bedding'].includes(product.category) || product.recordType === 'cloth' || product._collection === 'cloths';
+    const rawCat = product.cat || product.category || 'Product';
+    const isLaundry = isLaundryItem(product);
+    const isFood = isFoodItem(product);
+    const itemCat = isFood ? (rawCat || 'Food') : rawCat;
 
     const rawStoreId = product.storeId || product.store_id || product.storeID || product.sid || product.vendorId || product.businessId;
     const rawStoreName = product.store || product.storeName || product.store_name || product.vendorName || product.businessName;
@@ -218,7 +220,8 @@ export const DiscoveryPage = () => {
       cat: itemCat,
       location: product.location,
       idadi: product.quantity !== undefined ? product.quantity : product.idadi,
-      isLaundry
+      isLaundry,
+      isFood
     });
   };
 

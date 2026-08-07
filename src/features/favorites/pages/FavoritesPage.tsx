@@ -2,7 +2,7 @@ import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFavoritesStore } from '../hooks/useFavoritesStore';
-import { useCartStore } from '../../cart/store/useCartStore';
+import { useCartStore, isFoodItem, isLaundryItem } from '../../cart/store/useCartStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { getItemPriceWithDelivery, useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { productService } from '../../products/services/productService';
@@ -612,7 +612,8 @@ export const FavoritesPage = () => {
                           const catalog = productService.getMockProducts('all');
                           const item = catalog.find((c) => c.id === f.itemId);
                           const cat = (item as any)?.cat || f.cat || f.category || '';
-                          const isLaundry = cat === 'Nguo';
+                          const isLaundry = isLaundryItem(item || f);
+                          const isFood = isFoodItem(item || f);
 
                           addToCart({
                             productId: f.itemId,
@@ -626,7 +627,8 @@ export const FavoritesPage = () => {
                             cat,
                             location: f.location || item?.location,
                             idadi: item?.idadi,
-                            isLaundry
+                            isLaundry,
+                            isFood
                           });
                         }}
                       />

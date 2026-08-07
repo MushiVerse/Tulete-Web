@@ -519,9 +519,10 @@ export const HomePage = () => {
     let cat = (p as any).cat || 'Product';
     const collection = (p as Product & { _collection?: string })._collection;
     if (collection === 'foods' || foods.some(f => f.id === p.id)) cat = 'Food';
-    else if (collection === 'cloths' || cloths.some(c => c.id === p.id)) cat = 'Nguo';
+    else if (collection === 'cloths' || cloths.some(c => c.id === p.id) || cat === 'Nguo') cat = 'Nguo';
+    else if (!cat || cat === 'Products') cat = 'Product';
 
-    const isLaundry = cat === 'Nguo' || cat === 'Laundry' || p.category === 'Laundry' || p.category?.toLowerCase().includes('cloth');
+    const isLaundry = cat === 'Nguo' || collection === 'cloths';
     addToCart({
       productId: p.id,
       baseProductId: p.id,
