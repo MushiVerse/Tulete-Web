@@ -24,7 +24,7 @@ import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { locationService } from '../../location/services/locationService';
 import { useQuery } from '@tanstack/react-query';
 import { buildCompleteProductPayload } from '../../../shared/utils/productPayload';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, getCountFromServer } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
@@ -408,6 +408,37 @@ export const ProductDetailPage = () => {
 
     return PRODUCT_CATEGORIES.map(c => ({ ...c, source: 'ecommerce' }));
   }, [ecommerceCats, foodSubCats]);
+
+  // Fetch real Products count from Firestore for Service Stats
+  const { data: realProductsCount } = useQuery({
+    queryKey: ['serviceStatsProductsCount'],
+    queryFn: async () => {
+      try {
+        const [foodsSnap, clothsSnap, productsSnap] = await Promise.all([
+          getCountFromServer(collection(db, 'foods')),
+          getCountFromServer(collection(db, 'cloths')),
+          getCountFromServer(collection(db, 'products')),
+        ]);
+        return foodsSnap.data().count + clothsSnap.data().count + productsSnap.data().count;
+      } catch (err) {
+        try {
+          const [foodsSnap, clothsSnap, productsSnap] = await Promise.all([
+            getDocs(collection(db, 'foods')),
+            getDocs(collection(db, 'cloths')),
+            getDocs(collection(db, 'products')),
+          ]);
+          return foodsSnap.size + clothsSnap.size + productsSnap.size;
+        } catch (e) {
+          return null;
+        }
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const formattedProductsCount = realProductsCount !== undefined && realProductsCount !== null
+    ? (realProductsCount >= 1000 ? `${(realProductsCount / 1000).toFixed(1)}k+` : `${realProductsCount.toLocaleString()}+`)
+    : '...';
 
   // Compute display product (or fallback) unconditionally
   const displayProduct = product || {
@@ -1102,7 +1133,7 @@ export const ProductDetailPage = () => {
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  { value: '50k+', label: 'Products', icon: Tag },
+                  { value: formattedProductsCount, label: 'Products', icon: Tag },
                   { value: '4.9★', label: 'Avg Rating', icon: Star },
                   { value: 'Verified', label: 'Merchants', icon: ShieldCheck },
                 ].map(({ value, label, icon: Icon }) => (
