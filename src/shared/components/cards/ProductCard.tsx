@@ -13,6 +13,11 @@ import { APP_SETTINGS } from '../../../core/config/settings';
 import { getNormalizedRating } from '../../utils/ratingUtils';
 import { useCurrencyLanguageStore } from '../../../core/config/currencyStore';
 
+import { toast } from 'sonner';
+import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { useAuthModalStore } from '../../../features/auth/store/useAuthModalStore';
+import { useFavoritesStore } from '../../../features/favorites/hooks/useFavoritesStore';
+
 interface ProductCardProps {
   product: Product;
   onAddToCart?: (product: Product) => void;
@@ -26,13 +31,39 @@ export const ProductCard = ({
   product, 
   onAddToCart, 
   onToggleFavorite,
-  isFavorite = false,
+  isFavorite: customIsFavorite,
   onClick,
   viewMode = 'grid'
 }: ProductCardProps) => {
   if (product.availability === false || (product as any).availability === "false" || String((product as any).availability).toLowerCase() === "false") {
     return null;
   }
+
+  const { user, isAuthenticated } = useAuthStore();
+  const { openModal } = useAuthModalStore();
+  const { isFavorited, toggleFavorite } = useFavoritesStore();
+
+  const effectiveIsFavorite = customIsFavorite !== undefined 
+    ? customIsFavorite 
+    : isFavorited(product.id);
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onToggleFavorite) {
+      onToggleFavorite(product);
+    } else {
+      if (!isAuthenticated) {
+        openModal('login');
+        return;
+      }
+      if (user?.id) {
+        const willFav = !effectiveIsFavorite;
+        toggleFavorite(user.id, product);
+        toast.success(willFav ? `Added ${product.name || 'item'} to favorites` : `Removed ${product.name || 'item'} from wishlist`);
+      }
+    }
+  };
 
   const { currentLanguage } = useCurrencyLanguageStore();
   const { rating: normRating } = getNormalizedRating(product);
@@ -75,15 +106,11 @@ export const ProductCard = ({
               />
               
               <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggleFavorite?.(product);
-                }}
+                onClick={handleHeartClick}
                 className="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 active:scale-95 transition-all group/fav"
-                title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                title={effectiveIsFavorite ? "Remove from favorites" : "Add to favorites"}
               >
-                <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${isFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+                <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${effectiveIsFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
               </button>
 
               {product.tags?.includes('Most TamTam') && (
@@ -241,15 +268,11 @@ export const ProductCard = ({
             
             {/* Favorite Button (Bottom Left of Item Image) */}
             <button 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleFavorite?.(product);
-              }}
+              onClick={handleHeartClick}
               className="absolute bottom-3 left-3 z-20 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
-              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              title={effectiveIsFavorite ? "Remove from favorites" : "Add to favorites"}
             >
-              <Heart className={`w-4 h-4 transition-all duration-200 ${isFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+              <Heart className={`w-4 h-4 transition-all duration-200 ${effectiveIsFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
             </button>
             
             {/* Floating quantity left badge in top right corner of image */}
