@@ -719,7 +719,11 @@ export const FavoritesPage = () => {
                           const combined = { ...item, ...f };
 
                           const isLaundry = isLaundryItem(combined);
-                          const isFd = !isLaundry && isFoodItem(combined);
+                          // Detect food more reliably: check explicit flags, _collection, and category fields
+                          const isFdByFlag = combined.isFood === true;
+                          const isFdByColl = String(combined._collection || '').toLowerCase() === 'foods';
+                          const isFdByCat = ['food', 'foods'].includes(String(combined.category || combined.cat || '').toLowerCase());
+                          const isFd = !isLaundry && (isFdByFlag || isFdByColl || isFdByCat || isFoodItem(combined));
                           const isProd = !isLaundry && !isFd;
 
                           // Always use canonical category so CartPage renders the correct UI
@@ -732,7 +736,10 @@ export const FavoritesPage = () => {
                           const hour = new Date().getHours();
                           const isBrandNow = brandVal.toLowerCase() === 'now';
                           const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
-                          const slot = isLaundry ? 'Laundry' : (isFd ? ((combined as any).deliverySlot || defaultFoodSlot) : 'Product');
+                          // Use stored slot only if it's a valid food slot, otherwise use default
+                          const storedSlot = String((combined as any).deliverySlot || '');
+                          const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+                          const slot = isLaundry ? 'Laundry' : (isFd ? (validFoodSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
 
                           addToCart({
                             productId: combined.itemId || combined.id || f.itemId,
@@ -861,7 +868,10 @@ export const FavoritesPage = () => {
                                   <button
                                     onClick={() => {
                                       const isLaundry = isLaundryItem(item);
-                                      const isFd = !isLaundry && isFoodItem(item);
+                                      const isFdByFlag = (item as any).isFood === true;
+                                      const isFdByColl = String((item as any)._collection || '').toLowerCase() === 'foods';
+                                      const isFdByCat = ['food', 'foods'].includes(String((item as any).category || (item as any).cat || '').toLowerCase());
+                                      const isFd = !isLaundry && (isFdByFlag || isFdByColl || isFdByCat || isFoodItem(item));
                                       const isProd = !isLaundry && !isFd;
 
                                       // Always use canonical category so CartPage renders the correct UI
@@ -870,7 +880,9 @@ export const FavoritesPage = () => {
                                       const hour = new Date().getHours();
                                       const bVal = String((item as any).brand || item.store || '').toLowerCase().trim();
                                       const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
-                                      const slot = isLaundry ? 'Laundry' : (isFd ? ((item as any).deliverySlot || defaultFoodSlot) : 'Product');
+                                      const storedSlot = String((item as any).deliverySlot || '');
+                                      const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+                                      const slot = isLaundry ? 'Laundry' : (isFd ? (validFoodSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
 
                                       addToCart({
                                         productId: item.id,
@@ -956,7 +968,10 @@ export const FavoritesPage = () => {
                 }}
                 onAddToCart={(item, finalPrice) => {
                   const isLaundry = isLaundryItem(item);
-                  const isFd = !isLaundry && isFoodItem(item);
+                  const isFdByFlag = (item as any).isFood === true;
+                  const isFdByColl = String((item as any)._collection || '').toLowerCase() === 'foods';
+                  const isFdByCat = ['food', 'foods'].includes(String((item as any).category || (item as any).cat || '').toLowerCase());
+                  const isFd = !isLaundry && (isFdByFlag || isFdByColl || isFdByCat || isFoodItem(item));
                   const isProd = !isLaundry && !isFd;
 
                   // Always use canonical category so CartPage renders the correct UI
@@ -965,7 +980,9 @@ export const FavoritesPage = () => {
                   const hour = new Date().getHours();
                   const bVal = String((item as any).brand || (item as any).pbrand || item.store || '').toLowerCase().trim();
                   const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
-                  const slot = isLaundry ? 'Laundry' : (isFd ? ((item as any).deliverySlot || defaultFoodSlot) : 'Product');
+                  const storedSlot = String((item as any).deliverySlot || '');
+                  const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+                  const slot = isLaundry ? 'Laundry' : (isFd ? (validFoodSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
 
                   addToCart({
                     productId: item.id,

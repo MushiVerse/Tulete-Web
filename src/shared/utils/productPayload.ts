@@ -147,8 +147,18 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
 
   const storeId = String(product.storeId || extraFields.storeId || product.store || store || 's1');
   const storeName = String(product.storeName || extraFields.storeName || product.store || store || 'Verified Partner');
-  const isLaundry = Boolean(product.isLaundry || extraFields.isLaundry || category === 'Nguo' || category === 'Laundry' || itemCat === 'Nguo' || itemCat === 'Laundry');
-  const isFood = Boolean(product.isFood || extraFields.isFood || category === 'Food' || itemCat === 'Food');
+  const rawCatLower = String(category || itemCat || product.cat || product.category || '').toLowerCase();
+  const isLaundry = Boolean(product.isLaundry || extraFields.isLaundry || rawCatLower.includes('nguo') || rawCatLower.includes('laundry'));
+  
+  const isFood = !isLaundry && Boolean(
+    product.isFood || 
+    extraFields.isFood || 
+    rawCatLower === 'food' || 
+    rawCatLower === 'foods' || 
+    String(product._collection || extraFields._collection || '').toLowerCase() === 'foods' ||
+    ['food', 'foods', 'chakula', 'diko', 'restaurant', 'meal', 'meals', 'fast food', 'burgers', 'burger', 'pizza', 'breakfast', 'lunch', 'dinner', 'swahili', 'nyama choma', 'beverages', 'drinks', 'drink', 'juice', 'smoothie', 'snacks', 'desserts', 'bakery', 'cakes', 'chicken', 'chips', 'combo', 'coffee', 'tea'].some(k => rawCatLower.includes(k))
+  );
+  
   const isProduct = !isLaundry && !isFood;
   
   const washingSelected = product.washingSelected ?? extraFields.washingSelected ?? true;
@@ -157,8 +167,11 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const vipSelected = product.vipSelected ?? extraFields.vipSelected ?? false;
   
   // Default deliverySlot based on category to avoid misclassification
-  const defaultSlot = isLaundry ? 'Laundry' : (isFood ? 'ASAP' : 'Product');
-  const deliverySlot = String(product.deliverySlot || extraFields.deliverySlot || defaultSlot);
+  const hour = new Date().getHours();
+  const defaultFoodSlot = (brand.toLowerCase() === 'now' || String(product.brand || '').toLowerCase() === 'now') ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+  const validSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+  const storedSlot = String(product.deliverySlot || extraFields.deliverySlot || '');
+  const deliverySlot = isLaundry ? 'Laundry' : (isFood ? (validSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
   const isDeliverySelected = product.isDeliverySelected ?? extraFields.isDeliverySelected ?? true;
   const packagepickup = product.packagepickup ?? extraFields.packagepickup ?? false;
 

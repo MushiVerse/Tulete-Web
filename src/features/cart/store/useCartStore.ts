@@ -60,8 +60,11 @@ export function isLaundryItem(item: any): boolean {
 export function isFoodItem(item: any): boolean {
   if (!item || isLaundryItem(item)) return false;
   if (item.isFood === true) return true;
-  // Explicit product flags take priority — never classify Products as Food
-  if (item.isFood === false || item.isProduct === true) return false;
+  if (item.isFood === false) return false;
+
+  const coll = String(item._collection || '').toLowerCase().trim();
+  const recType = String(item.recordType || item.type || '').toLowerCase().trim();
+  if (coll === 'foods' || recType === 'food') return true;
 
   const cat = String(item.cat || item.category || item.specCat || item.subCat || item.mainCategory || '').toLowerCase().trim();
   const foodKeywords = [
@@ -74,15 +77,10 @@ export function isFoodItem(item: any): boolean {
 
   if (foodKeywords.some(k => cat.includes(k))) return true;
 
-  const coll = String(item._collection || '').toLowerCase().trim();
-  const recType = String(item.recordType || item.type || '').toLowerCase().trim();
-  if (coll === 'foods' || recType === 'food') return true;
+  const slot = String(item.deliverySlot || '').toLowerCase().trim();
+  if (['lunch', 'dinner', 'mchana', 'usiku', 'asap'].includes(slot)) return true;
 
-  // Only use deliverySlot as a food signal when no explicit isProduct flag is set
-  if (item.isProduct !== true) {
-    const slot = String(item.deliverySlot || '').toLowerCase().trim();
-    if (['lunch', 'dinner', 'mchana', 'usiku', 'asap'].includes(slot)) return true;
-  }
+  if (item.isProduct === true) return false;
 
   return false;
 }
@@ -316,15 +314,17 @@ export const useCartStore = create<CartState>()(
             return state;
           }
 
-          const isLaundry = isLaundryItem(item);
-          const isFd = isFoodItem(item);
+          const isLaundry = item.isLaundry === true || isLaundryItem(item);
+          const isFd = !isLaundry && (item.isFood === true || item.cat === 'Food' || item.category === 'Food' || isFoodItem(item));
           const isProd = !isLaundry && !isFd;
 
           const hour = new Date().getHours();
           const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
           const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
 
-          const defaultSlot = isProd ? 'Product' : (isLaundry ? 'Laundry' : (item.deliverySlot || defaultFoodSlot));
+          const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+          const passedSlot = String(item.deliverySlot || '');
+          const defaultSlot = isProd ? 'Product' : (isLaundry ? 'Laundry' : (validFoodSlots.includes(passedSlot) ? passedSlot : defaultFoodSlot));
           const catValue = isProd ? 'Product' : (isLaundry ? 'Nguo' : (item.cat || (item as any).category || 'Food'));
 
           return { 

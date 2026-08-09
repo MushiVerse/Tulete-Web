@@ -149,7 +149,9 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
 
             {/* Per-Item Non-Laundry Customization (Food options + Pick Up Toggle) */}
             {!isLaundryItem(item) && (() => {
-              const isFood = isFoodItem(item) ||
+              const isFood = item.isFood === true ||
+                item.cat === 'Food' ||
+                isFoodItem(item) ||
                 (fetchedDoc as any)?.cat === 'Food' ||
                 (fetchedDoc as any)?._collection === 'foods';
 

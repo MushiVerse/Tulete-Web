@@ -161,22 +161,19 @@ export const ProductDetailPage = () => {
   const { openModal } = useAuthModalStore();
 
   // Subscribe to favorites store for real-time heart icon state
-  const { isFavorited, initialize: initFavorites } = useFavoritesStore();
+  const { favorites, isFavorited, toggleFavorite, initialize: initFavorites } = useFavoritesStore();
 
   // Initialize favorites store when user is authenticated
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       initFavorites(user.id);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, initFavorites]);
 
   // Fetch specific product using decoded ID
   const { data: product, isLoading, error } = useFirestoreDocument(['product', decodedId || id || ''], productService, decodedId || id || '');
 
-  // Determine target collection based on opened item category:
-  // "products" when category === "Product"
-  // "cloths" when category === "Nguo"
-  // "foods" for otherwise documents
+  // Determine target collection based on opened item category
   const rawCat = (product as any)?.cat || product?.category || '';
   const rawColl = (product as any)?._collection || '';
 
@@ -193,14 +190,13 @@ export const ProductDetailPage = () => {
   const targetSubCat = (product as any)?.subCat || (product as any)?.subCategory || (product as any)?.scat;
   const isLaundryProduct = targetCollection === 'cloths';
 
-  // ── Record to userViewed (Only Products and Foods, NOT Laundry items) ──
+  // ── Record to userViewed ──
   useEffect(() => {
     if (!isAuthenticated || !user?.id || !product?.id) return;
 
     const itemCat = (product as any)?.cat || product?.category || '';
     const isLaundry = isLaundryProduct || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat);
 
-    // Save subCat preference to localStorage for Recommended for you section
     const currentSubCat = (product as any)?.subCat || (product as any)?.subCategory || targetSubCat;
     if (currentSubCat) {
       try {
@@ -208,45 +204,19 @@ export const ProductDetailPage = () => {
       } catch (e) {}
     }
 
-    // Only Products and Foods are added to userViewed (Not Laundry items)
     if (isLaundry) return;
 
     const docRef = doc(db, 'userViewed', user.id, 'recentlyViewed', product.id);
     const userViewedPayload = buildCompleteProductPayload(product, user.id);
     setDoc(docRef, userViewedPayload, { merge: true }).catch(() => {});
-  }, [isAuthenticated, user?.id, product?.id, isLaundryProduct]);
+  }, [isAuthenticated, user?.id, product?.id, isLaundryProduct, targetSubCat]);
 
-  // ── Sync & record userfavorites (matching ViewDetails.dart L453-L467) ──
+  // Sync isFavorite with useFavoritesStore
   useEffect(() => {
     if (!isAuthenticated || !user?.id || !product?.id) return;
-
-    const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', product.id);
-
-    // Sync from store first (instant, no network)
     const storeHasFav = isFavorited(product.id);
-    if (storeHasFav) {
-      setIsFavorite(true);
-      return;
-    }
-
-    // Fallback: check Firestore directly
-    getDoc(favDocRef)
-      .then((docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.fav !== false) {
-            setIsFavorite(true);
-          }
-          // Updating price on user favorite if it exists
-          if (product.price !== undefined) {
-            updateDoc(favDocRef, {
-              price: product.price,
-            }).catch(() => {});
-          }
-        }
-      })
-      .catch(() => {});
-  }, [isAuthenticated, user?.id, product?.id, isFavorited]);
+    setIsFavorite(storeHasFav);
+  }, [isAuthenticated, user?.id, product?.id, favorites, isFavorited]);
 
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
@@ -256,22 +226,13 @@ export const ProductDetailPage = () => {
     const targetProduct = product || (displayProduct as any);
     if (!user?.id || !targetProduct?.id) return;
 
-    const nextState = !isFavorite;
-    setIsFavorite(nextState);
-
-    const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', targetProduct.id);
-
     try {
-      if (nextState) {
-        const favPayload = buildCompleteProductPayload(targetProduct, user.id, { fav: true });
-        await setDoc(favDocRef, favPayload, { merge: true });
-        useFavoritesStore.getState().toggleFavorite(user.id, targetProduct);
+      const willBeFav = !isFavorited(targetProduct.id);
+      setIsFavorite(willBeFav);
+      await toggleFavorite(user.id, targetProduct);
+      if (willBeFav) {
         toast.success(`Added ${targetProduct.name || 'item'} to favorites`);
       } else {
-        await deleteDoc(favDocRef).catch(async () => {
-          await updateDoc(favDocRef, { fav: false }).catch(() => {});
-        });
-        useFavoritesStore.getState().removeFavorite(user.id, targetProduct);
         toast.success(`Removed ${targetProduct.name || 'item'} from wishlist`);
       }
     } catch (err) {
