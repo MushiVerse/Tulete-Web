@@ -452,12 +452,15 @@ export const useCartStore = create<CartState>()(
           pickupFee = baseFeeForPickup * 2;
         }
 
-        // Calculate dynamic Service Charge specifically for Laundry items (cat === 'Nguo') based on distance algorithm
+        // Calculate dynamic Service Charge specifically for Laundry items (cat === 'Nguo') based on distance algorithm (once per laundry item entry in cart)
         const laundryItems = items.filter((i) => (i as any).cat === 'Nguo' || i.isLaundry);
         if (laundryItems.length > 0) {
-          const firstLaundry = laundryItems[0];
-          const storeLoc = firstLaundry.location || firstLaundry.storeId;
-          serviceFee = calculateLaundryServiceFee(userLocation, storeLoc);
+          serviceFee = laundryItems.reduce((acc, item) => {
+            if (item.isDeliverySelected === false || (item as any).packagepickup === true) return acc;
+            const storeLoc = item.location || item.storeId;
+            const unitFee = calculateLaundryServiceFee(userLocation, storeLoc);
+            return acc + unitFee;
+          }, 0);
         } else {
           serviceFee = 0;
         }
