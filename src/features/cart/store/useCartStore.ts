@@ -26,6 +26,7 @@ export interface CartItem {
 
   // Food & Product Configurations
   isFood?: boolean;
+  isProduct?: boolean;
   isDeliverySelected?: boolean; // True means Delivery, False means Pickup
   packagepickup?: boolean;
   deliverySlot?: 'Lunch' | 'Dinner' | 'ASAP' | string;
@@ -33,6 +34,7 @@ export interface CartItem {
 
   // App-specific category ("Food", "Nguo", "Product") used by backend schema
   cat?: string;
+  category?: string;
   location?: { lat: number; lng: number };
   idadi?: number;
   maxQuantity?: number;
@@ -49,35 +51,41 @@ export interface LaundryRatios {
 
 export function isLaundryItem(item: any): boolean {
   if (!item) return false;
-  const cat = String(item.cat || item.category || '').toLowerCase().trim();
-  const coll = String(item._collection || '').toLowerCase().trim();
-  return cat === 'nguo' || cat === 'laundry' || coll === 'cloths';
+  if (item.isLaundry === true) return true;
+  if (item.isLaundry === false) return false;
+  const cat = String(item.cat || item.category || item.specCat || item.subCat || item._collection || '').toLowerCase().trim();
+  return cat === 'nguo' || cat === 'laundry' || cat === 'cloths' || cat.includes('laundry') || cat.includes('nguo');
 }
 
 export function isFoodItem(item: any): boolean {
   if (!item || isLaundryItem(item)) return false;
   if (item.isFood === true) return true;
-  
-  const cat = String(item.cat || item.category || '').toLowerCase().trim();
-  const coll = String(item._collection || '').toLowerCase().trim();
-  const slot = String(item.deliverySlot || '').toLowerCase().trim();
 
-  if (coll === 'foods' || item.recordType === 'food') return true;
-  if (['lunch', 'dinner', 'asap', 'mchana', 'usiku'].includes(slot)) return true;
-
+  const cat = String(item.cat || item.category || item.specCat || item.subCat || item.mainCategory || '').toLowerCase().trim();
   const foodKeywords = [
-    'food', 'chakula', 'diko', 'restaurant', 'meal', 'meals', 
+    'food', 'foods', 'chakula', 'diko', 'restaurant', 'meal', 'meals', 
     'fast food', 'burgers', 'burger', 'pizza', 'breakfast', 'lunch', 
     'dinner', 'swahili', 'nyama choma', 'beverages', 'drinks', 'drink',
-    'juice', 'smoothie', 'smoothies', 'snacks', 'snack', 'desserts', 
-    'dessert', 'bakery', 'cakes', 'cake', 'chicken', 'chips', 'combo', 
-    'local', 'healthy', 'coffee', 'tea'
+    'juice', 'smoothie', 'snacks', 'desserts', 'bakery', 'cakes', 
+    'chicken', 'chips', 'combo', 'coffee', 'tea'
   ];
 
-  return foodKeywords.some(k => cat.includes(k));
+  if (foodKeywords.some(k => cat.includes(k))) return true;
+
+  const coll = String(item._collection || '').toLowerCase().trim();
+  const recType = String(item.recordType || item.type || '').toLowerCase().trim();
+  if (coll === 'foods' || recType === 'food') return true;
+
+  const slot = String(item.deliverySlot || '').toLowerCase().trim();
+  if (['lunch', 'dinner', 'mchana', 'usiku', 'asap'].includes(slot)) return true;
+
+  if (item.isFood === false) return false;
+
+  return false;
 }
 
 export function isProductItem(item: any): boolean {
+  if (!item) return false;
   return !isLaundryItem(item) && !isFoodItem(item);
 }
 
@@ -313,8 +321,8 @@ export const useCartStore = create<CartState>()(
           const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
           const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
 
-          const defaultSlot = isProd ? 'Product' : (item.deliverySlot || (isFd ? defaultFoodSlot : undefined));
-          const catValue = isProd ? 'Product' : (isFd ? (item.cat || (item as any).category || 'Food') : (item.cat || (item as any).category));
+          const defaultSlot = isProd ? 'Product' : (isLaundry ? 'Laundry' : (item.deliverySlot || defaultFoodSlot));
+          const catValue = isProd ? 'Product' : (isLaundry ? 'Nguo' : (item.cat || (item as any).category || 'Food'));
 
           return { 
             items: [
@@ -322,8 +330,10 @@ export const useCartStore = create<CartState>()(
               { 
                 ...item, 
                 cat: catValue, 
+                category: catValue,
                 isLaundry, 
                 isFood: isFd, 
+                isProduct: isProd,
                 deliverySlot: defaultSlot, 
                 price: basePrice, 
                 basePrice, 

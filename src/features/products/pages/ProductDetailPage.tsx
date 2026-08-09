@@ -27,6 +27,7 @@ import { buildCompleteProductPayload } from '../../../shared/utils/productPayloa
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
+import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 
 /* Endless Vertical Grid Section for "More of ..." */
 const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] }) => {
@@ -234,7 +235,7 @@ export const ProductDetailPage = () => {
       openModal('login');
       return;
     }
-    const targetProduct = product || displayProduct;
+    const targetProduct = product || (displayProduct as any);
     if (!user?.id || !targetProduct?.id) return;
 
     const nextState = !isFavorite;
@@ -246,13 +247,18 @@ export const ProductDetailPage = () => {
       if (nextState) {
         const favPayload = buildCompleteProductPayload(targetProduct, user.id, { fav: true });
         await setDoc(favDocRef, favPayload, { merge: true });
+        useFavoritesStore.getState().toggleFavorite(user.id, targetProduct);
+        toast.success(`Added ${targetProduct.name || 'item'} to favorites`);
       } else {
-        await updateDoc(favDocRef, { fav: false }).catch(async () => {
-          await deleteDoc(favDocRef);
+        await deleteDoc(favDocRef).catch(async () => {
+          await updateDoc(favDocRef, { fav: false }).catch(() => {});
         });
+        useFavoritesStore.getState().removeFavorite(user.id, targetProduct);
+        toast.success(`Removed ${targetProduct.name || 'item'} from wishlist`);
       }
     } catch (err) {
       console.error('Error toggling favorite:', err);
+      toast.error('Failed to update wishlist');
     }
   };
 

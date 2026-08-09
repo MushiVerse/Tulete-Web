@@ -2,7 +2,7 @@ import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFavoritesStore } from '../hooks/useFavoritesStore';
-import { useCartStore, isFoodItem, isLaundryItem } from '../../cart/store/useCartStore';
+import { useCartStore, isFoodItem, isLaundryItem, isProductItem } from '../../cart/store/useCartStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { getItemPriceWithDelivery, useDynamicPrice } from '../../location/hooks/useDynamicPrice';
 import { productService } from '../../products/services/productService';
@@ -717,16 +717,22 @@ export const FavoritesPage = () => {
                           const catalog = productService.getMockProducts('all');
                           const item = catalog.find((c) => c.id === f.itemId);
                           const combined = { ...item, ...f };
-                          const isLaundry = isLaundryItem(combined);
-                          const isFood = isFoodItem(combined);
                           
-                          const rawCat = combined.category || combined.cat || combined.specCat;
-                          const cat = (rawCat && String(rawCat).toLowerCase() !== 'product')
-                            ? String(rawCat)
-                            : (isLaundry ? 'Nguo' : (isFood ? 'Food' : 'Product'));
+                          const specificCat = resolveItemCategory(combined);
+                          const rawCat = String(f.category || f.cat || combined.category || combined.cat || specificCat || '').trim();
+                          const isLaundry = isLaundryItem(combined) || specificCat === 'Nguo' || specificCat === 'Laundry' || rawCat === 'Nguo' || rawCat === 'Laundry';
+                          const isFd = !isLaundry && (isFoodItem(combined) || specificCat === 'Food' || rawCat === 'Food' || rawCat.toLowerCase().includes('food'));
+                          const isProd = !isLaundry && !isFd;
 
-                          const finalStoreId = combined.storeId || combined.store || combined.brand || item?.storeId || 's1';
-                          const finalStoreName = combined.storeName || combined.store || combined.brand || item?.store || 'Verified Partner';
+                          const mainCat = isLaundry ? 'Nguo' : (isFd ? (rawCat || 'Food') : 'Product');
+                          const brandVal = String(f.brand || f.pbrand || f.FBrand || f.LBrand || combined.brand || '').trim();
+                          const finalStoreId = combined.storeId || combined.store || brandVal || item?.storeId || 's1';
+                          const finalStoreName = combined.storeName || combined.store || brandVal || item?.store || 'Verified Partner';
+
+                          const hour = new Date().getHours();
+                          const isBrandNow = brandVal.toLowerCase() === 'now';
+                          const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+                          const slot = isLaundry ? 'Laundry' : (isFd ? (combined.deliverySlot || defaultFoodSlot) : 'Product');
 
                           addToCart({
                             productId: combined.itemId || combined.id || f.itemId,
@@ -737,17 +743,19 @@ export const FavoritesPage = () => {
                             imageUrl: resolveImageUrl(combined.imageUrl || combined.imgUrl || combined),
                             storeId: finalStoreId,
                             storeName: finalStoreName,
-                            brand: combined.brand || combined.pbrand || item?.brand || '',
-                            cat,
+                            brand: brandVal,
+                            category: mainCat,
+                            cat: mainCat,
                             location: combined.location || item?.location,
                             idadi: combined.idadi || item?.idadi,
                             isLaundry,
-                            isFood,
+                            isProduct: isProd,
+                            isFood: isFd,
                             washingSelected: combined.washingSelected ?? true,
                             ironingSelected: combined.ironingSelected ?? false,
                             packagingSelected: combined.packagingSelected ?? false,
                             vipSelected: combined.vipSelected ?? false,
-                            deliverySlot: combined.deliverySlot || 'ASAP',
+                            deliverySlot: slot,
                             isDeliverySelected: combined.isDeliverySelected ?? true,
                             packagepickup: combined.packagepickup ?? false,
                           });
@@ -852,6 +860,18 @@ export const FavoritesPage = () => {
                                 ) : (
                                   <button
                                     onClick={() => {
+                                      const specificCat = resolveItemCategory(item);
+                                      const docCat = item.category || item.cat || specificCat;
+                                      const isLaundry = isLaundryItem(item) || specificCat === 'Nguo' || specificCat === 'Laundry';
+                                      const isFd = !isLaundry && (isFoodItem(item) || specificCat === 'Food' || String(docCat || '').toLowerCase().includes('food'));
+                                      const isProd = !isLaundry && !isFd;
+                                      const mainCat = isLaundry ? 'Nguo' : (isFd ? (docCat || 'Food') : 'Product');
+
+                                      const hour = new Date().getHours();
+                                      const bVal = String(item.brand || item.store || '').toLowerCase().trim();
+                                      const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+                                      const slot = isLaundry ? 'Laundry' : (isFd ? ((item as any).deliverySlot || defaultFoodSlot) : 'Product');
+
                                       addToCart({
                                         productId: item.id,
                                         baseProductId: item.id,
@@ -861,11 +881,15 @@ export const FavoritesPage = () => {
                                         imageUrl: item.imgUrl,
                                         storeId: item.storeId,
                                         storeName: item.store,
-                                        cat: item.category || '',
+                                        category: mainCat,
+                                        cat: mainCat,
                                         location: item.location,
                                         idadi: stockVal,
                                         maxQuantity: stockVal,
-                                        isLaundry: isLaundryItem(item)
+                                        isLaundry,
+                                        isProduct: isProd,
+                                        isFood: isFd,
+                                        deliverySlot: slot,
                                       });
                                     }}
                                     className="p-1.5 text-primary hover:bg-primary/10 rounded-full"
@@ -928,6 +952,18 @@ export const FavoritesPage = () => {
                   alert(`Bookmarked ${item.name}!`);
                 }}
                 onAddToCart={(item, finalPrice) => {
+                  const specificCat = resolveItemCategory(item);
+                  const docCat = item.category || item.cat || specificCat;
+                  const isLaundry = isLaundryItem(item) || specificCat === 'Nguo' || specificCat === 'Laundry';
+                  const isFd = !isLaundry && (isFoodItem(item) || specificCat === 'Food' || String(docCat || '').toLowerCase().includes('food'));
+                  const isProd = !isLaundry && !isFd;
+                  const mainCat = isLaundry ? 'Nguo' : (isFd ? (docCat || 'Food') : 'Product');
+
+                  const hour = new Date().getHours();
+                  const bVal = String(item.brand || item.store || '').toLowerCase().trim();
+                  const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+                  const slot = isLaundry ? 'Laundry' : (isFd ? ((item as any).deliverySlot || defaultFoodSlot) : 'Product');
+
                   addToCart({
                     productId: item.id,
                     baseProductId: item.id,
@@ -937,10 +973,14 @@ export const FavoritesPage = () => {
                     imageUrl: item.imgUrl,
                     storeId: item.storeId,
                     storeName: item.store,
-                    cat: item.category || '',
+                    category: mainCat,
+                    cat: mainCat,
                     location: item.location,
                     idadi: item.idadi,
-                    isLaundry: isLaundryItem(item)
+                    isLaundry,
+                    isProduct: isProd,
+                    isFood: isFd,
+                    deliverySlot: slot,
                   });
                 }}
               />
