@@ -30,18 +30,33 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { toast } from 'sonner';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
-const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, navigate }: any) => {
+const StoreProductCardItem = ({
+  prod,
+  store,
+  cartItems,
+  updateQuantity,
+  addToCart,
+  onOpenStoreRatings,
+}: {
+  prod: any;
+  store: any;
+  cartItems: any[];
+  updateQuantity: (id: string, qty: number) => void;
+  addToCart: (item: any) => void;
+  onOpenStoreRatings?: () => void;
+}) => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { isFavorited, toggleFavorite } = useFavoritesStore();
-
-  const productId = prod.id || prod.objectID || prod._id || prod.productId;
-  const itemCat = (prod as any)?.cat || prod.category || store.category || 'Product';
-  const isLaundry = itemCat === 'Nguo';
+  const productId = String(prod.id || prod.foodId || prod.docId || 'unknown_item');
+  const itemCat = (prod as any)?.cat || prod.category || 'Product';
+  
   const dynamicPrice = useDynamicPrice(
-    prod.price, 
-    store.id, 
-    isLaundry, 
+    prod.price || 0, 
+    store.id || prod.storeId || store.store, 
+    isLaundryItem(prod), 
     prod.location || store.location, 
     undefined, 
     itemCat
@@ -53,6 +68,7 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
   const handleToggleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(prod);
     toggleFavorite(user?.id || 'guest_user', {
       ...prod,
       type: 'product',
@@ -61,8 +77,8 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
       description: prod.description || '',
       imageUrl: prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]) || '',
       price: prod.price || 0,
-      rating: prod.rating,
-      reviewCount: prod.reviewCount,
+      rating: prod.rating ?? normRating,
+      reviewCount: prod.reviewCount ?? normReviewCount,
       category: itemCat || prod.category || prod.cat || 'Product',
       cat: prod.cat || itemCat || prod.category || 'Product',
       storeId: store.id || prod.storeId || store.store || '',
@@ -167,7 +183,7 @@ const StoreProductRow = ({ prod, store, cartItems, updateQuantity, addToCart, na
                 addToCart({
                   productId: productId,
                   name: prod.name || prod.title || 'Item',
-                  price: prod.price || 0,
+                  price: dynamicPrice || prod.price || 0,
                   basePrice: prod.price || 0,
                   imageUrl: prod.imgUrl || prod.imgURL,
                   storeId: store.id,
@@ -1004,14 +1020,13 @@ export const StoreDetailsPage = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredProducts.map((prod) => (
-                      <StoreProductRow 
-                        key={prod.id} 
+                      <StoreProductCardItem 
+                        key={prod.id || prod.foodId || prod.docId} 
                         prod={prod} 
                         store={store} 
                         cartItems={cartItems} 
                         updateQuantity={updateQuantity} 
                         addToCart={addToCart} 
-                        navigate={navigate} 
                       />
                     ))}
                   </div>

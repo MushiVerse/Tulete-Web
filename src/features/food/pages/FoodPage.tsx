@@ -28,6 +28,7 @@ import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import { FacebookIcon, InstagramIcon, TikTokIcon, YoutubeIcon } from '../../../shared/components/SocialIcons';
 import { useCurrencyLanguageStore } from '../../../core/config/currencyStore';
 import { HelpSafetyWidget } from '../../../shared/components/HelpSafetyWidget';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
 // --- Static Fallback Data ---
 const FOOD_CATEGORIES = [
@@ -89,6 +90,7 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
   const handleToggleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(meal);
     toggleFavorite(user?.id || 'guest_user', {
       ...meal,
       type: 'product',
@@ -97,8 +99,8 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
       description: meal.description || '',
       imageUrl: meal.imgUrl || '',
       price: meal.price,
-      rating: meal.rating,
-      reviewCount: meal.reviewCount,
+      rating: meal.rating ?? normRating,
+      reviewCount: meal.reviewCount ?? normReviewCount,
       category: meal.category || meal.cat || 'Food',
       cat: meal.cat || meal.category || 'Food',
       storeId: meal.storeId || meal.store || '',

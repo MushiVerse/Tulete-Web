@@ -1,7 +1,7 @@
 {
   "name": "tulete_web_app",
   "private": true,
-  "version": "2.2.2",
+  "version": "2.2.3",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -20,7 +20,8 @@ import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { APP_SETTINGS } from '@/core/config/settings';
-import { resolveImageUrl } from '../../../shared/utils/productPayload';
+import { resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
 const FavoriteCardItem = ({
   fav,
@@ -39,9 +40,10 @@ const FavoriteCardItem = ({
   onQuickView: (fav: any) => void;
   onNavigate: (fav: any) => void;
 }) => {
-  const isLaundry = isLaundryItem(fav);
-  const isFood = isFoodItem(fav);
-  const itemCat = isLaundry ? 'Nguo' : (isFood ? (fav.cat || fav.category || 'Food') : (fav.cat || fav.category || 'Product'));
+  const specificCat = resolveItemCategory(fav);
+  const isLaundry = isLaundryItem(fav) || specificCat === 'Nguo' || specificCat === 'Laundry';
+  const isFood = isFoodItem(fav) || specificCat === 'Food';
+  const itemCat = isLaundry ? 'Nguo' : (isFood ? 'Food' : specificCat);
 
   const dynamicPrice = useDynamicPrice(
     fav.price || 0,
@@ -54,16 +56,17 @@ const FavoriteCardItem = ({
 
   const cartItem = cartItems.find((i: any) => i.productId === fav.itemId || i.baseProductId === fav.itemId);
 
-  const specificCat = fav.category || fav.cat || fav.specCat || fav.subCat;
-  const isGenericProd = !specificCat || String(specificCat).toLowerCase() === 'product';
+  const stockVal = fav.quantity !== undefined ? fav.quantity : (fav.idadi !== undefined ? fav.idadi : fav.maxQuantity);
+  const isSoldOut = (stockVal !== undefined && stockVal <= 0) || fav.availability === false;
+
+  const { rating: normRating } = getNormalizedRating(fav);
+  const displayRating = fav.rating && Number(fav.rating) > 0 ? Number(fav.rating) : normRating;
 
   const badgeLabel = fav.type === 'store' 
     ? 'Store' 
     : (isLaundry || specificCat === 'Nguo' || String(specificCat).toLowerCase().includes('laundry') || String(specificCat).toLowerCase().includes('nguo')
         ? 'Laundry'
-        : (!isGenericProd 
-            ? String(specificCat)
-            : (isFood ? 'Food' : 'Product')));
+        : specificCat);
 
   const badgeStyle = (badgeLabel === 'Laundry' || badgeLabel === 'Nguo' || badgeLabel.toLowerCase().includes('laundry') || isLaundry)
     ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20' 
@@ -76,24 +79,44 @@ const FavoriteCardItem = ({
   return (
     <Card 
       onClick={() => onNavigate(fav)}
-      className="p-4 border border-border bg-card shadow-sm flex gap-4 items-center relative overflow-hidden group cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+      className={`p-4 border border-border bg-card shadow-sm flex gap-4 items-center relative overflow-hidden group cursor-pointer hover:border-primary/50 hover:shadow-md transition-all ${isSoldOut ? 'opacity-85' : ''}`}
     >
-      <img 
-        src={resolveImageUrl(fav.imageUrl || fav)} 
-        alt={fav.name} 
-        className="w-20 h-20 rounded-xl object-cover bg-muted flex-shrink-0"
-      />
+      <div className="relative w-20 h-20 flex-shrink-0">
+        <img 
+          src={resolveImageUrl(fav.imageUrl || fav)} 
+          alt={fav.name} 
+          className="w-full h-full rounded-xl object-cover bg-muted"
+        />
+        {isSoldOut && (
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px] rounded-xl flex items-center justify-center">
+            <span className="text-[9px] font-extrabold text-foreground bg-background/90 px-1.5 py-0.5 rounded shadow-sm">
+              Sold Out
+            </span>
+          </div>
+        )}
+      </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-1">
+        <div className="flex flex-wrap items-center gap-1.5 mb-1">
           <Badge className={`border-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0 ${badgeStyle}`}>
             {badgeLabel}
           </Badge>
-          {fav.rating && (
+          {displayRating && (
             <span className="text-[10px] font-bold text-foreground flex items-center gap-0.5">
               <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
-              {fav.rating}
+              {displayRating}
             </span>
+          )}
+          {fav.type !== 'store' && (
+            isSoldOut ? (
+              <span className="text-[9px] font-extrabold text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded-md border border-rose-200 dark:border-rose-900">
+                Out of Stock
+              </span>
+            ) : (stockVal !== undefined && stockVal > 0) ? (
+              <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-900">
+                {stockVal} left
+              </span>
+            ) : null
           )}
         </div>
 
@@ -148,6 +171,10 @@ const FavoriteCardItem = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (stockVal !== undefined && stockVal > 0 && cartItem.quantity >= stockVal) {
+                        alert(`Cannot add more. Maximum available stock reached (${stockVal} left in stock).`);
+                        return;
+                      }
                       updateQuantity(cartItem.productId, cartItem.quantity + 1);
                     }}
                     className="w-5 h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors"
@@ -156,6 +183,14 @@ const FavoriteCardItem = ({
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
+              ) : isSoldOut ? (
+                <button
+                  disabled
+                  className="px-2.5 py-1 bg-muted text-muted-foreground font-extrabold text-[10px] rounded-full cursor-not-allowed border border-border"
+                  title="Out of stock"
+                >
+                  Sold Out
+                </button>
               ) : (
                 <button
                   onClick={(e) => {
@@ -213,15 +248,39 @@ const RecommendationCardItem = ({
   );
 
   const cartItem = cartItems.find((i: any) => i.productId === rec.id || i.baseProductId === rec.id);
+  const stockVal = rec.quantity !== undefined ? rec.quantity : (rec.idadi !== undefined ? rec.idadi : rec.maxQuantity);
+  const isSoldOut = (stockVal !== undefined && stockVal <= 0) || rec.availability === false;
+
+  const { rating: normRating } = getNormalizedRating(rec);
+  const displayRating = rec.rating && Number(rec.rating) > 0 ? Number(rec.rating) : normRating;
 
   return (
     <Card className="p-3 bg-card border border-border flex flex-col justify-between h-full group">
       <div>
         <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-3">
           <img src={resolveImageUrl(rec.imgUrl || rec)} alt={rec.name} className="w-full h-full object-cover" />
+          {isSoldOut ? (
+            <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px] flex items-center justify-center">
+              <span className="text-[9px] font-extrabold text-foreground bg-background/90 px-2 py-0.5 rounded shadow-sm">
+                Sold Out
+              </span>
+            </div>
+          ) : stockVal !== undefined && stockVal > 0 ? (
+            <div className="absolute top-1.5 right-1.5 bg-background/90 backdrop-blur text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-sm">
+              {stockVal} left
+            </div>
+          ) : null}
         </div>
 
-        <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
+        <div className="flex items-center justify-between gap-1 mb-1">
+          <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
+          {displayRating && (
+            <span className="text-[9px] font-bold text-foreground flex items-center gap-0.5">
+              <Star className="w-2.5 h-2.5 fill-amber-400 stroke-amber-400" />
+              {displayRating}
+            </span>
+          )}
+        </div>
         <h4 className="font-extrabold text-xs text-foreground mt-1 group-hover:text-primary transition-colors line-clamp-1">
           {rec.name}
         </h4>
@@ -235,6 +294,7 @@ const RecommendationCardItem = ({
           <button
             onClick={() => onBookmark(rec)}
             className="p-1.5 text-muted-foreground hover:text-red-500 rounded-full"
+            title="Bookmark item"
           >
             <Heart className="w-3.5 h-3.5" />
           </button>
@@ -257,6 +317,10 @@ const RecommendationCardItem = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (stockVal !== undefined && stockVal > 0 && cartItem.quantity >= stockVal) {
+                    alert(`Cannot add more. Maximum available stock reached (${stockVal} left in stock).`);
+                    return;
+                  }
                   updateQuantity(cartItem.productId, cartItem.quantity + 1);
                 }}
                 className="w-5 h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors"
@@ -265,10 +329,15 @@ const RecommendationCardItem = ({
                 <Plus className="w-3 h-3" />
               </button>
             </div>
+          ) : isSoldOut ? (
+            <span className="text-[9px] font-extrabold text-rose-500 px-1.5 py-0.5">
+              Sold Out
+            </span>
           ) : (
             <button
               onClick={() => onAddToCart(rec, dynamicPrice)}
               className="p-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full transition-colors"
+              title="Add to cart"
             >
               <ShoppingCart className="w-3.5 h-3.5" />
             </button>
@@ -334,6 +403,8 @@ export const FavoritesPage = () => {
         snap.docs.forEach((docSnap) => {
           const data = docSnap.data();
           if (data.fav !== false) {
+            const { rating: calculatedRating, reviewCount: calculatedReviewCount } = getNormalizedRating(data);
+            const resolvedCat = resolveItemCategory(data);
             list.push({
               id: docSnap.id,
               itemId: data.foodId || data.id || docSnap.id,
@@ -342,12 +413,17 @@ export const FavoritesPage = () => {
               type: data.type || (data.category === 'Store' ? 'store' : 'product'),
               name: data.name || data.nam1 || 'Favorite Item',
               description: data.description || data.desc || '',
-              imageUrl: resolveImageUrl(data),
               price: Number(data.price || data.price1 || 0),
-              rating: Number(data.rating || 4.8),
-              reviewCount: Number(data.reviewCount || 1),
+              quantity: data.quantity ?? data.quanty ?? data.idadi ?? data.count,
+              idadi: data.idadi ?? data.quantity ?? data.quanty,
               time: data.time || data.updatedAt || data.createdAt || '',
               ...(data as any),
+              category: resolvedCat,
+              cat: data.cat || resolvedCat,
+              subCat: data.subCat || data.subCategory || resolvedCat,
+              imageUrl: resolveImageUrl(data),
+              rating: calculatedRating,
+              reviewCount: calculatedReviewCount,
             });
           }
         });
@@ -725,12 +801,21 @@ export const FavoritesPage = () => {
                           const item = catalog.find((c) => c.id === itemId);
                           if (!item) return null;
                           const cartItem = cartItems.find((i: any) => i.productId === item.id || i.baseProductId === item.id);
+                          const stockVal = item.quantity !== undefined ? item.quantity : (item.idadi !== undefined ? item.idadi : (item as any).maxQuantity);
+                          const isSoldOut = (stockVal !== undefined && stockVal <= 0) || (item as any).availability === false;
 
                           return (
                             <div key={itemId} className="flex items-center justify-between gap-4 p-2 bg-muted rounded-lg text-xs">
                               <div className="flex items-center gap-2 min-w-0">
                                 <img src={item.imgUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                                <span className="font-bold text-foreground truncate">{item.name}</span>
+                                <div className="min-w-0">
+                                  <span className="font-bold text-foreground truncate block">{item.name}</span>
+                                  {isSoldOut ? (
+                                    <span className="text-[9px] font-extrabold text-rose-500">Sold Out</span>
+                                  ) : stockVal !== undefined && stockVal > 0 ? (
+                                    <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400">{stockVal} left</span>
+                                  ) : null}
+                                </div>
                               </div>
 
                               <div className="flex items-center gap-2">
@@ -749,13 +834,21 @@ export const FavoritesPage = () => {
                                     <span className="font-extrabold text-xs px-1 text-foreground min-w-[1rem] text-center">{cartItem.quantity}</span>
                                     <button
                                       type="button"
-                                      onClick={() => updateQuantity(cartItem.productId, cartItem.quantity + 1)}
+                                      onClick={() => {
+                                        if (stockVal !== undefined && stockVal > 0 && cartItem.quantity >= stockVal) {
+                                          alert(`Cannot add more. Maximum available stock reached (${stockVal} left in stock).`);
+                                          return;
+                                        }
+                                        updateQuantity(cartItem.productId, cartItem.quantity + 1);
+                                      }}
                                       className="w-5 h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors"
                                       title="Increase quantity"
                                     >
                                       <Plus className="w-3 h-3" />
                                     </button>
                                   </div>
+                                ) : isSoldOut ? (
+                                  <span className="text-[10px] font-extrabold text-rose-500 px-2 py-0.5">Out of Stock</span>
                                 ) : (
                                   <button
                                     onClick={() => {
@@ -770,11 +863,13 @@ export const FavoritesPage = () => {
                                         storeName: item.store,
                                         cat: item.category || '',
                                         location: item.location,
-                                        idadi: item.idadi,
+                                        idadi: stockVal,
+                                        maxQuantity: stockVal,
                                         isLaundry: isLaundryItem(item)
                                       });
                                     }}
                                     className="p-1.5 text-primary hover:bg-primary/10 rounded-full"
+                                    title="Add to cart"
                                   >
                                     <ShoppingCart className="w-3.5 h-3.5" />
                                   </button>
@@ -818,14 +913,17 @@ export const FavoritesPage = () => {
                 updateQuantity={updateQuantity}
                 onBookmark={(item) => {
                   const activeUid = user?.id || 'guest_user';
+                  const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
                   toggleFavorite(activeUid, {
+                    ...item,
                     itemId: item.id,
                     type: 'product',
                     name: item.name,
                     description: item.description,
                     imageUrl: item.imgUrl,
                     price: item.price,
-                    rating: item.rating,
+                    rating: item.rating ?? normRating,
+                    reviewCount: item.reviewCount ?? normReviewCount,
                   });
                   alert(`Bookmarked ${item.name}!`);
                 }}
@@ -967,30 +1065,46 @@ export const FavoritesPage = () => {
                      <p className="text-muted-foreground text-sm leading-relaxed">{quickViewProduct.description}</p>
                    </div>
                  )}
-                 
-                 <div className="mt-8 flex gap-3">
-                   <Button 
-                     onClick={() => { 
-                        addToCart({
-                          productId: quickViewProduct.id,
-                          baseProductId: quickViewProduct.id,
-                          name: quickViewProduct.name,
-                          price: quickViewProduct.price,
-                          imageUrl: quickViewProduct.imgUrl,
-                          storeId: quickViewProduct.storeId,
-                          storeName: quickViewProduct.store,
-                          cat: quickViewProduct.category || '',
-                          location: quickViewProduct.location,
-                          idadi: quickViewProduct.idadi,
-                          isLaundry: isLaundryItem(quickViewProduct)
-                        });
-                       setQuickViewProduct(null); 
-                     }} 
-                     className="flex-1 py-6 text-lg font-bold rounded-2xl shadow-lg shadow-primary/25"
-                   >
-                     Add to Cart
-                   </Button>
-                 </div>
+                       {(() => {
+                    const stockVal = quickViewProduct.quantity !== undefined ? quickViewProduct.quantity : (quickViewProduct.idadi !== undefined ? quickViewProduct.idadi : quickViewProduct.maxQuantity);
+                    const isSoldOut = (stockVal !== undefined && stockVal <= 0) || quickViewProduct.availability === false;
+
+                    return (
+                      <div className="mt-8 flex flex-col gap-3">
+                        {stockVal !== undefined && stockVal > 0 && !isSoldOut && (
+                          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            In Stock ({stockVal} available)
+                          </p>
+                        )}
+                        <Button 
+                          disabled={isSoldOut}
+                          onClick={() => { 
+                            if (isSoldOut) return;
+                            addToCart({
+                              productId: quickViewProduct.id,
+                              baseProductId: quickViewProduct.id,
+                              name: quickViewProduct.name,
+                              price: quickViewProduct.price,
+                              imageUrl: quickViewProduct.imgUrl,
+                              storeId: quickViewProduct.storeId,
+                              storeName: quickViewProduct.store,
+                              cat: quickViewProduct.category || '',
+                              location: quickViewProduct.location,
+                              idadi: stockVal,
+                              maxQuantity: stockVal,
+                              isLaundry: isLaundryItem(quickViewProduct)
+                            });
+                            setQuickViewProduct(null); 
+                          }} 
+                          className={`flex-1 py-6 text-lg font-bold rounded-2xl shadow-lg ${
+                            isSoldOut ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'shadow-primary/25'
+                          }`}
+                        >
+                          {isSoldOut ? 'Out of Stock' : 'Add to Cart'}
+                        </Button>
+                      </div>
+                    );
+                  })()}
               </div>
             </motion.div>
           </div>

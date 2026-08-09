@@ -28,6 +28,7 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { resolveItemCategory, resolveImageUrl } from '../../../shared/utils/productPayload';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 
 const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuantity, navigate }: any) => {
@@ -49,18 +50,23 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
   const handleToggleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    const resolvedCat = resolveItemCategory(product);
+    const resolvedImg = resolveImageUrl(product);
     toggleFavorite(user?.id || 'guest_user', {
       ...product,
       type: 'product',
       itemId: product.id,
       name: product.name,
       description: product.description || '',
-      imageUrl: product.imgUrl || '',
+      imageUrl: resolvedImg,
+      imgUrl: resolvedImg,
+      imgURL: resolvedImg,
       price: product.price,
       rating: product.rating,
       reviewCount: product.reviewCount,
-      category: product.category || product.cat || itemCat || 'Product',
-      cat: product.cat || product.category || itemCat || 'Product',
+      category: resolvedCat,
+      cat: product.cat || resolvedCat,
+      subCat: product.subCat || product.subCategory || resolvedCat,
       storeId: product.storeId || product.store || '',
       storeName: product.storeName || product.store || '',
       store: product.store || product.storeName || '',

@@ -1,3 +1,5 @@
+import { getNormalizedRating } from './ratingUtils';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
@@ -12,7 +14,16 @@ export function resolveImageUrl(data: any): string {
   if (typeof data === 'string') {
     raw = data;
   } else if (typeof data === 'object') {
-    raw = data.imgURL ?? data.imgUrl ?? data.img1 ?? data.imageUrl ?? data.image ?? (Array.isArray(data.images) ? data.images[0] : null);
+    const candidates = [
+      data.imageUrl, data.imgURL, data.imgUrl, data.img1, data.image,
+      (Array.isArray(data.images) ? data.images[0] : null),
+      data.photo, data.pic, data.url
+    ];
+    raw = candidates.find((c: any) => {
+      if (typeof c === 'string' && c.trim().length > 0) return true;
+      if (Array.isArray(c) && c.length > 0 && typeof c[0] === 'string' && c[0].trim().length > 0) return true;
+      return false;
+    });
   }
 
   if (Array.isArray(raw)) {
@@ -25,6 +36,62 @@ export function resolveImageUrl(data: any): string {
 }
 
 /**
+ * Safely resolves the display and store category for any item, store, food, or product.
+ * Inspects all possible subcategory and category fields across Firestore schemas.
+ */
+export function resolveItemCategory(item: any): string {
+  if (!item) return 'Product';
+
+  // 1. Laundry check
+  const isLaundry = item.isLaundry ||
+    String(item.category || item.cat || item.subCat || item._collection || '').toLowerCase().includes('laundry') ||
+    String(item.category || item.cat || item.subCat || item._collection || '').toLowerCase().includes('nguo') ||
+    item._collection === 'cloths' ||
+    item.recordType === 'cloth';
+
+  if (isLaundry) return 'Nguo';
+
+  // 2. Search specific subcategory & category candidate fields
+  const candidateKeys = [
+    'subCat', 'subCategory', 'subcat', 'ecommerceSubCategory', 'foodSubCategory',
+    'scat', 'speccat', 'specCat', 'subSubCat', 'subsubcat', 'mainCategory',
+    'category', 'cate', 'cat'
+  ];
+
+  for (const key of candidateKeys) {
+    const val = item[key];
+    if (val && typeof val === 'string') {
+      const trimmed = val.trim();
+      const lower = trimmed.toLowerCase();
+      if (
+        trimmed.length > 0 &&
+        lower !== 'product' &&
+        lower !== 'products' &&
+        lower !== 'all' &&
+        lower !== 'store' &&
+        lower !== 'item'
+      ) {
+        return trimmed;
+      }
+    }
+  }
+
+  // 3. Food check
+  if (item.isFood || item._collection === 'foods' || item.recordType === 'food') return 'Food';
+
+  // 4. Store check
+  if (item.type === 'store' || item.recordType === 'store') return 'Store';
+
+  // 5. Fallback to explicit category or cat if non-empty
+  const fallback = item.category || item.cat || item.mainCategory;
+  if (fallback && typeof fallback === 'string' && fallback.trim().length > 0) {
+    return fallback.trim();
+  }
+
+  return 'Product';
+}
+
+/**
  * Builds a complete, non-empty Firestore payload for userViewed and userfavorites collections.
  * Ensures every single one of the 17 required fields has a valid, non-empty value.
  */
@@ -33,7 +100,8 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const name = String(product.name || product.nam1 || extraFields.name || 'Tulete Item');
   const price = Number(product.price ?? product.price1 ?? extraFields.price ?? 0);
   
-  const imgURL = resolveImageUrl(product.imgUrl || product.imgURL || product.img1 || extraFields.imgURL || product);
+  const combinedObj = { ...product, ...extraFields };
+  const imgURL = resolveImageUrl(combinedObj);
 
   const brand = String(product.brand || product.pbrand || product.store || extraFields.brand || 'Tulete Store');
   
@@ -57,18 +125,21 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   if (!formattedLoc) formattedLoc = 'Dodoma, Tanzania';
 
   const description = String(product.description || product.desc || extraFields.description || 'Quality product available on Tulete.');
-  const category = String(product.category || product.cate || product.cat || extraFields.category || 'Product');
-  const itemCat = String(product.cat || product.specCat || product.category || extraFields.cat || category);
-  const subCat = String(product.subCat || product.subCategory || product.scat || extraFields.subCat || itemCat);
+  
+  const resolvedCategory = resolveItemCategory(combinedObj);
+  const category = String(extraFields.category || product.category || resolvedCategory);
+  const itemCat = String(extraFields.cat || product.cat || resolvedCategory);
+  const subCat = String(product.subCat || product.subCategory || product.scat || extraFields.subCat || resolvedCategory);
   const subSubCat = String(product.subSubCat || product.subSubCcat || product.speccat || extraFields.subSubCat || subCat);
   const store = String(product.store || product.sto || brand || 'Tulete Store');
-  const quantity = Number(product.quantity ?? product.quanty ?? product.count ?? extraFields.quantity ?? 1);
+  const quantity = Number(product.quantity ?? product.quanty ?? product.idadi ?? product.count ?? extraFields.quantity ?? extraFields.idadi ?? 1);
   const availability = product.availability !== false && extraFields.availability !== false;
+  
+  const { rating: calculatedRating, reviewCount: calculatedReviewCount } = getNormalizedRating(product);
   
   let rates = product.rate || product.rates || extraFields.rate;
   if (!Array.isArray(rates) || rates.length === 0) {
-    const rNum = Number(product.rating || extraFields.rating || 4.8);
-    rates = [isNaN(rNum) ? 4.8 : rNum];
+    rates = [calculatedRating];
   }
 
   const uids = String(userId || product.userId || product.uid || extraFields.userId || 'guest_user');
@@ -113,10 +184,14 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
     isDeliverySelected,
     packagepickup,
     quantity,
+    idadi: quantity,
     availability,
+    rating: calculatedRating,
+    reviewCount: calculatedReviewCount,
     rate: rates,
     time: timeStr,
     userId: uids,
     ...extraFields,
   };
 }
+

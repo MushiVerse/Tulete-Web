@@ -7,8 +7,8 @@ import { Product } from '../../products/services/productService';
 import { useCartStore, isLaundryItem, isFoodItem } from '../../cart/store/useCartStore';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
-import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { useAuthStore } from '../../../core/auth/useAuthStore';
 
 interface BrandDetailsViewProps {
   brandName: string;
@@ -142,6 +142,7 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
   const handleProductFav = (p: Product) => {
     const isLnd = isLaundryItem(p);
     const isFd = isFoodItem(p);
+    const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(p);
     toggleProductFavorite(user?.id || 'guest_user', {
       ...p,
       type: 'product',
@@ -150,8 +151,8 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
       description: p.description || '',
       imageUrl: p.imgUrl || '',
       price: p.price,
-      rating: p.rating,
-      reviewCount: p.reviewCount,
+      rating: p.rating ?? normRating,
+      reviewCount: p.reviewCount ?? normReviewCount,
       category: p.category || (p as any).cat || 'Product',
       cat: (p as any).cat || p.category || 'Product',
       storeId: p.storeId || (p as any).store || '',

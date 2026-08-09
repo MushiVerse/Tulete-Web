@@ -53,6 +53,8 @@ import { useLocationStore } from '../../location/store/useLocationStore';
 import { DiscoveryMap } from '../components/DiscoveryMap';
 import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 import { formatPrice } from '../../../shared/utils/formatPrice';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
 
 // Trending quick-filter chips
 const TRENDING_FILTERS = [
@@ -227,21 +229,32 @@ export const DiscoveryPage = () => {
 
   const handleToggleFavorite = (product: any) => {
     if (!isAuthenticated) { openModal('login'); return; }
+    const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(product);
+    const resolvedImg = resolveImageUrl(product);
+    const resolvedIsLaundry = isLaundryItem(product);
+    const resolvedIsFood = isFoodItem(product);
+
+    const resolvedCat = resolveItemCategory(product);
+
     toggleFavorite(user!.id, {
       ...product,
       itemId: product.id,
-      type: 'product' as const,
+      type: (product.type || (product.recordType === 'store' ? 'store' : 'product')) as any,
       name: product.name,
       description: product.description || '',
-      imageUrl: product.imgUrl || '',
+      imageUrl: resolvedImg,
+      imgUrl: resolvedImg,
+      imgURL: resolvedImg,
       price: product.price,
-      category: product.category || product.cat || 'Product',
-      cat: product.cat || product.category || 'Product',
+      rating: product.rating ?? normRating,
+      reviewCount: product.reviewCount ?? normReviewCount,
+      category: resolvedCat,
+      cat: product.cat || resolvedCat,
       storeId: product.storeId || product.store || '',
       storeName: product.storeName || product.store || '',
       store: product.store || product.storeName || '',
-      isLaundry: isLaundryItem(product),
-      isFood: isFoodItem(product),
+      isLaundry: resolvedIsLaundry,
+      isFood: resolvedIsFood,
       washingSelected: product.washingSelected ?? true,
       ironingSelected: product.ironingSelected ?? false,
       packagingSelected: product.packagingSelected ?? false,
@@ -897,6 +910,11 @@ export const DiscoveryPage = () => {
                         const rawSId = item.storeId || item.store_id || item.storeID || item.sid || item.vendorId || item.businessId || '';
                         const rawSName = item.store || item.storeName || item.store_name || item.vendorName || item.businessName || '';
 
+                        const resolvedImg = resolveImageUrl(item);
+                        const resolvedIsLaundry = isLaundryItem(item);
+                        const resolvedIsFood = isFoodItem(item);
+                        const itemCategory = resolveItemCategory(item);
+
                         const product = {
                           ...item,
                           id: item.objectID || item.id,
@@ -904,12 +922,15 @@ export const DiscoveryPage = () => {
                           description: item.description || '',
                           price: item.price !== undefined ? Number(item.price) : 0,
                           oldprice: item.oldprice !== undefined ? Number(item.oldprice) : undefined,
-                          imgUrl: item.imgUrl || item.imgURL || item.image || '',
+                          imgUrl: resolvedImg,
+                          imageUrl: resolvedImg,
+                          imgURL: resolvedImg,
                           storeId: rawSId || rawSName || '',
                           store: rawSName || rawSId || '',
                           rating: Math.round(rating * 10) / 10,
                           reviewCount,
-                          category: item.category || item.cat || '',
+                          category: itemCategory,
+                          cat: item.cat || itemCategory,
                           tags: item.tags || [],
                           availability: item.availability !== undefined ? !!item.availability : true,
                           location,

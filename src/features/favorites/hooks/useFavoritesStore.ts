@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware';
 import { favoriteService, FavoriteItem, WishlistCollection } from '../services/favoriteService';
 import { db } from '../../../core/firebase/config';
 import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { buildCompleteProductPayload, resolveImageUrl } from '../../../shared/utils/productPayload';
+import { buildCompleteProductPayload, resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
 interface FavoritesStore {
   favorites: FavoriteItem[];
@@ -53,6 +54,9 @@ export const useFavoritesStore = create<FavoritesStore>()(
                 const data = docSnap.data();
                 if (data.fav !== false) {
                   const targetId = data.foodId || data.id || docSnap.id;
+                  const { rating, reviewCount } = getNormalizedRating(data);
+                  const resolvedImg = resolveImageUrl(data);
+                  const resolvedCat = resolveItemCategory(data);
                   items.push({
                     id: docSnap.id,
                     userId,
@@ -60,18 +64,22 @@ export const useFavoritesStore = create<FavoritesStore>()(
                     itemId: targetId,
                     name: data.name || data.nam1 || 'Favorite Item',
                     description: data.description || '',
-                    imageUrl: resolveImageUrl(data),
                     price: Number(data.price || 0),
-                    rating: Number(data.rating || 0),
-                    reviewCount: Number(data.reviewCount || 0),
+                    rating,
+                    reviewCount,
                     location: data.location || data.productloc || '',
-                    cat: data.cat || data.specCat || data.category || '',
-                    category: data.category || data.cate || data.cat || '',
                     storeId: data.storeId || data.store || data.brand || '',
                     store: data.store || data.brand || '',
+                    quantity: data.quantity ?? data.quanty ?? data.idadi ?? data.count,
+                    idadi: data.idadi ?? data.quantity ?? data.quanty,
                     createdAt: data.time ? new Date(data.time) : new Date(),
                     updatedAt: data.time ? new Date(data.time) : new Date(),
                     ...(data as any),
+                    category: resolvedCat,
+                    cat: data.cat || resolvedCat,
+                    subCat: data.subCat || data.subCategory || resolvedCat,
+                    imageUrl: resolvedImg,
+                    imgURL: resolvedImg,
                   });
                 }
               });
@@ -115,6 +123,9 @@ export const useFavoritesStore = create<FavoritesStore>()(
           }
         } else {
           // Optimistic add
+          const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
+          const resolvedImg = resolveImageUrl(item);
+          const resolvedCat = resolveItemCategory(item);
           const newFavorite: FavoriteItem = {
             id: targetItemId || `fav_${Date.now()}`,
             userId: userId || 'guest_user',
@@ -122,8 +133,14 @@ export const useFavoritesStore = create<FavoritesStore>()(
             itemId: targetItemId || `item_${Date.now()}`,
             name: item.name || item.title || '',
             description: item.description || '',
-            imageUrl: item.imageUrl || item.imgURL || item.imgUrl || '',
             ...item,
+            category: resolvedCat,
+            cat: item.cat || resolvedCat,
+            subCat: item.subCat || item.subCategory || resolvedCat,
+            imageUrl: resolvedImg,
+            imgURL: resolvedImg,
+            rating: item.rating ?? normRating,
+            reviewCount: item.reviewCount ?? normReviewCount,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
@@ -135,7 +152,11 @@ export const useFavoritesStore = create<FavoritesStore>()(
           if (userId && userId !== 'guest_user') {
             try {
               const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
-              const favPayload = buildCompleteProductPayload(item, userId, { foodId: targetItemId, fav: true });
+              const favPayload = buildCompleteProductPayload(
+                { ...item, rating: item.rating ?? normRating, reviewCount: item.reviewCount ?? normReviewCount },
+                userId,
+                { foodId: targetItemId, fav: true, rating: item.rating ?? normRating, reviewCount: item.reviewCount ?? normReviewCount }
+              );
               await setDoc(favDocRef, favPayload, { merge: true });
             } catch (err) {
               console.error('Error adding favorite to Firestore userfavorites:', err);

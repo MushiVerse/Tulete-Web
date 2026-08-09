@@ -22,6 +22,7 @@ import { HorizontalCarousel } from '../../../shared/components/ui/HorizontalCaro
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { productService, Product } from '../../products/services/productService';
 import { buildCompleteProductPayload, resolveImageUrl } from '../../../shared/utils/productPayload';
+import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { BrandsView } from '../../brands/components/BrandsView';
 import { StoreCard } from '../../../shared/components/cards/StoreCard';
@@ -490,6 +491,7 @@ export const HomePage = () => {
     const isLnd = isLaundryItem(p) || collection === 'cloths' || cloths.some(c => c.id === p.id);
     const isFd = !isLnd && (isFoodItem(p) || collection === 'foods' || foods.some(f => f.id === p.id));
     const cat = isLnd ? 'Nguo' : (isFd ? ((p as any).cat || p.category || 'Food') : ((p as any).cat || p.category || 'Product'));
+    const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(p);
 
     toggleProductFavorite(user?.id || 'guest_user', {
       ...p,
@@ -499,8 +501,8 @@ export const HomePage = () => {
       description: p.description || '',
       imageUrl: p.imgUrl || '',
       price: p.price,
-      rating: p.rating,
-      reviewCount: p.reviewCount,
+      rating: p.rating ?? normRating,
+      reviewCount: p.reviewCount ?? normReviewCount,
       category: cat,
       cat: cat,
       isLaundry: isLnd,
