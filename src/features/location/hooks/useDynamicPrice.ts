@@ -93,6 +93,104 @@ export function calculateDeliveryFeeAlgorithm(
   }
 }
 
+/**
+ * Calculates dynamic Laundry Service Charge based on distance and delivery ration algorithm
+ * matching cartsHome.dart for cat == "Nguo".
+ */
+export function calculateLaundryServiceFee(
+  userLocation: string | { lat: number; lng: number } | null | undefined,
+  storeLocation?: string | { lat: number; lng: number } | null | undefined,
+  deliveryRation: number = 1000
+): number {
+  const effectiveUserLoc = userLocation || { lat: -6.18541, lng: 35.7671293 };
+  let effectiveStoreLoc = storeLocation || "-6.18541, 35.7671293";
+
+  try {
+    let userLatt: number;
+    let userLongg: number;
+    if (typeof effectiveUserLoc === 'string') {
+      const list = effectiveUserLoc.split(',');
+      if (list.length < 2) return 0;
+      userLatt = parseFloat(list[0].trim());
+      userLongg = parseFloat(list[1].trim());
+    } else {
+      userLatt = effectiveUserLoc.lat;
+      userLongg = effectiveUserLoc.lng;
+    }
+
+    let storeLatt: number;
+    let storeLongg: number;
+    if (typeof effectiveStoreLoc === 'string') {
+      const list = effectiveStoreLoc.split(',');
+      if (list.length >= 2) {
+        storeLatt = parseFloat(list[0].trim());
+        storeLongg = parseFloat(list[1].trim());
+      } else {
+        const allStores = storeService.getMockStores();
+        const store = allStores.find((s) => s.id === storeLocation || s.name?.toLowerCase().includes('laundry'));
+        const loc = store?.location || "-6.18541, 35.7671293";
+        if (typeof loc === 'string') {
+          const parts = loc.split(',');
+          storeLatt = parseFloat(parts[0].trim());
+          storeLongg = parseFloat(parts[1].trim());
+        } else {
+          storeLatt = loc.lat;
+          storeLongg = loc.lng;
+        }
+      }
+    } else {
+      storeLatt = effectiveStoreLoc.lat;
+      storeLongg = effectiveStoreLoc.lng;
+    }
+
+    if (isNaN(userLatt) || isNaN(userLongg) || isNaN(storeLatt) || isNaN(storeLongg)) {
+      return 0;
+    }
+
+    const p = 0.017453292519943295;
+    const a =
+      0.5 -
+      Math.cos((userLatt - storeLatt) * p) / 2 +
+      (Math.cos(storeLatt * p) *
+        Math.cos(userLatt * p) *
+        (1 - Math.cos((userLongg - storeLongg) * p))) /
+        2;
+    const distance = 12742 * Math.asin(Math.sqrt(a));
+
+    const distanceRounded = Math.round(distance);
+    const roundedFee = roundUp(distanceRounded * deliveryRation) || 0;
+
+    let multiplier = 0;
+    while (roundedFee > 100 * (multiplier + 1)) {
+      multiplier++;
+    }
+    let deliveryfee = roundedFee - 100 * multiplier;
+
+    if (roundedFee <= 300) {
+      deliveryfee += 50;
+    } else if (roundedFee >= 300 && roundedFee < 1000) {
+      deliveryfee += 100;
+    } else if (roundedFee >= 1000 && roundedFee < 3000) {
+      deliveryfee += 200;
+    } else if (roundedFee >= 3000 && roundedFee < 5000) {
+      deliveryfee += 300;
+    } else if (roundedFee >= 5000 && roundedFee < 7000) {
+      deliveryfee += 400;
+    } else if (roundedFee >= 7000 && roundedFee < 9000) {
+      deliveryfee += 500;
+    } else if (roundedFee >= 9000 && roundedFee < 15000) {
+      deliveryfee += 700;
+    } else if (roundedFee >= 15000) {
+      deliveryfee += 1200;
+    }
+
+    return Math.round(deliveryfee);
+  } catch (e) {
+    console.error('Error calculating laundry service fee:', e);
+    return 0;
+  }
+}
+
 export function getDeliveryFee(
   currentLocation: { lat: number; lng: number } | null,
   productLocation?: { lat: number; lng: number } | string,

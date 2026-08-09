@@ -5,7 +5,7 @@ import { storeService } from '../../stores/services/storeService';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
-import { calculateDeliveryFeeAlgorithm, getDeliveryFee } from '../../location/hooks/useDynamicPrice';
+import { calculateDeliveryFeeAlgorithm, getDeliveryFee, calculateLaundryServiceFee } from '../../location/hooks/useDynamicPrice';
 
 export interface CartItem {
   productId: string; // Composite ID for the cart (e.g., id-iron-pack)
@@ -452,9 +452,15 @@ export const useCartStore = create<CartState>()(
           pickupFee = baseFeeForPickup * 2;
         }
 
-        // Calculate 5% Service Charge specifically for Laundry items (cat === 'Nguo')
-        const hasLaundryNguo = items.some((i) => (i as any).cat === 'Nguo');
-        serviceFee = hasLaundryNguo && laundrySubtotal > 0 ? Math.round(laundrySubtotal * 0.05) : 0;
+        // Calculate dynamic Service Charge specifically for Laundry items (cat === 'Nguo') based on distance algorithm
+        const laundryItems = items.filter((i) => (i as any).cat === 'Nguo' || i.isLaundry);
+        if (laundryItems.length > 0) {
+          const firstLaundry = laundryItems[0];
+          const storeLoc = firstLaundry.location || firstLaundry.storeId;
+          serviceFee = calculateLaundryServiceFee(userLocation, storeLoc);
+        } else {
+          serviceFee = 0;
+        }
         const total = subtotal + globalExpressFee + pickupFee + serviceFee;
 
         return {
