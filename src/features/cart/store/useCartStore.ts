@@ -320,9 +320,10 @@ export const useCartStore = create<CartState>()(
 
           const hour = new Date().getHours();
           const bVal = String((item as any).brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
-          const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+          const isBrandNow = bVal === 'now';
+          const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
 
-          const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+          const validFoodSlots = isBrandNow ? ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'] : ['Lunch', 'Dinner', 'Mchana', 'Usiku'];
           const passedSlot = String(item.deliverySlot || '');
           const defaultSlot = isProd ? 'Product' : (isLaundry ? 'Laundry' : (validFoodSlots.includes(passedSlot) ? passedSlot : defaultFoodSlot));
           const catValue = isProd ? 'Product' : (isLaundry ? 'Nguo' : (item.cat || (item as any).category || 'Food'));

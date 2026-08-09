@@ -168,8 +168,9 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   
   // Default deliverySlot based on category to avoid misclassification
   const hour = new Date().getHours();
-  const defaultFoodSlot = (brand.toLowerCase() === 'now' || String(product.brand || '').toLowerCase() === 'now') ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
-  const validSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+  const isBrandNow = (brand.toLowerCase() === 'now' || String(product.brand || '').toLowerCase() === 'now');
+  const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+  const validSlots = isBrandNow ? ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'] : ['Lunch', 'Dinner', 'Mchana', 'Usiku'];
   const storedSlot = String(product.deliverySlot || extraFields.deliverySlot || '');
   const deliverySlot = isLaundry ? 'Laundry' : (isFood ? (validSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
   const isDeliverySelected = product.isDeliverySelected ?? extraFields.isDeliverySelected ?? true;

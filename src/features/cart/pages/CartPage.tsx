@@ -46,7 +46,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
       {/* Item Details */}
       <div className="flex-1 min-w-0">
         <h3 className="notranslate font-semibold text-foreground truncate text-sm sm:text-base mb-0.5" translate="no">{item.name}</h3>
-        <p className="notranslate text-xs text-muted-foreground mb-1 truncate" translate="no">From {item.storeName}</p>
+        {/* <p className="notranslate text-xs text-muted-foreground mb-1 truncate" translate="no">From {item.storeName}</p> */}
 
         {/* Left in stock indicator */}
         {(() => {
@@ -163,7 +163,9 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                     const bVal = String(item.brand || (item as any).pbrand || (item as any).FBrand || (item as any).LBrand || '').toLowerCase().trim();
                     const isBrandNow = bVal === 'now';
                     const updateFoodItemSlot = useCartStore.getState().updateFoodItemSlot;
-                    const currentSlot = item.deliverySlot || (isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner'));
+                    const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+                    const validFoodSlots = isBrandNow ? ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'] : ['Lunch', 'Dinner', 'Mchana', 'Usiku'];
+                    const currentSlot = validFoodSlots.includes(String(item.deliverySlot || '')) ? item.deliverySlot : defaultFoodSlot;
 
                     return (
                       <div className="flex items-center flex-wrap gap-2">

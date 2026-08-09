@@ -738,7 +738,7 @@ export const FavoritesPage = () => {
                           const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
                           // Use stored slot only if it's a valid food slot, otherwise use default
                           const storedSlot = String((combined as any).deliverySlot || '');
-                          const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+                          const validFoodSlots = isBrandNow ? ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'] : ['Lunch', 'Dinner', 'Mchana', 'Usiku'];
                           const slot = isLaundry ? 'Laundry' : (isFd ? (validFoodSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
 
                           addToCart({
@@ -879,9 +879,10 @@ export const FavoritesPage = () => {
 
                                       const hour = new Date().getHours();
                                       const bVal = String((item as any).brand || item.store || '').toLowerCase().trim();
-                                      const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+                                      const isBrandNow = bVal === 'now';
+                                      const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
                                       const storedSlot = String((item as any).deliverySlot || '');
-                                      const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+                                      const validFoodSlots = isBrandNow ? ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'] : ['Lunch', 'Dinner', 'Mchana', 'Usiku'];
                                       const slot = isLaundry ? 'Laundry' : (isFd ? (validFoodSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
 
                                       addToCart({
@@ -979,9 +980,10 @@ export const FavoritesPage = () => {
 
                   const hour = new Date().getHours();
                   const bVal = String((item as any).brand || (item as any).pbrand || item.store || '').toLowerCase().trim();
-                  const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
+                  const isBrandNow = bVal === 'now';
+                  const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
                   const storedSlot = String((item as any).deliverySlot || '');
-                  const validFoodSlots = ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'];
+                  const validFoodSlots = isBrandNow ? ['ASAP', 'Lunch', 'Dinner', 'Mchana', 'Usiku'] : ['Lunch', 'Dinner', 'Mchana', 'Usiku'];
                   const slot = isLaundry ? 'Laundry' : (isFd ? (validFoodSlots.includes(storedSlot) ? storedSlot : defaultFoodSlot) : 'Product');
 
                   addToCart({
