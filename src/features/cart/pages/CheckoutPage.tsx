@@ -159,7 +159,7 @@ export const CheckoutPage = () => {
           ? Math.round(computedDeliveryFee / numGroups)
           : getStoreDeliveryFee(group.items, selectedLocation);
         const groupExtraLaundryCharges = isLaundryGroup ? (expressFee + pickupFee + serviceFee) : 0;
-        const groupTotalAmount = Math.round(groupSubtotal + groupDeliveryFee + groupExtraLaundryCharges);
+        const groupTotalAmount = Math.round(groupSubtotal + groupExtraLaundryCharges);
 
         const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
           userId: user.id,
