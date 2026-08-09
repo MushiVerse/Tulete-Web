@@ -2,6 +2,14 @@ import { useCurrencyLanguageStore } from '../../core/config/currencyStore';
 import { useState, useEffect } from 'react';
 
 /**
+ * Rounds a TZS price to the nearest 100 (matching the display rule for TZS currency).
+ */
+export function roundTZSPrice(priceInTZS: number): number {
+  if (isNaN(priceInTZS) || priceInTZS == null) return 0;
+  return Math.round(priceInTZS / 100) * 100;
+}
+
+/**
  * Formats a price by converting base TZS into the currently selected language's currency.
  * If TZS: rounds to nearest 100 or formats as whole number.
  * If USD/EUR/AED/CNY: converts based on exchange rate and formats with 2 decimal places.
@@ -15,7 +23,7 @@ export function formatPrice(priceInTZS: number): string {
 
   // Base Currency: TZS
   if (currentLanguage.currency === 'TZS') {
-    const roundedPrice = Math.round(priceInTZS / 100) * 100;
+    const roundedPrice = roundTZSPrice(priceInTZS);
     return roundedPrice.toLocaleString();
   }
 

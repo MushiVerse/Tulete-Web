@@ -1,4 +1,4 @@
-import { formatPrice } from '../../../shared/utils/formatPrice';
+import { formatPrice, roundTZSPrice } from '../../../shared/utils/formatPrice';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore, getStoreDeliveryFee, isLaundryItem, isFoodItem, isProductItem } from '../store/useCartStore';
@@ -159,7 +159,7 @@ export const CheckoutPage = () => {
           ? Math.round(computedDeliveryFee / numGroups)
           : getStoreDeliveryFee(group.items, selectedLocation);
         const groupExtraLaundryCharges = isLaundryGroup ? (expressFee + pickupFee + serviceFee) : 0;
-        const groupTotalAmount = Math.round(groupSubtotal + groupExtraLaundryCharges);
+        const groupTotalAmount = roundTZSPrice(groupSubtotal + groupExtraLaundryCharges);
 
         const orderPayload: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
           userId: user.id,
@@ -167,7 +167,7 @@ export const CheckoutPage = () => {
           uname: user.displayName || 'Web User',
           items: group.items.map(item => {
             const rowTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
-            const unitPrice = item.quantity > 0 ? Math.round(rowTotal / item.quantity) : item.price;
+            const unitPrice = item.quantity > 0 ? roundTZSPrice(rowTotal / item.quantity) : roundTZSPrice(item.price);
             
             const isPickUp = item.isDeliverySelected === false || (item as any).packagepickup === true;
             const isFd = isFoodItem(item);

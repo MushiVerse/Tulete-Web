@@ -4,6 +4,7 @@ import { BaseDocument } from '../../../core/services/types';
 import { useCartStore, isLaundryItem, isFoodItem, isProductItem } from '../../cart/store/useCartStore';
 import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp, updateDoc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
+import { roundTZSPrice } from '../../../shared/utils/formatPrice';
 
 export type OrderStatus = 
   | 'Pending'
@@ -200,7 +201,7 @@ class OrderService extends BaseFirestoreService<Order> {
    * are sent to 'newcomfirmedorders'.
    */
   override async create(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>, customId?: string): Promise<Order> {
-    const isLaundry = data.isLaundryOrder || (data.items && data.items.some(item => isLaundryItem(item)));
+    const isLaundry = data.isLaundryOrder || data.cat === 'Nguo' || (data.items && data.items.some(item => isLaundryItem(item)));
     
     const targetCollection = isLaundry ? 'orders' : 'newcomfirmedorders';
     
@@ -209,8 +210,11 @@ class OrderService extends BaseFirestoreService<Order> {
       : doc(collection(db, targetCollection));
 
     const nowTimeStr = getFlutterTime();
+
     const payload = removeUndefinedFields({
       ...data,
+      totalAmount: roundTZSPrice(data.totalAmount || 0),
+      items: data.items ? data.items.map(i => ({ ...i, price: roundTZSPrice(i.price) })) : data.items,
       status: data.status && data.status !== 'Pending' ? data.status : 'Order Placed',
       ordersts: data.ordersts || ['Order Placed'],
       orderststime: data.orderststime || [nowTimeStr],
@@ -597,8 +601,8 @@ class OrderService extends BaseFirestoreService<Order> {
         const totalLaundryCount = laundryItems.reduce((acc, item) => acc + item.quantity, 0);
         const calculatedItemSum = laundryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const finalLaundryPrice = (order.totalAmount && order.totalAmount > 0)
-          ? Math.round(order.totalAmount)
-          : Math.round(calculatedItemSum + (order.deliveryFee || 0));
+          ? roundTZSPrice(order.totalAmount)
+          : roundTZSPrice(calculatedItemSum + (order.deliveryFee || 0));
 
         const firstItem = laundryItems[0];
         const timestamp = String(Date.now() % 100000).padStart(5, '0');
