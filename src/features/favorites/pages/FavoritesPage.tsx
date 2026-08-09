@@ -717,22 +717,22 @@ export const FavoritesPage = () => {
                           const catalog = productService.getMockProducts('all');
                           const item = catalog.find((c) => c.id === f.itemId);
                           const combined = { ...item, ...f };
-                          
-                          const specificCat = resolveItemCategory(combined);
-                          const rawCat = String(f.category || f.cat || combined.category || combined.cat || specificCat || '').trim();
-                          const isLaundry = isLaundryItem(combined) || specificCat === 'Nguo' || specificCat === 'Laundry' || rawCat === 'Nguo' || rawCat === 'Laundry';
-                          const isFd = !isLaundry && (isFoodItem(combined) || specificCat === 'Food' || rawCat === 'Food' || rawCat.toLowerCase().includes('food'));
+
+                          const isLaundry = isLaundryItem(combined);
+                          const isFd = !isLaundry && isFoodItem(combined);
                           const isProd = !isLaundry && !isFd;
 
-                          const mainCat = isLaundry ? 'Nguo' : (isFd ? (rawCat || 'Food') : 'Product');
-                          const brandVal = String(f.brand || f.pbrand || f.FBrand || f.LBrand || combined.brand || '').trim();
+                          // Always use canonical category so CartPage renders the correct UI
+                          const canonicalCat = isLaundry ? 'Nguo' : (isFd ? 'Food' : 'Product');
+
+                          const brandVal = String(f.brand || f.pbrand || f.FBrand || f.LBrand || combined.brand || (item as any)?.brand || '').trim();
                           const finalStoreId = combined.storeId || combined.store || brandVal || item?.storeId || 's1';
                           const finalStoreName = combined.storeName || combined.store || brandVal || item?.store || 'Verified Partner';
 
                           const hour = new Date().getHours();
                           const isBrandNow = brandVal.toLowerCase() === 'now';
                           const defaultFoodSlot = isBrandNow ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
-                          const slot = isLaundry ? 'Laundry' : (isFd ? (combined.deliverySlot || defaultFoodSlot) : 'Product');
+                          const slot = isLaundry ? 'Laundry' : (isFd ? ((combined as any).deliverySlot || defaultFoodSlot) : 'Product');
 
                           addToCart({
                             productId: combined.itemId || combined.id || f.itemId,
@@ -744,8 +744,8 @@ export const FavoritesPage = () => {
                             storeId: finalStoreId,
                             storeName: finalStoreName,
                             brand: brandVal,
-                            category: mainCat,
-                            cat: mainCat,
+                            category: canonicalCat,
+                            cat: canonicalCat,
                             location: combined.location || item?.location,
                             idadi: combined.idadi || item?.idadi,
                             isLaundry,
@@ -860,15 +860,15 @@ export const FavoritesPage = () => {
                                 ) : (
                                   <button
                                     onClick={() => {
-                                      const specificCat = resolveItemCategory(item);
-                                      const docCat = item.category || item.cat || specificCat;
-                                      const isLaundry = isLaundryItem(item) || specificCat === 'Nguo' || specificCat === 'Laundry';
-                                      const isFd = !isLaundry && (isFoodItem(item) || specificCat === 'Food' || String(docCat || '').toLowerCase().includes('food'));
+                                      const isLaundry = isLaundryItem(item);
+                                      const isFd = !isLaundry && isFoodItem(item);
                                       const isProd = !isLaundry && !isFd;
-                                      const mainCat = isLaundry ? 'Nguo' : (isFd ? (docCat || 'Food') : 'Product');
+
+                                      // Always use canonical category so CartPage renders the correct UI
+                                      const canonicalCat = isLaundry ? 'Nguo' : (isFd ? 'Food' : 'Product');
 
                                       const hour = new Date().getHours();
-                                      const bVal = String(item.brand || item.store || '').toLowerCase().trim();
+                                      const bVal = String((item as any).brand || item.store || '').toLowerCase().trim();
                                       const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
                                       const slot = isLaundry ? 'Laundry' : (isFd ? ((item as any).deliverySlot || defaultFoodSlot) : 'Product');
 
@@ -881,15 +881,18 @@ export const FavoritesPage = () => {
                                         imageUrl: item.imgUrl,
                                         storeId: item.storeId,
                                         storeName: item.store,
-                                        category: mainCat,
-                                        cat: mainCat,
+                                        brand: (item as any).brand || (item as any).pbrand || '',
+                                        category: canonicalCat,
+                                        cat: canonicalCat,
                                         location: item.location,
                                         idadi: stockVal,
                                         maxQuantity: stockVal,
                                         isLaundry,
                                         isProduct: isProd,
                                         isFood: isFd,
+                                        washingSelected: isLaundry ? true : undefined,
                                         deliverySlot: slot,
+                                        isDeliverySelected: !isProd,
                                       });
                                     }}
                                     className="p-1.5 text-primary hover:bg-primary/10 rounded-full"
@@ -952,15 +955,15 @@ export const FavoritesPage = () => {
                   alert(`Bookmarked ${item.name}!`);
                 }}
                 onAddToCart={(item, finalPrice) => {
-                  const specificCat = resolveItemCategory(item);
-                  const docCat = item.category || item.cat || specificCat;
-                  const isLaundry = isLaundryItem(item) || specificCat === 'Nguo' || specificCat === 'Laundry';
-                  const isFd = !isLaundry && (isFoodItem(item) || specificCat === 'Food' || String(docCat || '').toLowerCase().includes('food'));
+                  const isLaundry = isLaundryItem(item);
+                  const isFd = !isLaundry && isFoodItem(item);
                   const isProd = !isLaundry && !isFd;
-                  const mainCat = isLaundry ? 'Nguo' : (isFd ? (docCat || 'Food') : 'Product');
+
+                  // Always use canonical category so CartPage renders the correct UI
+                  const canonicalCat = isLaundry ? 'Nguo' : (isFd ? 'Food' : 'Product');
 
                   const hour = new Date().getHours();
-                  const bVal = String(item.brand || item.store || '').toLowerCase().trim();
+                  const bVal = String((item as any).brand || (item as any).pbrand || item.store || '').toLowerCase().trim();
                   const defaultFoodSlot = bVal === 'now' ? 'ASAP' : (hour < 15 ? 'Lunch' : 'Dinner');
                   const slot = isLaundry ? 'Laundry' : (isFd ? ((item as any).deliverySlot || defaultFoodSlot) : 'Product');
 
@@ -973,14 +976,17 @@ export const FavoritesPage = () => {
                     imageUrl: item.imgUrl,
                     storeId: item.storeId,
                     storeName: item.store,
-                    category: mainCat,
-                    cat: mainCat,
+                    brand: (item as any).brand || (item as any).pbrand || '',
+                    category: canonicalCat,
+                    cat: canonicalCat,
                     location: item.location,
                     idadi: item.idadi,
                     isLaundry,
                     isProduct: isProd,
                     isFood: isFd,
+                    washingSelected: isLaundry ? true : undefined,
                     deliverySlot: slot,
+                    isDeliverySelected: !isProd,
                   });
                 }}
               />

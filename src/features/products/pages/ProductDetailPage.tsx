@@ -160,6 +160,16 @@ export const ProductDetailPage = () => {
   const { user, isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
 
+  // Subscribe to favorites store for real-time heart icon state
+  const { isFavorited, initialize: initFavorites } = useFavoritesStore();
+
+  // Initialize favorites store when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      initFavorites(user.id);
+    }
+  }, [isAuthenticated, user?.id]);
+
   // Fetch specific product using decoded ID
   const { data: product, isLoading, error } = useFirestoreDocument(['product', decodedId || id || ''], productService, decodedId || id || '');
 
@@ -212,6 +222,14 @@ export const ProductDetailPage = () => {
 
     const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', product.id);
 
+    // Sync from store first (instant, no network)
+    const storeHasFav = isFavorited(product.id);
+    if (storeHasFav) {
+      setIsFavorite(true);
+      return;
+    }
+
+    // Fallback: check Firestore directly
     getDoc(favDocRef)
       .then((docSnap) => {
         if (docSnap.exists()) {
@@ -228,7 +246,7 @@ export const ProductDetailPage = () => {
         }
       })
       .catch(() => {});
-  }, [isAuthenticated, user?.id, product?.id]);
+  }, [isAuthenticated, user?.id, product?.id, isFavorited]);
 
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {

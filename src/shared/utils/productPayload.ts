@@ -149,13 +149,16 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const storeName = String(product.storeName || extraFields.storeName || product.store || store || 'Verified Partner');
   const isLaundry = Boolean(product.isLaundry || extraFields.isLaundry || category === 'Nguo' || category === 'Laundry' || itemCat === 'Nguo' || itemCat === 'Laundry');
   const isFood = Boolean(product.isFood || extraFields.isFood || category === 'Food' || itemCat === 'Food');
+  const isProduct = !isLaundry && !isFood;
   
   const washingSelected = product.washingSelected ?? extraFields.washingSelected ?? true;
   const ironingSelected = product.ironingSelected ?? extraFields.ironingSelected ?? false;
   const packagingSelected = product.packagingSelected ?? extraFields.packagingSelected ?? false;
   const vipSelected = product.vipSelected ?? extraFields.vipSelected ?? false;
   
-  const deliverySlot = String(product.deliverySlot || extraFields.deliverySlot || 'ASAP');
+  // Default deliverySlot based on category to avoid misclassification
+  const defaultSlot = isLaundry ? 'Laundry' : (isFood ? 'ASAP' : 'Product');
+  const deliverySlot = String(product.deliverySlot || extraFields.deliverySlot || defaultSlot);
   const isDeliverySelected = product.isDeliverySelected ?? extraFields.isDeliverySelected ?? true;
   const packagepickup = product.packagepickup ?? extraFields.packagepickup ?? false;
 
@@ -176,6 +179,7 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
     storeName,
     isLaundry,
     isFood,
+    isProduct,
     washingSelected,
     ironingSelected,
     packagingSelected,
