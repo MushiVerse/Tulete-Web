@@ -1035,30 +1035,42 @@ export const StoreListingPage = () => {
                   className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
                 >
                   <AnimatePresence>
-                    {displayedStores.map((store) => (
-                      <StoreGridCard
-                        key={store.id}
-                        store={store}
-                        isFav={favorites.includes(store.id)}
-                        onFav={(e) => toggleFav(store.id, e)}
-                        onClick={() => navigate(`/store/${store.id}`)}
-                      />
-                    ))}
+                    {displayedStores.map((store) => {
+                      const sName = store.store || store.name;
+                      const sTargetId = (store.id && store.id !== 's1' && store.id !== 'Tulete Duka' && store.id !== 'Tulete Dobi') 
+                        ? store.id 
+                        : (sName || store.id || 's1');
+                      return (
+                        <StoreGridCard
+                          key={store.id}
+                          store={store}
+                          isFav={favorites.includes(store.id)}
+                          onFav={(e) => toggleFav(store.id, e)}
+                          onClick={() => navigate(`/store/${encodeURIComponent(sTargetId)}`, { state: { storeData: { ...store, store: sName || store.store } } })}
+                        />
+                      );
+                    })}
                   </AnimatePresence>
                 </motion.div>
               ) : (
                 /* ── List View ─ */
                 <div className="space-y-3">
                   <AnimatePresence>
-                    {displayedStores.map((store) => (
-                      <StoreListCard
-                        key={store.id}
-                        store={store}
-                        isFav={favorites.includes(store.id)}
-                        onFav={(e) => toggleFav(store.id, e)}
-                        onClick={() => navigate(`/store/${store.id}`)}
-                      />
-                    ))}
+                    {displayedStores.map((store) => {
+                      const sName = store.store || store.name;
+                      const sTargetId = (store.id && store.id !== 's1' && store.id !== 'Tulete Duka' && store.id !== 'Tulete Dobi') 
+                        ? store.id 
+                        : (sName || store.id || 's1');
+                      return (
+                        <StoreListCard
+                          key={store.id}
+                          store={store}
+                          isFav={favorites.includes(store.id)}
+                          onFav={(e) => toggleFav(store.id, e)}
+                          onClick={() => navigate(`/store/${encodeURIComponent(sTargetId)}`, { state: { storeData: { ...store, store: sName || store.store } } })}
+                        />
+                      );
+                    })}
                   </AnimatePresence>
                 </div>
               )}

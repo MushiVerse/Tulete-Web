@@ -50,6 +50,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../../shared/components/ui/Button';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
+import { locationService } from '../../location/services/locationService';
 import { DiscoveryMap } from '../components/DiscoveryMap';
 import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 import { formatPrice } from '../../../shared/utils/formatPrice';
@@ -405,21 +406,89 @@ export const DiscoveryPage = () => {
         return;
       }
 
-      // --- Standard path: Algolia for food / product / all / stores ---
+      // --- Stores path: query Firestore foodStores collection directly so ALL stores return ---
+      if (activeTab === 'stores') {
+        try {
+          const storesSnap = await getDocs(collection(db, 'foodStores'));
+          const firestoreStores = storesSnap.docs.map(doc => ({
+            id: doc.id,
+            objectID: doc.id,
+            recordType: 'store',
+            store: doc.data().store || doc.data().name || '',
+            name: doc.data().name || doc.data().store || '',
+            ...doc.data()
+          }));
+
+          let algoliaStores: any[] = [];
+          try {
+            algoliaStores = await searchTuleteItems(localQuery, {
+              filters: `recordType:store`,
+              hitsPerPage: 200,
+            });
+          } catch (_) {}
+
+          const storeMap = new Map<string, any>();
+          firestoreStores.forEach(s => storeMap.set(s.id, s));
+          algoliaStores.forEach(s => {
+            const sId = s.id || s.objectID;
+            if (sId && !storeMap.has(sId)) storeMap.set(sId, s);
+          });
+
+          let storesList = Array.from(storeMap.values());
+
+          if (localQuery.trim()) {
+            const q = localQuery.toLowerCase().trim();
+            storesList = storesList.filter(s =>
+              String(s.store || s.name || '').toLowerCase().includes(q) ||
+              String(s.category || s.cat || '').toLowerCase().includes(q) ||
+              String(s.address || '').toLowerCase().includes(q) ||
+              String(s.description || '').toLowerCase().includes(q)
+            );
+          }
+
+          // Calculate proximity distance from user's selected location and sort nearest stores first
+          if (currentLocation && typeof currentLocation.lat === 'number' && typeof currentLocation.lng === 'number') {
+            storesList = storesList.map((s) => {
+              let sLat = s.location?.lat ?? s.lat ?? s.latitude;
+              let sLng = s.location?.lng ?? s.lng ?? s.longitude;
+              if (typeof sLat === 'string') sLat = parseFloat(sLat);
+              if (typeof sLng === 'string') sLng = parseFloat(sLng);
+
+              const dist = (typeof sLat === 'number' && typeof sLng === 'number' && !isNaN(sLat) && !isNaN(sLng))
+                ? locationService.calculateDistance(
+                    { lat: currentLocation.lat, lng: currentLocation.lng },
+                    { lat: sLat, lng: sLng }
+                  )
+                : 99.9;
+
+              return { ...s, distance: dist };
+            });
+
+            // Sort stores nearest to selected location first
+            storesList.sort((a, b) => (a.distance ?? 99.9) - (b.distance ?? 99.9));
+          }
+
+          if (!controller.signal.aborted) {
+            setProducts(storesList);
+            setLoading(false);
+          }
+          return;
+        } catch (err) {
+          console.warn('Error fetching foodStores from Firestore for DiscoveryPage:', err);
+        }
+      }
+
+      // --- Standard path: Algolia for food / product / all ---
       let filterStr: string | undefined = undefined;
 
-      if (activeTab === 'stores') {
-        filterStr = `recordType:store`;
-      } else {
-        if (category && category !== 'all') {
-          if (catLower === 'food') {
-            filterStr = `(recordType:food OR category:"Food" OR _collection:foods) AND NOT recordType:store AND NOT recordType:brand`;
-          } else if (catLower === 'product') {
-            filterStr = `(recordType:product OR category:"Product" OR _collection:products) AND NOT recordType:store AND NOT recordType:brand`;
-          }
-        } else {
-          filterStr = `NOT recordType:store AND NOT recordType:brand`;
+      if (category && category !== 'all') {
+        if (catLower === 'food') {
+          filterStr = `(recordType:food OR category:"Food" OR _collection:foods) AND NOT recordType:store AND NOT recordType:brand`;
+        } else if (catLower === 'product') {
+          filterStr = `(recordType:product OR category:"Product" OR _collection:products) AND NOT recordType:store AND NOT recordType:brand`;
         }
+      } else {
+        filterStr = `NOT recordType:store AND NOT recordType:brand`;
       }
 
       // Only apply price as numeric filter (reliably indexed in Algolia)
@@ -448,7 +517,7 @@ export const DiscoveryPage = () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [localQuery, category, minPrice, maxPrice, isAvailableOnly, activeTab]);
+  }, [localQuery, category, minPrice, maxPrice, isAvailableOnly, activeTab, currentLocation?.lat, currentLocation?.lng]);
 
   const getRating = (item: any) => {
     let rating = 0;
@@ -896,12 +965,18 @@ export const DiscoveryPage = () => {
                             availability: item.availability !== undefined ? !!item.availability : true,
                             location
                           };
+                          const sName = storeData.store || storeData.name;
+                          const sTargetId = (storeData.id && storeData.id !== 's1' && storeData.id !== 'Tulete Duka' && storeData.id !== 'Tulete Dobi') 
+                            ? storeData.id 
+                            : (sName || storeData.id || 's1');
+
                           return (
                             <StoreCard
                               key={storeData.id}
                               store={storeData as any}
+                              distanceKm={item.distance !== undefined && item.distance !== 99.9 ? item.distance : undefined}
                               viewMode={viewMode}
-                              onClick={() => navigate(`/store/${storeData.id}`, { state: { storeData } })}
+                              onClick={() => navigate(`/store/${encodeURIComponent(sTargetId)}`, { state: { storeData: { ...storeData, store: sName || storeData.store } } })}
                             />
                           );
                         }

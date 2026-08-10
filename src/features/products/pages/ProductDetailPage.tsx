@@ -850,8 +850,15 @@ export const ProductDetailPage = () => {
 
               {/* Store Info */}
               {(() => {
-                const rawStoreId = displayProduct.storeId || (displayProduct as any).brand || (displayProduct as any).pbrand || (displayProduct as any).FBrand || (displayProduct as any).store;
-                const storeTargetId = rawStoreId && rawStoreId !== 'unknown' ? rawStoreId : 's1';
+                const storeName = displayProduct.store;
+                const storeBrand = (displayProduct as any).brand || (displayProduct as any).pbrand || (displayProduct as any).FBrand || (displayProduct as any).LBrand;
+                const storeId = displayProduct.storeId || (displayProduct as any).store_id || (displayProduct as any).brandId;
+
+                const isGenericId = !storeId || storeId === 's1' || storeId === 'unknown' || storeId === 'Tulete Duka' || storeId === 'Tulete Dobi';
+
+                const storeTargetId = (!isGenericId && storeId) 
+                  ? storeId 
+                  : (storeName || storeBrand || storeId || 's1');
 
                 let rawLat = (displayProduct as any)?.location?.lat ?? (displayProduct as any)?.lat ?? (displayProduct as any)?.latitude;
                 let rawLng = (displayProduct as any)?.location?.lng ?? (displayProduct as any)?.lng ?? (displayProduct as any)?.longitude;

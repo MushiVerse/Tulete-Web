@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -211,6 +212,7 @@ const StoreProductCardItem = ({
 };
 
 export const StoreDetailsPage = () => {
+  const queryClient = useQueryClient();
   const { isDark } = useThemeStore();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -269,6 +271,11 @@ export const StoreDetailsPage = () => {
   };
 
   const decodedId = id ? decodeURIComponent(id) : '';
+  const passedStoreData = location.state?.storeData || location.state?.store;
+
+  const rawStoreName = routeStoreData?.store || fromProduct?.store || passedStoreData?.store || (
+    decodedId && decodedId !== 's1' && decodedId !== 'Tulete Duka' && decodedId !== 'Tulete Dobi' && decodedId !== 'undefined' ? decodedId : ''
+  );
 
   const { data: dbStore, isLoading: isStoreDocLoading } = useFirestoreDocument(
     ['store', id || ''],
@@ -277,27 +284,31 @@ export const StoreDetailsPage = () => {
   );
   
   const { data: dbStoresByName, isLoading: isStoreQueryLoading } = useFirestoreQuery(
-    ['store_by_name', decodedId],
+    ['store_by_name', rawStoreName || decodedId],
     storeService,
     {
-      filters: decodedId ? [{ field: 'store', operator: '==' as const, value: decodedId }] : []
+      filters: rawStoreName 
+        ? [{ field: 'store', operator: '==' as const, value: rawStoreName }] 
+        : (decodedId && decodedId !== 's1' && decodedId !== 'Tulete Duka' && decodedId !== 'Tulete Dobi' ? [{ field: 'store', operator: '==' as const, value: decodedId }] : [])
     }
   );
   const dbStoreByName = dbStoresByName?.data && dbStoresByName.data.length > 0 ? dbStoresByName.data[0] : null;
 
+  const realDbStore = dbStore || dbStoreByName;
   const isStoreLoading = isStoreDocLoading || isStoreQueryLoading;
   const isCheckingRegistration = Boolean(isStoreLoading);
-  const isRegisteredInFoodStores = Boolean(dbStore || dbStoreByName);
+  const isRegisteredInFoodStores = Boolean(realDbStore);
 
   const mockMatch = storeService.getMockStores().find((s) => 
     s.id === id || s.id === decodedId || 
     s.store?.toLowerCase() === id?.toLowerCase() || 
-    s.store?.toLowerCase() === decodedId.toLowerCase()
+    s.store?.toLowerCase() === decodedId.toLowerCase() ||
+    (rawStoreName && s.store?.toLowerCase() === rawStoreName.toLowerCase())
   );
 
   const fallbackStore: Store = {
-    id: decodedId || 's1',
-    store: fromProduct?.store || (decodedId && decodedId !== 's1' && decodedId !== 'undefined' ? decodedId : 'Tulete Partner Store'),
+    id: (decodedId && decodedId !== 's1' && decodedId !== 'Tulete Duka' && decodedId !== 'Tulete Dobi') ? decodedId : (rawStoreName || 's1'),
+    store: rawStoreName || 'Tulete Partner Store',
     description: 'Welcome to our store! We provide high quality items with fast delivery.',
     imgURL: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
     ownerId: 'owner-1',
@@ -310,20 +321,29 @@ export const StoreDetailsPage = () => {
     isVerified: true
   };
 
-  const passedStoreData = location.state?.storeData || location.state?.store;
-  const baseStore = routeStoreData || dbStore || dbStoreByName || mockMatch || fallbackStore;
+  const baseStore = realDbStore || routeStoreData || mockMatch || fallbackStore;
+
+  const resolvedStoreId = realDbStore?.id || 
+    (routeStoreData?.id && routeStoreData.id !== 's1' && routeStoreData.id !== 'Tulete Duka' && routeStoreData.id !== 'Tulete Dobi' ? routeStoreData.id : undefined) ||
+    (id && id !== 's1' && id !== 'Tulete Duka' && id !== 'Tulete Dobi' ? decodedId : undefined) ||
+    rawStoreName ||
+    's1';
 
   const store: Store = {
     ...baseStore,
+    id: resolvedStoreId,
+    store: realDbStore?.store || routeStoreData?.store || fromProduct?.store || baseStore.store,
+    rating: realDbStore?.rating ?? baseStore.rating,
+    reviewCount: realDbStore?.reviewCount ?? baseStore.reviewCount,
+    rates: realDbStore?.rates ?? baseStore.rates,
     imgURL: passedStoreData?.imgURL || passedStoreData?.imgUrl || passedStoreData?.image || baseStore.imgURL || (baseStore as any)?.imgUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
     category: passedStoreData?.cat || passedStoreData?.category || baseStore.category || baseStore.cat || 'Food',
     cat: passedStoreData?.cat || passedStoreData?.category || baseStore.cat || baseStore.category || 'Food',
     availability: passedStoreData?.availability !== undefined ? Boolean(passedStoreData.availability) : baseStore.availability,
   };
 
-  const rawStoreName = store?.store || store?.name || fromProduct?.store || (decodedId && decodedId !== 's1' && decodedId !== 'undefined' ? decodedId : '');
-  const targetStoreName = rawStoreName.toLowerCase().trim();
-  const targetStoreId = (id || store?.id || fromProduct?.storeId || '').toLowerCase().trim();
+  const targetStoreName = (rawStoreName || store.store).toLowerCase().trim();
+  const targetStoreId = (resolvedStoreId || id || store?.id || fromProduct?.storeId || '').toLowerCase().trim();
 
   // Fetch Firestore collections for foods, products, and cloths according to specific store offering (matching store.dart logic)
   const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(
@@ -331,8 +351,7 @@ export const StoreDetailsPage = () => {
     productService,
     { 
       filters: [
-        { field: '_collection', operator: '==' as const, value: 'foods' },
-        ...(rawStoreName ? [{ field: 'store', operator: '==' as const, value: rawStoreName }] : [])
+        { field: '_collection', operator: '==' as const, value: 'foods' }
       ] 
     }
   );
@@ -341,8 +360,7 @@ export const StoreDetailsPage = () => {
     productService,
     { 
       filters: [
-        { field: '_collection', operator: '==' as const, value: 'products' },
-        ...(rawStoreName ? [{ field: 'store', operator: '==' as const, value: rawStoreName }] : [])
+        { field: '_collection', operator: '==' as const, value: 'products' }
       ] 
     }
   );
@@ -351,8 +369,7 @@ export const StoreDetailsPage = () => {
     productService,
     { 
       filters: [
-        { field: '_collection', operator: '==' as const, value: 'cloths' },
-        ...(rawStoreName ? [{ field: 'store', operator: '==' as const, value: rawStoreName }] : [])
+        { field: '_collection', operator: '==' as const, value: 'cloths' }
       ] 
     }
   );
@@ -707,7 +724,15 @@ export const StoreDetailsPage = () => {
       openModal('login');
       return;
     }
-    const storeIdToRate = store?.id || targetStoreId || id;
+
+    const isGeneric = (val?: string) => !val || val === 's1' || val === 'Tulete Duka' || val === 'Tulete Dobi' || val === 'unknown';
+
+    const storeIdToRate = realDbStore?.id || 
+      (!isGeneric(store?.id) ? store.id : undefined) || 
+      (!isGeneric(targetStoreId) ? targetStoreId : undefined) || 
+      (!isGeneric(id) ? decodedId : undefined) || 
+      rawStoreName;
+
     if (!storeIdToRate || isSubmittingStoreRating) return;
 
     setIsSubmittingStoreRating(true);
@@ -723,11 +748,16 @@ export const StoreDetailsPage = () => {
         const rawRates = data.rates;
         if (Array.isArray(rawRates)) {
           currentRates = rawRates.map(Number).filter((n) => !isNaN(n));
+        } else if (rawRates && typeof rawRates === 'object') {
+          currentRates = Object.values(rawRates).map(Number).filter((n) => !isNaN(n));
         }
       }
 
       const updatedRates = [...currentRates, stars];
       await setDoc(docRef, { rates: updatedRates }, { merge: true });
+
+      queryClient.invalidateQueries({ queryKey: ['store'] });
+      queryClient.invalidateQueries({ queryKey: ['store_by_name'] });
 
       toast.success('Thanks, Rated');
     } catch (err) {
