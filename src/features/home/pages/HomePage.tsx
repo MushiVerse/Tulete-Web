@@ -17,6 +17,7 @@ import { useAuthModalStore } from '../../auth/store/useAuthModalStore';
 import { useCartStore, isLaundryItem, isFoodItem } from '../../cart/store/useCartStore';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
+import { locationService } from '../../location/services/locationService';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { HorizontalCarousel } from '../../../shared/components/ui/HorizontalCarousel';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
@@ -256,6 +257,32 @@ const PROMOS = [
   }
 ];
 
+const parseStoreCoords = (s: any): { lat: number; lng: number } | null => {
+  if (!s) return null;
+
+  const strLoc = typeof s.location === 'string' ? s.location : (typeof s.loc === 'string' ? s.loc : undefined);
+  if (strLoc) {
+    const parts = strLoc.split(',');
+    if (parts.length >= 2) {
+      const pLat = parseFloat(parts[0].trim());
+      const pLng = parseFloat(parts[1].trim());
+      if (!isNaN(pLat) && !isNaN(pLng)) return { lat: pLat, lng: pLng };
+    }
+  }
+
+  let pLat = s.location?.lat ?? s.location?.latitude ?? s.lat ?? s.latitude;
+  let pLng = s.location?.lng ?? s.location?.longitude ?? s.lng ?? s.longitude;
+
+  if (typeof pLat === 'string') pLat = parseFloat(pLat);
+  if (typeof pLng === 'string') pLng = parseFloat(pLng);
+
+  if (typeof pLat === 'number' && typeof pLng === 'number' && !isNaN(pLat) && !isNaN(pLng)) {
+    return { lat: pLat, lng: pLng };
+  }
+
+  return null;
+};
+
 /*  Store Card  */
 const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
   store: Store & { distance?: number };
@@ -271,7 +298,7 @@ const FeaturedStoreCard = ({ store, onClick, isFav, onFav }: {
 
   return (
     <div onClick={onClick} className="w-full h-full cursor-pointer">
-      <StoreCard store={storeData as any} distanceKm={store.distance} />
+      <StoreCard store={storeData as any} distanceKm={store.distance !== undefined && store.distance !== 99.9 ? store.distance : undefined} />
     </div>
   );
 };
@@ -592,18 +619,28 @@ export const HomePage = () => {
   };
 
   const stores = storesData?.data || [];
-  const validStores = stores.filter(s => {
-    if (!s || !s.id || s.id === 'undefined' || s.id === 'null') return false;
-    const storeName = (s.store || s.name || '').trim();
-    if (!storeName || storeName === 'undefined' || storeName === 'null' || storeName === 'Store') return false;
-    if (storeName.toLowerCase().includes('dummy') || storeName.toLowerCase().includes('test store')) return false;
-    if (s.availability === false) return false;
-    if (currentLocation && s.location) {
-      const fee = getDeliveryFee(currentLocation, s.location, s.id, false, true);
-      if (fee > 10000) return false;
-    }
-    return true;
-  });
+  const validStores = stores
+    .filter(s => {
+      if (!s || !s.id || s.id === 'undefined' || s.id === 'null') return false;
+      const storeName = (s.store || s.name || '').trim();
+      if (!storeName || storeName === 'undefined' || storeName === 'null' || storeName === 'Store') return false;
+      if (storeName.toLowerCase().includes('dummy') || storeName.toLowerCase().includes('test store')) return false;
+      if (s.availability === false) return false;
+      return true;
+    })
+    .map(s => {
+      const coords = parseStoreCoords(s);
+      const dist = (currentLocation && coords && typeof currentLocation.lat === 'number' && typeof currentLocation.lng === 'number')
+        ? locationService.calculateDistance(
+            { lat: currentLocation.lat, lng: currentLocation.lng },
+            coords
+          )
+        : undefined;
+
+      return { ...s, distance: dist };
+    })
+    .filter(s => s.distance !== undefined && !isNaN(s.distance) && s.distance < 1.2)
+    .sort((a, b) => (a.distance ?? 99.9) - (b.distance ?? 99.9));
 
   // Randomize stores at data level using the 10-hour seed
   const processedStores = shuffleWithSeed(validStores, homeSeed + 400);
@@ -1135,12 +1172,17 @@ export const HomePage = () => {
               const hasMoreStores = filteredStoresNearMe.length > storeLimit;
 
               return (
-                <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
+                <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/stores">
                   {visibleStores.map((store) => (
                     <div key={`store-${store.id}`} className="w-[280px] sm:w-[320px] shrink-0">
                       <FeaturedStoreCard
                         store={store}
-                        onClick={() => navigate(`/store/${store.id}`)}
+                        onClick={() => {
+                          const storeName = store.store || store.name;
+                          const isGeneric = !store.id || store.id === 's1' || store.id === 'Tulete Duka' || store.id === 'Tulete Dobi' || store.id === 'unknown';
+                          const targetId = !isGeneric ? store.id : (storeName || store.id || 's1');
+                          navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData: { ...store, store: storeName } } });
+                        }}
                         isFav={favorites.includes(store.id)}
                         onFav={(e) => toggleFav(store.id, e)}
                       />

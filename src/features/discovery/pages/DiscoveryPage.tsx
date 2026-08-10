@@ -446,26 +446,53 @@ export const DiscoveryPage = () => {
             );
           }
 
-          // Calculate proximity distance from user's selected location and sort nearest stores first
+          // Calculate proximity distance from user's selected location and filter stores near the desired area
           if (currentLocation && typeof currentLocation.lat === 'number' && typeof currentLocation.lng === 'number') {
-            storesList = storesList.map((s) => {
-              let sLat = s.location?.lat ?? s.lat ?? s.latitude;
-              let sLng = s.location?.lng ?? s.lng ?? s.longitude;
-              if (typeof sLat === 'string') sLat = parseFloat(sLat);
-              if (typeof sLng === 'string') sLng = parseFloat(sLng);
+            const mappedStores = storesList.map((s) => {
+              let sLat: number | undefined = undefined;
+              let sLng: number | undefined = undefined;
 
-              const dist = (typeof sLat === 'number' && typeof sLng === 'number' && !isNaN(sLat) && !isNaN(sLng))
+              // Parse string location format "lat, lng" (e.g. "-6.18541, 35.7671293")
+              const strLoc = typeof s.location === 'string' ? s.location : (typeof s.loc === 'string' ? s.loc : undefined);
+              if (strLoc) {
+                const parts = strLoc.split(',');
+                if (parts.length >= 2) {
+                  const pLat = parseFloat(parts[0].trim());
+                  const pLng = parseFloat(parts[1].trim());
+                  if (!isNaN(pLat) && !isNaN(pLng)) {
+                    sLat = pLat;
+                    sLng = pLng;
+                  }
+                }
+              }
+
+              if (sLat === undefined || sLng === undefined) {
+                let pLat = s.location?.lat ?? s.location?.latitude ?? s.lat ?? s.latitude;
+                let pLng = s.location?.lng ?? s.location?.longitude ?? s.lng ?? s.longitude;
+                if (typeof pLat === 'string') pLat = parseFloat(pLat);
+                if (typeof pLng === 'string') pLng = parseFloat(pLng);
+                if (typeof pLat === 'number' && typeof pLng === 'number' && !isNaN(pLat) && !isNaN(pLng)) {
+                  sLat = pLat;
+                  sLng = pLng;
+                }
+              }
+
+              const hasValidCoords = sLat !== undefined && sLng !== undefined;
+
+              const dist = hasValidCoords
                 ? locationService.calculateDistance(
                     { lat: currentLocation.lat, lng: currentLocation.lng },
-                    { lat: sLat, lng: sLng }
+                    { lat: sLat!, lng: sLng! }
                   )
-                : 99.9;
+                : undefined;
 
               return { ...s, distance: dist };
             });
 
-            // Sort stores nearest to selected location first
-            storesList.sort((a, b) => (a.distance ?? 99.9) - (b.distance ?? 99.9));
+            // Return only stores that are less than 1 km (< 1.0 km) from selected address location
+            let nearbyStores = mappedStores.filter((s) => s.distance !== undefined && !isNaN(s.distance) && s.distance < 1.0);
+
+            storesList = nearbyStores.sort((a, b) => ((a.distance !== undefined ? a.distance : 99.9) - (b.distance !== undefined ? b.distance : 99.9)));
           }
 
           if (!controller.signal.aborted) {
