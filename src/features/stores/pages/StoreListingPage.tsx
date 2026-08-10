@@ -475,6 +475,9 @@ export const StoreListingPage = () => {
     e.stopPropagation();
     const storeName = st.store || st.name || '';
     const storeId = st.id || st.objectID || storeName;
+    const resolvedCat = (st.cat && st.cat !== 'Store') 
+      ? st.cat 
+      : ((st.category && st.category !== 'Store') ? st.category : (st.subCategory || st.mainCategory || 'Store'));
     const storePayload = {
       ...st,
       id: storeId,
@@ -482,8 +485,11 @@ export const StoreListingPage = () => {
       foodId: storeId,
       type: 'store',
       recordType: 'store',
-      category: 'Store',
-      cat: st.cat || st.category || 'Store',
+      category: st.category || st.cat || st.storeCategory || resolvedCat,
+      cat: st.cat || st.category || st.storeCategory || resolvedCat,
+      storeCategory: st.storeCategory || st.cat || st.category || resolvedCat,
+      subCategory: st.subCategory || st.subCat || resolvedCat,
+      subCat: st.subCat || st.subCategory || resolvedCat,
       store: storeName,
       name: storeName,
       description: st.description || '',

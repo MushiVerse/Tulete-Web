@@ -126,8 +126,9 @@ export const useFavoritesStore = create<FavoritesStore>()(
           const isStore = item?.type === 'store' || item?.recordType === 'store' || item?.category === 'Store' || item?.cat === 'Store';
           const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
           const resolvedImg = resolveImageUrl(item);
-          const resolvedCat = isStore ? 'Store' : resolveItemCategory(item);
+          const resolvedCat = resolveItemCategory(item);
           const storeName = item.store || item.name || item.title || 'Store';
+          const storeCategoryResolved = item.storeCategory || item.cat || item.category || item.subCategory || (isStore ? resolvedCat : '');
 
           const newFavorite: FavoriteItem = {
             id: targetItemId || `fav_${Date.now()}`,
@@ -138,9 +139,10 @@ export const useFavoritesStore = create<FavoritesStore>()(
             store: storeName,
             description: item.description || '',
             ...item,
-            category: isStore ? 'Store' : resolvedCat,
-            cat: isStore ? 'Store' : (item.cat || resolvedCat),
-            subCat: isStore ? 'Store' : (item.subCat || item.subCategory || resolvedCat),
+            storeCategory: storeCategoryResolved,
+            category: item.category || item.cat || storeCategoryResolved || (isStore ? 'Store' : resolvedCat),
+            cat: item.cat || item.category || storeCategoryResolved || resolvedCat,
+            subCat: item.subCat || item.subCategory || item.cat || item.category || resolvedCat,
             imageUrl: resolvedImg,
             imgURL: resolvedImg,
             rating: item.rating ?? normRating,
@@ -157,14 +159,22 @@ export const useFavoritesStore = create<FavoritesStore>()(
             try {
               const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
               const favPayload = buildCompleteProductPayload(
-                { ...item, name: isStore ? storeName : (item.name || storeName), rating: item.rating ?? normRating, reviewCount: item.reviewCount ?? normReviewCount },
+                { 
+                  ...item, 
+                  name: isStore ? storeName : (item.name || storeName), 
+                  rating: item.rating ?? normRating, 
+                  reviewCount: item.reviewCount ?? normReviewCount 
+                },
                 userId,
                 { 
                   foodId: targetItemId, 
+                  id: targetItemId,
                   fav: true, 
                   type: isStore ? 'store' : (item.type || 'product'),
-                  category: isStore ? 'Store' : (item.category || resolvedCat),
-                  cat: isStore ? 'Store' : (item.cat || resolvedCat),
+                  storeCategory: storeCategoryResolved,
+                  category: item.category || item.cat || storeCategoryResolved || (isStore ? 'Store' : resolvedCat),
+                  cat: item.cat || item.category || storeCategoryResolved || resolvedCat,
+                  subCat: item.subCat || item.subCategory || item.cat || item.category || resolvedCat,
                   store: storeName,
                   name: isStore ? storeName : (item.name || storeName),
                   rating: item.rating ?? normRating, 

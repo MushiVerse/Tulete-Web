@@ -276,7 +276,7 @@ export const StoreDetailsPage = () => {
   const decodedId = id ? decodeURIComponent(id) : '';
   const passedStoreData = location.state?.storeData || location.state?.store;
 
-  const rawStoreName = routeStoreData?.store || fromProduct?.store || passedStoreData?.store || (
+  const rawStoreName = routeStoreData?.store || fromProduct?.store || passedStoreData?.store || passedStoreData?.name || (
     decodedId && decodedId !== 's1' && decodedId !== 'Tulete Duka' && decodedId !== 'Tulete Dobi' && decodedId !== 'undefined' ? decodedId : ''
   );
 
@@ -298,7 +298,7 @@ export const StoreDetailsPage = () => {
   const dbStoreByName = dbStoresByName?.data && dbStoresByName.data.length > 0 ? dbStoresByName.data[0] : null;
 
   const realDbStore = dbStore || dbStoreByName;
-  const isStoreLoading = isStoreDocLoading || isStoreQueryLoading;
+  const isStoreLoading = (isStoreDocLoading || isStoreQueryLoading) && !routeStoreData && !passedStoreData;
   const isCheckingRegistration = Boolean(isStoreLoading);
   const isRegisteredInFoodStores = Boolean(realDbStore);
 
@@ -324,10 +324,11 @@ export const StoreDetailsPage = () => {
     isVerified: true
   };
 
-  const baseStore = realDbStore || routeStoreData || mockMatch || fallbackStore;
+  const baseStore = realDbStore || routeStoreData || passedStoreData || mockMatch || fallbackStore;
 
   const resolvedStoreId = realDbStore?.id || 
     (routeStoreData?.id && routeStoreData.id !== 's1' && routeStoreData.id !== 'Tulete Duka' && routeStoreData.id !== 'Tulete Dobi' ? routeStoreData.id : undefined) ||
+    (passedStoreData?.id && passedStoreData.id !== 's1' && passedStoreData.id !== 'Tulete Duka' && passedStoreData.id !== 'Tulete Dobi' ? passedStoreData.id : undefined) ||
     (id && id !== 's1' && id !== 'Tulete Duka' && id !== 'Tulete Dobi' ? decodedId : undefined) ||
     rawStoreName ||
     's1';
@@ -335,9 +336,9 @@ export const StoreDetailsPage = () => {
   const store: Store = {
     ...baseStore,
     id: resolvedStoreId,
-    store: realDbStore?.store || routeStoreData?.store || fromProduct?.store || baseStore.store,
-    rating: realDbStore?.rating ?? baseStore.rating,
-    reviewCount: realDbStore?.reviewCount ?? baseStore.reviewCount,
+    store: realDbStore?.store || routeStoreData?.store || passedStoreData?.store || passedStoreData?.name || fromProduct?.store || baseStore.store,
+    rating: realDbStore?.rating ?? passedStoreData?.rating ?? baseStore.rating,
+    reviewCount: realDbStore?.reviewCount ?? passedStoreData?.reviewCount ?? baseStore.reviewCount,
     rates: realDbStore?.rates ?? baseStore.rates,
     imgURL: passedStoreData?.imgURL || passedStoreData?.imgUrl || passedStoreData?.image || baseStore.imgURL || (baseStore as any)?.imgUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
     category: passedStoreData?.cat || passedStoreData?.category || baseStore.category || baseStore.cat || 'Food',
@@ -347,6 +348,72 @@ export const StoreDetailsPage = () => {
 
   const targetStoreName = (rawStoreName || store.store).toLowerCase().trim();
   const targetStoreId = (resolvedStoreId || id || store?.id || fromProduct?.storeId || '').toLowerCase().trim();
+
+  // Live Firestore document listener for store favorite state
+  const [liveStoreFav, setLiveStoreFav] = useState<boolean | null>(null);
+
+  const isGenericVal = (val?: string) => !val || val === 's1' || val === 'Tulete Duka' || val === 'Tulete Dobi' || val === 'unknown';
+  const effectiveStoreId = realDbStore?.id || (!isGenericVal(store?.id) ? store.id : undefined) || (!isGenericVal(targetStoreId) ? targetStoreId : undefined) || (!isGenericVal(id) ? decodedId : undefined) || rawStoreName;
+
+  useEffect(() => {
+    if (!user?.id || user.id === 'guest_user' || !effectiveStoreId) {
+      setLiveStoreFav(null);
+      return;
+    }
+
+    try {
+      const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', effectiveStoreId);
+      const unsub = onSnapshot(favDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setLiveStoreFav(data.fav !== false);
+        } else {
+          setLiveStoreFav(false);
+        }
+      }, (err) => {
+        console.warn('Error listening to store favorite document in StoreDetailsPage:', err);
+      });
+      return () => unsub();
+    } catch (_) {}
+  }, [user?.id, effectiveStoreId]);
+
+  const isFavorite = liveStoreFav !== null
+    ? liveStoreFav
+    : savedFavorites.some(
+        (f) => (f as any).fav !== false && (f.itemId === effectiveStoreId || f.id === effectiveStoreId || (f as any).foodId === effectiveStoreId || (f.store && f.store.toLowerCase() === rawStoreName.toLowerCase()))
+      );
+
+  // Toggle favorite matching Firestore userfavorites
+  const handleToggleFavorite = () => {
+    const targetName = realDbStore?.store || store.store || rawStoreName;
+    const resolvedStoreCat = (store.cat && store.cat !== 'Store') 
+      ? store.cat 
+      : (((store.category as string) && (store.category as string) !== 'Store') ? store.category : (fromProduct?.category || 'Food'));
+    const storePayload = {
+      ...realDbStore,
+      ...store,
+      id: effectiveStoreId,
+      itemId: effectiveStoreId,
+      foodId: effectiveStoreId,
+      type: 'store',
+      recordType: 'store',
+      category: store.category || realDbStore?.category || store.cat || realDbStore?.cat || store.storeCategory || realDbStore?.storeCategory || resolvedStoreCat,
+      cat: store.cat || realDbStore?.cat || store.category || realDbStore?.category || store.storeCategory || realDbStore?.storeCategory || resolvedStoreCat,
+      storeCategory: store.storeCategory || realDbStore?.storeCategory || store.cat || realDbStore?.cat || store.category || realDbStore?.category || resolvedStoreCat,
+      subCategory: store.subCategory || realDbStore?.subCategory || store.subCat || realDbStore?.subCat || resolvedStoreCat,
+      subCat: store.subCat || realDbStore?.subCat || store.subCategory || realDbStore?.subCategory || resolvedStoreCat,
+      store: targetName,
+      name: targetName,
+      description: store.description || realDbStore?.description || '',
+      imgURL: store.imgURL || store.image || store.imgUrl || realDbStore?.imgURL || '',
+      imageUrl: store.imgURL || store.image || store.imgUrl || realDbStore?.imgURL || '',
+      rating: store.rating || realDbStore?.rating || 4.8,
+      reviewCount: store.reviewCount || realDbStore?.reviewCount || 0,
+      location: store.location || realDbStore?.location || '',
+      availability: store.availability !== undefined ? store.availability : true,
+    };
+    toggleFavorite(user?.id || 'guest_user', storePayload);
+  };
 
   // Fetch Firestore collections for foods, products, and cloths according to specific store offering (matching store.dart logic)
   const { data: foodsData, isLoading: isFoodsLoading } = useFirestoreQuery(
@@ -692,65 +759,6 @@ export const StoreDetailsPage = () => {
       </PageContainer>
     );
   }
-
-  // Live Firestore document listener for store favorite state
-  const [liveStoreFav, setLiveStoreFav] = useState<boolean | null>(null);
-
-  const isGenericVal = (val?: string) => !val || val === 's1' || val === 'Tulete Duka' || val === 'Tulete Dobi' || val === 'unknown';
-  const effectiveStoreId = realDbStore?.id || (!isGenericVal(store?.id) ? store.id : undefined) || (!isGenericVal(targetStoreId) ? targetStoreId : undefined) || (!isGenericVal(id) ? decodedId : undefined) || rawStoreName;
-
-  useEffect(() => {
-    if (!user?.id || user.id === 'guest_user' || !effectiveStoreId) {
-      setLiveStoreFav(null);
-      return;
-    }
-
-    try {
-      const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', effectiveStoreId);
-      const unsub = onSnapshot(favDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setLiveStoreFav(data.fav !== false);
-        } else {
-          setLiveStoreFav(false);
-        }
-      }, (err) => {
-        console.warn('Error listening to store favorite document in StoreDetailsPage:', err);
-      });
-      return () => unsub();
-    } catch (_) {}
-  }, [user?.id, effectiveStoreId]);
-
-  const isFavorite = liveStoreFav !== null
-    ? liveStoreFav
-    : savedFavorites.some(
-        (f) => (f as any).fav !== false && (f.itemId === effectiveStoreId || f.id === effectiveStoreId || (f as any).foodId === effectiveStoreId || (f.store && f.store.toLowerCase() === rawStoreName.toLowerCase()))
-      );
-
-  // Toggle favorite matching Firestore userfavorites
-  const handleToggleFavorite = () => {
-    const targetName = realDbStore?.store || store.store || rawStoreName;
-    const storePayload = {
-      ...store,
-      id: effectiveStoreId,
-      itemId: effectiveStoreId,
-      foodId: effectiveStoreId,
-      type: 'store',
-      recordType: 'store',
-      category: 'Store',
-      cat: store.cat || store.category || 'Store',
-      store: targetName,
-      name: targetName,
-      description: store.description || '',
-      imgURL: store.imgURL || store.image || store.imgUrl || '',
-      imageUrl: store.imgURL || store.image || store.imgUrl || '',
-      rating: store.rating || 4.8,
-      reviewCount: store.reviewCount || 0,
-      location: store.location || '',
-      availability: store.availability !== undefined ? store.availability : true,
-    };
-    toggleFavorite(user?.id || 'guest_user', storePayload);
-  };
 
   // Share helper
   const handleShare = () => {

@@ -27,12 +27,17 @@ export interface Store extends BaseDocument {
   name?: string;
   description: string;
   imgURL: string;
+  image?: string;
+  imgUrl?: string;
+  imageUrl?: string;
   ownerId: string;
   rating: number;
   reviewCount: number;
-  category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides';
+  category: 'Food' | 'Laundry' | 'Electrical' | 'Beauty' | 'Rides' | string;
   cat?: string;
+  storeCategory?: string;
   subCategory?: string;
+  subCat?: string;
   mainCategory?: string;
   rates?: number[];
   availability: boolean;

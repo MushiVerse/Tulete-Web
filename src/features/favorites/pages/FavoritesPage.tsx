@@ -23,6 +23,77 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
+const resolveStoreCategory = (fav: any): string => {
+  if (!fav) return 'Store';
+
+  const candidates = [
+    fav.storeCategory,
+    fav.cat && fav.cat !== 'Store' ? fav.cat : null,
+    fav.category && fav.category !== 'Store' ? fav.category : null,
+    fav.subCategory,
+    fav.subCat,
+    fav.mainCategory,
+    fav.scat,
+    fav.speccat,
+  ];
+
+  for (const c of candidates) {
+    if (c && typeof c === 'string') {
+      const trimmed = c.trim();
+      const lower = trimmed.toLowerCase();
+      if (
+        trimmed.length > 0 &&
+        lower !== 'store' &&
+        lower !== 'stores' &&
+        lower !== 'product' &&
+        lower !== 'products' &&
+        lower !== 'all' &&
+        lower !== 'item'
+      ) {
+        return trimmed;
+      }
+    }
+  }
+
+  // Fallback: infer category from store name, product title, or description
+  const searchStr = `${fav.name || ''} ${fav.store || ''} ${fav.description || ''} ${fav.itemId || ''}`.toLowerCase();
+
+  if (searchStr.includes('laundry') || searchStr.includes('nguo') || searchStr.includes('dobi') || searchStr.includes('dry clean') || searchStr.includes('wash')) {
+    return 'Laundry';
+  }
+  if (
+    searchStr.includes('food') || searchStr.includes('diko') || searchStr.includes('restaurant') || 
+    searchStr.includes('cafe') || searchStr.includes('meal') || searchStr.includes('kitchen') || 
+    searchStr.includes('bakery') || searchStr.includes('bites') || searchStr.includes('pizza') || 
+    searchStr.includes('burger') || searchStr.includes('chapati') || searchStr.includes('fast food') || 
+    searchStr.includes('duka la chakula') || searchStr.includes('hotel')
+  ) {
+    return 'Food';
+  }
+  if (
+    searchStr.includes('electric') || searchStr.includes('electronics') || searchStr.includes('tech') || 
+    searchStr.includes('phone') || searchStr.includes('gadget') || searchStr.includes('simu') || 
+    searchStr.includes('solar') || searchStr.includes('hardware')
+  ) {
+    return 'Electrical';
+  }
+  if (
+    searchStr.includes('beauty') || searchStr.includes('cosmetics') || searchStr.includes('salon') || 
+    searchStr.includes('barber') || searchStr.includes('spa') || searchStr.includes('makeup') || 
+    searchStr.includes('hair')
+  ) {
+    return 'Beauty';
+  }
+  if (
+    searchStr.includes('supermarket') || searchStr.includes('mart') || searchStr.includes('grocery') || 
+    searchStr.includes('groceries') || searchStr.includes('duka')
+  ) {
+    return 'Supermarket';
+  }
+
+  return 'Store';
+};
+
 const FavoriteCardItem = ({
   fav,
   cartItems,
@@ -40,9 +111,21 @@ const FavoriteCardItem = ({
   onQuickView: (fav: any) => void;
   onNavigate: (fav: any) => void;
 }) => {
-  const specificCat = resolveItemCategory(fav);
-  const isLaundry = isLaundryItem(fav) || specificCat === 'Nguo' || specificCat === 'Laundry';
-  const isFood = isFoodItem(fav) || specificCat === 'Food';
+  const isStore = fav.type === 'store' || (fav as any).recordType === 'store' || (fav as any).category === 'Store' || (fav as any).cat === 'Store';
+
+  const formatStoreCat = (c?: string) => {
+    if (!c || c.trim() === '' || c.toLowerCase() === 'store') return 'Store';
+    const trimmed = c.trim();
+    if (trimmed.toLowerCase().includes('store')) return trimmed;
+    return `${trimmed} Store`;
+  };
+
+  const storeCatResolved = resolveStoreCategory(fav);
+  const storeBadgeText = formatStoreCat(storeCatResolved);
+  const rawStoreCat = fav.storeCategory || fav.category || fav.cat || (storeCatResolved !== 'Store' ? storeCatResolved : '');
+  const specificCat = isStore ? storeBadgeText : resolveItemCategory(fav);
+  const isLaundry = !isStore && (isLaundryItem(fav) || specificCat === 'Nguo' || specificCat === 'Laundry');
+  const isFood = !isStore && (isFoodItem(fav) || specificCat === 'Food');
   const itemCat = isLaundry ? 'Nguo' : (isFood ? 'Food' : specificCat);
 
   const dynamicPrice = useDynamicPrice(
@@ -57,23 +140,23 @@ const FavoriteCardItem = ({
   const cartItem = cartItems.find((i: any) => i.productId === fav.itemId || i.baseProductId === fav.itemId);
 
   const stockVal = fav.quantity !== undefined ? fav.quantity : (fav.idadi !== undefined ? fav.idadi : fav.maxQuantity);
-  const isSoldOut = (stockVal !== undefined && stockVal <= 0) || fav.availability === false;
+  const isSoldOut = !isStore && ((stockVal !== undefined && stockVal <= 0) || fav.availability === false);
 
   const { rating: normRating } = getNormalizedRating(fav);
   const displayRating = fav.rating && Number(fav.rating) > 0 ? Number(fav.rating) : normRating;
 
-  const badgeLabel = fav.type === 'store' 
-    ? 'Store' 
-    : (isLaundry || specificCat === 'Nguo' || String(specificCat).toLowerCase().includes('laundry') || String(specificCat).toLowerCase().includes('nguo')
-        ? 'Laundry'
-        : specificCat);
+  const badgeLabel = specificCat;
 
-  const badgeStyle = (badgeLabel === 'Laundry' || badgeLabel === 'Nguo' || badgeLabel.toLowerCase().includes('laundry') || isLaundry)
+  const badgeStyle = isStore
+    ? (storeCatResolved.toLowerCase().includes('laundry') || storeCatResolved.toLowerCase().includes('nguo'))
+      ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-extrabold'
+      : (storeCatResolved.toLowerCase().includes('food'))
+      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-extrabold'
+      : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-extrabold'
+    : (badgeLabel === 'Laundry' || badgeLabel === 'Nguo' || badgeLabel.toLowerCase().includes('laundry') || isLaundry)
     ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20' 
     : (badgeLabel === 'Food' || badgeLabel.toLowerCase().includes('food') || isFood)
     ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
-    : badgeLabel === 'Store' 
-    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' 
     : 'bg-primary/10 text-primary';
 
   return (
@@ -124,7 +207,7 @@ const FavoriteCardItem = ({
           {fav.name}
         </h3>
         <p className="text-[11px] text-muted-foreground line-clamp-1 mb-2">
-          {fav.description || 'Saved service shortcut'}
+          {fav.description || (isStore ? (rawStoreCat ? `${rawStoreCat} provider in Dodoma` : 'Verified partner store') : 'Saved service shortcut')}
         </p>
 
         <div className="flex justify-between items-center">
@@ -134,7 +217,7 @@ const FavoriteCardItem = ({
             </span>
           ) : (
             <span className="text-[10px] font-semibold text-emerald-500">
-              Dodoma Hub Verified
+              Hub Verified
             </span>
           )}
 
@@ -353,6 +436,7 @@ export const FavoritesPage = () => {
   
   // Tab states
   const [activeTab, setActiveTab] = useState<'favorites' | 'wishlists'>('favorites');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [favoriteTypeFilter, setFavoriteTypeFilter] = useState<'all' | 'store' | 'item'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'rating' | 'price_low' | 'price_high'>('recent');
@@ -404,23 +488,27 @@ export const FavoritesPage = () => {
           const data = docSnap.data();
           if (data.fav !== false) {
             const { rating: calculatedRating, reviewCount: calculatedReviewCount } = getNormalizedRating(data);
+            const isStoreDoc = data.type === 'store' || data.recordType === 'store' || data.category === 'Store' || data.cat === 'Store';
             const resolvedCat = resolveItemCategory(data);
+            const resolvedStoreCat = resolveStoreCategory(data);
+
             list.push({
               id: docSnap.id,
               itemId: data.foodId || data.id || docSnap.id,
               docId: docSnap.id,
               userId: user.id,
               type: data.type || (data.category === 'Store' ? 'store' : 'product'),
-              name: data.name || data.nam1 || 'Favorite Item',
+              name: data.name || data.nam1 || data.store || 'Favorite Item',
               description: data.description || data.desc || '',
               price: Number(data.price || data.price1 || 0),
               quantity: data.quantity ?? data.quanty ?? data.idadi ?? data.count,
               idadi: data.idadi ?? data.quantity ?? data.quanty,
               time: data.time || data.updatedAt || data.createdAt || '',
               ...(data as any),
-              category: resolvedCat,
-              cat: data.cat || resolvedCat,
-              subCat: data.subCat || data.subCategory || resolvedCat,
+              storeCategory: data.storeCategory || data.cat || data.category || data.subCategory || resolvedStoreCat,
+              category: data.category || data.cat || data.storeCategory || (isStoreDoc ? 'Store' : resolvedCat),
+              cat: data.cat || data.category || data.storeCategory || (isStoreDoc ? (resolvedStoreCat !== 'Store' ? resolvedStoreCat : 'Store') : (data.cat || data.category || resolvedCat)),
+              subCat: data.subCat || data.subCategory || data.cat || data.category || resolvedCat,
               imageUrl: resolveImageUrl(data),
               rating: calculatedRating,
               reviewCount: calculatedReviewCount,
@@ -469,12 +557,26 @@ export const FavoritesPage = () => {
       if (favoriteTypeFilter === 'store' && !isStoreType) return false;
       if (favoriteTypeFilter === 'item' && isStoreType) return false;
 
+      // Category filter (Food, Laundry, Electrical, Beauty)
+      if (selectedCategoryFilter !== 'all') {
+        const catTarget = selectedCategoryFilter.toLowerCase();
+        const storeCat = String(fav.cat || fav.category || fav.storeCategory || fav.subCategory || '').toLowerCase();
+        const itemCat = String(resolveItemCategory(fav)).toLowerCase();
+        const resStoreCat = String(resolveStoreCategory(fav)).toLowerCase();
+
+        const catMatches = storeCat.includes(catTarget) || itemCat.includes(catTarget) || resStoreCat.includes(catTarget) ||
+          (catTarget === 'laundry' && (storeCat.includes('nguo') || itemCat.includes('nguo') || resStoreCat.includes('nguo')));
+        
+        if (!catMatches) return false;
+      }
+
       // Search query
       const nameStr = String(fav.name || fav.store || '');
       const descStr = String(fav.description || '');
-      const nameMatch = nameStr.toLowerCase().includes(searchQuery.toLowerCase());
-      const descMatch = descStr.toLowerCase().includes(searchQuery.toLowerCase());
-      return nameMatch || descMatch;
+      const catStr = String(fav.cat || fav.category || '');
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      return nameStr.toLowerCase().includes(q) || descStr.toLowerCase().includes(q) || catStr.toLowerCase().includes(q);
     })
     .sort((a, b) => {
       if (sortBy === 'rating') {
@@ -610,31 +712,43 @@ export const FavoritesPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 items-center w-full md:w-auto justify-between md:justify-end">
-              {/* Type selector */}
+              {/* Type filter tabs: All, Stores, Items */}
               <div className="flex border border-border rounded-lg p-0.5 bg-muted text-[10px] font-bold">
                 <button
+                  type="button"
                   onClick={() => setFavoriteTypeFilter('all')}
-                  className={`px-3 py-1.5 rounded-md transition-all ${
-                    favoriteTypeFilter === 'all' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
+                  className={`px-3 py-1.5 rounded-md font-extrabold flex items-center gap-1 transition-all ${
+                    favoriteTypeFilter === 'all'
+                      ? 'bg-white dark:bg-slate-800 shadow-sm text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  All
+                  <Sparkles className="w-3 h-3" />
+                  <span>All ✨</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setFavoriteTypeFilter('store')}
-                  className={`px-3 py-1.5 rounded-md transition-all ${
-                    favoriteTypeFilter === 'store' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
+                  className={`px-3 py-1.5 rounded-md font-extrabold flex items-center gap-1 transition-all ${
+                    favoriteTypeFilter === 'store'
+                      ? 'bg-white dark:bg-slate-800 shadow-sm text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Stores
+                  <StoreIcon className="w-3 h-3" />
+                  <span>Stores 🏪</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setFavoriteTypeFilter('item')}
-                  className={`px-3 py-1.5 rounded-md transition-all ${
-                    favoriteTypeFilter === 'item' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-muted-foreground'
+                  className={`px-3 py-1.5 rounded-md font-extrabold flex items-center gap-1 transition-all ${
+                    favoriteTypeFilter === 'item'
+                      ? 'bg-white dark:bg-slate-800 shadow-sm text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Items
+                  <ShoppingCart className="w-3 h-3" />
+                  <span>Items 🛍️</span>
                 </button>
               </div>
 
