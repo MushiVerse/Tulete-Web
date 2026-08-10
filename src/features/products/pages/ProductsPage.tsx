@@ -383,6 +383,18 @@ export const ProductsPage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const { data: totalProductsSnap = [] } = useQuery({
+    queryKey: ['productsCollectionTotalCount'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'products'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
   // Filter logic
   const { data: productsData, isLoading } = useFirestoreQuery(
     ['products', 'page', activeCategory],
@@ -391,6 +403,7 @@ export const ProductsPage = () => {
   );
 
   const rawProducts = productsData?.data || [];
+  const totalProductsCount = totalProductsSnap.length > 0 ? totalProductsSnap.length : (rawProducts.length || 0);
   
   const { currentLocation } = useLocationStore();
 
@@ -754,9 +767,9 @@ export const ProductsPage = () => {
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  { value: '50k+', label: 'Products', icon: Tag },
-                  { value: '4.9★', label: 'Avg Rating', icon: Star },
-                  { value: 'Fast', label: 'Delivery', icon: Clock },
+                  { value: `${totalProductsCount || 0}+`, label: 'Products', icon: Tag },
+                  { value: '4.8★', label: 'Avg Rating', icon: Star },
+                  { value: 'Next Day', label: 'Delivery', icon: Clock },
                   { value: '24/7', label: 'Support', icon: Phone },
                 ].map(({ value, label, icon: Icon }) => (
                   <div key={label} className="flex items-center gap-3">

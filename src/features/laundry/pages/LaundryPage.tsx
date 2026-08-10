@@ -29,8 +29,8 @@ import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 
 const STATS = [
-  { value: '50+', label: 'Local Cleaners', icon: Shirt },
-  { value: '4.9★', label: 'Avg Rating', icon: Star },
+  { value: '5', label: 'Local Cleaners', icon: Shirt },
+  { value: '4.8★', label: 'Avg Rating', icon: Star },
   { value: '2hrs', label: 'Express Pickup', icon: Zap },
   { value: '24/7', label: 'Support', icon: Phone },
 ];

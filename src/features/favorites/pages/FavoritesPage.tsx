@@ -465,12 +465,15 @@ export const FavoritesPage = () => {
   const filteredFavorites = activeFavorites
     .filter((fav) => {
       // Category type filter
-      if (favoriteTypeFilter === 'store' && fav.type !== 'store') return false;
-      if (favoriteTypeFilter === 'item' && fav.type === 'store') return false;
+      const isStoreType = fav.type === 'store' || (fav as any).recordType === 'store' || (fav as any).category === 'Store' || (fav as any).cat === 'Store';
+      if (favoriteTypeFilter === 'store' && !isStoreType) return false;
+      if (favoriteTypeFilter === 'item' && isStoreType) return false;
 
       // Search query
-      const nameMatch = fav.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const descMatch = fav.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const nameStr = String(fav.name || fav.store || '');
+      const descStr = String(fav.description || '');
+      const nameMatch = nameStr.toLowerCase().includes(searchQuery.toLowerCase());
+      const descMatch = descStr.toLowerCase().includes(searchQuery.toLowerCase());
       return nameMatch || descMatch;
     })
     .sort((a, b) => {
@@ -694,8 +697,12 @@ export const FavoritesPage = () => {
                         updateQuantity={updateQuantity}
                         onRemove={handleRemove}
                         onQuickView={(f) => {
-                          if (f.type === 'store') {
-                            navigate(`/store/${f.itemId}`);
+                          const isStore = f.type === 'store' || (f as any).recordType === 'store' || (f as any).category === 'Store';
+                          if (isStore) {
+                            const storeName = f.store || f.name;
+                            const isGeneric = !f.itemId || f.itemId === 's1' || f.itemId === 'Tulete Duka' || f.itemId === 'Tulete Dobi' || f.itemId === 'unknown';
+                            const targetId = !isGeneric ? f.itemId : (storeName || f.itemId || 's1');
+                            navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData: { ...f, store: storeName } } });
                           } else {
                             const catalog = productService.getMockProducts('all');
                             const item = catalog.find((c) => c.id === f.itemId);
@@ -707,8 +714,12 @@ export const FavoritesPage = () => {
                           }
                         }}
                         onNavigate={(f) => {
-                          if (f.type === 'store') {
-                            navigate(`/store/${f.itemId}`);
+                          const isStore = f.type === 'store' || (f as any).recordType === 'store' || (f as any).category === 'Store';
+                          if (isStore) {
+                            const storeName = f.store || f.name;
+                            const isGeneric = !f.itemId || f.itemId === 's1' || f.itemId === 'Tulete Duka' || f.itemId === 'Tulete Dobi' || f.itemId === 'unknown';
+                            const targetId = !isGeneric ? f.itemId : (storeName || f.itemId || 's1');
+                            navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData: { ...f, store: storeName } } });
                           } else {
                             navigate(`/product/${encodeURIComponent(f.itemId)}`);
                           }

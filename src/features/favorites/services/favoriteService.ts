@@ -36,50 +36,8 @@ class FavoriteService extends BaseFirestoreService<FavoriteItem> {
   /**
    * Return initial high-fidelity mock favorites for offline-ready demonstrations
    */
-  getMockFavorites(userId: string): FavoriteItem[] {
-    return [
-      {
-        id: 'fav_store_mama_safi',
-        userId,
-        type: 'store',
-        itemId: 's1',
-        name: 'Mama Safi Laundry',
-        description: 'Professional laundry, dry cleaning, and fabric care services in Dodoma, Tanzania.',
-        imageUrl: 'https://images.unsplash.com/photo-1545173168-9f1947eebd01?w=300',
-        rating: 4.8,
-        reviewCount: 120,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      },
-      {
-        id: 'fav_prod_chapati',
-        userId,
-        type: 'product',
-        itemId: 'p3',
-        name: 'Soft Layered Chapati',
-        description: 'Warm, soft layered traditional chapatis (Pack of 5).',
-        imageUrl: 'https://images.unsplash.com/photo-1626132647523-66f5bf380027?w=300',
-        price: 150,
-        rating: 4.9,
-        reviewCount: 220,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      },
-      {
-        id: 'fav_serv_ironing',
-        userId,
-        type: 'service',
-        itemId: 'p2',
-        name: 'Executive Suit Ironing',
-        description: 'Gentle steam pressing and creasing for suits, jackets, and corporate attire.',
-        imageUrl: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=300',
-        price: 450,
-        rating: 4.7,
-        reviewCount: 95,
-        createdAt: new Date(Date.now() - 1000 * 60 * 30),
-        updatedAt: new Date(Date.now() - 1000 * 60 * 30),
-      }
-    ];
+  getMockFavorites(_userId: string): FavoriteItem[] {
+    return [];
   }
 
   /**

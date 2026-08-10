@@ -27,7 +27,7 @@ import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { locationService } from '../../location/services/locationService';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { toast } from 'sonner';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
@@ -248,12 +248,15 @@ export const StoreDetailsPage = () => {
   const [storeHoverRating, setStoreHoverRating] = useState<number>(0);
   const [isSubmittingStoreRating, setIsSubmittingStoreRating] = useState(false);
 
-  // Local persistence for favorites
-  const [isFavorite, setIsFavorite] = useState(() => {
-    const saved = localStorage.getItem('tulete_favorite_stores');
-    const list = saved ? JSON.parse(saved) : [];
-    return list.includes(id || '');
-  });
+  // Store user & favorites state
+  const { user } = useAuthStore();
+  const { favorites: savedFavorites, toggleFavorite } = useFavoritesStore();
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem('tulete_favorite_stores');
+    } catch (_) {}
+  }, []);
 
   const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const { total: cartTotal } = getTotals();
@@ -690,17 +693,63 @@ export const StoreDetailsPage = () => {
     );
   }
 
-  // Toggle favorite
-  const handleToggleFavorite = () => {
-    const saved = localStorage.getItem('tulete_favorite_stores');
-    let list = saved ? JSON.parse(saved) : [];
-    if (isFavorite) {
-      list = list.filter((storeId: string) => storeId !== id);
-    } else {
-      list.push(id || '');
+  // Live Firestore document listener for store favorite state
+  const [liveStoreFav, setLiveStoreFav] = useState<boolean | null>(null);
+
+  const isGenericVal = (val?: string) => !val || val === 's1' || val === 'Tulete Duka' || val === 'Tulete Dobi' || val === 'unknown';
+  const effectiveStoreId = realDbStore?.id || (!isGenericVal(store?.id) ? store.id : undefined) || (!isGenericVal(targetStoreId) ? targetStoreId : undefined) || (!isGenericVal(id) ? decodedId : undefined) || rawStoreName;
+
+  useEffect(() => {
+    if (!user?.id || user.id === 'guest_user' || !effectiveStoreId) {
+      setLiveStoreFav(null);
+      return;
     }
-    localStorage.setItem('tulete_favorite_stores', JSON.stringify(list));
-    setIsFavorite(!isFavorite);
+
+    try {
+      const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', effectiveStoreId);
+      const unsub = onSnapshot(favDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setLiveStoreFav(data.fav !== false);
+        } else {
+          setLiveStoreFav(false);
+        }
+      }, (err) => {
+        console.warn('Error listening to store favorite document in StoreDetailsPage:', err);
+      });
+      return () => unsub();
+    } catch (_) {}
+  }, [user?.id, effectiveStoreId]);
+
+  const isFavorite = liveStoreFav !== null
+    ? liveStoreFav
+    : savedFavorites.some(
+        (f) => (f as any).fav !== false && (f.itemId === effectiveStoreId || f.id === effectiveStoreId || (f as any).foodId === effectiveStoreId || (f.store && f.store.toLowerCase() === rawStoreName.toLowerCase()))
+      );
+
+  // Toggle favorite matching Firestore userfavorites
+  const handleToggleFavorite = () => {
+    const targetName = realDbStore?.store || store.store || rawStoreName;
+    const storePayload = {
+      ...store,
+      id: effectiveStoreId,
+      itemId: effectiveStoreId,
+      foodId: effectiveStoreId,
+      type: 'store',
+      recordType: 'store',
+      category: 'Store',
+      cat: store.cat || store.category || 'Store',
+      store: targetName,
+      name: targetName,
+      description: store.description || '',
+      imgURL: store.imgURL || store.image || store.imgUrl || '',
+      imageUrl: store.imgURL || store.image || store.imgUrl || '',
+      rating: store.rating || 4.8,
+      reviewCount: store.reviewCount || 0,
+      location: store.location || '',
+      availability: store.availability !== undefined ? store.availability : true,
+    };
+    toggleFavorite(user?.id || 'guest_user', storePayload);
   };
 
   // Share helper

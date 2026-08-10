@@ -427,6 +427,26 @@ export const FoodPage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const { data: foodStoresList = [] } = useQuery({
+    queryKey: ['foodStoresCountFoodPage'],
+    queryFn: async () => {
+      try {
+        const snap = await getDocs(collection(db, 'foodStores'));
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  const foodStoresCount = React.useMemo(() => {
+    const matching = foodStoresList.filter((s: any) => {
+      const cat = String(s.category || s.mainCategory || s.cat || s.type || '').toLowerCase();
+      return cat.includes('food') || cat.includes('kitchen') || cat.includes('restaurant');
+    });
+    return matching.length > 0 ? matching.length : foodStoresList.length;
+  }, [foodStoresList]);
+
   // Filter logic
   const { data: foodsData, isLoading } = useFirestoreQuery(
     ['foods', 'page', activeCategory],
@@ -777,7 +797,7 @@ export const FoodPage = () => {
               <h2 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-foreground">Service Stats</h2>
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  { value: '100+', label: 'Local Kitchens', icon: ShoppingBag, onClick: undefined },
+                  { value: `${foodStoresCount || 0}+`, label: 'Local Kitchens', icon: ShoppingBag, onClick: undefined },
                   { value: '4.8★', label: 'Avg Rating', icon: Star, onClick: undefined },
                   { value: '30min', label: 'Fast Delivery', icon: Clock, onClick: undefined },
                   { 

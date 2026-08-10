@@ -15,10 +15,12 @@ import {
   Navigation, Clock, TrendingUp, Tag, ChevronDown, Phone, ArrowRight, Bell, ChevronRight
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
+import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
+import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { HelpSafetyWidget } from '@/shared/components/HelpSafetyWidget';
 import { SocialLinksWidget } from '@/shared/components/SocialLinksWidget';
 import { PlatformStatsWidget } from '@/shared/components/PlatformStatsWidget';
@@ -420,18 +422,79 @@ export const StoreListingPage = () => {
     (searchParams.get('sort') as any) || 'rating'
   );
 
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    const s = localStorage.getItem('tulete_favorite_stores');
-    return s ? JSON.parse(s) : [];
-  });
+  const { user } = useAuthStore();
+  const { favorites: savedFavorites, initialize: initFavorites, toggleFavorite } = useFavoritesStore();
+  const [liveFavMap, setLiveFavMap] = useState<Record<string, boolean>>({});
 
-  const toggleFav = (storeId: string, e: React.MouseEvent) => {
+  useEffect(() => {
+    if (user?.id) {
+      initFavorites(user.id);
+    }
+  }, [user?.id, initFavorites]);
+
+  // Live Firestore subscription directly listening to userfavorites documents
+  useEffect(() => {
+    if (!user?.id || user.id === 'guest_user') {
+      setLiveFavMap({});
+      return;
+    }
+
+    try {
+      const favsRef = collection(db, 'userfavorites', user.id, 'favorites');
+      const unsub = onSnapshot(favsRef, (snap) => {
+        const map: Record<string, boolean> = {};
+        snap.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          const isFavActive = data.fav !== false;
+          const targetId = data.foodId || data.id || docSnap.id;
+          if (targetId) map[String(targetId)] = isFavActive;
+          if (data.store) map[String(data.store).toLowerCase()] = isFavActive;
+          if (data.name) map[String(data.name).toLowerCase()] = isFavActive;
+        });
+        setLiveFavMap(map);
+      }, (err) => {
+        console.warn('Error listening to userfavorites in StoreListingPage:', err);
+      });
+      return () => unsub();
+    } catch (_) {}
+  }, [user?.id]);
+
+  const isStoreFav = (stId: string, stName?: string) => {
+    const normId = String(stId || '');
+    const normName = stName ? String(stName).toLowerCase() : '';
+
+    if (liveFavMap[normId] !== undefined) return liveFavMap[normId];
+    if (normName && liveFavMap[normName] !== undefined) return liveFavMap[normName];
+
+    return savedFavorites.some(
+      (f) => (f as any).fav !== false && (f.itemId === stId || f.id === stId || (f as any).foodId === stId || (stName && (f.name === stName || f.store === stName)))
+    );
+  };
+
+  const handleStoreFav = (st: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = favorites.includes(storeId)
-      ? favorites.filter(id => id !== storeId)
-      : [...favorites, storeId];
-    setFavorites(updated);
-    localStorage.setItem('tulete_favorite_stores', JSON.stringify(updated));
+    const storeName = st.store || st.name || '';
+    const storeId = st.id || st.objectID || storeName;
+    const storePayload = {
+      ...st,
+      id: storeId,
+      itemId: storeId,
+      foodId: storeId,
+      type: 'store',
+      recordType: 'store',
+      category: 'Store',
+      cat: st.cat || st.category || 'Store',
+      store: storeName,
+      name: storeName,
+      description: st.description || '',
+      imgURL: st.imgURL || st.image || st.imgUrl || '',
+      imageUrl: st.imgURL || st.image || st.imgUrl || '',
+      rating: st.rating || 4.8,
+      reviewCount: st.reviewCount || 0,
+      location: st.location || '',
+      availability: st.availability !== undefined ? st.availability : true,
+    };
+    toggleFavorite(user?.id || 'guest_user', storePayload);
   };
 
   const { data: storesData, isLoading } = useFirestoreQuery(
@@ -1044,8 +1107,8 @@ export const StoreListingPage = () => {
                         <StoreGridCard
                           key={store.id}
                           store={store}
-                          isFav={favorites.includes(store.id)}
-                          onFav={(e) => toggleFav(store.id, e)}
+                          isFav={isStoreFav(store.id, store.store || store.name)}
+                          onFav={(e) => handleStoreFav(store, e)}
                           onClick={() => navigate(`/store/${encodeURIComponent(sTargetId)}`, { state: { storeData: { ...store, store: sName || store.store } } })}
                         />
                       );
@@ -1065,8 +1128,8 @@ export const StoreListingPage = () => {
                         <StoreListCard
                           key={store.id}
                           store={store}
-                          isFav={favorites.includes(store.id)}
-                          onFav={(e) => toggleFav(store.id, e)}
+                          isFav={isStoreFav(store.id, store.store || store.name)}
+                          onFav={(e) => handleStoreFav(store, e)}
                           onClick={() => navigate(`/store/${encodeURIComponent(sTargetId)}`, { state: { storeData: { ...store, store: sName || store.store } } })}
                         />
                       );

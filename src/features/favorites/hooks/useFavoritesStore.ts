@@ -123,20 +123,24 @@ export const useFavoritesStore = create<FavoritesStore>()(
           }
         } else {
           // Optimistic add
+          const isStore = item?.type === 'store' || item?.recordType === 'store' || item?.category === 'Store' || item?.cat === 'Store';
           const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
           const resolvedImg = resolveImageUrl(item);
-          const resolvedCat = resolveItemCategory(item);
+          const resolvedCat = isStore ? 'Store' : resolveItemCategory(item);
+          const storeName = item.store || item.name || item.title || 'Store';
+
           const newFavorite: FavoriteItem = {
             id: targetItemId || `fav_${Date.now()}`,
             userId: userId || 'guest_user',
-            type: item.type || 'product',
+            type: isStore ? 'store' : (item.type || 'product'),
             itemId: targetItemId || `item_${Date.now()}`,
-            name: item.name || item.title || '',
+            name: isStore ? storeName : (item.name || item.title || ''),
+            store: storeName,
             description: item.description || '',
             ...item,
-            category: resolvedCat,
-            cat: item.cat || resolvedCat,
-            subCat: item.subCat || item.subCategory || resolvedCat,
+            category: isStore ? 'Store' : resolvedCat,
+            cat: isStore ? 'Store' : (item.cat || resolvedCat),
+            subCat: isStore ? 'Store' : (item.subCat || item.subCategory || resolvedCat),
             imageUrl: resolvedImg,
             imgURL: resolvedImg,
             rating: item.rating ?? normRating,
@@ -153,9 +157,19 @@ export const useFavoritesStore = create<FavoritesStore>()(
             try {
               const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
               const favPayload = buildCompleteProductPayload(
-                { ...item, rating: item.rating ?? normRating, reviewCount: item.reviewCount ?? normReviewCount },
+                { ...item, name: isStore ? storeName : (item.name || storeName), rating: item.rating ?? normRating, reviewCount: item.reviewCount ?? normReviewCount },
                 userId,
-                { foodId: targetItemId, fav: true, rating: item.rating ?? normRating, reviewCount: item.reviewCount ?? normReviewCount }
+                { 
+                  foodId: targetItemId, 
+                  fav: true, 
+                  type: isStore ? 'store' : (item.type || 'product'),
+                  category: isStore ? 'Store' : (item.category || resolvedCat),
+                  cat: isStore ? 'Store' : (item.cat || resolvedCat),
+                  store: storeName,
+                  name: isStore ? storeName : (item.name || storeName),
+                  rating: item.rating ?? normRating, 
+                  reviewCount: item.reviewCount ?? normReviewCount 
+                }
               );
               await setDoc(favDocRef, favPayload, { merge: true });
             } catch (err) {
@@ -194,7 +208,13 @@ export const useFavoritesStore = create<FavoritesStore>()(
 
       isFavorited: (itemId) => {
         if (!itemId) return false;
-        return get().favorites.some((f) => f.itemId === itemId || f.id === itemId || (f as any).foodId === itemId);
+        const target = String(itemId).toLowerCase().trim();
+        return get().favorites.some((f) => {
+          if ((f as any).fav === false) return false;
+          const fId = String(f.itemId || f.id || (f as any).foodId || '').toLowerCase().trim();
+          const fStore = String(f.store || f.name || '').toLowerCase().trim();
+          return fId === target || (fStore && fStore === target);
+        });
       },
 
       createWishlist: (userId, name, description) => {
