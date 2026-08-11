@@ -32,6 +32,57 @@ const getTimeValue = (item: any): number => {
 
   return 0;
 };
+
+const getItemSearchableText = (item: any): string => {
+  if (!item || typeof item !== 'object') return '';
+  const fields = [
+    item.name, item.title, item.nam1, item.nameEn, item.nameSw, item.item_name, item.product_name,
+    item.description, item.desc, item.details, item.detail,
+    item.store, item.storeName, item.store_name, item.vendorName, item.businessName,
+    item.category, item.cat, item.mainCategory, item.subCat, item.subCategory, item.subcat, item.scat, item.speccat,
+    item.address, item.location,
+    Array.isArray(item.tags) ? item.tags.join(' ') : item.tags,
+    Array.isArray(item.keywords) ? item.keywords.join(' ') : item.keywords,
+  ];
+  return fields.filter(Boolean).map(v => String(v).toLowerCase()).join(' ');
+};
+
+const matchesSearchQuery = (item: any, query: string): boolean => {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return true;
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  const searchableText = getItemSearchableText(item);
+  return tokens.every(token => searchableText.includes(token));
+};
+
+const getSearchRelevanceScore = (item: any, query: string): number => {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return 0;
+
+  const name = String(item.name || item.title || item.nam1 || item.store || item.storeName || '').toLowerCase().trim();
+  if (name === trimmed) return 1000;
+  if (name.startsWith(trimmed)) return 500;
+  if (name.includes(trimmed)) return 200;
+
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  let score = 0;
+  for (const token of tokens) {
+    if (name.includes(token)) score += 60;
+  }
+
+  const desc = String(item.description || item.desc || '').toLowerCase();
+  if (desc.includes(trimmed)) score += 30;
+
+  const store = String(item.store || item.storeName || item.store_name || '').toLowerCase();
+  if (store.includes(trimmed)) score += 20;
+
+  const cat = String(item.category || item.cat || item.subCat || item.subCategory || '').toLowerCase();
+  if (cat.includes(trimmed)) score += 15;
+
+  return score;
+};
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Filter, Grid, List, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map as MapIcon, Store, Heart, ExternalLink } from 'lucide-react';
@@ -181,11 +232,15 @@ export const DiscoveryPage = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlTab = urlParams.get('tab');
+    const urlQuery = urlParams.get('q') || urlParams.get('search') || urlParams.get('query');
     const isMapParam = urlParams.get('map') === 'true' || urlParams.get('view') === 'map';
     const stateShowMap = (location.state as any)?.showMap;
 
     if (urlTab === 'stores') {
       setActiveTab('stores');
+    }
+    if (urlQuery && urlQuery !== localQuery) {
+      setLocalQuery(urlQuery);
     }
     if (isMapParam || stateShowMap) {
       setShowMap(true);
@@ -306,13 +361,7 @@ export const DiscoveryPage = () => {
           let laundryList = Array.from(combinedMap.values());
 
           if (localQuery.trim()) {
-            const q = localQuery.toLowerCase().trim();
-            laundryList = laundryList.filter((item: any) =>
-              String(item.name || '').toLowerCase().includes(q) ||
-              String(item.description || '').toLowerCase().includes(q) ||
-              String(item.store || '').toLowerCase().includes(q) ||
-              String(item.category || '').toLowerCase().includes(q)
-            );
+            laundryList = laundryList.filter((item: any) => matchesSearchQuery(item, localQuery));
           }
 
           // Sort descending by time field directly at retrieval data level
@@ -385,14 +434,7 @@ export const DiscoveryPage = () => {
 
           // Apply text search on top if user is typing
           const textFiltered = localQuery.trim()
-            ? matched.filter(item => {
-                const q = localQuery.toLowerCase().trim();
-                return (
-                  String(item.name || '').toLowerCase().includes(q) ||
-                  String(item.description || '').toLowerCase().includes(q) ||
-                  String(item.store || '').toLowerCase().includes(q)
-                );
-              })
+            ? matched.filter((item: any) => matchesSearchQuery(item, localQuery))
             : matched;
 
           if (!controller.signal.aborted) {
@@ -437,13 +479,7 @@ export const DiscoveryPage = () => {
           let storesList = Array.from(storeMap.values());
 
           if (localQuery.trim()) {
-            const q = localQuery.toLowerCase().trim();
-            storesList = storesList.filter(s =>
-              String(s.store || s.name || '').toLowerCase().includes(q) ||
-              String(s.category || s.cat || '').toLowerCase().includes(q) ||
-              String(s.address || '').toLowerCase().includes(q) ||
-              String(s.description || '').toLowerCase().includes(q)
-            );
+            storesList = storesList.filter((s: any) => matchesSearchQuery(s, localQuery));
           }
 
           // Calculate proximity distance from user's selected location and filter stores near the desired area
@@ -676,7 +712,13 @@ export const DiscoveryPage = () => {
         return 0;
       }
 
-      // Most Popular (default) — highest rating first, then most reviews, then newest
+      // Most Popular / Search Relevance (default) — prioritize search relevance when query is active
+      if (localQuery.trim()) {
+        const scoreA = getSearchRelevanceScore(a, localQuery);
+        const scoreB = getSearchRelevanceScore(b, localQuery);
+        if (scoreA !== scoreB) return scoreB - scoreA;
+      }
+
       const ratingInfoA = getRating(a);
       const ratingInfoB = getRating(b);
       const ratingDiff = ratingInfoB.rating - ratingInfoA.rating;
