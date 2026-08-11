@@ -65,7 +65,7 @@ export const TopNav = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 transition-all pointer-events-auto">
+    <header className={`sticky top-0 ${isMobileMenuOpen ? 'z-[60]' : 'z-50'} w-full border-b border-border/20 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 transition-all pointer-events-auto`}>
       <div className="flex h-16 w-full items-center justify-between px-4 md:px-8 max-w-[1600px] mx-auto">
 
         {/* Left: Logo & Main Links */}
@@ -255,7 +255,7 @@ export const TopNav = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden absolute top-full left-0 right-0 border-t border-border bg-card shadow-2xl overflow-visible z-50 max-h-[calc(100vh-4rem)] overflow-y-auto"
+            className="md:hidden absolute top-full left-0 right-0 border-t border-border bg-card shadow-2xl overflow-visible z-[60] max-h-[calc(100vh-4rem)] overflow-y-auto"
           >
             <nav className="flex flex-col p-4 gap-2">
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname === '/' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Home</Link>

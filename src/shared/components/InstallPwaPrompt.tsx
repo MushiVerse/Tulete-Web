@@ -11,26 +11,57 @@ export const InstallPwaPrompt: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    // Clear any previously stored dismissal so prompt opens on every visit
-    localStorage.removeItem('tulete_pwa_dismissed');
+    let isCancelled = false;
 
-    // 1. Check if already running in standalone mode (installed)
-    const isStandalone = 
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://');
+    const checkInstallation = async () => {
+      // 1. Check media queries and standalone display modes (Desktop & Mobile)
+      const isStandaloneMedia = window.matchMedia('(display-mode: standalone)').matches;
+      const isFullscreenMedia = window.matchMedia('(display-mode: fullscreen)').matches;
+      const isMinimalUiMedia = window.matchMedia('(display-mode: minimal-ui)').matches;
+      const isIosStandalone = (window.navigator as any).standalone === true;
+      const isAndroidApp = document.referrer.includes('android-app://');
+      const isLocalInstalled = localStorage.getItem('tulete_pwa_installed') === 'true';
 
-    if (isStandalone) {
-      setIsInstalled(true);
-      return;
-    }
+      if (isStandaloneMedia || isFullscreenMedia || isMinimalUiMedia || isIosStandalone || isAndroidApp || isLocalInstalled) {
+        if (!isCancelled) setIsInstalled(true);
+        return true;
+      }
 
-    // 2. Detect iOS Safari
-    const ua = window.navigator.userAgent;
-    const isIosDevice = /iphone|ipad|ipod/i.test(ua) && !(window as any).MSStream;
-    setIsIOS(isIosDevice);
+      // 2. Check navigator.getInstalledRelatedApps API (Chrome/Edge Desktop & Mobile)
+      if ('getInstalledRelatedApps' in navigator) {
+        try {
+          const relatedApps = await (navigator as any).getInstalledRelatedApps();
+          if (Array.isArray(relatedApps) && relatedApps.length > 0) {
+            localStorage.setItem('tulete_pwa_installed', 'true');
+            if (!isCancelled) setIsInstalled(true);
+            return true;
+          }
+        } catch (e) {
+          // Ignore error
+        }
+      }
 
-    // 3. Handle Chrome/Android/Desktop beforeinstallprompt event
+      return false;
+    };
+
+    checkInstallation().then((alreadyInstalled) => {
+      if (alreadyInstalled || isCancelled) return;
+
+      // Detect iOS Safari
+      const ua = window.navigator.userAgent;
+      const isIosDevice = /iphone|ipad|ipod/i.test(ua) && !(window as any).MSStream;
+      setIsIOS(isIosDevice);
+
+      // On iOS Safari (where beforeinstallprompt is not supported), show helper after delay
+      if (isIosDevice) {
+        const iosTimer = setTimeout(() => {
+          if (!isCancelled) setShowPrompt(true);
+        }, 2000);
+        return () => clearTimeout(iosTimer);
+      }
+    });
+
+    // 3. Listen for Chrome / Edge / Android beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -41,18 +72,14 @@ export const InstallPwaPrompt: React.FC = () => {
       setIsInstalled(true);
       setShowPrompt(false);
       setDeferredPrompt(null);
+      localStorage.setItem('tulete_pwa_installed', 'true');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Show prompt after a brief delay every time the site is opened
-    const timer = setTimeout(() => {
-      setShowPrompt(true);
-    }, 1000);
-
     return () => {
-      clearTimeout(timer);
+      isCancelled = true;
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
@@ -64,6 +91,7 @@ export const InstallPwaPrompt: React.FC = () => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setIsInstalled(true);
+        localStorage.setItem('tulete_pwa_installed', 'true');
       }
       setDeferredPrompt(null);
       setShowPrompt(false);

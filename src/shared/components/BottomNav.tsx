@@ -29,7 +29,7 @@ export const BottomNav = () => {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-6 left-4 right-4 h-16 bg-card/95 backdrop-blur-xl border border-border rounded-3xl flex items-center justify-around z-50 shadow-2xl shadow-black/10 dark:shadow-black/50 px-2">
+    <div className="md:hidden fixed bottom-6 left-4 right-4 h-16 bg-card/95 backdrop-blur-xl border border-border rounded-3xl flex items-center justify-around z-40 shadow-2xl shadow-black/10 dark:shadow-black/50 px-2">
       {mobileNavigation
         .filter((item) => item.show)
         .map((item) => (
