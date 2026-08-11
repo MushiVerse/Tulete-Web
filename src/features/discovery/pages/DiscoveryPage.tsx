@@ -297,8 +297,8 @@ export const DiscoveryPage = () => {
           });
 
           const combinedMap = new Map<string, any>();
-          firestoreCloths.forEach(item => combinedMap.set(item.id, item));
-          algoliaHits.forEach(item => {
+          firestoreCloths.forEach((item: any) => combinedMap.set(item.id, item));
+          algoliaHits.forEach((item: any) => {
             const id = item.id || item.objectID;
             if (id && !combinedMap.has(id)) combinedMap.set(id, item);
           });
@@ -307,7 +307,7 @@ export const DiscoveryPage = () => {
 
           if (localQuery.trim()) {
             const q = localQuery.toLowerCase().trim();
-            laundryList = laundryList.filter(item =>
+            laundryList = laundryList.filter((item: any) =>
               String(item.name || '').toLowerCase().includes(q) ||
               String(item.description || '').toLowerCase().includes(q) ||
               String(item.store || '').toLowerCase().includes(q) ||
