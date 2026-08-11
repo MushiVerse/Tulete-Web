@@ -92,8 +92,50 @@ export function resolveItemCategory(item: any): string {
 }
 
 /**
+ * Safely resolves all image URLs from any document data structure.
+ * Preserves multi-image arrays (especially for Product items) so mobile carousels show all images.
+ */
+export function resolveAllImageUrls(data: any): string | string[] {
+  if (!data) return 'https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media';
+
+  const candidates: string[] = [];
+
+  const add = (val: any) => {
+    if (!val) return;
+    if (typeof val === 'string' && val.trim().length > 0) {
+      if (!candidates.includes(val.trim())) candidates.push(val.trim());
+    } else if (Array.isArray(val)) {
+      val.forEach((item: any) => {
+        if (typeof item === 'string' && item.trim().length > 0) {
+          if (!candidates.includes(item.trim())) candidates.push(item.trim());
+        }
+      });
+    }
+  };
+
+  add(data.imgURL);
+  add(data.images);
+  add(data.imgUrl);
+  add(data.img1);
+  add(data.imageUrl);
+  add(data.image);
+  add(data.photo);
+  add(data.pic);
+  add(data.url);
+
+  if (candidates.length > 1) {
+    return candidates;
+  }
+  if (candidates.length === 1) {
+    return candidates[0];
+  }
+
+  return 'https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media';
+}
+
+/**
  * Builds a complete, non-empty Firestore payload for userViewed and userfavorites collections.
- * Ensures every single one of the 17 required fields has a valid, non-empty value.
+ * Ensures every single required field has a valid, non-empty value.
  */
 export function buildCompleteProductPayload(product: any, userId: string, extraFields: Record<string, any> = {}) {
   const foodId = String(product.id || product.foodId || extraFields.foodId || 'unknown_product');
@@ -101,7 +143,7 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const price = Number(product.price ?? product.price1 ?? extraFields.price ?? 0);
   
   const combinedObj = { ...product, ...extraFields };
-  const imgURL = resolveImageUrl(combinedObj);
+  const imgURL = resolveAllImageUrls(combinedObj);
 
   const brand = String(product.brand || product.pbrand || product.store || extraFields.brand || 'Tulete Store');
   
@@ -122,7 +164,6 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   } else if (rawLoc) {
     formattedLoc = String(rawLoc);
   }
-  if (!formattedLoc) formattedLoc = 'Dodoma, Tanzania';
 
   const description = String(product.description || product.desc || extraFields.description || 'Quality product available on Tulete.');
   
@@ -162,12 +203,13 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const isProduct = !isLaundry && !isFood;
   
   // Category string exact match for Flutter client (Product, food, Nguo)
-  const flutterCat = isLaundry ? 'Nguo' : (isFood ? 'food' : 'Product');
+  const flutterCategory = isLaundry ? 'Nguo' : (isFood ? 'food' : 'Product');
+  const flutterCat = isLaundry ? 'Nguo' : (isFood ? 'food' : (extraFields.cat || product.cat || subCat || 'Product'));
 
   // Format location as valid numeric lat,lng string so Flutter's double.parse(split(',')) never fails
   let validCoordinatesLoc = '';
-  if (typeof rawLoc === 'string' && rawLoc.includes(',')) {
-    const parts = rawLoc.split(',');
+  if (typeof formattedLoc === 'string' && formattedLoc.includes(',')) {
+    const parts = formattedLoc.split(',');
     const p0 = parseFloat(parts[0]);
     const p1 = parseFloat(parts[1]);
     if (!isNaN(p0) && !isNaN(p1)) {
@@ -199,7 +241,7 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const isDeliverySelected = product.isDeliverySelected ?? extraFields.isDeliverySelected ?? true;
   const packagepickup = product.packagepickup ?? extraFields.packagepickup ?? false;
 
-  return {
+  const basePayload = {
     uid: uids,
     userId: uids,
     foodId,
@@ -211,8 +253,6 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
     brand,
     location: validCoordinatesLoc,
     description,
-    category: flutterCat,
-    cat: flutterCat,
     subCat,
     subSubCat,
     store,
@@ -240,6 +280,12 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
     rate: rates,
     time: timeStr,
     ...extraFields,
+  };
+
+  return {
+    ...basePayload,
+    category: flutterCategory, // Strictly 'Product', 'food', or 'Nguo' (Case-sensitive for Flutter getcurrentcount query)
+    cat: flutterCat,
   };
 }
 
