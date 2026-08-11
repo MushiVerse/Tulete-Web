@@ -252,11 +252,6 @@ export const StoreDetailsPage = () => {
   const { user } = useAuthStore();
   const { favorites: savedFavorites, toggleFavorite } = useFavoritesStore();
 
-  useEffect(() => {
-    try {
-      localStorage.removeItem('tulete_favorite_stores');
-    } catch (_) {}
-  }, []);
 
   const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const { total: cartTotal } = getTotals();

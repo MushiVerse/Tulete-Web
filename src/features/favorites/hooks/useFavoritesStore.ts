@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { favoriteService, FavoriteItem, WishlistCollection } from '../services/favoriteService';
 import { db } from '../../../core/firebase/config';
 import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
@@ -27,325 +26,320 @@ interface FavoritesStore {
 let firestoreUnsubscribe: (() => void) | null = null;
 
 export const useFavoritesStore = create<FavoritesStore>()(
-  persist(
-    (set, get) => ({
-      favorites: [],
-      wishlists: [],
-      initialized: false,
-      activeUserId: null,
+  (set, get) => ({
+    favorites: [],
+    wishlists: [],
+    initialized: false,
+    activeUserId: null,
 
-      initialize: (userId) => {
-        if (!userId) return;
-        if (get().activeUserId === userId && get().initialized) return;
+    initialize: (userId) => {
+      if (!userId) return;
+      if (get().activeUserId === userId && get().initialized) return;
 
-        // Clean up any previous listener
-        if (firestoreUnsubscribe) {
-          firestoreUnsubscribe();
-          firestoreUnsubscribe = null;
-        }
+      // Clean up any previous listener
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+        firestoreUnsubscribe = null;
+      }
 
-        set({ activeUserId: userId, initialized: true });
+      set({ activeUserId: userId, initialized: true });
 
-        if (userId !== 'guest_user') {
-          try {
-            const favsRef = collection(db, 'userfavorites', userId, 'favorites');
-            const storesRef = collection(db, 'userfavorites', userId, 'stores');
+      if (userId !== 'guest_user') {
+        try {
+          const favsRef = collection(db, 'userfavorites', userId, 'favorites');
+          const storesRef = collection(db, 'userfavorites', userId, 'stores');
 
-            let favDocs: any[] = [];
-            let storeDocs: any[] = [];
+          let favDocs: any[] = [];
+          let storeDocs: any[] = [];
 
-            const updateStoreState = () => {
-              const itemsMap = new Map<string, FavoriteItem>();
+          const updateStoreState = () => {
+            const itemsMap = new Map<string, FavoriteItem>();
 
-              const parseDoc = (docSnap: any) => {
-                const data = docSnap.data();
-                if (data.fav !== false) {
-                  // Exempt Laundry items from userFavorites
-                  if (isLaundryItem(data)) return;
+            const parseDoc = (docSnap: any) => {
+              const data = docSnap.data();
+              if (data.fav !== false) {
+                // Exempt Laundry items from userFavorites
+                if (isLaundryItem(data)) return;
 
-                  const targetId = data.foodId || data.id || docSnap.id;
-                  const { rating, reviewCount } = getNormalizedRating(data);
-                  const resolvedImg = resolveImageUrl(data);
-                  const resolvedCat = resolveItemCategory(data);
-                  const isStoreDoc = data.type === 'store' || data.recordType === 'store' || data.category === 'Store' || data.cat === 'Store';
-                  itemsMap.set(docSnap.id, {
-                    id: docSnap.id,
-                    userId,
-                    type: (data.type as any) || (isStoreDoc ? 'store' : 'product'),
-                    itemId: targetId,
-                    name: data.name || data.nam1 || data.store || 'Favorite Item',
-                    description: data.description || '',
-                    price: Number(data.price || 0),
-                    rating,
-                    reviewCount,
-                    location: data.location || data.productloc || '',
-                    storeId: data.storeId || data.store || data.brand || '',
-                    store: data.store || data.brand || '',
-                    quantity: data.quantity ?? data.quanty ?? data.idadi ?? data.count,
-                    idadi: data.idadi ?? data.quantity ?? data.quanty,
-                    createdAt: data.time ? new Date(data.time) : new Date(),
-                    updatedAt: data.time ? new Date(data.time) : new Date(),
-                    ...(data as any),
-                    category: resolvedCat,
-                    cat: data.cat || resolvedCat,
-                    subCat: data.subCat || data.subCategory || resolvedCat,
-                    imageUrl: resolvedImg,
-                    imgURL: resolvedImg,
-                  });
-                }
-              };
-
-              favDocs.forEach(parseDoc);
-              storeDocs.forEach(parseDoc);
-
-              set({ favorites: Array.from(itemsMap.values()) });
-            };
-
-            const unsubFavs = onSnapshot(favsRef, (snapshot) => {
-              favDocs = snapshot.docs;
-              updateStoreState();
-            }, (err) => {
-              console.warn('Error listening to userfavorites/favorites:', err);
-            });
-
-            const unsubStores = onSnapshot(storesRef, (snapshot) => {
-              storeDocs = snapshot.docs;
-              updateStoreState();
-            }, (err) => {
-              console.warn('Error listening to userfavorites/stores:', err);
-            });
-
-            firestoreUnsubscribe = () => {
-              unsubFavs();
-              unsubStores();
-            };
-          } catch (e) {
-            console.warn('Firestore subscription failed in useFavoritesStore:', e);
-          }
-        } else {
-          const mockFavs = favoriteService.getMockFavorites(userId);
-          const mockWishes = favoriteService.getMockWishlists(userId);
-          set({
-            favorites: mockFavs,
-            wishlists: mockWishes,
-          });
-        }
-      },
-
-      toggleFavorite: async (userId, item: any) => {
-        const current = get().favorites;
-        const targetItemId = String(item?.itemId || item?.id || item?.foodId || item?.objectID || '').trim();
-        if (!targetItemId) return;
-        const exists = current.find((f) => f.itemId === targetItemId || f.id === targetItemId || (f as any).foodId === targetItemId || (f as any).objectID === targetItemId);
-
-        if (exists) {
-          // Optimistic remove
-          set({
-            favorites: current.filter((f) => f.itemId !== targetItemId && f.id !== targetItemId && (f as any).foodId !== targetItemId && (f as any).objectID !== targetItemId),
-          });
-
-          if (userId && userId !== 'guest_user') {
-            try {
-              const isStore = exists.type === 'store' || (exists as any).recordType === 'store' || (exists as any).category === 'Store' || (exists as any).cat === 'Store';
-              if (isStore) {
-                const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
-                await updateDoc(storeDocRef, { fav: false }).catch(async () => {
-                  await deleteDoc(storeDocRef);
-                });
-              } else {
-                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
-                await updateDoc(favDocRef, { fav: false }).catch(async () => {
-                  await deleteDoc(favDocRef);
+                const targetId = data.foodId || data.id || docSnap.id;
+                const { rating, reviewCount } = getNormalizedRating(data);
+                const resolvedImg = resolveImageUrl(data);
+                const resolvedCat = resolveItemCategory(data);
+                const isStoreDoc = data.type === 'store' || data.recordType === 'store' || data.category === 'Store' || data.cat === 'Store';
+                itemsMap.set(docSnap.id, {
+                  id: docSnap.id,
+                  userId,
+                  type: (data.type as any) || (isStoreDoc ? 'store' : 'product'),
+                  itemId: targetId,
+                  name: data.name || data.nam1 || data.store || 'Favorite Item',
+                  description: data.description || '',
+                  price: Number(data.price || 0),
+                  rating,
+                  reviewCount,
+                  location: data.location || data.productloc || '',
+                  storeId: data.storeId || data.store || data.brand || '',
+                  store: data.store || data.brand || '',
+                  quantity: data.quantity ?? data.quanty ?? data.idadi ?? data.count,
+                  idadi: data.idadi ?? data.quantity ?? data.quanty,
+                  createdAt: data.time ? new Date(data.time) : new Date(),
+                  updatedAt: data.time ? new Date(data.time) : new Date(),
+                  ...(data as any),
+                  category: resolvedCat,
+                  cat: data.cat || resolvedCat,
+                  subCat: data.subCat || data.subCategory || resolvedCat,
+                  imageUrl: resolvedImg,
+                  imgURL: resolvedImg,
                 });
               }
-            } catch (err) {
-              console.error('Error removing favorite from Firestore userfavorites:', err);
-            }
-          }
-        } else {
-          // Exempt Laundry items from being added to userFavorites
-          if (isLaundryItem(item)) {
-            console.info('Laundry items are exempt from userFavorites.');
-            return;
-          }
+            };
 
-          // Optimistic add
-          const isStore = item?.type === 'store' || item?.recordType === 'store' || item?.category === 'Store' || item?.cat === 'Store';
-          const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
-          const resolvedImg = resolveImageUrl(item);
-          const resolvedCat = resolveItemCategory(item);
-          const storeName = item.store || item.name || item.title || 'Store';
-          const storeCategoryResolved = item.storeCategory || item.cat || item.category || item.subCategory || (isStore ? resolvedCat : '');
+            favDocs.forEach(parseDoc);
+            storeDocs.forEach(parseDoc);
 
-          const newFavorite: FavoriteItem = {
-            id: targetItemId || `fav_${Date.now()}`,
-            userId: userId || 'guest_user',
-            type: isStore ? 'store' : (item.type || 'product'),
-            itemId: targetItemId || `item_${Date.now()}`,
-            name: isStore ? storeName : (item.name || item.title || ''),
-            store: storeName,
-            description: item.description || '',
-            ...item,
-            storeCategory: storeCategoryResolved,
-            category: item.category || item.cat || storeCategoryResolved || (isStore ? 'Store' : resolvedCat),
-            cat: item.cat || item.category || storeCategoryResolved || resolvedCat,
-            subCat: item.subCat || item.subCategory || item.cat || item.category || resolvedCat,
-            imageUrl: resolvedImg,
-            imgURL: resolvedImg,
-            rating: item.rating ?? normRating,
-            reviewCount: item.reviewCount ?? normReviewCount,
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            set({ favorites: Array.from(itemsMap.values()) });
           };
 
-          set({
-            favorites: [...current, newFavorite],
+          const unsubFavs = onSnapshot(favsRef, (snapshot) => {
+            favDocs = snapshot.docs;
+            updateStoreState();
+          }, (err) => {
+            console.warn('Error listening to userfavorites/favorites:', err);
           });
 
-          if (userId && userId !== 'guest_user') {
-            try {
-              const favPayload = buildCompleteProductPayload(
-                { 
-                  ...item, 
-                  name: isStore ? storeName : (item.name || storeName), 
-                  rating: item.rating ?? normRating, 
-                  reviewCount: item.reviewCount ?? normReviewCount 
-                },
-                userId,
-                { 
-                  foodId: targetItemId, 
-                  id: targetItemId,
-                  fav: true, 
-                  type: isStore ? 'store' : (item.type || 'product'),
-                  sourceCollection: isStore ? 'foodStores' : (item.sourceCollection || 'products'),
-                  storeCategory: storeCategoryResolved,
-                  category: item.category || item.cat || storeCategoryResolved || (isStore ? 'Store' : resolvedCat),
-                  cat: item.cat || item.category || storeCategoryResolved || resolvedCat,
-                  subCat: item.subCat || item.subCategory || item.cat || item.category || resolvedCat,
-                  store: storeName,
-                  name: isStore ? storeName : (item.name || storeName),
-                  rating: item.rating ?? normRating, 
-                  reviewCount: item.reviewCount ?? normReviewCount 
-                }
-              );
+          const unsubStores = onSnapshot(storesRef, (snapshot) => {
+            storeDocs = snapshot.docs;
+            updateStoreState();
+          }, (err) => {
+            console.warn('Error listening to userfavorites/stores:', err);
+          });
 
-              if (isStore) {
-                // Stores ONLY saved to stores subcollection (referencing foodStores document)
-                const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
-                await setDoc(storeDocRef, { ...favPayload, type: 'store', isStore: true, sourceCollection: 'foodStores' }, { merge: true });
-              } else {
-                // Products/items saved to favorites subcollection
-                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
-                await setDoc(favDocRef, favPayload, { merge: true });
-              }
-            } catch (err) {
-              console.error('Error adding favorite to Firestore userfavorites:', err);
-            }
-          }
+          firestoreUnsubscribe = () => {
+            unsubFavs();
+            unsubStores();
+          };
+        } catch (e) {
+          console.warn('Firestore subscription failed in useFavoritesStore:', e);
         }
-      },
-
-      removeFavorite: async (userId, item: any) => {
-        const current = get().favorites;
-        const targetItemId = typeof item === 'string' ? item : (item?.itemId || item?.id || item?.foodId || item?.docId || '');
-        const docId = typeof item === 'string' ? item : (item?.id || item?.docId || targetItemId);
-
+      } else {
+        const mockFavs = favoriteService.getMockFavorites(userId);
+        const mockWishes = favoriteService.getMockWishlists(userId);
         set({
-          favorites: current.filter(
-            (f) => f.itemId !== targetItemId && f.id !== targetItemId && f.id !== docId && f.itemId !== docId && (f as any).foodId !== targetItemId
-          ),
+          favorites: mockFavs,
+          wishlists: mockWishes,
+        });
+      }
+    },
+
+    toggleFavorite: async (userId, item: any) => {
+      const current = get().favorites;
+      const targetItemId = String(item?.itemId || item?.id || item?.foodId || item?.objectID || '').trim();
+      if (!targetItemId) return;
+      const exists = current.find((f) => f.itemId === targetItemId || f.id === targetItemId || (f as any).foodId === targetItemId || (f as any).objectID === targetItemId);
+
+      if (exists) {
+        // Optimistic remove
+        set({
+          favorites: current.filter((f) => f.itemId !== targetItemId && f.id !== targetItemId && (f as any).foodId !== targetItemId && (f as any).objectID !== targetItemId),
         });
 
         if (userId && userId !== 'guest_user') {
           try {
-            const isStore = (item as any)?.type === 'store' || (item as any)?.recordType === 'store' || (item as any)?.category === 'Store' || (item as any)?.cat === 'Store';
-            const possibleIds = Array.from(new Set([targetItemId, docId, item?.id, item?.itemId, item?.docId].filter(Boolean)));
-            for (const idToDelete of possibleIds) {
-              if (!idToDelete) continue;
-              if (isStore) {
-                const storeDocRef = doc(db, 'userfavorites', userId, 'stores', idToDelete);
-                await deleteDoc(storeDocRef).catch(async () => {
-                  await updateDoc(storeDocRef, { fav: false }).catch(() => {});
-                });
-              } else {
-                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', idToDelete);
-                await deleteDoc(favDocRef).catch(async () => {
-                  await updateDoc(favDocRef, { fav: false }).catch(() => {});
-                });
-              }
+            const isStore = exists.type === 'store' || (exists as any).recordType === 'store' || (exists as any).category === 'Store' || (exists as any).cat === 'Store';
+            if (isStore) {
+              const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
+              await updateDoc(storeDocRef, { fav: false }).catch(async () => {
+                await deleteDoc(storeDocRef);
+              });
+            } else {
+              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
+              await updateDoc(favDocRef, { fav: false }).catch(async () => {
+                await deleteDoc(favDocRef);
+              });
             }
           } catch (err) {
             console.error('Error removing favorite from Firestore userfavorites:', err);
           }
         }
-      },
+      } else {
+        // Exempt Laundry items from being added to userFavorites
+        if (isLaundryItem(item)) {
+          console.info('Laundry items are exempt from userFavorites.');
+          return;
+        }
 
-      isFavorited: (itemId) => {
-        if (!itemId) return false;
-        const target = String(itemId).toLowerCase().trim();
-        return get().favorites.some((f: any) => {
-          if (f.fav === false) return false;
-          const candidates = [f.itemId, f.id, f.foodId, f.objectID].filter(Boolean).map((v: any) => String(v).toLowerCase().trim());
-          return candidates.includes(target);
-        });
-      },
+        // Optimistic add
+        const isStore = item?.type === 'store' || item?.recordType === 'store' || item?.category === 'Store' || item?.cat === 'Store';
+        const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
+        const resolvedImg = resolveImageUrl(item);
+        const resolvedCat = resolveItemCategory(item);
+        const storeName = item.store || item.name || item.title || 'Store';
+        const storeCategoryResolved = item.storeCategory || item.cat || item.category || item.subCategory || (isStore ? resolvedCat : '');
 
-      createWishlist: (userId, name, description) => {
-        const newWishlist: WishlistCollection = {
-          id: `wish_${Date.now()}`,
-          userId,
-          name,
-          description,
-          itemIds: [],
+        const newFavorite: FavoriteItem = {
+          id: targetItemId || `fav_${Date.now()}`,
+          userId: userId || 'guest_user',
+          type: isStore ? 'store' : (item.type || 'product'),
+          itemId: targetItemId || `item_${Date.now()}`,
+          name: isStore ? storeName : (item.name || item.title || ''),
+          store: storeName,
+          description: item.description || '',
+          ...item,
+          storeCategory: storeCategoryResolved,
+          category: item.category || item.cat || storeCategoryResolved || (isStore ? 'Store' : resolvedCat),
+          cat: item.cat || item.category || storeCategoryResolved || resolvedCat,
+          subCat: item.subCat || item.subCategory || item.cat || item.category || resolvedCat,
+          imageUrl: resolvedImg,
+          imgURL: resolvedImg,
+          rating: item.rating ?? normRating,
+          reviewCount: item.reviewCount ?? normReviewCount,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
 
         set({
-          wishlists: [...get().wishlists, newWishlist],
+          favorites: [...current, newFavorite],
         });
-      },
 
-      addToWishlist: (wishlistId, itemId) => {
-        const updated = get().wishlists.map((w) => {
-          if (w.id === wishlistId) {
-            if (w.itemIds.includes(itemId)) return w;
-            return {
-              ...w,
-              itemIds: [...w.itemIds, itemId],
-              updatedAt: new Date(),
-            };
+        if (userId && userId !== 'guest_user') {
+          try {
+            const favPayload = buildCompleteProductPayload(
+              { 
+                ...item, 
+                name: isStore ? storeName : (item.name || storeName), 
+                rating: item.rating ?? normRating, 
+                reviewCount: item.reviewCount ?? normReviewCount 
+              },
+              userId,
+              { 
+                foodId: targetItemId, 
+                id: targetItemId,
+                fav: true, 
+                type: isStore ? 'store' : (item.type || 'product'),
+                sourceCollection: isStore ? 'foodStores' : (item.sourceCollection || 'products'),
+                storeCategory: storeCategoryResolved,
+                category: item.category || item.cat || storeCategoryResolved || (isStore ? 'Store' : resolvedCat),
+                cat: item.cat || item.category || storeCategoryResolved || resolvedCat,
+                subCat: item.subCat || item.subCategory || item.cat || item.category || resolvedCat,
+                store: storeName,
+                name: isStore ? storeName : (item.name || storeName),
+                rating: item.rating ?? normRating, 
+                reviewCount: item.reviewCount ?? normReviewCount 
+              }
+            );
+
+            if (isStore) {
+              // Stores ONLY saved to stores subcollection (referencing foodStores document)
+              const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
+              await setDoc(storeDocRef, { ...favPayload, type: 'store', isStore: true, sourceCollection: 'foodStores' }, { merge: true });
+            } else {
+              // Products/items saved to favorites subcollection
+              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
+              await setDoc(favDocRef, favPayload, { merge: true });
+            }
+          } catch (err) {
+            console.error('Error adding favorite to Firestore userfavorites:', err);
           }
-          return w;
-        });
+        }
+      }
+    },
 
-        set({ wishlists: updated });
-      },
+    removeFavorite: async (userId, item: any) => {
+      const current = get().favorites;
+      const targetItemId = typeof item === 'string' ? item : (item?.itemId || item?.id || item?.foodId || item?.docId || '');
+      const docId = typeof item === 'string' ? item : (item?.id || item?.docId || targetItemId);
 
-      removeFromWishlist: (wishlistId, itemId) => {
-        const updated = get().wishlists.map((w) => {
-          if (w.id === wishlistId) {
-            return {
-              ...w,
-              itemIds: w.itemIds.filter((id) => id !== itemId),
-              updatedAt: new Date(),
-            };
+      set({
+        favorites: current.filter(
+          (f) => f.itemId !== targetItemId && f.id !== targetItemId && f.id !== docId && f.itemId !== docId && (f as any).foodId !== targetItemId
+        ),
+      });
+
+      if (userId && userId !== 'guest_user') {
+        try {
+          const isStore = (item as any)?.type === 'store' || (item as any)?.recordType === 'store' || (item as any)?.category === 'Store' || (item as any)?.cat === 'Store';
+          const possibleIds = Array.from(new Set([targetItemId, docId, item?.id, item?.itemId, item?.docId].filter(Boolean)));
+          for (const idToDelete of possibleIds) {
+            if (!idToDelete) continue;
+            if (isStore) {
+              const storeDocRef = doc(db, 'userfavorites', userId, 'stores', idToDelete);
+              await deleteDoc(storeDocRef).catch(async () => {
+                await updateDoc(storeDocRef, { fav: false }).catch(() => {});
+              });
+            } else {
+              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', idToDelete);
+              await deleteDoc(favDocRef).catch(async () => {
+                await updateDoc(favDocRef, { fav: false }).catch(() => {});
+              });
+            }
           }
-          return w;
-        });
+        } catch (err) {
+          console.error('Error removing favorite from Firestore userfavorites:', err);
+        }
+      }
+    },
 
-        set({ wishlists: updated });
-      },
+    isFavorited: (itemId) => {
+      if (!itemId) return false;
+      const target = String(itemId).toLowerCase().trim();
+      return get().favorites.some((f: any) => {
+        if (f.fav === false) return false;
+        const candidates = [f.itemId, f.id, f.foodId, f.objectID, f.storeId, f.store, f.name].filter(Boolean).map((v: any) => String(v).toLowerCase().trim());
+        return candidates.includes(target);
+      });
+    },
 
-      deleteWishlist: (wishlistId) => {
-        set({
-          wishlists: get().wishlists.filter((w) => w.id !== wishlistId),
-        });
-      },
-    }),
-    {
-      name: 'tulete_favorites_storage',
-    }
-  )
+    createWishlist: (userId, name, description) => {
+      const newWishlist: WishlistCollection = {
+        id: `wish_${Date.now()}`,
+        userId,
+        name,
+        description,
+        itemIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      set({
+        wishlists: [...get().wishlists, newWishlist],
+      });
+    },
+
+    addToWishlist: (wishlistId, itemId) => {
+      const updated = get().wishlists.map((w) => {
+        if (w.id === wishlistId) {
+          if (w.itemIds.includes(itemId)) return w;
+          return {
+            ...w,
+            itemIds: [...w.itemIds, itemId],
+            updatedAt: new Date(),
+          };
+        }
+        return w;
+      });
+
+      set({ wishlists: updated });
+    },
+
+    removeFromWishlist: (wishlistId, itemId) => {
+      const updated = get().wishlists.map((w) => {
+        if (w.id === wishlistId) {
+          return {
+            ...w,
+            itemIds: w.itemIds.filter((id) => id !== itemId),
+            updatedAt: new Date(),
+          };
+        }
+        return w;
+      });
+
+      set({ wishlists: updated });
+    },
+
+    deleteWishlist: (wishlistId) => {
+      set({
+        wishlists: get().wishlists.filter((w) => w.id !== wishlistId),
+      });
+    },
+  })
 );
 

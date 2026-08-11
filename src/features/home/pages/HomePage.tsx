@@ -499,10 +499,6 @@ export const HomePage = () => {
   }, [searchQuery, isMobileSearchOpen, filterValue]);
 
 
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    const s = localStorage.getItem('tulete_favorite_stores');
-    return s ? JSON.parse(s) : [];
-  });
   const promoRef = useRef<HTMLDivElement>(null);
   const openNowRef = useRef<HTMLDivElement>(null);
   const topRatedRef = useRef<HTMLDivElement>(null);
@@ -835,13 +831,23 @@ export const HomePage = () => {
     };
   }, [openStores.length, topStores.length]);
 
-  const toggleFav = (storeId: string, e: React.MouseEvent) => {
+  const toggleFav = (store: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = favorites.includes(storeId)
-      ? favorites.filter(id => id !== storeId)
-      : [...favorites, storeId];
-    setFavorites(updated);
-    localStorage.setItem('tulete_favorite_stores', JSON.stringify(updated));
+    const storeName = store.store || store.name || '';
+    const storeId = store.id || store.objectID || storeName;
+    const storePayload = {
+      ...store,
+      id: storeId,
+      itemId: storeId,
+      foodId: storeId,
+      type: 'store',
+      recordType: 'store',
+      category: store.category || store.cat || 'Store',
+      cat: store.cat || store.category || 'Store',
+      store: storeName,
+      name: storeName,
+    };
+    toggleProductFavorite(user?.id || 'guest_user', storePayload);
   };
 
   const handleCheckout = () => {
@@ -1201,8 +1207,8 @@ export const HomePage = () => {
                           const targetId = !isGeneric ? store.id : (storeName || store.id || 's1');
                           navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData: { ...store, store: storeName } } });
                         }}
-                        isFav={favorites.includes(store.id)}
-                        onFav={(e) => toggleFav(store.id, e)}
+                        isFav={isFavorited(store.id)}
+                        onFav={(e) => toggleFav(store, e)}
                       />
                     </div>
                   ))}

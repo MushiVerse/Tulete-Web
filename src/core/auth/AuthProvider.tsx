@@ -3,6 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuthStore } from './useAuthStore';
+import { useFavoritesStore } from '../../features/favorites/hooks/useFavoritesStore';
 import { UserProfile } from '../../features/auth/services/authService';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -11,6 +12,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        useFavoritesStore.getState().initialize(firebaseUser.uid);
         try {
           if (!firebaseUser.email) throw new Error("User email is required");
           const emailKey = firebaseUser.email.toLowerCase();
@@ -43,6 +45,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
         }
       } else {
+        useFavoritesStore.getState().initialize('guest_user');
         setUser(null);
       }
       setLoading(false);

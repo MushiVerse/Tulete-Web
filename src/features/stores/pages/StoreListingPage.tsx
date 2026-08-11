@@ -423,8 +423,7 @@ export const StoreListingPage = () => {
   );
 
   const { user } = useAuthStore();
-  const { favorites: savedFavorites, initialize: initFavorites, toggleFavorite } = useFavoritesStore();
-  const [liveFavMap, setLiveFavMap] = useState<Record<string, boolean>>({});
+  const { isFavorited, initialize: initFavorites, toggleFavorite } = useFavoritesStore();
 
   useEffect(() => {
     if (user?.id) {
@@ -432,73 +431,8 @@ export const StoreListingPage = () => {
     }
   }, [user?.id, initFavorites]);
 
-  // Live Firestore subscription directly listening to userfavorites documents (favorites & stores)
-  useEffect(() => {
-    if (!user?.id || user.id === 'guest_user') {
-      setLiveFavMap({});
-      return;
-    }
-
-    try {
-      const favsRef = collection(db, 'userfavorites', user.id, 'favorites');
-      const storesRef = collection(db, 'userfavorites', user.id, 'stores');
-
-      let favMap: Record<string, boolean> = {};
-      let storeMap: Record<string, boolean> = {};
-
-      const updateCombinedMap = () => {
-        setLiveFavMap({ ...favMap, ...storeMap });
-      };
-
-      const unsubFavs = onSnapshot(favsRef, (snap) => {
-        const map: Record<string, boolean> = {};
-        snap.docs.forEach((docSnap) => {
-          const data = docSnap.data();
-          const isFavActive = data.fav !== false;
-          const targetId = data.foodId || data.id || docSnap.id;
-          if (targetId) map[String(targetId)] = isFavActive;
-          if (data.store) map[String(data.store).toLowerCase()] = isFavActive;
-          if (data.name) map[String(data.name).toLowerCase()] = isFavActive;
-        });
-        favMap = map;
-        updateCombinedMap();
-      }, (err) => {
-        console.warn('Error listening to userfavorites in StoreListingPage:', err);
-      });
-
-      const unsubStores = onSnapshot(storesRef, (snap) => {
-        const map: Record<string, boolean> = {};
-        snap.docs.forEach((docSnap) => {
-          const data = docSnap.data();
-          const isFavActive = data.fav !== false;
-          const targetId = data.foodId || data.id || docSnap.id;
-          if (targetId) map[String(targetId)] = isFavActive;
-          if (data.store) map[String(data.store).toLowerCase()] = isFavActive;
-          if (data.name) map[String(data.name).toLowerCase()] = isFavActive;
-        });
-        storeMap = map;
-        updateCombinedMap();
-      }, (err) => {
-        console.warn('Error listening to userfavorites stores in StoreListingPage:', err);
-      });
-
-      return () => {
-        unsubFavs();
-        unsubStores();
-      };
-    } catch (_) {}
-  }, [user?.id]);
-
   const isStoreFav = (stId: string, stName?: string) => {
-    const normId = String(stId || '');
-    const normName = stName ? String(stName).toLowerCase() : '';
-
-    if (liveFavMap[normId] !== undefined) return liveFavMap[normId];
-    if (normName && liveFavMap[normName] !== undefined) return liveFavMap[normName];
-
-    return savedFavorites.some(
-      (f) => (f as any).fav !== false && (f.itemId === stId || f.id === stId || (f as any).foodId === stId || (stName && (f.name === stName || f.store === stName)))
-    );
+    return isFavorited(stId) || (stName ? isFavorited(stName) : false);
   };
 
   const handleStoreFav = (st: any, e: React.MouseEvent) => {
