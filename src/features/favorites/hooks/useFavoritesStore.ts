@@ -48,21 +48,28 @@ export const useFavoritesStore = create<FavoritesStore>()(
         if (userId !== 'guest_user') {
           try {
             const favsRef = collection(db, 'userfavorites', userId, 'favorites');
-            firestoreUnsubscribe = onSnapshot(favsRef, (snapshot) => {
-              const items: FavoriteItem[] = [];
-              snapshot.docs.forEach((docSnap) => {
+            const storesRef = collection(db, 'userfavorites', userId, 'stores');
+
+            let favDocs: any[] = [];
+            let storeDocs: any[] = [];
+
+            const updateStoreState = () => {
+              const itemsMap = new Map<string, FavoriteItem>();
+
+              const parseDoc = (docSnap: any) => {
                 const data = docSnap.data();
                 if (data.fav !== false) {
                   const targetId = data.foodId || data.id || docSnap.id;
                   const { rating, reviewCount } = getNormalizedRating(data);
                   const resolvedImg = resolveImageUrl(data);
                   const resolvedCat = resolveItemCategory(data);
-                  items.push({
+                  const isStoreDoc = data.type === 'store' || data.recordType === 'store' || data.category === 'Store' || data.cat === 'Store';
+                  itemsMap.set(docSnap.id, {
                     id: docSnap.id,
                     userId,
-                    type: (data.type as any) || 'product',
+                    type: (data.type as any) || (isStoreDoc ? 'store' : 'product'),
                     itemId: targetId,
-                    name: data.name || data.nam1 || 'Favorite Item',
+                    name: data.name || data.nam1 || data.store || 'Favorite Item',
                     description: data.description || '',
                     price: Number(data.price || 0),
                     rating,
@@ -82,11 +89,32 @@ export const useFavoritesStore = create<FavoritesStore>()(
                     imgURL: resolvedImg,
                   });
                 }
-              });
-              set({ favorites: items });
+              };
+
+              favDocs.forEach(parseDoc);
+              storeDocs.forEach(parseDoc);
+
+              set({ favorites: Array.from(itemsMap.values()) });
+            };
+
+            const unsubFavs = onSnapshot(favsRef, (snapshot) => {
+              favDocs = snapshot.docs;
+              updateStoreState();
             }, (err) => {
-              console.warn('Error listening to userfavorites:', err);
+              console.warn('Error listening to userfavorites/favorites:', err);
             });
+
+            const unsubStores = onSnapshot(storesRef, (snapshot) => {
+              storeDocs = snapshot.docs;
+              updateStoreState();
+            }, (err) => {
+              console.warn('Error listening to userfavorites/stores:', err);
+            });
+
+            firestoreUnsubscribe = () => {
+              unsubFavs();
+              unsubStores();
+            };
           } catch (e) {
             console.warn('Firestore subscription failed in useFavoritesStore:', e);
           }
@@ -113,10 +141,17 @@ export const useFavoritesStore = create<FavoritesStore>()(
 
           if (userId && userId !== 'guest_user') {
             try {
+              const isStore = exists.type === 'store' || (exists as any).recordType === 'store' || (exists as any).category === 'Store' || (exists as any).cat === 'Store';
               const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
               await updateDoc(favDocRef, { fav: false }).catch(async () => {
                 await deleteDoc(favDocRef);
               });
+              if (isStore) {
+                const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
+                await updateDoc(storeDocRef, { fav: false }).catch(async () => {
+                  await deleteDoc(storeDocRef);
+                });
+              }
             } catch (err) {
               console.error('Error removing favorite from Firestore userfavorites:', err);
             }
@@ -157,7 +192,6 @@ export const useFavoritesStore = create<FavoritesStore>()(
 
           if (userId && userId !== 'guest_user') {
             try {
-              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
               const favPayload = buildCompleteProductPayload(
                 { 
                   ...item, 
@@ -181,7 +215,18 @@ export const useFavoritesStore = create<FavoritesStore>()(
                   reviewCount: item.reviewCount ?? normReviewCount 
                 }
               );
-              await setDoc(favDocRef, favPayload, { merge: true });
+
+              if (isStore) {
+                // Dedicated Store Favorite Document creation
+                const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
+                await setDoc(storeDocRef, { ...favPayload, type: 'store', isStore: true }, { merge: true });
+                // Also write to favorites collection for fallback compatibility
+                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
+                await setDoc(favDocRef, favPayload, { merge: true });
+              } else {
+                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
+                await setDoc(favDocRef, favPayload, { merge: true });
+              }
             } catch (err) {
               console.error('Error adding favorite to Firestore userfavorites:', err);
             }
@@ -208,6 +253,10 @@ export const useFavoritesStore = create<FavoritesStore>()(
               const favDocRef = doc(db, 'userfavorites', userId, 'favorites', idToDelete);
               await deleteDoc(favDocRef).catch(async () => {
                 await updateDoc(favDocRef, { fav: false }).catch(() => {});
+              });
+              const storeDocRef = doc(db, 'userfavorites', userId, 'stores', idToDelete);
+              await deleteDoc(storeDocRef).catch(async () => {
+                await updateDoc(storeDocRef, { fav: false }).catch(() => {});
               });
             }
           } catch (err) {

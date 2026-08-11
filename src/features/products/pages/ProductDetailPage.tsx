@@ -262,7 +262,13 @@ export const ProductDetailPage = () => {
       const docRef = doc(db, targetColl, targetItem.id);
       const snap = await getDoc(docRef);
 
-      let currentRates: any[] = [];
+      const forceDouble = (n: number): number => {
+        const num = Number(n);
+        if (isNaN(num)) return 0.001;
+        return Number.isInteger(num) ? num + 0.001 : num;
+      };
+
+      let currentRates: number[] = [];
       if (snap.exists()) {
         const data = snap.data();
         const rawRate = data.rate;
@@ -273,7 +279,8 @@ export const ProductDetailPage = () => {
         }
       }
 
-      const updatedRates = [...currentRates, stars];
+      const rateAsDouble = forceDouble(stars);
+      const updatedRates = [...currentRates.map(forceDouble), rateAsDouble];
       await setDoc(docRef, { rate: updatedRates }, { merge: true });
 
       toast.success('Thanks, Rated');

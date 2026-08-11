@@ -474,17 +474,22 @@ export const FavoritesPage = () => {
     initialize(user?.id || 'guest_user');
   }, [initialize, user?.id]);
 
-  // Live Firestore subscription for userfavorites collection
+  // Live Firestore subscription for userfavorites collection (both favorites and stores subcollections)
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
       setFirestoreFavorites([]);
       return;
     }
     try {
-      const ref = collection(db, 'userfavorites', user.id, 'favorites');
-      const unsubscribe = onSnapshot(ref, (snap) => {
-        const list: any[] = [];
-        snap.docs.forEach((docSnap) => {
+      const favsRef = collection(db, 'userfavorites', user.id, 'favorites');
+      const storesRef = collection(db, 'userfavorites', user.id, 'stores');
+
+      let favsList: any[] = [];
+      let storesList: any[] = [];
+
+      const combineAndSet = () => {
+        const docsMap = new Map<string, any>();
+        const processItem = (docSnap: any) => {
           const data = docSnap.data();
           if (data.fav !== false) {
             const { rating: calculatedRating, reviewCount: calculatedReviewCount } = getNormalizedRating(data);
@@ -492,7 +497,7 @@ export const FavoritesPage = () => {
             const resolvedCat = resolveItemCategory(data);
             const resolvedStoreCat = resolveStoreCategory(data);
 
-            list.push({
+            docsMap.set(docSnap.id, {
               id: docSnap.id,
               itemId: data.foodId || data.id || docSnap.id,
               docId: docSnap.id,
@@ -514,7 +519,12 @@ export const FavoritesPage = () => {
               reviewCount: calculatedReviewCount,
             });
           }
-        });
+        };
+
+        favsList.forEach(processItem);
+        storesList.forEach(processItem);
+
+        const list = Array.from(docsMap.values());
 
         // Arrange in descending order using "time" field
         list.sort((a, b) => {
@@ -528,10 +538,26 @@ export const FavoritesPage = () => {
         });
 
         setFirestoreFavorites(list);
+      };
+
+      const unsubFavs = onSnapshot(favsRef, (snap) => {
+        favsList = snap.docs;
+        combineAndSet();
       }, (err) => {
-        console.warn('Error listening to userfavorites in FavoritesPage:', err);
+        console.warn('Error listening to favorites in FavoritesPage:', err);
       });
-      return () => unsubscribe();
+
+      const unsubStores = onSnapshot(storesRef, (snap) => {
+        storesList = snap.docs;
+        combineAndSet();
+      }, (err) => {
+        console.warn('Error listening to store favorites in FavoritesPage:', err);
+      });
+
+      return () => {
+        unsubFavs();
+        unsubStores();
+      };
     } catch (e) {
       console.warn('userfavorites listener error:', e);
     }

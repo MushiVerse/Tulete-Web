@@ -363,17 +363,39 @@ export const StoreDetailsPage = () => {
 
     try {
       const favDocRef = doc(db, 'userfavorites', user.id, 'favorites', effectiveStoreId);
-      const unsub = onSnapshot(favDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setLiveStoreFav(data.fav !== false);
+      const storeDocRef = doc(db, 'userfavorites', user.id, 'stores', effectiveStoreId);
+
+      let favStatus: boolean | null = null;
+      let storeFavStatus: boolean | null = null;
+
+      const updateFavState = () => {
+        if (storeFavStatus !== null) {
+          setLiveStoreFav(storeFavStatus);
+        } else if (favStatus !== null) {
+          setLiveStoreFav(favStatus);
         } else {
           setLiveStoreFav(false);
         }
+      };
+
+      const unsubFav = onSnapshot(favDocRef, (docSnap) => {
+        favStatus = docSnap.exists() ? docSnap.data().fav !== false : null;
+        updateFavState();
       }, (err) => {
         console.warn('Error listening to store favorite document in StoreDetailsPage:', err);
       });
-      return () => unsub();
+
+      const unsubStoreFav = onSnapshot(storeDocRef, (docSnap) => {
+        storeFavStatus = docSnap.exists() ? docSnap.data().fav !== false : null;
+        updateFavState();
+      }, (err) => {
+        console.warn('Error listening to store favorite stores document in StoreDetailsPage:', err);
+      });
+
+      return () => {
+        unsubFav();
+        unsubStoreFav();
+      };
     } catch (_) {}
   }, [user?.id, effectiveStoreId]);
 
@@ -799,7 +821,13 @@ export const StoreDetailsPage = () => {
       const docRef = doc(db, 'foodStores', storeIdToRate);
       const snap = await getDoc(docRef);
 
-      let currentRates: any[] = [];
+      const forceDouble = (n: number): number => {
+        const num = Number(n);
+        if (isNaN(num)) return 0.001;
+        return Number.isInteger(num) ? num + 0.001 : num;
+      };
+
+      let currentRates: number[] = [];
       if (snap.exists()) {
         const data = snap.data();
         const rawRates = data.rates;
@@ -810,7 +838,8 @@ export const StoreDetailsPage = () => {
         }
       }
 
-      const updatedRates = [...currentRates, stars];
+      const rateAsDouble = forceDouble(stars);
+      const updatedRates = [...currentRates.map(forceDouble), rateAsDouble];
       await setDoc(docRef, { rates: updatedRates }, { merge: true });
 
       queryClient.invalidateQueries({ queryKey: ['store'] });

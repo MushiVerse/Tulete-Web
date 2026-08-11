@@ -432,7 +432,7 @@ export const StoreListingPage = () => {
     }
   }, [user?.id, initFavorites]);
 
-  // Live Firestore subscription directly listening to userfavorites documents
+  // Live Firestore subscription directly listening to userfavorites documents (favorites & stores)
   useEffect(() => {
     if (!user?.id || user.id === 'guest_user') {
       setLiveFavMap({});
@@ -441,7 +441,16 @@ export const StoreListingPage = () => {
 
     try {
       const favsRef = collection(db, 'userfavorites', user.id, 'favorites');
-      const unsub = onSnapshot(favsRef, (snap) => {
+      const storesRef = collection(db, 'userfavorites', user.id, 'stores');
+
+      let favMap: Record<string, boolean> = {};
+      let storeMap: Record<string, boolean> = {};
+
+      const updateCombinedMap = () => {
+        setLiveFavMap({ ...favMap, ...storeMap });
+      };
+
+      const unsubFavs = onSnapshot(favsRef, (snap) => {
         const map: Record<string, boolean> = {};
         snap.docs.forEach((docSnap) => {
           const data = docSnap.data();
@@ -451,11 +460,32 @@ export const StoreListingPage = () => {
           if (data.store) map[String(data.store).toLowerCase()] = isFavActive;
           if (data.name) map[String(data.name).toLowerCase()] = isFavActive;
         });
-        setLiveFavMap(map);
+        favMap = map;
+        updateCombinedMap();
       }, (err) => {
         console.warn('Error listening to userfavorites in StoreListingPage:', err);
       });
-      return () => unsub();
+
+      const unsubStores = onSnapshot(storesRef, (snap) => {
+        const map: Record<string, boolean> = {};
+        snap.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          const isFavActive = data.fav !== false;
+          const targetId = data.foodId || data.id || docSnap.id;
+          if (targetId) map[String(targetId)] = isFavActive;
+          if (data.store) map[String(data.store).toLowerCase()] = isFavActive;
+          if (data.name) map[String(data.name).toLowerCase()] = isFavActive;
+        });
+        storeMap = map;
+        updateCombinedMap();
+      }, (err) => {
+        console.warn('Error listening to userfavorites stores in StoreListingPage:', err);
+      });
+
+      return () => {
+        unsubFavs();
+        unsubStores();
+      };
     } catch (_) {}
   }, [user?.id]);
 
