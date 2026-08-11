@@ -9,6 +9,8 @@ import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 
 interface BrandDetailsViewProps {
   brandName: string;
@@ -47,16 +49,43 @@ export const BrandDetailsView: React.FC<BrandDetailsViewProps> = ({ brandName: r
       setIsLoading(true);
       const escapedBrand = brandName.replace(/"/g, '\\"');
       // Fetch up to 200 hits for the brand from Algolia so we can paginate locally in batches of 20
-      let results = await searchTuleteItems(searchQuery, {
-        filters: `brand:"${escapedBrand}"`,
-        hitsPerPage: 200
-      });
+      let results: any[] = [];
+      try {
+        results = await searchTuleteItems(searchQuery, {
+          filters: `brand:"${escapedBrand}"`,
+          hitsPerPage: 200
+        });
+      } catch (e) {}
       
       // Fallback if faceting isn't configured in Algolia yet
       if (!results || results.length === 0) {
-        const queryToUse = searchQuery || brandName;
-        const fallbackResults = await searchTuleteItems(queryToUse, { hitsPerPage: 200 });
-        results = fallbackResults;
+        try {
+          const queryToUse = searchQuery || brandName;
+          const fallbackResults = await searchTuleteItems(queryToUse, { hitsPerPage: 200 });
+          results = fallbackResults;
+        } catch (e) {}
+      }
+
+      // Firestore fallback if Algolia yields 0 items
+      if (!results || results.length === 0) {
+        try {
+          const cols = ['products', 'foods', 'cloths'];
+          let firestoreHits: any[] = [];
+          for (const colName of cols) {
+            const snap = await getDocs(collection(db, colName));
+            snap.docs.forEach(docSnap => {
+              const d = docSnap.data();
+              firestoreHits.push({
+                objectID: docSnap.id,
+                id: docSnap.id,
+                ...d
+              });
+            });
+          }
+          results = firestoreHits;
+        } catch (e) {
+          console.warn('Firestore fallback in BrandDetailsView failed:', e);
+        }
       }
       
       // Strict local filtering for valid product data, price, availability, and brand match

@@ -3,6 +3,8 @@ import { Tag, Utensils, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GridSkeleton } from '../../../shared/components/skeletons/GridSkeleton';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config';
 
 type BrandCategoryFilter = 'food' | 'product' | null;
 
@@ -19,14 +21,98 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
   React.useEffect(() => {
     const fetchBrands = async () => {
       setLoading(true);
-      // We filter by recordType:brand, and if a category filter is active, we append it.
+      
       let filterStr = "recordType:brand";
       if (categoryFilter) {
-        // Assuming category filter is stored in 'category' field.
         filterStr += ` AND category:${categoryFilter}`;
       }
       
-      const results = await searchTuleteItems(searchQuery, filterStr);
+      let results: any[] = [];
+      try {
+        results = await searchTuleteItems(searchQuery, { filters: filterStr, includeStoresAndBrands: true });
+      } catch (err) {
+        console.warn('Algolia search brands error:', err);
+      }
+
+      // Fallback 1: Query Firestore 'brands' collection if Algolia returns 0 items
+      if (!results || results.length === 0) {
+        try {
+          const snapshot = await getDocs(collection(db, 'brands'));
+          const firestoreBrands = snapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              objectID: docSnap.id,
+              name: data.name || data.brand || data.title || docSnap.id,
+              image: data.image || data.imgUrl || data.imgURL || data.logo || data.picture || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+              category: data.category || data.cat || 'product'
+            };
+          });
+
+          results = firestoreBrands.filter((b: any) => {
+            if (!b.name) return false;
+            if (categoryFilter) {
+              const bCat = String(b.category || '').toLowerCase();
+              if (categoryFilter === 'food' && !bCat.includes('food')) return false;
+              if (categoryFilter === 'product' && !bCat.includes('product') && bCat.includes('food')) return false;
+            }
+            if (searchQuery.trim()) {
+              const q = searchQuery.toLowerCase().trim();
+              const name = String(b.name || '').toLowerCase();
+              if (!name.includes(q)) return false;
+            }
+            return true;
+          });
+        } catch (e) {
+          console.warn('Firestore brands fallback error:', e);
+        }
+      }
+
+      // Fallback 2: Extract unique brands from products & foods & cloths if brands collection is empty
+      if (!results || results.length === 0) {
+        try {
+          const collectionsToScan = [
+            { colName: 'products', defaultCategory: 'product' },
+            { colName: 'foods', defaultCategory: 'food' },
+            { colName: 'cloths', defaultCategory: 'product' }
+          ];
+          const extractedMap = new Map<string, any>();
+
+          for (const col of collectionsToScan) {
+            if (categoryFilter && categoryFilter !== col.defaultCategory && col.colName !== 'products') continue;
+            const snap = await getDocs(collection(db, col.colName));
+            snap.docs.forEach(docSnap => {
+              const d = docSnap.data();
+              const brandName = d.brand || d.pbrand || d.FBrand || d.LBrand || d.brandName || d.store;
+              if (brandName && typeof brandName === 'string' && brandName.trim().length > 0) {
+                const cleanName = brandName.trim();
+                const key = cleanName.toLowerCase();
+                if (!extractedMap.has(key) && key !== 's1' && key !== 'tulete partner store') {
+                  extractedMap.set(key, {
+                    id: `extracted-${key}`,
+                    objectID: `extracted-${key}`,
+                    name: cleanName,
+                    image: d.imgUrl || d.imgURL || d.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+                    category: d.category || col.defaultCategory
+                  });
+                }
+              }
+            });
+          }
+
+          let extractedBrands = Array.from(extractedMap.values());
+          if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            extractedBrands = extractedBrands.filter(b => b.name.toLowerCase().includes(q));
+          }
+          if (extractedBrands.length > 0) {
+            results = extractedBrands;
+          }
+        } catch (e) {
+          console.warn('Extracted brands fallback error:', e);
+        }
+      }
+
       setBrands(results);
       setLoading(false);
     };

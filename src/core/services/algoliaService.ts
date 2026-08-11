@@ -14,12 +14,15 @@ export interface SearchOptions {
   hitsPerPage?: number;
   page?: number;
   aroundLatLng?: string;
+  includeStoresAndBrands?: boolean;
 }
 
-export function isValidSearchItem(item: any): boolean {
+export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: boolean }): boolean {
   if (!item || typeof item !== 'object') return false;
 
-  // 1. Exclude store and brand documents ONLY (Search results return items: food, products, laundry)
+  const allowStoresAndBrands = options?.allowStoresAndBrands ?? false;
+
+  // 1. Exclude store and brand documents ONLY when searching for regular products
   const recordType = String(item.recordType || item.type || '').toLowerCase();
   const cat = String(item.category || item.cat || '').toLowerCase();
   const isExplicitStore = 
@@ -29,7 +32,7 @@ export function isValidSearchItem(item: any): boolean {
     item.isStore === true || 
     cat === 'store';
 
-  if (isExplicitStore) {
+  if (isExplicitStore && !allowStoresAndBrands) {
     return false;
   }
 
@@ -72,6 +75,12 @@ export const searchTuleteItems = async (
     ? { filters: filtersOrOptions } 
     : filtersOrOptions || {};
 
+  const filterStr = options.filters || '';
+  const allowStoresAndBrands = 
+    Boolean(options.includeStoresAndBrands) || 
+    filterStr.includes('recordType:brand') || 
+    filterStr.includes('recordType:store');
+
   try {
     const { results } = await algoliaClient.search({
       requests: [
@@ -84,7 +93,7 @@ export const searchTuleteItems = async (
     });
     const res = (results[0] as any) || {};
     const rawHits = (res.hits || []) as any[];
-    const validHits = rawHits.filter(isValidSearchItem);
+    const validHits = rawHits.filter(hit => isValidSearchItem(hit, { allowStoresAndBrands }));
 
     // Attach pagination metadata onto array for components that need page/nbPages
     const resultArr: any = validHits;

@@ -268,6 +268,17 @@ export const StoreDetailsPage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [viewerOpen, viewerItems.length]);
   
+  // Pagination & infinite scroll states (20 items initially, +20 on scroll)
+  const [productVisibleCount, setProductVisibleCount] = useState<number>(20);
+  const [galleryVisibleCount, setGalleryVisibleCount] = useState<number>(20);
+  const menuLoadMoreRef = useRef<HTMLDivElement | null>(null);
+  const galleryLoadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset product pagination when category or search changes
+  useEffect(() => {
+    setProductVisibleCount(20);
+  }, [selectedProductCategory, productSearch]);
+
   // Store rating states
   const [storeUserRating, setStoreUserRating] = useState<number>(0);
   const [storeHoverRating, setStoreHoverRating] = useState<number>(0);
@@ -365,6 +376,11 @@ export const StoreDetailsPage = () => {
     cat: passedStoreData?.cat || passedStoreData?.category || baseStore.cat || baseStore.category || 'Food',
     availability: passedStoreData?.availability !== undefined ? Boolean(passedStoreData.availability) : baseStore.availability,
   };
+
+  // Reset gallery pagination when activeTab or store changes
+  useEffect(() => {
+    setGalleryVisibleCount(20);
+  }, [activeTab, store?.id]);
 
   const targetStoreName = (rawStoreName || store.store).toLowerCase().trim();
   const targetStoreId = (resolvedStoreId || id || store?.id || fromProduct?.storeId || '').toLowerCase().trim();
@@ -882,6 +898,22 @@ export const StoreDetailsPage = () => {
     return categoryMatch && searchMatch;
   });
 
+  // Intersection Observer for Menu items infinite scroll
+  useEffect(() => {
+    if (activeTab !== 'menu' || !menuLoadMoreRef.current) return;
+    const sentinel = menuLoadMoreRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && productVisibleCount < filteredProducts.length) {
+          setProductVisibleCount((prev) => prev + 20);
+        }
+      },
+      { rootMargin: '250px', threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.unobserve(sentinel);
+  }, [activeTab, filteredProducts.length, productVisibleCount]);
+
   return (
     <PageContainer>
       <div className="flex w-full bg-background relative lg:h-[calc(100vh-4rem)] items-stretch overflow-visible lg:overflow-hidden justify-start">
@@ -1135,18 +1167,37 @@ export const StoreDetailsPage = () => {
                     <p className="text-xs text-muted-foreground">No matching services or items found.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredProducts.map((prod) => (
-                      <StoreProductCardItem 
-                        key={prod.id || prod.foodId || prod.docId} 
-                        prod={prod} 
-                        store={store} 
-                        cartItems={cartItems} 
-                        updateQuantity={updateQuantity} 
-                        addToCart={addToCart} 
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredProducts.slice(0, productVisibleCount).map((prod) => (
+                        <StoreProductCardItem 
+                          key={prod.id || prod.foodId || prod.docId} 
+                          prod={prod} 
+                          store={store} 
+                          cartItems={cartItems} 
+                          updateQuantity={updateQuantity} 
+                          addToCart={addToCart} 
+                        />
+                      ))}
+                    </div>
+
+                    {/* Scroll Sentinel & Loading / Completion status for Menu */}
+                    <div ref={menuLoadMoreRef} className="py-6 flex flex-col items-center justify-center">
+                      {productVisibleCount < filteredProducts.length ? (
+                        <button
+                          onClick={() => setProductVisibleCount((prev) => prev + 20)}
+                          className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 px-5 py-2.5 rounded-full transition-all shadow-xs cursor-pointer"
+                        >
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <span>Load More Items ({filteredProducts.length - productVisibleCount} remaining)</span>
+                        </button>
+                      ) : filteredProducts.length > 20 ? (
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Showing all {filteredProducts.length} items
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
                 )}
               </>
             )}
@@ -1379,6 +1430,11 @@ export const StoreDetailsPage = () => {
             }))
           ];
 
+          const totalGalleryCount = topRatedItems.length + (store.gallery || []).length;
+          const displayedTopRatedItems = topRatedItems.slice(0, galleryVisibleCount);
+          const remainingQuota = Math.max(0, galleryVisibleCount - topRatedItems.length);
+          const displayedStoreGallery = (store.gallery || []).slice(0, remainingQuota);
+
           return (
             <div className="space-y-6">
               {/* Coupon promotion cards */}
@@ -1430,92 +1486,111 @@ export const StoreDetailsPage = () => {
                     <p className="text-xs text-muted-foreground">Photos of top-rated items will appear here as ratings are added.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4">
-                    {/* Top Rated Items Offered by the Store (>3.8 rating) */}
-                    {topRatedItems.map((prod, i) => {
-                      const img = prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]);
-                      const { rating } = getNormalizedRating(prod);
-                      const prodName = prod.name || prod.title || 'Top Rated Item';
-                      const pCat = prod.category || prod.cat || (store.cat || store.category);
-                      const isLaundry = isLaundryItem(prod) || pCat === 'Nguo' || pCat === 'Laundry' || prod._collection === 'cloths' || prod.recordType === 'cloth';
-                      const dynamicP = getItemPriceWithDelivery(
-                        prod.price || 0,
-                        currentLocation,
-                        prod.location || store.location,
-                        store.id || prod.storeId || store.store,
-                        isLaundry,
-                        true,
-                        pCat
-                      );
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                      {/* Top Rated Items Photo Cards (Paginated) */}
+                      {displayedTopRatedItems.map((prod, i) => {
+                        const img = prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]);
+                        const { rating } = getNormalizedRating(prod);
+                        const prodName = prod.name || prod.title || 'Top Rated Item';
+                        const pCat = prod.category || prod.cat || (store.cat || store.category);
+                        const isLaundry = isLaundryItem(prod) || pCat === 'Nguo' || pCat === 'Laundry' || prod._collection === 'cloths' || prod.recordType === 'cloth';
+                        const dynamicP = getItemPriceWithDelivery(
+                          prod.price || 0,
+                          currentLocation,
+                          prod.location || store.location,
+                          store.id || prod.storeId || store.store,
+                          isLaundry,
+                          true,
+                          pCat
+                        );
 
-                      return (
-                        <div
-                          key={`top_item_${prod.id || i}`}
-                          onClick={() => openImageViewer(allGalleryObjects, i)}
-                          className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-xl bg-card border border-border cursor-pointer transition-all duration-300 hover:-translate-y-1"
-                        >
-                          <img 
-                            src={img} 
-                            alt={prodName} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
-                            }}
-                          />
-                          {/* Bottom Compact Gradient Overlay Tint (covers only name & price, leaving 75%+ image area bright) */}
-                          <div className="absolute inset-x-0 -bottom-1 h-1/4 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none transition-opacity duration-300" />
+                        return (
+                          <div
+                            key={`top_item_${prod.id || i}`}
+                            onClick={() => openImageViewer(allGalleryObjects, i)}
+                            className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-xl bg-card border border-border cursor-pointer transition-all duration-300 hover:-translate-y-1"
+                          >
+                            <img 
+                              src={img} 
+                              alt={prodName} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
+                              }}
+                            />
+                            {/* Bottom Compact Gradient Overlay Tint */}
+                            <div className="absolute inset-x-0 -bottom-1 h-1/4 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none transition-opacity duration-300" />
 
-                          {/* Top Badges */}
-                          <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center gap-1">
-                            <span className="bg-background/85 dark:bg-black/60 backdrop-blur-md font-extrabold text-[10px] px-2 py-0.5 rounded-full border border-border/40 flex items-center gap-1 shadow-sm">
-                              <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
-                              <span className="text-slate-900 dark:text-white font-extrabold">{rating.toFixed(1)}</span>
-                            </span>
-                            {pCat && (
-                              <span className="bg-black/50 backdrop-blur-md text-white/90 font-bold text-[9px] px-2 py-0.5 rounded-full truncate max-w-[80px]">
-                                {pCat === 'Nguo' || pCat === 'nguo' ? 'Laundry' : pCat}
+                            {/* Top Badges */}
+                            <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center gap-1">
+                              <span className="bg-background/85 dark:bg-black/60 backdrop-blur-md font-extrabold text-[10px] px-2 py-0.5 rounded-full border border-border/40 flex items-center gap-1 shadow-sm">
+                                <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
+                                <span className="text-slate-900 dark:text-white font-extrabold">{rating.toFixed(1)}</span>
                               </span>
-                            )}
-                          </div>
+                              {pCat && (
+                                <span className="bg-black/50 backdrop-blur-md text-white/90 font-bold text-[9px] px-2 py-0.5 rounded-full truncate max-w-[80px]">
+                                  {pCat === 'Nguo' || pCat === 'nguo' ? 'Laundry' : pCat}
+                                </span>
+                              )}
+                            </div>
 
-                          {/* Bottom Info Overlay */}
-                          <div className="absolute bottom-2.5 inset-x-2.5 text-white">
-                            <p className="font-extrabold text-xs line-clamp-1 group-hover:text-primary transition-colors drop-shadow">
-                              {prodName}
-                            </p>
-                            {dynamicP > 0 && (
-                              <p className="text-[11px] font-bold text-slate-200 mt-0.5 drop-shadow">
-                                {formatPrice(dynamicP)} {APP_SETTINGS.currency}
+                            {/* Bottom Info Overlay */}
+                            <div className="absolute bottom-2.5 inset-x-2.5 text-white">
+                              <p className="font-extrabold text-xs line-clamp-1 group-hover:text-primary transition-colors drop-shadow">
+                                {prodName}
                               </p>
-                            )}
+                              {dynamicP > 0 && (
+                                <p className="text-[11px] font-bold text-slate-200 mt-0.5 drop-shadow">
+                                  {formatPrice(dynamicP)} {APP_SETTINGS.currency}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
 
-                    {/* General Store Gallery Photos */}
-                    {(store.gallery || []).map((imgUrl, i) => {
-                      const viewerIdx = topRatedItems.length + i;
-                      return (
-                        <div 
-                          key={`store_gal_${i}`} 
-                          className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-xl bg-card border border-border cursor-pointer transition-all duration-300 hover:-translate-y-1"
-                          onClick={() => openImageViewer(allGalleryObjects, viewerIdx)}
-                        >
-                          <img 
-                            src={imgUrl} 
-                            alt={`Gallery ${i}`} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                          {/* Bottom Compact Gradient Overlay Tint (covers only badge area) */}
-                          <div className="absolute inset-x-0 -bottom-1 h-1/5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none transition-opacity duration-300" />
-                          <div className="absolute bottom-2.5 left-2.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] text-white font-semibold">
-                            Store Photo
+                      {/* General Store Gallery Photos (Paginated) */}
+                      {displayedStoreGallery.map((imgUrl, i) => {
+                        const viewerIdx = topRatedItems.length + i;
+                        return (
+                          <div 
+                            key={`store_gal_${i}`} 
+                            className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-xl bg-card border border-border cursor-pointer transition-all duration-300 hover:-translate-y-1"
+                            onClick={() => openImageViewer(allGalleryObjects, viewerIdx)}
+                          >
+                            <img 
+                              src={imgUrl} 
+                              alt={`Gallery ${i}`} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            {/* Bottom Compact Gradient Overlay Tint */}
+                            <div className="absolute inset-x-0 -bottom-1 h-1/5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none transition-opacity duration-300" />
+                            <div className="absolute bottom-2.5 left-2.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] text-white font-semibold">
+                              Store Photo
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Scroll Sentinel & Loading / Completion status for Gallery */}
+                    <div ref={galleryLoadMoreRef} className="py-6 flex flex-col items-center justify-center">
+                      {galleryVisibleCount < totalGalleryCount ? (
+                        <button
+                          onClick={() => setGalleryVisibleCount((prev) => prev + 20)}
+                          className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 px-5 py-2.5 rounded-full transition-all shadow-xs cursor-pointer"
+                        >
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <span>Load More Photos ({totalGalleryCount - galleryVisibleCount} remaining)</span>
+                        </button>
+                      ) : totalGalleryCount > 20 ? (
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Showing all {totalGalleryCount} gallery photos
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
