@@ -53,11 +53,12 @@ const StoreProductCardItem = ({
   const { isFavorited, toggleFavorite } = useFavoritesStore();
   const productId = String(prod.id || prod.foodId || prod.docId || 'unknown_item');
   const itemCat = (prod as any)?.cat || prod.category || 'Product';
+  const isLaundry = isLaundryItem(prod) || itemCat === 'Nguo' || itemCat === 'Laundry' || prod._collection === 'cloths' || prod.recordType === 'cloth';
   
   const dynamicPrice = useDynamicPrice(
     prod.price || 0, 
     store.id || prod.storeId || store.store, 
-    isLaundryItem(prod), 
+    isLaundry, 
     prod.location || store.location, 
     undefined, 
     itemCat
@@ -69,6 +70,7 @@ const StoreProductCardItem = ({
   const handleToggleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    if (isLaundry) return;
     const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(prod);
     toggleFavorite(user?.id || 'guest_user', {
       ...prod,
@@ -86,7 +88,7 @@ const StoreProductCardItem = ({
       storeName: store.name || store.store || prod.store || '',
       store: store.name || store.store || prod.store || '',
       location: prod.location || store.location || '',
-      isLaundry: isLaundryItem(prod),
+      isLaundry,
       isFood: isFoodItem(prod),
     });
   };
@@ -110,13 +112,15 @@ const StoreProductCardItem = ({
           }}
         />
         {/* Favorite Button (Bottom Left of Item Image) */}
-        <button 
-          onClick={handleToggleFav}
-          className="absolute bottom-1 left-1 z-20 w-6 h-6 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
-          title={isFav ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Heart className={`w-3 h-3 transition-all duration-200 ${isFav ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
-        </button>
+        {!isLaundry && (
+          <button 
+            onClick={handleToggleFav}
+            className="absolute bottom-1 left-1 z-20 w-6 h-6 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
+            title={isFav ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart className={`w-3 h-3 transition-all duration-200 ${isFav ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
