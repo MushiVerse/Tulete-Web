@@ -145,7 +145,7 @@ const FavoriteCardItem = ({
   const { rating: normRating } = getNormalizedRating(fav);
   const displayRating = fav.rating && Number(fav.rating) > 0 ? Number(fav.rating) : normRating;
 
-  const badgeLabel = specificCat;
+  const badgeLabel = (specificCat === 'Nguo' || specificCat === 'nguo') ? 'Laundry' : specificCat;
 
   const badgeStyle = isStore
     ? (storeCatResolved.toLowerCase().includes('laundry') || storeCatResolved.toLowerCase().includes('nguo'))
@@ -356,7 +356,9 @@ const RecommendationCardItem = ({
         </div>
 
         <div className="flex items-center justify-between gap-1 mb-1">
-          <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">{rec.category}</span>
+          <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary">
+            {rec.category === 'Nguo' || rec.category === 'nguo' ? 'Laundry' : rec.category}
+          </span>
           {displayRating && (
             <span className="text-[9px] font-bold text-foreground flex items-center gap-0.5">
               <Star className="w-2.5 h-2.5 fill-amber-400 stroke-amber-400" />
