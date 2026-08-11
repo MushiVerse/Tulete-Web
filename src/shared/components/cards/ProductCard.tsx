@@ -41,15 +41,18 @@ export const ProductCard = ({
 
   const { user, isAuthenticated } = useAuthStore();
   const { openModal } = useAuthModalStore();
-  const { isFavorited, toggleFavorite } = useFavoritesStore();
+  const { favorites, isFavorited, toggleFavorite } = useFavoritesStore();
 
   const effectiveIsFavorite = customIsFavorite !== undefined 
     ? customIsFavorite 
     : isFavorited(product.id);
 
+  const isLaundry = isLaundryItem(product);
+
   const handleHeartClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isLaundry) return;
     if (onToggleFavorite) {
       onToggleFavorite(product);
     } else {
@@ -105,13 +108,15 @@ export const ProductCard = ({
                 loading="lazy"
               />
               
-              <button 
-                onClick={handleHeartClick}
-                className="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 active:scale-95 transition-all group/fav"
-                title={effectiveIsFavorite ? "Remove from favorites" : "Add to favorites"}
-              >
-                <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${effectiveIsFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
-              </button>
+              {!isLaundry && (
+                <button 
+                  onClick={handleHeartClick}
+                  className="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 active:scale-95 transition-all group/fav"
+                  title={effectiveIsFavorite ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${effectiveIsFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+                </button>
+              )}
 
               {product.tags?.includes('Most TamTam') && (
                 <span className="absolute bottom-2 left-2 text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-success/90 text-primary-foreground tracking-wide">
@@ -267,13 +272,15 @@ export const ProductCard = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
             {/* Favorite Button (Bottom Left of Item Image) */}
-            <button 
-              onClick={handleHeartClick}
-              className="absolute bottom-3 left-3 z-20 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
-              title={effectiveIsFavorite ? "Remove from favorites" : "Add to favorites"}
-            >
-              <Heart className={`w-4 h-4 transition-all duration-200 ${effectiveIsFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
-            </button>
+            {!isLaundry && (
+              <button 
+                onClick={handleHeartClick}
+                className="absolute bottom-3 left-3 z-20 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-black/60 hover:scale-110 active:scale-95 transition-all group/fav"
+                title={effectiveIsFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Heart className={`w-4 h-4 transition-all duration-200 ${effectiveIsFavorite ? 'fill-rose-500 text-rose-500 scale-110' : 'text-white group-hover/fav:text-rose-400'}`} />
+              </button>
+            )}
             
             {/* Floating quantity left badge in top right corner of image */}
             {(() => {

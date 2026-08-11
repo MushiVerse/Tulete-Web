@@ -190,13 +190,12 @@ export const ProductDetailPage = () => {
   const targetSubSubCat = (product as any)?.subSubCat || (product as any)?.subSubCategory || (product as any)?.speccat;
   const targetSubCat = (product as any)?.subCat || (product as any)?.subCategory || (product as any)?.scat;
   const isLaundryProduct = targetCollection === 'cloths';
+  const itemCat = (product as any)?.cat || product?.category || '';
+  const isLaundry = isLaundryProduct || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat) || isLaundryItem(product);
 
   // ── Record to userViewed ──
   useEffect(() => {
     if (!isAuthenticated || !user?.id || !product?.id) return;
-
-    const itemCat = (product as any)?.cat || product?.category || '';
-    const isLaundry = isLaundryProduct || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat);
 
     const currentSubCat = (product as any)?.subCat || (product as any)?.subCategory || targetSubCat;
     if (currentSubCat) {
@@ -220,6 +219,7 @@ export const ProductDetailPage = () => {
   }, [isAuthenticated, user?.id, product?.id, favorites, isFavorited]);
 
   const handleToggleFavorite = async () => {
+    if (isLaundry) return;
     if (!isAuthenticated) {
       openModal('login');
       return;
@@ -450,11 +450,11 @@ export const ProductDetailPage = () => {
     availability: true,
   };
 
-  const itemCat = (displayProduct as any)?.cat || displayProduct.category || 'Product';
+  const displayItemCat = (displayProduct as any)?.cat || displayProduct.category || 'Product';
   
   // Execute ALL hooks unconditionally BEFORE any early return
-  const magicPrice = useDynamicPrice(displayProduct.price || 0, displayProduct.storeId, false, (displayProduct as any).location, undefined, itemCat);
-  const calcOldPrice = useDynamicPrice(displayProduct.oldprice || 0, displayProduct.storeId, false, (displayProduct as any).location, undefined, itemCat);
+  const magicPrice = useDynamicPrice(displayProduct.price || 0, displayProduct.storeId, false, (displayProduct as any).location, undefined, displayItemCat);
+  const calcOldPrice = useDynamicPrice(displayProduct.oldprice || 0, displayProduct.storeId, false, (displayProduct as any).location, undefined, displayItemCat);
   const magicOldPrice = displayProduct.oldprice ? calcOldPrice : undefined;
 
   const handleCheckout = () => {
@@ -632,13 +632,15 @@ export const ProductDetailPage = () => {
               >
                 <Share2 className="w-5 h-5" />
               </button>
-              <button 
-                onClick={handleToggleFavorite}
-                className="p-2 rounded-full hover:bg-muted transition-colors cursor-pointer"
-                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                <Heart className={`w-5 h-5 ${isFavorite ? 'fill-destructive text-destructive' : ''}`} />
-              </button>
+              {!isLaundry && (
+                <button 
+                  onClick={handleToggleFavorite}
+                  className="p-2 rounded-full hover:bg-muted transition-colors cursor-pointer"
+                  title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Heart className={`w-5 h-5 ${isFavorite ? 'fill-destructive text-destructive' : ''}`} />
+                </button>
+              )}
             </div>
           </div>
 

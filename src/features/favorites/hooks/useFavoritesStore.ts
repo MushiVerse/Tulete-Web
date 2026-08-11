@@ -5,6 +5,7 @@ import { db } from '../../../core/firebase/config';
 import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { buildCompleteProductPayload, resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { isLaundryItem } from '../../cart/store/useCartStore';
 
 interface FavoritesStore {
   favorites: FavoriteItem[];
@@ -59,6 +60,9 @@ export const useFavoritesStore = create<FavoritesStore>()(
               const parseDoc = (docSnap: any) => {
                 const data = docSnap.data();
                 if (data.fav !== false) {
+                  // Exempt Laundry items from userFavorites
+                  if (isLaundryItem(data)) return;
+
                   const targetId = data.foodId || data.id || docSnap.id;
                   const { rating, reviewCount } = getNormalizedRating(data);
                   const resolvedImg = resolveImageUrl(data);
@@ -130,13 +134,14 @@ export const useFavoritesStore = create<FavoritesStore>()(
 
       toggleFavorite: async (userId, item: any) => {
         const current = get().favorites;
-        const targetItemId = item?.itemId || item?.id || item?.foodId || '';
-        const exists = current.find((f) => f.itemId === targetItemId || f.id === targetItemId || (f as any).foodId === targetItemId);
+        const targetItemId = String(item?.itemId || item?.id || item?.foodId || item?.objectID || '').trim();
+        if (!targetItemId) return;
+        const exists = current.find((f) => f.itemId === targetItemId || f.id === targetItemId || (f as any).foodId === targetItemId || (f as any).objectID === targetItemId);
 
         if (exists) {
           // Optimistic remove
           set({
-            favorites: current.filter((f) => f.itemId !== targetItemId && f.id !== targetItemId && (f as any).foodId !== targetItemId),
+            favorites: current.filter((f) => f.itemId !== targetItemId && f.id !== targetItemId && (f as any).foodId !== targetItemId && (f as any).objectID !== targetItemId),
           });
 
           if (userId && userId !== 'guest_user') {
@@ -158,6 +163,12 @@ export const useFavoritesStore = create<FavoritesStore>()(
             }
           }
         } else {
+          // Exempt Laundry items from being added to userFavorites
+          if (isLaundryItem(item)) {
+            console.info('Laundry items are exempt from userFavorites.');
+            return;
+          }
+
           // Optimistic add
           const isStore = item?.type === 'store' || item?.recordType === 'store' || item?.category === 'Store' || item?.cat === 'Store';
           const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
@@ -272,11 +283,10 @@ export const useFavoritesStore = create<FavoritesStore>()(
       isFavorited: (itemId) => {
         if (!itemId) return false;
         const target = String(itemId).toLowerCase().trim();
-        return get().favorites.some((f) => {
-          if ((f as any).fav === false) return false;
-          const fId = String(f.itemId || f.id || (f as any).foodId || '').toLowerCase().trim();
-          const fStore = String(f.store || f.name || '').toLowerCase().trim();
-          return fId === target || (fStore && fStore === target);
+        return get().favorites.some((f: any) => {
+          if (f.fav === false) return false;
+          const candidates = [f.itemId, f.id, f.foodId, f.objectID].filter(Boolean).map((v: any) => String(v).toLowerCase().trim());
+          return candidates.includes(target);
         });
       },
 

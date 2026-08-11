@@ -106,6 +106,7 @@ import { DiscoveryMap } from '../components/DiscoveryMap';
 import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { toast } from 'sonner';
 import { resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
 
 // Trending quick-filter chips
@@ -185,7 +186,7 @@ export const DiscoveryPage = () => {
   const { openModal } = useAuthModalStore();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { toggleFavorite, isFavorited, initialize: initFavs } = useFavoritesStore();
+  const { favorites, toggleFavorite, isFavorited, initialize: initFavs } = useFavoritesStore();
 
   const { total: cartTotal } = getTotals();
   const hasItems = cartItems.length > 0;
@@ -285,23 +286,31 @@ export const DiscoveryPage = () => {
 
   const handleToggleFavorite = (product: any) => {
     if (!isAuthenticated) { openModal('login'); return; }
+    if (isLaundryItem(product)) return;
+
+    const targetId = String(product.id || product.objectID || product.itemId || product.foodId || '').trim();
+    if (!targetId) return;
+
     const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(product);
     const resolvedImg = resolveImageUrl(product);
     const resolvedIsLaundry = isLaundryItem(product);
     const resolvedIsFood = isFoodItem(product);
-
     const resolvedCat = resolveItemCategory(product);
 
-    toggleFavorite(user!.id, {
+    const activeUid = user?.id || 'guest_user';
+    const willFav = !isFavorited(targetId);
+
+    toggleFavorite(activeUid, {
       ...product,
-      itemId: product.id,
+      id: targetId,
+      itemId: targetId,
       type: (product.type || (product.recordType === 'store' ? 'store' : 'product')) as any,
-      name: product.name,
+      name: product.name || product.title || 'Favorite Item',
       description: product.description || '',
       imageUrl: resolvedImg,
       imgUrl: resolvedImg,
       imgURL: resolvedImg,
-      price: product.price,
+      price: product.price ?? 0,
       rating: product.rating ?? normRating,
       reviewCount: product.reviewCount ?? normReviewCount,
       category: resolvedCat,
@@ -311,12 +320,9 @@ export const DiscoveryPage = () => {
       store: product.store || product.storeName || '',
       isLaundry: resolvedIsLaundry,
       isFood: resolvedIsFood,
-      washingSelected: product.washingSelected ?? true,
-      ironingSelected: product.ironingSelected ?? false,
-      packagingSelected: product.packagingSelected ?? false,
-      vipSelected: product.vipSelected ?? false,
-      deliverySlot: product.deliverySlot || 'ASAP',
     });
+
+    toast.success(willFav ? `Added ${product.name || 'item'} to favorites` : `Removed ${product.name || 'item'} from wishlist`);
   };
 
   useEffect(() => {
@@ -1267,12 +1273,14 @@ export const DiscoveryPage = () => {
 
                   <div className="mt-6 flex flex-col gap-3">
                     <div className="flex gap-3">
-                      <button
-                        onClick={() => handleToggleFavorite(quickViewProduct)}
-                        className="p-4 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0"
-                      >
-                        <Heart className={`w-6 h-6 ${isFavorited(quickViewProduct.id) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
-                      </button>
+                      {!isLaundryItem(quickViewProduct) && (
+                        <button
+                          onClick={() => handleToggleFavorite(quickViewProduct)}
+                          className="p-4 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0"
+                        >
+                          <Heart className={`w-6 h-6 ${isFavorited(quickViewProduct.id || quickViewProduct.objectID || quickViewProduct.itemId) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+                        </button>
+                      )}
                       <Button
                         onClick={() => {
                           handleAddToCart(quickViewProduct);

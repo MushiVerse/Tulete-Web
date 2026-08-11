@@ -188,8 +188,19 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
 
   const storeId = String(product.storeId || extraFields.storeId || product.store || store || 's1');
   const storeName = String(product.storeName || extraFields.storeName || product.store || store || 'Verified Partner');
-  const rawCatLower = String(category || itemCat || product.cat || product.category || '').toLowerCase();
-  const isLaundry = Boolean(product.isLaundry || extraFields.isLaundry || rawCatLower.includes('nguo') || rawCatLower.includes('laundry'));
+  const rawCatLower = String(category || itemCat || product.cat || product.category || '').toLowerCase().trim();
+  const isExplicitFoodOrProduct = Boolean(
+    product.isFood || extraFields.isFood ||
+    product.isProduct || extraFields.isProduct ||
+    product._collection === 'foods' || product._collection === 'products' ||
+    extraFields._collection === 'foods' || extraFields._collection === 'products' ||
+    product.recordType === 'food' || product.recordType === 'product'
+  );
+
+  const isLaundry = !isExplicitFoodOrProduct && Boolean(
+    product.isLaundry || extraFields.isLaundry ||
+    rawCatLower === 'nguo' || rawCatLower === 'laundry' || rawCatLower === 'cloths'
+  );
   
   const isFood = !isLaundry && Boolean(
     product.isFood || 
