@@ -833,7 +833,7 @@ export const StoreDetailsPage = () => {
       }
 
       const rateAsDouble = toFirestoreDouble(stars);
-      const updatedRates = [...currentRates.map(toFirestoreDouble), rateAsDouble];
+      const updatedRates = [...currentRates.map((val: any) => toFirestoreDouble(val)), rateAsDouble];
       await setDoc(docRef, { rates: updatedRates }, { merge: true });
 
       queryClient.invalidateQueries({ queryKey: ['store'] });
@@ -1077,7 +1077,7 @@ export const StoreDetailsPage = () => {
                     <Input
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="Search item, clean package..."
+                      placeholder="Search items here..."
                       className="pl-10 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md"
                     />
                   </div>

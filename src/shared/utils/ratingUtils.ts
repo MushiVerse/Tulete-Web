@@ -36,10 +36,13 @@ export function getNormalizedRating(item: any): { rating: number; reviewCount: n
 }
 
 /**
- * Converts a selected rate value to a clean number rounded to 1 decimal place.
+ * Converts a selected rate value to a double float for Firestore documents.
+ * Forces Firebase Web SDK to serialize the value as a double float so Firestore
+ * stores it as a double type for Flutter compatibility.
  */
 export function toFirestoreDouble(value: any): number {
   const num = typeof value === 'number' ? value : parseFloat(String(value));
-  if (isNaN(num)) return 0;
-  return Number(num.toFixed(1));
+  if (isNaN(num)) return 0.000000000001;
+  const rounded = parseFloat(num.toFixed(1));
+  return Number.isInteger(rounded) ? rounded + 0.000000000001 : rounded;
 }
