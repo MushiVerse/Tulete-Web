@@ -34,3 +34,12 @@ export function getNormalizedRating(item: any): { rating: number; reviewCount: n
     reviewCount: Math.max(1, reviewCount)
   };
 }
+
+/**
+ * Converts a selected rate value to a clean number rounded to 1 decimal place.
+ */
+export function toFirestoreDouble(value: any): number {
+  const num = typeof value === 'number' ? value : parseFloat(String(value));
+  if (isNaN(num)) return 0;
+  return Number(num.toFixed(1));
+}

@@ -31,7 +31,7 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { toast } from 'sonner';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
-import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { getNormalizedRating, toFirestoreDouble } from '../../../shared/utils/ratingUtils';
 
 const StoreProductCardItem = ({
   prod,
@@ -821,25 +821,19 @@ export const StoreDetailsPage = () => {
       const docRef = doc(db, 'foodStores', storeIdToRate);
       const snap = await getDoc(docRef);
 
-      const forceDouble = (n: number): number => {
-        const num = Number(n);
-        if (isNaN(num)) return 0.001;
-        return Number.isInteger(num) ? num + 0.001 : num;
-      };
-
       let currentRates: number[] = [];
       if (snap.exists()) {
         const data = snap.data();
         const rawRates = data.rates;
         if (Array.isArray(rawRates)) {
-          currentRates = rawRates.map(Number).filter((n) => !isNaN(n));
+          currentRates = rawRates.map((val: any) => toFirestoreDouble(val)).filter((n) => !isNaN(n));
         } else if (rawRates && typeof rawRates === 'object') {
-          currentRates = Object.values(rawRates).map(Number).filter((n) => !isNaN(n));
+          currentRates = Object.values(rawRates).map((val: any) => toFirestoreDouble(val)).filter((n) => !isNaN(n));
         }
       }
 
-      const rateAsDouble = forceDouble(stars);
-      const updatedRates = [...currentRates.map(forceDouble), rateAsDouble];
+      const rateAsDouble = toFirestoreDouble(stars);
+      const updatedRates = [...currentRates.map(toFirestoreDouble), rateAsDouble];
       await setDoc(docRef, { rates: updatedRates }, { merge: true });
 
       queryClient.invalidateQueries({ queryKey: ['store'] });

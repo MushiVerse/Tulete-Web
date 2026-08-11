@@ -1,4 +1,5 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
+import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ArrowRight, Sparkles, Plus, Minus } from 'lucide-react';
@@ -26,7 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import { buildCompleteProductPayload } from '../../../shared/utils/productPayload';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, getCountFromServer } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
-import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
+import { getNormalizedRating, toFirestoreDouble } from '../../../shared/utils/ratingUtils';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 
 /* Endless Vertical Grid Section for "More of ..." */
@@ -262,12 +263,6 @@ export const ProductDetailPage = () => {
       const docRef = doc(db, targetColl, targetItem.id);
       const snap = await getDoc(docRef);
 
-      const forceDouble = (n: number): number => {
-        const num = Number(n);
-        if (isNaN(num)) return 0.001;
-        return Number.isInteger(num) ? num + 0.001 : num;
-      };
-
       let currentRates: number[] = [];
       if (snap.exists()) {
         const data = snap.data();
@@ -275,12 +270,12 @@ export const ProductDetailPage = () => {
         if (typeof rawRate === 'number' || typeof rawRate === 'string') {
           await updateDoc(docRef, { rate: deleteField() }).catch(() => {});
         } else if (Array.isArray(rawRate)) {
-          currentRates = rawRate.map(Number).filter((n) => !isNaN(n));
+          currentRates = rawRate.map((val: any) => toFirestoreDouble(val)).filter((n) => !isNaN(n));
         }
       }
 
-      const rateAsDouble = forceDouble(stars);
-      const updatedRates = [...currentRates.map(forceDouble), rateAsDouble];
+      const rateAsDouble = toFirestoreDouble(stars);
+      const updatedRates = [...currentRates.map((val: any) => toFirestoreDouble(val)), rateAsDouble];
       await setDoc(docRef, { rate: updatedRates }, { merge: true });
 
       toast.success('Thanks, Rated');
