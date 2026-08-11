@@ -51,10 +51,19 @@ export interface LaundryRatios {
 
 export function isLaundryItem(item: any): boolean {
   if (!item) return false;
+  
+  // Stores are never laundry items
+  const isStore = item.type === 'store' || item.recordType === 'store' || item.isStore === true ||
+    String(item.cat || item.category || '').toLowerCase().includes('store');
+  if (isStore) return false;
+
   if (item.isLaundry === true) return true;
   if (item.isLaundry === false) return false;
+
   const cat = String(item.cat || item.category || item.specCat || item.subCat || item._collection || '').toLowerCase().trim();
-  return cat === 'nguo' || cat === 'laundry' || cat === 'cloths' || cat.includes('laundry') || cat.includes('nguo');
+  if (cat.includes('store')) return false;
+
+  return cat === 'nguo' || cat === 'laundry' || cat === 'cloths' || (cat.includes('laundry') && !cat.includes('store')) || (cat.includes('nguo') && !cat.includes('store'));
 }
 
 export function isFoodItem(item: any): boolean {

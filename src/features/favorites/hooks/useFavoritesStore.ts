@@ -58,14 +58,15 @@ export const useFavoritesStore = create<FavoritesStore>()(
             const parseDoc = (docSnap: any) => {
               const data = docSnap.data();
               if (data.fav !== false) {
-                // Exempt Laundry items from userFavorites
-                if (isLaundryItem(data)) return;
+                const isStoreDoc = data.type === 'store' || data.recordType === 'store' || data.category === 'Store' || data.cat === 'Store' || data.isStore === true || String(data.category || data.cat || '').toLowerCase().includes('store');
+
+                // Exempt Laundry items (cat === 'Nguo') from userFavorites, but keep Laundry Stores
+                if (!isStoreDoc && isLaundryItem(data)) return;
 
                 const targetId = data.foodId || data.id || docSnap.id;
                 const { rating, reviewCount } = getNormalizedRating(data);
                 const resolvedImg = resolveImageUrl(data);
                 const resolvedCat = resolveItemCategory(data);
-                const isStoreDoc = data.type === 'store' || data.recordType === 'store' || data.category === 'Store' || data.cat === 'Store';
                 itemsMap.set(docSnap.id, {
                   id: docSnap.id,
                   userId,
@@ -161,14 +162,15 @@ export const useFavoritesStore = create<FavoritesStore>()(
           }
         }
       } else {
-        // Exempt Laundry items from being added to userFavorites
-        if (isLaundryItem(item)) {
+        const isStore = item?.type === 'store' || item?.recordType === 'store' || item?.category === 'Store' || item?.cat === 'Store' || item?.isStore === true || String(item?.category || item?.cat || '').toLowerCase().includes('store');
+
+        // Exempt Laundry items (cat === 'Nguo') from being added to userFavorites, but keep Laundry Stores
+        if (!isStore && isLaundryItem(item)) {
           console.info('Laundry items are exempt from userFavorites.');
           return;
         }
 
         // Optimistic add
-        const isStore = item?.type === 'store' || item?.recordType === 'store' || item?.category === 'Store' || item?.cat === 'Store';
         const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);
         const resolvedImg = resolveImageUrl(item);
         const resolvedCat = resolveItemCategory(item);
