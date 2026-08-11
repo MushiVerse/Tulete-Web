@@ -161,6 +161,29 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   
   const isProduct = !isLaundry && !isFood;
   
+  // Category string exact match for Flutter client (Product, food, Nguo)
+  const flutterCat = isLaundry ? 'Nguo' : (isFood ? 'food' : 'Product');
+
+  // Format location as valid numeric lat,lng string so Flutter's double.parse(split(',')) never fails
+  let validCoordinatesLoc = '';
+  if (typeof rawLoc === 'string' && rawLoc.includes(',')) {
+    const parts = rawLoc.split(',');
+    const p0 = parseFloat(parts[0]);
+    const p1 = parseFloat(parts[1]);
+    if (!isNaN(p0) && !isNaN(p1)) {
+      validCoordinatesLoc = `${p0},${p1}`;
+    }
+  } else if (rawLoc && typeof rawLoc === 'object') {
+    const lat = parseFloat(rawLoc.lat ?? rawLoc.latitude);
+    const lng = parseFloat(rawLoc.lng ?? rawLoc.long ?? rawLoc.longitude);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      validCoordinatesLoc = `${lat},${lng}`;
+    }
+  }
+  if (!validCoordinatesLoc) {
+    validCoordinatesLoc = '-6.1630,35.7516'; // Fallback valid Dodoma coordinates
+  }
+
   const washingSelected = product.washingSelected ?? extraFields.washingSelected ?? true;
   const ironingSelected = product.ironingSelected ?? extraFields.ironingSelected ?? false;
   const packagingSelected = product.packagingSelected ?? extraFields.packagingSelected ?? false;
@@ -177,15 +200,19 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
   const packagepickup = product.packagepickup ?? extraFields.packagepickup ?? false;
 
   return {
+    uid: uids,
+    userId: uids,
     foodId,
+    id: foodId,
     name,
     price,
     imgURL,
+    chose: '',
     brand,
-    location: formattedLoc,
+    location: validCoordinatesLoc,
     description,
-    category,
-    cat: itemCat,
+    category: flutterCat,
+    cat: flutterCat,
     subCat,
     subSubCat,
     store,
@@ -203,12 +230,15 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
     packagepickup,
     quantity,
     idadi: quantity,
-    availability,
+    count: quantity,
+    total: price,
+    availability: true,
+    fav: true,
+    cancel: false,
     rating: calculatedRating,
     reviewCount: calculatedReviewCount,
     rate: rates,
     time: timeStr,
-    userId: uids,
     ...extraFields,
   };
 }
