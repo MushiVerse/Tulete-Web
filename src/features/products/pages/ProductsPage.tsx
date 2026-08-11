@@ -92,7 +92,7 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
         <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
           <img src={product.imgUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
           <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm z-10">
-            <Star className="w-3.5 h-3.5 fill-warning stroke-warning" />
+            <Star className="w-3.5 h-3.5 fill-primary stroke-primary text-primary" />
             <span className="text-xs font-extrabold">{product.rating}</span>
           </div>
 
@@ -664,7 +664,7 @@ export const ProductsPage = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold flex items-center gap-2">
-                <Star className="w-5 h-5 text-orange-500 fill-orange-500" /> Top Rated Products
+                <Star className="w-5 h-5 text-primary fill-primary stroke-primary" /> Top Rated Products
               </h2>
               <span className="text-sm font-bold text-muted-foreground">
                 Showing {Math.min(visibleCount, filteredProducts.length)} of {filteredProducts.length} Items

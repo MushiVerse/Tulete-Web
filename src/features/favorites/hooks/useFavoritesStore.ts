@@ -34,6 +34,18 @@ export const useFavoritesStore = create<FavoritesStore>()(
 
     initialize: (userId) => {
       if (!userId) return;
+
+      // Clear legacy favorites local storage keys to ensure single source of truth from Firestore
+      if (typeof window !== 'undefined') {
+        try {
+          ['favorites', 'userfavorites', 'favorite_stores', 'favorites-storage', 'tulete_favorites'].forEach((key) => {
+            localStorage.removeItem(key);
+          });
+        } catch (e) {
+          console.warn('Error clearing legacy favorites from localStorage:', e);
+        }
+      }
+
       if (get().activeUserId === userId && get().initialized) return;
 
       // Clean up any previous listener
@@ -285,7 +297,7 @@ export const useFavoritesStore = create<FavoritesStore>()(
       const target = String(itemId).toLowerCase().trim();
       return get().favorites.some((f: any) => {
         if (f.fav === false) return false;
-        const candidates = [f.itemId, f.id, f.foodId, f.objectID, f.storeId, f.store, f.name].filter(Boolean).map((v: any) => String(v).toLowerCase().trim());
+        const candidates = [f.itemId, f.id, f.foodId, f.objectID, f.storeId].filter(Boolean).map((v: any) => String(v).toLowerCase().trim());
         return candidates.includes(target);
       });
     },

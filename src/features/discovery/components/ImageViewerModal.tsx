@@ -83,18 +83,27 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => handleZoom(0.5)}
-              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white cursor-pointer"
-              title="Zoom In"
-            >
-              <ZoomIn className="w-5 h-5" />
-            </button>
-            <button
               onClick={() => handleZoom(-0.5)}
-              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white cursor-pointer"
+              disabled={zoomLevel <= 1}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
               title="Zoom Out"
             >
               <ZoomOut className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setZoomLevel(1)}
+              className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white transition-all cursor-pointer min-w-[50px] text-center"
+              title="Reset Zoom"
+            >
+              {Math.round(zoomLevel * 100)}%
+            </button>
+            <button
+              onClick={() => handleZoom(0.5)}
+              disabled={zoomLevel >= 3}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-5 h-5" />
             </button>
             <button
               onClick={onClose}
@@ -132,7 +141,16 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
             <img
               src={images[currentIndex]}
               alt={`${title} - Image ${currentIndex + 1}`}
-              className="max-h-[75vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl transition-transform duration-200 cursor-zoom-in"
+              onWheel={(e) => {
+                if (e.deltaY < 0) {
+                  handleZoom(0.25);
+                } else {
+                  handleZoom(-0.25);
+                }
+              }}
+              className={`max-h-[75vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl transition-transform duration-200 ${
+                zoomLevel > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'
+              }`}
               onClick={() => handleZoom(zoomLevel > 1 ? -0.5 : 0.5)}
             />
           </motion.div>

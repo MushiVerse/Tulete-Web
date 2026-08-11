@@ -101,75 +101,78 @@ const StoreGridCard = ({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -4 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      whileHover={{ y: -3 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.18 }}
       onClick={onClick}
-      className="cursor-pointer group"
+      className="cursor-pointer group h-full"
     >
-      <div className="bg-card rounded-3xl overflow-hidden border border-border shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full group-hover:-translate-y-1">
-        {/* Cover image */}
-        <div className="relative aspect-square w-full overflow-hidden bg-muted shrink-0">
+      <div className="bg-card rounded-2xl overflow-hidden border border-border shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col h-full group-hover:border-primary/40">
+        {/* Cover image - Wide landscape aspect ratio (h-36) */}
+        <div className="relative h-36 w-full overflow-hidden bg-muted shrink-0">
           <img
             src={store.imgURL}
             alt={store.store}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
             onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400'; }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10 opacity-80 group-hover:opacity-90 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/30 opacity-90 group-hover:opacity-95 transition-opacity" />
 
           {/* Status & Fav Row */}
-          <div className="absolute top-3 inset-x-3 flex justify-between items-start">
-            <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full shadow-sm backdrop-blur-md ${store.availability ? 'bg-emerald-600 text-white' : 'bg-black/60 text-white/80'
-              }`}>
+          <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center gap-2">
+            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-sm backdrop-blur-md bg-black/50 text-white border border-white/10 flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${store.availability ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
               {store.availability ? 'Open Now' : 'Closed'}
             </span>
             <button
               onClick={onFav}
-              className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-sm hover:bg-white/40 active:scale-95 transition-all"
+              className="w-7 h-7 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center shadow-sm hover:bg-black/60 active:scale-90 transition-all border border-white/10"
+              title={isFav ? "Remove from favorites" : "Add to favorites"}
             >
-              <Heart className={`w-4 h-4 transition-colors ${isFav ? 'fill-destructive text-destructive' : 'text-white'}`} />
+              <Heart className={`w-3.5 h-3.5 transition-colors ${isFav ? 'fill-rose-500 text-rose-500' : 'text-white/90 hover:text-rose-400'}`} />
             </button>
           </div>
 
-          {/* Bottom Row on Image */}
-          <div className="absolute bottom-3 inset-x-3 flex justify-between items-end gap-2">
-            <div className={`flex items-center gap-1 ${cfg.bg} border px-2 py-1 rounded-full bg-background/95 backdrop-blur shadow-sm max-w-[120px] shrink min-w-0`}>
-              {/* <span className="text-xs shrink-0">{cfg.emoji}</span> */}
-              <span className={`text-[9px] font-extrabold uppercase tracking-wider ${cfg.color} truncate whitespace-nowrap`}>{displayCat}</span>
+          {/* Category & Rating Row on Image */}
+          <div className="absolute bottom-2.5 inset-x-2.5 flex justify-between items-center gap-2">
+            <div className="flex items-center gap-1 bg-black/50 backdrop-blur-md border border-white/15 px-2 py-0.5 rounded-full max-w-[120px] shrink min-w-0">
+              <span className="text-[10px] shrink-0">{cfg.emoji}</span>
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-white/90 truncate whitespace-nowrap">{displayCat}</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm shrink-0">
-              <Star className="w-4 h-4 fill-warning stroke-warning" />
-              <span className="text-white text-sm font-extrabold">{store.rating || '—'}</span>
+            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full shadow-sm shrink-0 border border-white/15">
+              <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
+              <span className="text-white text-xs font-extrabold">{store.rating || '—'}</span>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-5 flex flex-col flex-1 bg-card">
-          <div className="flex items-start justify-between gap-3 mb-1.5">
-            <h3 className="notranslate font-extrabold text-foreground text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors flex-1" translate="no">
-              {store.store || (store as any).name}
-            </h3>
-            {store.isVerified && (
-              <CheckCircle2 className="w-5 h-5 text-sky-500 shrink-0" />
-            )}
+        {/* Content - Compact padding & elegant typography */}
+        <div className="p-3.5 flex flex-col flex-1 bg-card justify-between space-y-2">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <h3 className="notranslate font-extrabold text-foreground text-sm leading-snug line-clamp-1 group-hover:text-primary transition-colors flex-1" translate="no">
+                {store.store || (store as any).name}
+              </h3>
+              {store.isVerified && (
+                <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0" />
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed mb-1">
+              {store.description}
+            </p>
           </div>
 
-          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-4 flex-1">
-            {store.description}
-          </p>
-
-          <div className="flex items-center justify-between pt-4 border-t border-border/50 text-base">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <MapPin className="w-5 h-5 text-success shrink-0" />
+          <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs">
+            <div className="flex items-center gap-1 text-muted-foreground font-medium">
+              <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span className="font-bold text-foreground">{store.distance} km</span>
             </div>
-            <span className="text-primary font-extrabold text-sm tracking-wide uppercase flex items-center gap-1 group-hover:gap-2 transition-all">
-              Visit <ArrowRight className="w-3.5 h-3.5" />
+            <span className="text-primary font-extrabold text-xs tracking-wide uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all">
+              Visit <ArrowRight className="w-3 h-3" />
             </span>
           </div>
         </div>
@@ -192,16 +195,16 @@ const StoreListCard = ({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: -12 }}
+      initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -12 }}
+      exit={{ opacity: 0, x: -10 }}
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
       className="cursor-pointer group"
     >
-      <div className="flex gap-4 bg-card rounded-2xl border border-border p-3.5 shadow-sm hover:shadow-md transition-all items-center">
+      <div className="flex gap-3.5 bg-card rounded-2xl border border-border p-3 shadow-xs hover:shadow-md hover:border-primary/40 transition-all items-center">
         {/* Thumbnail */}
-        <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-muted">
+        <div className="relative w-24 h-20 shrink-0 rounded-xl overflow-hidden bg-muted">
           <img
             src={store.imgURL}
             alt={store.store}
@@ -220,8 +223,8 @@ const StoreListCard = ({
             {store.isVerified && <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />}
           </div>
 
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.bg} border ${cfg.color} max-w-[110px] truncate whitespace-nowrap inline-block align-middle`}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted border border-border text-foreground/80 max-w-[110px] truncate whitespace-nowrap inline-block align-middle">
               {cfg.emoji} {displayCat}
             </span>
             <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 ${store.availability ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-muted text-muted-foreground'}`}>
@@ -231,13 +234,13 @@ const StoreListCard = ({
 
           <p className="text-[11px] text-muted-foreground line-clamp-1">{store.description}</p>
 
-          <div className="flex items-center gap-3 mt-1.5 text-[11px]">
+          <div className="flex items-center gap-3 mt-1 text-[11px]">
             <span className="flex items-center gap-1 text-muted-foreground">
-              <MapPin className="w-3 h-3 text-success" />
+              <MapPin className="w-3 h-3 text-emerald-500" />
               <span className="font-semibold">{store.distance} km</span>
             </span>
             <span className="flex items-center gap-0.5 font-bold text-foreground">
-              <Star className="w-3 h-3 fill-warning stroke-warning" />
+              <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
               {store.rating}
             </span>
           </div>
@@ -247,12 +250,12 @@ const StoreListCard = ({
         <div className="flex flex-col gap-2 shrink-0">
           <button
             onClick={onFav}
-            className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors"
+            className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center hover:bg-rose-500/10 transition-colors"
           >
-            <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
+            <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground'}`} />
           </button>
-          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
+          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+            <ChevronRight className="w-3.5 h-3.5" />
           </div>
         </div>
       </div>
@@ -425,13 +428,80 @@ export const StoreListingPage = () => {
   const { user } = useAuthStore();
   const { isFavorited, initialize: initFavorites, toggleFavorite } = useFavoritesStore();
 
+  // Live Firestore subscription for store favorites straight from userfavorites/{uid}/stores
+  const [favStoreIds, setFavStoreIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (user?.id) {
       initFavorites(user.id);
     }
   }, [user?.id, initFavorites]);
 
+  useEffect(() => {
+    if (!user?.id || user.id === 'guest_user') {
+      setFavStoreIds(new Set());
+      return;
+    }
+
+    const storesRef = collection(db, 'userfavorites', user.id, 'stores');
+    const favsRef = collection(db, 'userfavorites', user.id, 'favorites');
+
+    let storeSet = new Set<string>();
+    let favSet = new Set<string>();
+
+    const updateSets = () => {
+      const combined = new Set<string>([...storeSet, ...favSet]);
+      setFavStoreIds(combined);
+    };
+
+    const unsubStores = onSnapshot(storesRef, (snapshot) => {
+      storeSet = new Set();
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.fav !== false) {
+          storeSet.add(docSnap.id.toLowerCase().trim());
+          if (data.store) storeSet.add(String(data.store).toLowerCase().trim());
+          if (data.name) storeSet.add(String(data.name).toLowerCase().trim());
+          if (data.itemId) storeSet.add(String(data.itemId).toLowerCase().trim());
+          if (data.foodId) storeSet.add(String(data.foodId).toLowerCase().trim());
+        }
+      });
+      updateSets();
+    }, (err) => {
+      console.warn('Error reading store favorites from userfavorites/stores:', err);
+    });
+
+    const unsubFavs = onSnapshot(favsRef, (snapshot) => {
+      favSet = new Set();
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.fav !== false && (data.type === 'store' || data.isStore || data.recordType === 'store')) {
+          favSet.add(docSnap.id.toLowerCase().trim());
+          if (data.store) favSet.add(String(data.store).toLowerCase().trim());
+          if (data.name) favSet.add(String(data.name).toLowerCase().trim());
+          if (data.itemId) favSet.add(String(data.itemId).toLowerCase().trim());
+          if (data.foodId) favSet.add(String(data.foodId).toLowerCase().trim());
+        }
+      });
+      updateSets();
+    }, (err) => {
+      console.warn('Error reading favorites from userfavorites/favorites:', err);
+    });
+
+    return () => {
+      unsubStores();
+      unsubFavs();
+    };
+  }, [user?.id]);
+
   const isStoreFav = (stId: string, stName?: string) => {
+    const idLower = String(stId || '').toLowerCase().trim();
+    const nameLower = String(stName || '').toLowerCase().trim();
+
+    if (favStoreIds.has(idLower) || (nameLower && favStoreIds.has(nameLower))) {
+      return true;
+    }
+
     return isFavorited(stId) || (stName ? isFavorited(stName) : false);
   };
 
@@ -1065,7 +1135,7 @@ export const StoreListingPage = () => {
                 /* ── Grid View ─ */
                 <motion.div
                   layout
-                  className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+                  className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
                 >
                   <AnimatePresence>
                     {displayedStores.map((store) => {

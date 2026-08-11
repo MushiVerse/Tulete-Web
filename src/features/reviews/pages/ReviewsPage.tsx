@@ -117,7 +117,7 @@ export const ReviewsPage = () => {
                     key={s} 
                     className={`w-4 h-4 ${
                       s <= Math.round(stats.average) 
-                        ? 'fill-amber-400 stroke-amber-400' 
+                        ? 'fill-primary stroke-primary text-primary' 
                         : 'stroke-slate-300 dark:stroke-slate-700'
                     }`} 
                   />
@@ -141,11 +141,11 @@ export const ReviewsPage = () => {
                     }`}
                   >
                     <span className="w-2 text-right">{stars}</span>
-                    <Star className="w-3.5 h-3.5 fill-amber-400 stroke-amber-400 flex-shrink-0" />
+                    <Star className="w-3.5 h-3.5 fill-primary stroke-primary text-primary flex-shrink-0" />
                     
                     <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div 
-                        className="bg-amber-400 h-full rounded-full transition-all duration-500" 
+                        className="bg-primary h-full rounded-full transition-all duration-500" 
                         style={{ width: pct }} 
                       />
                     </div>
@@ -249,7 +249,7 @@ export const ReviewsPage = () => {
                               key={s} 
                               className={`w-3.5 h-3.5 ${
                                 s <= rev.rating 
-                                  ? 'fill-amber-400 stroke-amber-400' 
+                                  ? 'fill-primary stroke-primary text-primary' 
                                   : 'stroke-slate-200 dark:stroke-slate-850'
                               }`} 
                             />

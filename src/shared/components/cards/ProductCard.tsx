@@ -144,7 +144,7 @@ export const ProductCard = ({
                     </span>
                   </div>
                   <div className="flex items-center gap-1 bg-background/90 backdrop-blur text-foreground border border-border/40 px-2 py-0.5 rounded-full shrink-0 shadow-sm">
-                    <Star className="w-3 h-3 fill-warning stroke-warning" />
+                    <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
                     <span className="text-xs font-extrabold">{displayRating.toFixed(1)}</span>
                   </div>
                 </div>
@@ -314,7 +314,7 @@ export const ProductCard = ({
                 </span>
               </div>
               <div className="flex items-center gap-1 bg-background/90 backdrop-blur text-foreground border border-border/40 px-1.5 py-0.5 rounded-full shrink-0 shadow-sm">
-                <Star className="w-3 h-3 fill-warning stroke-warning" />
+                <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
                 <span className="text-[10px] font-extrabold">{displayRating.toFixed(1)}</span>
               </div>
             </div>

@@ -264,10 +264,10 @@ export const ProfilePage = () => {
           color="bg-rose-50 dark:bg-rose-950/30"
         />
         <StatCard
-          icon={<Star className="w-4 h-4 text-amber-500" />}
+          icon={<Star className="w-4 h-4 text-primary fill-primary" />}
           label="Reviews"
           value="0"
-          color="bg-amber-50 dark:bg-amber-950/30"
+          color="bg-primary/10"
         />
       </div>
 
@@ -277,7 +277,7 @@ export const ProfilePage = () => {
           { label: 'My Orders', icon: <Package className="w-4 h-4 text-indigo-500" />, path: '/orders' },
           { label: 'Favorites & Wishlists', icon: <Heart className="w-4 h-4 text-rose-500" />, path: '/favorites' },
           { label: 'Messages', icon: <MessageSquare className="w-4 h-4 text-sky-500" />, path: '/messages' },
-          { label: 'Reviews & Ratings', icon: <Star className="w-4 h-4 text-amber-500" />, path: '/reviews' },
+          { label: 'Reviews & Ratings', icon: <Star className="w-4 h-4 text-primary fill-primary" />, path: '/reviews' },
           { label: 'Address Book', icon: <MapPin className="w-4 h-4 text-primary" />, path: '/location' },
           { label: 'Account Settings', icon: <Shield className="w-4 h-4 text-muted-foreground" />, path: '/settings' },
         ].map(({ label, icon, path }) => (

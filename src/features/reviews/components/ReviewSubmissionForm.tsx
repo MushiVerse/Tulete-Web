@@ -88,7 +88,7 @@ export const ReviewSubmissionForm: React.FC<ReviewSubmissionFormProps> = ({
                 <Star
                   className={`w-8 h-8 ${
                     star <= (hoveredRating !== null ? hoveredRating : ratingValue)
-                      ? 'fill-amber-400 stroke-amber-400'
+                      ? 'fill-primary stroke-primary text-primary'
                       : 'stroke-slate-300 dark:stroke-slate-700'
                   }`}
                 />

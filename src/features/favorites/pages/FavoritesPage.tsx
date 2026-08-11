@@ -186,7 +186,7 @@ const FavoriteCardItem = ({
           </Badge>
           {displayRating && (
             <span className="text-[10px] font-bold text-foreground flex items-center gap-0.5">
-              <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
+              <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
               {displayRating}
             </span>
           )}

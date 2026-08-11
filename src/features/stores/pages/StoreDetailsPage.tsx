@@ -15,7 +15,8 @@ import {
   ArrowLeft, Star, Clock, MapPin, Phone, 
   MessageSquare, Share2, Heart, Search, Plus, Minus,
   CheckCircle2, Compass, Percent, Image, AlertTriangle,
-  ShoppingBag, ArrowRight, Trash2, ExternalLink, Navigation, Loader2
+  ShoppingBag, ArrowRight, Trash2, ExternalLink, Navigation, Loader2,
+  ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
@@ -26,7 +27,7 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { locationService } from '../../location/services/locationService';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
-import { useDynamicPrice } from '../../location/hooks/useDynamicPrice';
+import { useDynamicPrice, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { toast } from 'sonner';
@@ -235,17 +236,37 @@ export const StoreDetailsPage = () => {
   
   // Image Viewer Modal state
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerItems, setViewerItems] = useState<any[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
-  const [viewerTitle, setViewerTitle] = useState('');
+  const [viewerZoom, setViewerZoom] = useState<number>(1);
 
-  const openImageViewer = (imgs: string[], index = 0, title?: string) => {
-    if (!imgs || imgs.length === 0) return;
-    setViewerImages(imgs);
+  const openImageViewer = (items: any[], index = 0) => {
+    if (!items || items.length === 0) return;
+    setViewerItems(items);
     setViewerIndex(index);
-    setViewerTitle(title || store?.store || 'Image Preview');
+    setViewerZoom(1);
     setViewerOpen(true);
   };
+
+  useEffect(() => {
+    setViewerZoom(1);
+  }, [viewerIndex]);
+
+  // Keyboard event listener for Image Viewer
+  useEffect(() => {
+    if (!viewerOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        setViewerIndex((prev) => (prev - 1 + viewerItems.length) % viewerItems.length);
+      } else if (e.key === 'ArrowRight') {
+        setViewerIndex((prev) => (prev + 1) % viewerItems.length);
+      } else if (e.key === 'Escape') {
+        setViewerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewerOpen, viewerItems.length]);
   
   // Store rating states
   const [storeUserRating, setStoreUserRating] = useState<number>(0);
@@ -368,41 +389,39 @@ export const StoreDetailsPage = () => {
       let storeFavStatus: boolean | null = null;
 
       const updateFavState = () => {
-        if (storeFavStatus !== null) {
-          setLiveStoreFav(storeFavStatus);
-        } else if (favStatus !== null) {
-          setLiveStoreFav(favStatus);
+        if (storeFavStatus === true || favStatus === true) {
+          setLiveStoreFav(true);
         } else {
           setLiveStoreFav(false);
         }
       };
 
       const unsubFav = onSnapshot(favDocRef, (docSnap) => {
-        favStatus = docSnap.exists() ? docSnap.data().fav !== false : null;
+        favStatus = docSnap.exists() ? docSnap.data().fav !== false : false;
         updateFavState();
       }, (err) => {
         console.warn('Error listening to store favorite document in StoreDetailsPage:', err);
+        setLiveStoreFav(false);
       });
 
       const unsubStoreFav = onSnapshot(storeDocRef, (docSnap) => {
-        storeFavStatus = docSnap.exists() ? docSnap.data().fav !== false : null;
+        storeFavStatus = docSnap.exists() ? docSnap.data().fav !== false : false;
         updateFavState();
       }, (err) => {
         console.warn('Error listening to store favorite stores document in StoreDetailsPage:', err);
+        setLiveStoreFav(false);
       });
 
       return () => {
         unsubFav();
         unsubStoreFav();
       };
-    } catch (_) {}
+    } catch (_) {
+      setLiveStoreFav(false);
+    }
   }, [user?.id, effectiveStoreId]);
 
-  const isFavorite = liveStoreFav !== null
-    ? liveStoreFav
-    : savedFavorites.some(
-        (f) => (f as any).fav !== false && (f.itemId === effectiveStoreId || f.id === effectiveStoreId || (f as any).foodId === effectiveStoreId || (f.store && f.store.toLowerCase() === rawStoreName.toLowerCase()))
-      );
+  const isFavorite = Boolean(liveStoreFav);
 
   // Toggle favorite matching Firestore userfavorites
   const handleToggleFavorite = () => {
@@ -918,7 +937,7 @@ export const StoreDetailsPage = () => {
 
       {/* Hero Banner details */}
       <div 
-        onClick={() => store?.imgURL && openImageViewer([store.imgURL], 0, store.store)}
+        onClick={() => store?.imgURL && openImageViewer([{ imgUrl: store.imgURL, title: store.store, rating: store.rating, reviewCount: store.reviewCount, category: store.cat || store.category, isProduct: false }], 0)}
         className="relative h-60 md:h-72 rounded-3xl overflow-hidden mb-6 shadow-md border border-border bg-slate-100 dark:bg-slate-900 cursor-pointer group"
       >
         <img 
@@ -952,7 +971,7 @@ export const StoreDetailsPage = () => {
 
           <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
             <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md border border-white/10">
-              <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+              <Star className="w-4 h-4 fill-primary stroke-primary text-primary" />
               <span>{store.rating}</span>
               <span className="text-slate-400 font-normal">({store.reviewCount} Reviews)</span>
             </div>
@@ -976,7 +995,7 @@ export const StoreDetailsPage = () => {
                     <Star
                       className={`w-3.5 h-3.5 transition-colors ${
                         (storeHoverRating || storeUserRating) >= star
-                          ? 'fill-amber-400 stroke-amber-400 text-amber-400'
+                          ? 'fill-primary stroke-primary text-primary'
                           : 'text-slate-400/60'
                       }`}
                     />
@@ -1246,12 +1265,12 @@ export const StoreDetailsPage = () => {
         {/* Reviews tab */}
         {activeTab === 'reviews' && (
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6 items-center bg-muted border border-slate-200 dark:border-slate-805 p-6 rounded-2xl">
+            <div className="flex flex-col md:flex-row gap-6 items-center bg-muted border border-border p-6 rounded-2xl">
               <div className="text-center md:border-r border-border pr-6">
-                <h2 className="text-5xl font-extrabold text-slate-950 dark:text-white">{store.rating}</h2>
+                <h2 className="text-5xl font-extrabold text-foreground">{store.rating}</h2>
                 <div className="flex items-center justify-center gap-0.5 mt-2 mb-1">
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+                    <Star key={s} className="w-4 h-4 fill-primary stroke-primary text-primary" />
                   ))}
                 </div>
                 <span className="text-xs text-muted-foreground">Based on {store.reviewCount} reviews</span>
@@ -1268,9 +1287,9 @@ export const StoreDetailsPage = () => {
                 ].map((row, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <span className="w-3 text-right">{row.stars}</span>
-                    <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
-                    <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="bg-amber-400 h-full rounded-full" style={{ width: row.pct }} />
+                    <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full" style={{ width: row.pct }} />
                     </div>
                     <span className="w-8 text-right font-medium">{row.pct}</span>
                   </div>
@@ -1294,7 +1313,7 @@ export const StoreDetailsPage = () => {
 
                   <div className="flex items-center gap-0.5 mb-2">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? 'fill-amber-400 stroke-amber-400' : 'text-slate-350'}`} />
+                      <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? 'fill-primary stroke-primary text-primary' : 'text-slate-350'}`} />
                     ))}
                   </div>
 
@@ -1308,52 +1327,200 @@ export const StoreDetailsPage = () => {
         )}
 
         {/* Gallery & Promotions tab */}
-        {activeTab === 'gallery' && (
-          <div className="space-y-6">
-            {/* Coupon promotion cards */}
-            {(store.promotions || []).length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(store.promotions || []).map((promo, idx) => (
-                  <Card key={idx} className="p-4 border border-dashed border-primary bg-primary/5 rounded-2xl flex items-center gap-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary flex-shrink-0">
-                      <Percent className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-primary text-white border-0 text-[10px] font-bold">
-                          {promo.code}
-                        </Badge>
-                        <span className="text-xs font-extrabold text-foreground">Save {promo.discountValue}</span>
+        {activeTab === 'gallery' && (() => {
+          // Filter items offered by store with top ratings (>3.8) and valid image
+          const topRatedItems = products.filter((prod) => {
+            if (!prod) return false;
+            const img = prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]);
+            if (!img) return false;
+            const { rating } = getNormalizedRating(prod);
+            return rating > 3.8;
+          }).sort((a, b) => getNormalizedRating(b).rating - getNormalizedRating(a).rating);
+
+          // Combined gallery objects for rich interactive viewer modal
+          const allGalleryObjects = [
+            ...topRatedItems.map(p => {
+              const rawCat = p.category || p.cat || store.category;
+              const pCat = (rawCat === 'Nguo' || rawCat === 'nguo') ? 'Laundry' : rawCat;
+              const isLaundry = isLaundryItem(p) || rawCat === 'Nguo' || rawCat === 'nguo' || rawCat === 'Laundry' || p._collection === 'cloths' || p.recordType === 'cloth';
+              const priceWithDelivery = getItemPriceWithDelivery(
+                p.price || 0,
+                currentLocation,
+                p.location || store.location,
+                store.id || p.storeId || store.store,
+                isLaundry,
+                true,
+                pCat
+              );
+
+              return {
+                imgUrl: p.imgUrl || p.imgURL || (Array.isArray(p.images) && p.images[0]),
+                title: p.name || p.title || 'Top Rated Item',
+                rating: getNormalizedRating(p).rating,
+                reviewCount: getNormalizedRating(p).reviewCount,
+                price: priceWithDelivery,
+                basePrice: p.price || 0,
+                category: pCat,
+                product: {
+                  ...p,
+                  price: priceWithDelivery,
+                  basePrice: p.price || 0,
+                },
+                isProduct: true,
+              };
+            }),
+            ...(store.gallery || []).map(imgUrl => ({
+              imgUrl,
+              title: `${store.store} Photo`,
+              rating: store.rating,
+              reviewCount: store.reviewCount,
+              category: store.cat || store.category,
+              isProduct: false,
+            }))
+          ];
+
+          return (
+            <div className="space-y-6">
+              {/* Coupon promotion cards */}
+              {(store.promotions || []).length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(store.promotions || []).map((promo, idx) => (
+                    <Card key={idx} className="p-4 border border-dashed border-primary bg-primary/5 rounded-2xl flex items-center gap-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary flex-shrink-0">
+                        <Percent className="w-5 h-5" />
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-1">{promo.description}</p>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary text-white border-0 text-[10px] font-bold">
+                            {promo.code}
+                          </Badge>
+                          <span className="text-xs font-extrabold text-foreground">Save {promo.discountValue}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">{promo.description}</p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
-            {/* Gallery Image cards */}
-            <div>
-              <h3 className="flex items-center gap-2 font-bold text-sm text-foreground uppercase tracking-wider mb-4 border-b border-slate-50 dark:border-slate-800 pb-2">
-                <Image className="w-4 h-4 text-primary" />
-                Store Photo Gallery
-              </h3>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {(store.gallery || []).map((imgUrl, i) => (
-                  <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm bg-slate-100 dark:bg-slate-900 border border-border">
-                    <img 
-                      src={imgUrl} 
-                      alt={`Gallery ${i}`} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => openImageViewer(store.gallery || [imgUrl], i, `${store.store} Photo Gallery`)}
-                    />
+              {/* Store Photo Gallery */}
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 border-b border-border pb-3">
+                  <div>
+                    <h3 className="flex items-center gap-2 font-extrabold text-sm text-foreground uppercase tracking-wider">
+                      <Image className="w-4 h-4 text-primary" />
+                      Store Photo Gallery
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Top-rated items &amp; store highlights
+                    </p>
                   </div>
-                ))}
+                  {topRatedItems.length > 0 && (
+                    <Badge className="bg-primary/10 text-primary border border-primary/30 text-xs font-bold px-3 py-1 self-start sm:self-auto rounded-full flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-primary stroke-primary text-primary" />
+                      {topRatedItems.length} Top Rated Items
+                    </Badge>
+                  )}
+                </div>
+
+                {topRatedItems.length === 0 && (store.gallery || []).length === 0 ? (
+                  <div className="text-center py-12 bg-muted/50 border border-border rounded-2xl p-6">
+                    <Image className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-foreground">No gallery photos yet</p>
+                    <p className="text-xs text-muted-foreground">Photos of top-rated items will appear here as ratings are added.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4">
+                    {/* Top Rated Items Offered by the Store (>3.8 rating) */}
+                    {topRatedItems.map((prod, i) => {
+                      const img = prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]);
+                      const { rating } = getNormalizedRating(prod);
+                      const prodName = prod.name || prod.title || 'Top Rated Item';
+                      const pCat = prod.category || prod.cat || (store.cat || store.category);
+                      const isLaundry = isLaundryItem(prod) || pCat === 'Nguo' || pCat === 'Laundry' || prod._collection === 'cloths' || prod.recordType === 'cloth';
+                      const dynamicP = getItemPriceWithDelivery(
+                        prod.price || 0,
+                        currentLocation,
+                        prod.location || store.location,
+                        store.id || prod.storeId || store.store,
+                        isLaundry,
+                        true,
+                        pCat
+                      );
+
+                      return (
+                        <div
+                          key={`top_item_${prod.id || i}`}
+                          onClick={() => openImageViewer(allGalleryObjects, i)}
+                          className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-xl bg-card border border-border cursor-pointer transition-all duration-300 hover:-translate-y-1"
+                        >
+                          <img 
+                            src={img} 
+                            alt={prodName} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
+                            }}
+                          />
+                          {/* Bottom Compact Gradient Overlay Tint (covers only name & price, leaving 75%+ image area bright) */}
+                          <div className="absolute inset-x-0 -bottom-1 h-1/4 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none transition-opacity duration-300" />
+
+                          {/* Top Badges */}
+                          <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center gap-1">
+                            <span className="bg-background/85 dark:bg-black/60 backdrop-blur-md font-extrabold text-[10px] px-2 py-0.5 rounded-full border border-border/40 flex items-center gap-1 shadow-sm">
+                              <Star className="w-3 h-3 fill-primary stroke-primary text-primary" />
+                              <span className="text-slate-900 dark:text-white font-extrabold">{rating.toFixed(1)}</span>
+                            </span>
+                            {pCat && (
+                              <span className="bg-black/50 backdrop-blur-md text-white/90 font-bold text-[9px] px-2 py-0.5 rounded-full truncate max-w-[80px]">
+                                {pCat === 'Nguo' || pCat === 'nguo' ? 'Laundry' : pCat}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Bottom Info Overlay */}
+                          <div className="absolute bottom-2.5 inset-x-2.5 text-white">
+                            <p className="font-extrabold text-xs line-clamp-1 group-hover:text-primary transition-colors drop-shadow">
+                              {prodName}
+                            </p>
+                            {dynamicP > 0 && (
+                              <p className="text-[11px] font-bold text-slate-200 mt-0.5 drop-shadow">
+                                {formatPrice(dynamicP)} {APP_SETTINGS.currency}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* General Store Gallery Photos */}
+                    {(store.gallery || []).map((imgUrl, i) => {
+                      const viewerIdx = topRatedItems.length + i;
+                      return (
+                        <div 
+                          key={`store_gal_${i}`} 
+                          className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-xl bg-card border border-border cursor-pointer transition-all duration-300 hover:-translate-y-1"
+                          onClick={() => openImageViewer(allGalleryObjects, viewerIdx)}
+                        >
+                          <img 
+                            src={imgUrl} 
+                            alt={`Gallery ${i}`} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          {/* Bottom Compact Gradient Overlay Tint (covers only badge area) */}
+                          <div className="absolute inset-x-0 -bottom-1 h-1/5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none transition-opacity duration-300" />
+                          <div className="absolute bottom-2.5 left-2.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] text-white font-semibold">
+                            Store Photo
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
       </div>
 
@@ -1364,7 +1531,7 @@ export const StoreDetailsPage = () => {
             {/* CART WIDGET */}
             <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Order</h2>
+                <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Cart</h2>
                 <ShoppingBag className="w-4 h-4 text-primary" />
               </div>
 
@@ -1409,6 +1576,7 @@ export const StoreDetailsPage = () => {
 
           </div>
         </div>
+      </div>
 
         {/* Mobile Sticky Cart */}
         <AnimatePresence>
@@ -1435,7 +1603,225 @@ export const StoreDetailsPage = () => {
           )}
         </AnimatePresence>
 
-      </div>
+        {/* ── INTERACTIVE IMAGE VIEWER MODAL ── */}
+        <AnimatePresence>
+          {viewerOpen && viewerItems.length > 0 && (() => {
+            const currentItem = viewerItems[viewerIndex] || viewerItems[0];
+            const currentProd = currentItem?.product;
+            const currentImg = currentItem?.imgUrl || currentItem?.imgURL || store.imgURL;
+            const isProd = Boolean(currentItem?.isProduct && currentProd);
+            const productId = currentProd ? String(currentProd.id || currentProd.foodId || currentProd.docId || '') : '';
+            
+            const cartItem = isProd && productId ? cartItems.find((ci: any) => ci.productId === productId) : null;
+            const itemCat = currentProd ? (currentProd.cat || currentProd.category || 'Product') : (currentItem?.category || store.category);
+
+            const handleViewDetails = () => {
+              if (productId && productId !== 'undefined') {
+                setViewerOpen(false);
+                navigate(`/product/${encodeURIComponent(productId)}`);
+              }
+            };
+
+            const handleAddToCart = () => {
+              if (!isProd || !productId) return;
+              const itemPriceWithFee = currentItem?.price || currentProd?.price || 0;
+              const baseItemPrice = currentItem?.basePrice || currentProd?.basePrice || currentProd?.price || 0;
+              addToCart({
+                productId: productId,
+                name: currentProd.name || currentProd.title || 'Item',
+                price: itemPriceWithFee,
+                basePrice: baseItemPrice,
+                imageUrl: currentImg,
+                storeId: store.id,
+                storeName: store.store,
+                cat: itemCat,
+                location: currentProd.location || store.location,
+                idadi: currentProd.quantity !== undefined ? currentProd.quantity : (currentProd as any)?.idadi,
+                maxQuantity: currentProd.quantity !== undefined ? currentProd.quantity : (currentProd as any)?.idadi,
+              });
+              toast.success(`Added ${currentProd.name || 'Item'} to cart`);
+            };
+
+            return (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 md:p-8"
+                onClick={() => setViewerOpen(false)}
+              >
+                <div 
+                  className="relative w-full max-w-5xl h-full max-h-[90vh] flex flex-col justify-between overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Top Bar */}
+                  <div className="flex items-center justify-between z-20 text-white bg-black/40 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-extrabold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                        {viewerIndex + 1} / {viewerItems.length}
+                      </span>
+                      <span className="font-extrabold text-sm truncate max-w-[160px] sm:max-w-md">
+                        {currentItem?.title || store.store}
+                      </span>
+                    </div>
+
+                    {/* Zoom & Action Controls */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setViewerZoom((prev) => Math.max(1, prev - 0.5))}
+                        disabled={viewerZoom <= 1}
+                        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
+                        title="Zoom Out"
+                      >
+                        <ZoomOut className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => setViewerZoom(1)}
+                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white transition-all cursor-pointer min-w-[50px] text-center"
+                        title="Reset Zoom"
+                      >
+                        {Math.round(viewerZoom * 100)}%
+                      </button>
+
+                      <button
+                        onClick={() => setViewerZoom((prev) => Math.min(3.5, prev + 0.5))}
+                        disabled={viewerZoom >= 3.5}
+                        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
+                        title="Zoom In"
+                      >
+                        <ZoomIn className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => setViewerOpen(false)}
+                        className="p-2 rounded-full bg-white/10 hover:bg-rose-500/80 transition-all text-white ml-2 cursor-pointer"
+                        title="Close Viewer (Esc)"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Main Display Area with Prev/Next buttons & Zoom support */}
+                  <div className="relative flex-1 flex items-center justify-center my-4 overflow-hidden group/main">
+                    {/* Previous Button */}
+                    {viewerItems.length > 1 && (
+                      <button
+                        onClick={() => setViewerIndex((prev) => (prev - 1 + viewerItems.length) % viewerItems.length)}
+                        className="absolute left-2 md:left-4 z-20 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md border border-white/20 transition-all shadow-lg hover:scale-110 active:scale-95 cursor-pointer"
+                        title="Previous Image"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                    )}
+
+                    {/* Image with Zoom */}
+                    <motion.img
+                      key={currentImg}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: viewerZoom }}
+                      transition={{ duration: 0.2 }}
+                      src={currentImg}
+                      alt={currentItem?.title || 'Preview'}
+                      onWheel={(e) => {
+                        if (e.deltaY < 0) {
+                          setViewerZoom((prev) => Math.min(prev + 0.25, 3.5));
+                        } else {
+                          setViewerZoom((prev) => Math.max(prev - 0.25, 1));
+                        }
+                      }}
+                      onClick={() => setViewerZoom((prev) => (prev > 1 ? 1 : 2))}
+                      className={`max-h-full max-w-full object-contain rounded-2xl shadow-2xl transition-transform duration-200 ${
+                        viewerZoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'
+                      }`}
+                    />
+
+                    {/* Next Button */}
+                    {viewerItems.length > 1 && (
+                      <button
+                        onClick={() => setViewerIndex((prev) => (prev + 1) % viewerItems.length)}
+                        className="absolute right-2 md:right-4 z-20 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md border border-white/20 transition-all shadow-lg hover:scale-110 active:scale-95 cursor-pointer"
+                        title="Next Image"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bottom Action HUD Bar */}
+                  <div className="z-20 bg-black/60 backdrop-blur-xl border border-white/15 p-4 rounded-3xl text-white flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-extrabold text-base md:text-lg text-white truncate">
+                          {currentItem?.title || 'Gallery Preview'}
+                        </h3>
+                        {currentItem?.rating && (
+                          <Badge className="bg-background/80 dark:bg-white/10 border-border/40 text-xs font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 fill-primary stroke-primary text-primary" />
+                            <span className="text-slate-900 dark:text-white font-extrabold">{currentItem.rating.toFixed(1)}</span>
+                          </Badge>
+                        )}
+                        {currentItem?.category && (
+                          <Badge className="bg-white/10 text-white/90 border-white/20 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">
+                            {currentItem.category === 'Nguo' || currentItem.category === 'nguo' ? 'Laundry' : currentItem.category}
+                          </Badge>
+                        )}
+                      </div>
+                      {currentItem?.price > 0 && (
+                        <p className="text-sm font-extrabold text-emerald-400">
+                          {formatPrice(currentItem.price)} {APP_SETTINGS.currency}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {isProd && productId && (
+                        <Button
+                          onClick={handleViewDetails}
+                          variant="outline"
+                          className="rounded-2xl border-white/30 text-white bg-white/10 hover:bg-white/20 font-bold text-xs px-4 py-2.5 flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View Details
+                        </Button>
+                      )}
+
+                      {isProd && productId && (
+                        cartItem && cartItem.quantity > 0 ? (
+                          <div className="flex items-center gap-2 bg-white/15 px-3 py-1.5 rounded-2xl border border-white/20">
+                            <button
+                              onClick={() => updateQuantity(productId, cartItem.quantity - 1)}
+                              className="w-7 h-7 rounded-xl bg-white/20 text-white flex items-center justify-center hover:bg-white/30 cursor-pointer"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="font-extrabold text-sm px-1">{cartItem.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(productId, cartItem.quantity + 1)}
+                              className="w-7 h-7 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={handleAddToCart}
+                            className="rounded-2xl bg-primary text-primary-foreground font-extrabold text-xs px-5 py-2.5 shadow-lg flex items-center gap-2 hover:scale-105 transition-transform cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add to Cart
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
       </div>
     </PageContainer>
   );

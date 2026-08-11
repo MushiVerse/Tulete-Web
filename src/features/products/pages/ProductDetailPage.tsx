@@ -673,9 +673,9 @@ export const ProductDetailPage = () => {
                 </h1>
                 
                 <div className="flex items-center gap-4 mb-4 flex-wrap">
-                  <div className="flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded text-sm font-bold">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span>{(displayProduct.rating ?? 0).toFixed(1)}</span>
+                  <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded text-sm font-bold">
+                    <Star className="w-4 h-4 fill-primary stroke-primary text-primary" />
+                    <span className="text-slate-900 dark:text-white font-extrabold">{(displayProduct.rating ?? 0).toFixed(1)}</span>
                     <span className="text-muted-foreground text-xs ml-1">({displayProduct.reviewCount} reviews)</span>
                   </div>
 
@@ -696,7 +696,7 @@ export const ProductDetailPage = () => {
                             <Star
                               className={`w-4 h-4 transition-colors ${
                                 (hoverRating || userRating) >= star
-                                  ? 'fill-yellow-500 text-yellow-500'
+                                  ? 'fill-primary stroke-primary text-primary'
                                   : 'text-muted-foreground/40'
                               }`}
                             />
@@ -1093,7 +1093,7 @@ export const ProductDetailPage = () => {
             {/* CART WIDGET */}
             <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Order</h2>
+                <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Cart</h2>
                 <ShoppingBag className="w-4 h-4 text-primary" />
               </div>
 
