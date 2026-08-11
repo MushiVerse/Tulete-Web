@@ -1472,7 +1472,7 @@ export const HomePage = () => {
                         iconBg: 'bg-amber-500/10 text-amber-500',
                         title: 'All Stores',
                         sub: 'Browse network',
-                        href: '/explore?tab=stores',
+                        href: '/stores',
                       },
                     ].map(({ icon: Icon, iconBg, title, sub, href }) => (
                       <motion.button
