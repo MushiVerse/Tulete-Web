@@ -25,14 +25,14 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
 
   const getFilterStr = useCallback(() => {
     if (filterValue === 'food') {
-      return `recordType:food`;
+      return `(recordType:food OR category:Food OR cat:Food)`;
     } else if (filterValue === 'product') {
-      return `recordType:product`;
+      return `(recordType:product OR category:Product OR cat:Product)`;
     } else if (filterValue === 'laundry') {
-      return `(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)`;
+      return `(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo OR cat:Nguo)`;
     }
-    // 'All' option: positive filter for item record types
-    return `(recordType:food OR recordType:product OR recordType:cloth OR recordType:laundry)`;
+    // 'All' option: fetch all search query hits from Algolia, JS validation cleans up stores & invalid data
+    return undefined;
   }, [filterValue]);
 
   // Reset and fetch initial 20 items (Page 0)
@@ -51,7 +51,7 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
       const filterStr = getFilterStr();
 
       try {
-        const hits = await searchTuleteItems(query, {
+        const result: any = await searchTuleteItems(query, {
           filters: filterStr,
           hitsPerPage: 20,
           page: 0
@@ -59,12 +59,17 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
 
         if (isCancelled) return;
 
-        const rawHits = hits || [];
-        const validHits = rawHits.filter(isValidSearchItem);
-        setResults(validHits);
+        const hitsList = Array.isArray(result) ? result : (result.hits || []);
+        setResults(hitsList);
 
-        // If raw hits returned by Algolia is less than 20, we reached the end
-        if (rawHits.length < 20) {
+        const currPage = result.page ?? 0;
+        const totalPages = result.nbPages ?? 1;
+        const rawCount = result.rawCount ?? hitsList.length;
+
+        // More pages exist if current page is less than totalPages - 1 AND rawCount was at least 1
+        if (currPage < totalPages - 1 && rawCount > 0) {
+          setHasMore(true);
+        } else {
           setHasMore(false);
         }
       } catch (err) {
@@ -84,7 +89,7 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
     };
   }, [query, filterValue, getFilterStr]);
 
-  // Fetch next page on scroll or manual button click
+  // Fetch next page on scroll
   const loadNextPage = useCallback(async () => {
     if (fetchingRef.current || !hasMore || loading || loadingMore || !query.trim()) return;
 
@@ -94,23 +99,24 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
     const filterStr = getFilterStr();
 
     try {
-      const hits = await searchTuleteItems(query, {
+      const result: any = await searchTuleteItems(query, {
         filters: filterStr,
         hitsPerPage: 20,
         page: nextPage
       });
 
-      const rawHits = hits || [];
-      const validHits = rawHits.filter(isValidSearchItem);
+      const hitsList = Array.isArray(result) ? result : (result.hits || []);
+      const currPage = result.page ?? nextPage;
+      const totalPages = result.nbPages ?? 1;
 
-      if (rawHits.length < 20) {
+      if (currPage >= totalPages - 1) {
         setHasMore(false);
       }
 
-      if (validHits.length > 0) {
+      if (hitsList.length > 0) {
         setResults((prev) => {
           const existingIds = new Set(prev.map((item) => item.objectID || item.id));
-          const uniqueNewHits = validHits.filter((item) => !existingIds.has(item.objectID || item.id));
+          const uniqueNewHits = hitsList.filter((item: any) => !existingIds.has(item.objectID || item.id));
           return [...prev, ...uniqueNewHits];
         });
         setPage(nextPage);

@@ -484,10 +484,10 @@ export const HomePage = () => {
     const run = async () => {
       setMobileLoading(true);
       try {
-        const filterStr = filterValue === 'food' ? 'recordType:food'
-          : filterValue === 'product' ? 'recordType:product'
-          : filterValue === 'laundry' ? '(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)'
-          : '(recordType:food OR recordType:product OR recordType:cloth OR recordType:laundry)';
+        const filterStr = filterValue === 'food' ? '(recordType:food OR category:Food OR cat:Food)'
+          : filterValue === 'product' ? '(recordType:product OR category:Product OR cat:Product)'
+          : filterValue === 'laundry' ? '(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo OR cat:Nguo)'
+          : undefined;
         const hits = await searchTuleteItems(searchQuery, { filters: filterStr, hitsPerPage: 40 });
         if (!controller.signal.aborted) setMobileResults(hits);
       } finally {

@@ -19,17 +19,17 @@ export interface SearchOptions {
 export function isValidSearchItem(item: any): boolean {
   if (!item || typeof item !== 'object') return false;
 
-  // 1. Exclude stores and brands (Search results must return items only: food, products, laundry)
+  // 1. Exclude store and brand documents ONLY (Search results return items: food, products, laundry)
   const recordType = String(item.recordType || item.type || '').toLowerCase();
   const cat = String(item.category || item.cat || '').toLowerCase();
-  if (
-    recordType === 'store' ||
-    recordType === 'foodstore' ||
-    recordType === 'brand' ||
-    item.isStore === true ||
-    cat === 'store' ||
-    item.storeCategory !== undefined
-  ) {
+  const isExplicitStore = 
+    recordType === 'store' || 
+    recordType === 'foodstore' || 
+    recordType === 'brand' || 
+    item.isStore === true || 
+    cat === 'store';
+
+  if (isExplicitStore) {
     return false;
   }
 
@@ -53,7 +53,7 @@ export function isValidSearchItem(item: any): boolean {
     return false;
   }
 
-  // 5. Must have valid non-negative price
+  // 5. Must have valid non-negative price if price field is present
   const rawPrice = item.price ?? item.price1;
   if (rawPrice !== undefined && rawPrice !== null) {
     const priceNum = Number(rawPrice);
@@ -82,11 +82,28 @@ export const searchTuleteItems = async (
         },
       ],
     });
-    const hits = ((results[0] as any)?.hits || []) as any[];
-    return hits.filter(isValidSearchItem);
+    const res = (results[0] as any) || {};
+    const rawHits = (res.hits || []) as any[];
+    const validHits = rawHits.filter(isValidSearchItem);
+
+    // Attach pagination metadata onto array for components that need page/nbPages
+    const resultArr: any = validHits;
+    resultArr.hits = validHits;
+    resultArr.page = res.page ?? 0;
+    resultArr.nbPages = res.nbPages ?? 1;
+    resultArr.nbHits = res.nbHits ?? validHits.length;
+    resultArr.rawCount = rawHits.length;
+
+    return resultArr;
   } catch (error) {
     console.error('Algolia Search Error:', error);
-    return [];
+    const emptyArr: any = [];
+    emptyArr.hits = [];
+    emptyArr.page = 0;
+    emptyArr.nbPages = 0;
+    emptyArr.nbHits = 0;
+    emptyArr.rawCount = 0;
+    return emptyArr;
   }
 };
 
