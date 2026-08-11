@@ -852,6 +852,24 @@ export const HomePage = () => {
     navigate('/cart');
   };
 
+  const searchPlaceholderText = useMemo(() => {
+    if (selectedBrand) {
+      return `Search ${selectedBrand.name}...`;
+    }
+    switch (filterValue) {
+      case 'food':
+        return t('searchPlaceholderFood');
+      case 'product':
+        return t('searchPlaceholderProduct');
+      case 'laundry':
+        return t('searchPlaceholderLaundry');
+      case 'brands':
+        return t('searchPlaceholderBrands');
+      default:
+        return t('searchPlaceholder');
+    }
+  }, [selectedBrand, filterValue, t]);
+
   return (
     <PageContainer className="flex-1 flex flex-col min-h-0">
       {/* Mobile full-screen search overlay */}
@@ -863,7 +881,7 @@ export const HomePage = () => {
             onClose={() => { setIsMobileSearchOpen(false); setSearchQuery(''); setMobileResults([]); }}
             loading={mobileLoading}
             results={mobileResults}
-            placeholder={filterValue === 'brands' ? 'Search brands...' : 'Search stores, food, laundry, products...'}
+            placeholder={searchPlaceholderText}
           />
         )}
       </AnimatePresence>
@@ -944,7 +962,7 @@ export const HomePage = () => {
                   // On mobile (window width < 1024px) open full-screen overlay
                   if (window.innerWidth < 1024) setIsMobileSearchOpen(true);
                 }}
-                placeholder={selectedBrand ? `Search ${selectedBrand.name}...` : filterValue === 'brands' ? 'Search brands...' : t('searchPlaceholder')}
+                placeholder={searchPlaceholderText}
                 className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
               />
 
