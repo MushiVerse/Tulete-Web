@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SearchX } from 'lucide-react';
-import { searchTuleteItems } from '../../../core/services/algoliaService';
+import { SearchX, Loader2 } from 'lucide-react';
+import { searchTuleteItems, isValidSearchItem } from '../../../core/services/algoliaService';
 import { ProductCard } from '../../../shared/components/cards/ProductCard';
 import { Skeleton } from '../../../shared/components/ui/Skeleton';
 import { useCartStore } from '../../cart/store/useCartStore';
-import { useLocationStore } from '../../location/store/useLocationStore';
-import { getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 
 interface HomeSearchResultsViewProps {
@@ -16,46 +14,147 @@ interface HomeSearchResultsViewProps {
 
 export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ query, filterValue }) => {
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [results, setResults] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const addToCart = useCartStore((state) => state.addToCart);
 
+  // Ref to prevent concurrent page fetches
+  const fetchingRef = useRef(false);
+
+  const getFilterStr = useCallback(() => {
+    if (filterValue === 'food') {
+      return `recordType:food`;
+    } else if (filterValue === 'product') {
+      return `recordType:product`;
+    } else if (filterValue === 'laundry') {
+      return `(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)`;
+    }
+    // 'All' option: positive filter for item record types
+    return `(recordType:food OR recordType:product OR recordType:cloth OR recordType:laundry)`;
+  }, [filterValue]);
+
+  // Reset and fetch initial 20 items (Page 0)
   useEffect(() => {
-    const fetchResults = async () => {
+    let isCancelled = false;
+
+    const fetchInitial = async () => {
       if (!query.trim()) return;
-      
+
       setLoading(true);
-      
-      let filterStr = undefined;
-      // We exclude brands unless filterValue is brands, but BrandsView handles brands.
-      // So here we only care about non-brands, or specific categories.
-      if (filterValue === 'food') {
-        filterStr = `recordType:food`;
-      } else if (filterValue === 'product') {
-        filterStr = `recordType:product`;
-      } else if (filterValue === 'laundry') {
-        filterStr = `(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)`;
-      } else {
-        filterStr = `NOT recordType:brand`;
+      setPage(0);
+      setHasMore(true);
+      setResults([]);
+      fetchingRef.current = true;
+
+      const filterStr = getFilterStr();
+
+      try {
+        const hits = await searchTuleteItems(query, {
+          filters: filterStr,
+          hitsPerPage: 20,
+          page: 0
+        });
+
+        if (isCancelled) return;
+
+        const rawHits = hits || [];
+        const validHits = rawHits.filter(isValidSearchItem);
+        setResults(validHits);
+
+        // If raw hits returned by Algolia is less than 20, we reached the end
+        if (rawHits.length < 20) {
+          setHasMore(false);
+        }
+      } catch (err) {
+        console.error('Error fetching initial search results:', err);
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+          fetchingRef.current = false;
+        }
       }
-
-      const hits = await searchTuleteItems(query, {
-        filters: filterStr,
-        hitsPerPage: 20
-      });
-      
-      const validHits = (hits || []).filter((item: any) => 
-        item.availability !== false && 
-        item.availability !== 'false' && 
-        item.available !== false && 
-        item.isAvailable !== false
-      );
-
-      setResults(validHits);
-      setLoading(false);
     };
 
-    fetchResults();
-  }, [query, filterValue]);
+    fetchInitial();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [query, filterValue, getFilterStr]);
+
+  // Fetch next page on scroll or manual button click
+  const loadNextPage = useCallback(async () => {
+    if (fetchingRef.current || !hasMore || loading || loadingMore || !query.trim()) return;
+
+    fetchingRef.current = true;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    const filterStr = getFilterStr();
+
+    try {
+      const hits = await searchTuleteItems(query, {
+        filters: filterStr,
+        hitsPerPage: 20,
+        page: nextPage
+      });
+
+      const rawHits = hits || [];
+      const validHits = rawHits.filter(isValidSearchItem);
+
+      if (rawHits.length < 20) {
+        setHasMore(false);
+      }
+
+      if (validHits.length > 0) {
+        setResults((prev) => {
+          const existingIds = new Set(prev.map((item) => item.objectID || item.id));
+          const uniqueNewHits = validHits.filter((item) => !existingIds.has(item.objectID || item.id));
+          return [...prev, ...uniqueNewHits];
+        });
+        setPage(nextPage);
+      }
+    } catch (err) {
+      console.error('Error loading next search page:', err);
+    } finally {
+      setLoadingMore(false);
+      fetchingRef.current = false;
+    }
+  }, [page, hasMore, loading, loadingMore, query, getFilterStr]);
+
+  // High-performance IntersectionObserver for zero-lag infinite scrolling
+  const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!bottomSentinelRef.current || !hasMore || loading || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadNextPage();
+        }
+      },
+      { rootMargin: '800px 0px 800px 0px', threshold: 0 }
+    );
+
+    observer.observe(bottomSentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, loadNextPage]);
+
+  // Window Scroll Listener fallback (threshold: 1000px from bottom)
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollBottom = window.innerHeight + window.scrollY;
+      const docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      if (docHeight - scrollBottom < 1000) {
+        loadNextPage();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadNextPage]);
 
   const handleAddToCart = (product: any) => {
     const rawCat = product.cat || product.category;
@@ -101,34 +200,47 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-      <AnimatePresence>
-        {results.map((item, i) => {
-          const { rating, reviewCount } = getNormalizedRating(item);
-          const product = {
-            ...item,
-            id: item.objectID || item.id,
-            imgUrl: item.imgURL || item.image || item.imgUrl || '',
-            rating,
-            reviewCount
-          };
-          
-          return (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2, delay: i * 0.03 }}
-            >
-              <ProductCard 
-                product={product}
-                onAddToCart={() => handleAddToCart(product)}
-              />
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <AnimatePresence>
+          {results.map((item, i) => {
+            const { rating, reviewCount } = getNormalizedRating(item);
+            const product = {
+              ...item,
+              id: item.objectID || item.id,
+              imgUrl: item.imgURL || item.image || item.imgUrl || '',
+              rating,
+              reviewCount
+            };
+            
+            return (
+              <motion.div
+                key={`${product.id}-${i}`}
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2, delay: (i % 20) * 0.02 }}
+              >
+                <ProductCard 
+                  product={product}
+                  onAddToCart={() => handleAddToCart(product)}
+                />
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* Sentinel element for IntersectionObserver infinite scrolling */}
+      <div ref={bottomSentinelRef} className="h-4 w-full" />
+
+      {/* Loading Indicator */}
+      {loadingMore && (
+        <div className="flex justify-center items-center py-6 gap-2 text-primary font-bold text-sm bg-primary/5 rounded-full border border-primary/10 w-max mx-auto px-6">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span>Loading more results...</span>
+        </div>
+      )}
     </div>
   );
 };

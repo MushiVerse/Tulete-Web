@@ -16,6 +16,53 @@ export interface SearchOptions {
   aroundLatLng?: string;
 }
 
+export function isValidSearchItem(item: any): boolean {
+  if (!item || typeof item !== 'object') return false;
+
+  // 1. Exclude stores and brands (Search results must return items only: food, products, laundry)
+  const recordType = String(item.recordType || item.type || '').toLowerCase();
+  const cat = String(item.category || item.cat || '').toLowerCase();
+  if (
+    recordType === 'store' ||
+    recordType === 'foodstore' ||
+    recordType === 'brand' ||
+    item.isStore === true ||
+    cat === 'store' ||
+    item.storeCategory !== undefined
+  ) {
+    return false;
+  }
+
+  // 2. Must have a valid ID
+  const id = item.objectID || item.id || item.foodId;
+  if (!id || String(id).trim().length === 0) return false;
+
+  // 3. Must have a valid, non-placeholder name
+  const name = item.name || item.nam1;
+  if (!name || typeof name !== 'string' || name.trim().length === 0) return false;
+  const lowerName = name.trim().toLowerCase();
+  if (['null', 'undefined', 'test', 'no name', 'unknown', 'dummy', 'temp', 'delete'].includes(lowerName)) return false;
+
+  // 4. Must be available
+  if (
+    item.availability === false ||
+    item.availability === 'false' ||
+    item.available === false ||
+    item.isAvailable === false
+  ) {
+    return false;
+  }
+
+  // 5. Must have valid non-negative price
+  const rawPrice = item.price ?? item.price1;
+  if (rawPrice !== undefined && rawPrice !== null) {
+    const priceNum = Number(rawPrice);
+    if (isNaN(priceNum) || priceNum < 0) return false;
+  }
+
+  return true;
+}
+
 // Helper function to query the unified index
 export const searchTuleteItems = async (
   query: string, 
@@ -36,12 +83,7 @@ export const searchTuleteItems = async (
       ],
     });
     const hits = ((results[0] as any)?.hits || []) as any[];
-    return hits.filter((item: any) => 
-      item.availability !== false && 
-      item.availability !== 'false' && 
-      item.available !== false && 
-      item.isAvailable !== false
-    );
+    return hits.filter(isValidSearchItem);
   } catch (error) {
     console.error('Algolia Search Error:', error);
     return [];

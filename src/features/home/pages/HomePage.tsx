@@ -487,7 +487,7 @@ export const HomePage = () => {
         const filterStr = filterValue === 'food' ? 'recordType:food'
           : filterValue === 'product' ? 'recordType:product'
           : filterValue === 'laundry' ? '(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo)'
-          : 'NOT recordType:brand';
+          : '(recordType:food OR recordType:product OR recordType:cloth OR recordType:laundry)';
         const hits = await searchTuleteItems(searchQuery, { filters: filterStr, hitsPerPage: 40 });
         if (!controller.signal.aborted) setMobileResults(hits);
       } finally {
