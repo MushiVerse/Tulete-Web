@@ -95,8 +95,8 @@ export function resolveItemCategory(item: any): string {
  * Safely resolves all image URLs from any document data structure.
  * Preserves multi-image arrays (especially for Product items) so mobile carousels show all images.
  */
-export function resolveAllImageUrls(data: any): string | string[] {
-  if (!data) return 'https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media';
+export function resolveAllImageUrls(data: any): string[] {
+  if (!data) return ['https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media'];
 
   const candidates: string[] = [];
 
@@ -123,14 +123,11 @@ export function resolveAllImageUrls(data: any): string | string[] {
   add(data.pic);
   add(data.url);
 
-  if (candidates.length > 1) {
+  if (candidates.length > 0) {
     return candidates;
   }
-  if (candidates.length === 1) {
-    return candidates[0];
-  }
 
-  return 'https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media';
+  return ['https://firebasestorage.googleapis.com/v0/b/fast-tz.appspot.com/o/placeholder.png?alt=media'];
 }
 
 /**
@@ -260,6 +257,9 @@ export function buildCompleteProductPayload(product: any, userId: string, extraF
     name,
     price,
     imgURL,
+    images: imgURL,
+    imageUrl: resolveImageUrl(combinedObj),
+    imgUrl: resolveImageUrl(combinedObj),
     chose: '',
     brand,
     location: validCoordinatesLoc,
