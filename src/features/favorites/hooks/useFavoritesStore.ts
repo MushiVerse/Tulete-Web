@@ -142,14 +142,15 @@ export const useFavoritesStore = create<FavoritesStore>()(
           if (userId && userId !== 'guest_user') {
             try {
               const isStore = exists.type === 'store' || (exists as any).recordType === 'store' || (exists as any).category === 'Store' || (exists as any).cat === 'Store';
-              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
-              await updateDoc(favDocRef, { fav: false }).catch(async () => {
-                await deleteDoc(favDocRef);
-              });
               if (isStore) {
                 const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
                 await updateDoc(storeDocRef, { fav: false }).catch(async () => {
                   await deleteDoc(storeDocRef);
+                });
+              } else {
+                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
+                await updateDoc(favDocRef, { fav: false }).catch(async () => {
+                  await deleteDoc(favDocRef);
                 });
               }
             } catch (err) {
@@ -205,6 +206,7 @@ export const useFavoritesStore = create<FavoritesStore>()(
                   id: targetItemId,
                   fav: true, 
                   type: isStore ? 'store' : (item.type || 'product'),
+                  sourceCollection: isStore ? 'foodStores' : (item.sourceCollection || 'products'),
                   storeCategory: storeCategoryResolved,
                   category: item.category || item.cat || storeCategoryResolved || (isStore ? 'Store' : resolvedCat),
                   cat: item.cat || item.category || storeCategoryResolved || resolvedCat,
@@ -217,13 +219,11 @@ export const useFavoritesStore = create<FavoritesStore>()(
               );
 
               if (isStore) {
-                // Dedicated Store Favorite Document creation
+                // Stores ONLY saved to stores subcollection (referencing foodStores document)
                 const storeDocRef = doc(db, 'userfavorites', userId, 'stores', targetItemId);
-                await setDoc(storeDocRef, { ...favPayload, type: 'store', isStore: true }, { merge: true });
-                // Also write to favorites collection for fallback compatibility
-                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
-                await setDoc(favDocRef, favPayload, { merge: true });
+                await setDoc(storeDocRef, { ...favPayload, type: 'store', isStore: true, sourceCollection: 'foodStores' }, { merge: true });
               } else {
+                // Products/items saved to favorites subcollection
                 const favDocRef = doc(db, 'userfavorites', userId, 'favorites', targetItemId);
                 await setDoc(favDocRef, favPayload, { merge: true });
               }
@@ -247,17 +247,21 @@ export const useFavoritesStore = create<FavoritesStore>()(
 
         if (userId && userId !== 'guest_user') {
           try {
+            const isStore = (item as any)?.type === 'store' || (item as any)?.recordType === 'store' || (item as any)?.category === 'Store' || (item as any)?.cat === 'Store';
             const possibleIds = Array.from(new Set([targetItemId, docId, item?.id, item?.itemId, item?.docId].filter(Boolean)));
             for (const idToDelete of possibleIds) {
               if (!idToDelete) continue;
-              const favDocRef = doc(db, 'userfavorites', userId, 'favorites', idToDelete);
-              await deleteDoc(favDocRef).catch(async () => {
-                await updateDoc(favDocRef, { fav: false }).catch(() => {});
-              });
-              const storeDocRef = doc(db, 'userfavorites', userId, 'stores', idToDelete);
-              await deleteDoc(storeDocRef).catch(async () => {
-                await updateDoc(storeDocRef, { fav: false }).catch(() => {});
-              });
+              if (isStore) {
+                const storeDocRef = doc(db, 'userfavorites', userId, 'stores', idToDelete);
+                await deleteDoc(storeDocRef).catch(async () => {
+                  await updateDoc(storeDocRef, { fav: false }).catch(() => {});
+                });
+              } else {
+                const favDocRef = doc(db, 'userfavorites', userId, 'favorites', idToDelete);
+                await deleteDoc(favDocRef).catch(async () => {
+                  await updateDoc(favDocRef, { fav: false }).catch(() => {});
+                });
+              }
             }
           } catch (err) {
             console.error('Error removing favorite from Firestore userfavorites:', err);

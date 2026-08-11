@@ -916,22 +916,11 @@ export const StoreDetailsPage = () => {
 
         {/* ── CENTER COLUMN ── */}
         <div className="flex-auto min-w-0 max-w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none pt-6 pb-32 xl:pb-28 px-4 lg:px-8 xl:px-10 space-y-8">
-          {/* Mobile Back & Actions */}
+          {/* Mobile Back Header */}
           <div className="lg:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between py-3 mb-6">
             <button onClick={() => navigate('/explore?map=true', { state: { showMap: true } })} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <button className="p-2 rounded-full hover:bg-muted transition-colors">
-                <Share2 className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={handleToggleFavorite}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-              >
-                <Heart className={`w-5 h-5 ${isFavorite ? 'fill-destructive text-destructive' : ''}`} />
-              </button>
-            </div>
           </div>
 
       {/* Hero Banner details */}
