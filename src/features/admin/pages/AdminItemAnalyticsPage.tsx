@@ -4,6 +4,7 @@ import { db } from '../../../core/firebase/config';
 import { Eye, Download, Search, Heart, ShoppingCart, Star, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdminTheme } from '../context/AdminThemeContext';
+import { AdminPagination } from '../components/AdminPagination';
 
 export const AdminItemAnalyticsPage: React.FC = () => {
   const { theme } = useAdminTheme();
@@ -13,6 +14,9 @@ export const AdminItemAnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     setLoading(true);
@@ -46,6 +50,13 @@ export const AdminItemAnalyticsPage: React.FC = () => {
     const nameStr = String(item.name || item.id || '').toLowerCase();
     return nameStr.includes(q);
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterQuery, categoryFilter]);
+
+  const totalPages = Math.ceil(filteredItems.length / pageSize) || 1;
+  const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const totalViewsRecorded = items.reduce((acc, curr) => acc + (curr.viewCount || 0), 0);
   const totalFavoritesRecorded = items.reduce((acc, curr) => acc + (curr.favoriteCount || 0), 0);
@@ -206,7 +217,7 @@ export const AdminItemAnalyticsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className={`divide-y text-xs font-medium ${isDark ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-                {filteredItems.map((item, idx) => {
+                {paginatedItems.map((item, idx) => {
                   const views = item.viewCount || 0;
                   const orders = item.orderCount || 0;
                   const favs = item.favoriteCount || 0;
@@ -217,7 +228,7 @@ export const AdminItemAnalyticsPage: React.FC = () => {
                       key={item.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.02 }}
+                      transition={{ delay: idx * 0.015 }}
                       className={isDark ? 'hover:bg-slate-800/40 transition-colors' : 'hover:bg-slate-50 transition-colors'}
                     >
                       <td className="py-4 px-6">
@@ -269,6 +280,15 @@ export const AdminItemAnalyticsPage: React.FC = () => {
             </table>
           </div>
         )}
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredItems.length}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={(size) => setPageSize(size)}
+        />
       </div>
     </div>
   );

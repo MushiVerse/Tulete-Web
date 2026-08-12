@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminTheme } from '../context/AdminThemeContext';
+import { AdminPagination } from '../components/AdminPagination';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { formatPrice } from '../../../shared/utils/formatPrice';
 
@@ -18,6 +19,9 @@ export const AdminCancellationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState('');
   const [whoFilter, setWhoFilter] = useState('all');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const fromInputRef = useRef<HTMLInputElement>(null);
   const toInputRef = useRef<HTMLInputElement>(null);
@@ -242,6 +246,13 @@ export const AdminCancellationsPage: React.FC = () => {
     const storeStr = (c.storeNames || []).join(' ').toLowerCase();
     return userStr.includes(q) || itemStr.includes(q) || storeStr.includes(q);
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterQuery, whoFilter, startDate, endDate]);
+
+  const totalPages = Math.ceil(filteredCancellations.length / pageSize) || 1;
+  const paginatedCancellations = filteredCancellations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const totalCancelledRevenue = filteredCancellations.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
 
@@ -506,7 +517,7 @@ export const AdminCancellationsPage: React.FC = () => {
           </div>
         ) : (
           <div className={`divide-y overflow-x-auto ${isDark ? 'divide-slate-800/80' : 'divide-slate-200'}`}>
-            {filteredCancellations.map((c) => {
+            {paginatedCancellations.map((c) => {
               const itemTs = getRecordTimestamp(c);
               const dateStr = itemTs > 0 ? new Date(itemTs).toLocaleString() : (c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString() : 'Recent');
               const itemsList = c.items || [];
@@ -583,6 +594,15 @@ export const AdminCancellationsPage: React.FC = () => {
             })}
           </div>
         )}
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredCancellations.length}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={(size) => setPageSize(size)}
+        />
       </div>
 
       {/* FULL CANCELED ORDER PREVIEW MODAL */}

@@ -842,15 +842,27 @@ export const analyticsService = {
       const cancelLogRef = doc(db, 'analytics_cancellations', `${orderId}_${Date.now()}`);
 
       const items = orderData?.items || orderData?.cartItems || [];
-      const itemSummaries = Array.isArray(items) ? items.map((item: any) => ({
+      let itemSummaries = Array.isArray(items) && items.length > 0 ? items.map((item: any) => ({
         productId: item.productId || item.id || item.foodId || '',
         name: item.name || item.title || 'Item',
         price: Number(item.price) || 0,
-        quantity: Number(item.quantity) || 1,
+        quantity: Number(item.quantity || item.count) || 1,
         storeId: item.storeId || '',
         storeName: item.storeName || item.store || '',
       })) : [];
 
+      if (itemSummaries.length === 0 && (orderData?.foodId || orderData?.productId || orderData?.name)) {
+        itemSummaries = [{
+          productId: orderData.foodId || orderData.productId || orderData.id || '',
+          name: orderData.name || 'Item',
+          price: Number(orderData.price || orderData.total) || 0,
+          quantity: Number(orderData.count || orderData.quantity) || 1,
+          storeId: orderData.storeId || '',
+          storeName: orderData.storeName || orderData.store || '',
+        }];
+      }
+
+      const cancelledQty = itemSummaries.reduce((acc: number, i: any) => acc + i.quantity, 0) || 1;
       const totalAmount = Number(orderData?.total || orderData?.price || orderData?.totalAmount || 0);
 
       const cancelPayload: any = {
@@ -866,44 +878,77 @@ export const analyticsService = {
         createdAt: serverTimestamp(),
       };
 
+      // Prepare updates for individual item analytics docs and overview orderedItems map
+      const overviewItemUpdates: Record<string, any> = {};
+      const itemDocOperations: Promise<any>[] = [];
+
+      itemSummaries.forEach((item: any) => {
+        if (item.productId) {
+          const cleanId = String(item.productId).trim();
+          const safeKey = sanitizeKey(cleanId);
+          overviewItemUpdates[`orderedItems.${safeKey}`] = increment(-item.quantity);
+
+          const itemRef = doc(db, 'analytics_items', cleanId);
+          itemDocOperations.push(
+            setDoc(
+              itemRef,
+              {
+                orderCount: increment(-item.quantity),
+                lastCancelledByUserId: userInfo.userId,
+                lastCancelledAt: serverTimestamp(),
+              },
+              { merge: true }
+            )
+          );
+        }
+      });
+
       await Promise.all([
         // 1. Audit record in analytics_cancellations collection
         setDoc(cancelLogRef, cancelPayload, { merge: true }),
 
-        // 2. Global overview analytics updates
+        // 2. Global overview analytics updates (reducing totalOrders & orderedItems count)
         setDoc(
           overviewRef,
           {
+            totalOrders: increment(-cancelledQty),
             totalCancelledOrders: increment(1),
-            totalCancelledItems: increment(itemSummaries.reduce((acc: number, i: any) => acc + i.quantity, 0)),
+            totalCancelledItems: increment(cancelledQty),
+            ...overviewItemUpdates,
             lastUpdated: serverTimestamp(),
           },
           { merge: true }
         ),
 
-        // 3. Daily breakdown update
+        // 3. Daily breakdown update (reducing orders field count, incrementing ordersCancelled)
         setDoc(
           dailyRef,
           {
             date: today,
+            orders: increment(-cancelledQty),
             ordersCancelled: increment(1),
             lastUpdated: serverTimestamp(),
           },
           { merge: true }
         ),
 
-        // 4. Update user profile analytics for cancellation frequency
+        // 4. Update user profile analytics for cancellation frequency & total orders count
         updateUserAnalytics(userInfo, {
+          totalOrders: increment(-cancelledQty),
           totalCancelledOrders: increment(1),
           lastCancelledAt: serverTimestamp(),
         }),
 
-        // 5. Audit log event
+        // 5. Audit log event for Latest Customer Events Log
         logActivityEvent({
           userId: userInfo.userId,
           eventType: 'order_cancelled',
           context: `Order ${orderId} cancelled by ${cancelledBy}`,
+          quantity: cancelledQty,
         }),
+
+        // 6. Update individual analytics_items documents
+        ...itemDocOperations,
       ]);
     } catch (err) {
       console.warn('[Analytics] Failed to track order cancellation:', err);

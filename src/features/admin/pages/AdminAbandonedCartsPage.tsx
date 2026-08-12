@@ -4,6 +4,7 @@ import { db } from '../../../core/firebase/config';
 import { ShoppingBag, Download, Search, DollarSign, Users, CheckCircle, Clock, Mail, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdminTheme } from '../context/AdminThemeContext';
+import { AdminPagination } from '../components/AdminPagination';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { formatPrice } from '../../../shared/utils/formatPrice';
 
@@ -15,6 +16,9 @@ export const AdminAbandonedCartsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     setLoading(true);
@@ -59,6 +63,13 @@ export const AdminAbandonedCartsPage: React.FC = () => {
     const itemStr = (c.items || []).map((i: any) => i.name || '').join(' ').toLowerCase();
     return userStr.includes(q) || itemStr.includes(q);
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterQuery, statusFilter]);
+
+  const totalPages = Math.ceil(filteredCarts.length / pageSize) || 1;
+  const paginatedCarts = filteredCarts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const exportCSV = () => {
     if (carts.length === 0) return;
@@ -215,7 +226,7 @@ export const AdminAbandonedCartsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className={`divide-y text-xs font-medium ${isDark ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-                {filteredCarts.map((cart, idx) => {
+                {paginatedCarts.map((cart, idx) => {
                   const itemsList = cart.items || [];
                   const timeStr = cart.lastCartUpdate?.toDate ? cart.lastCartUpdate.toDate().toLocaleString() : 'Recent';
                   const isConverted = cart.status === 'converted';
@@ -225,7 +236,7 @@ export const AdminAbandonedCartsPage: React.FC = () => {
                       key={cart.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.02 }}
+                      transition={{ delay: idx * 0.015 }}
                       className={isDark ? 'hover:bg-slate-800/40 transition-colors' : 'hover:bg-slate-50 transition-colors'}
                     >
                       <td className="py-4 px-6">
@@ -271,6 +282,15 @@ export const AdminAbandonedCartsPage: React.FC = () => {
             </table>
           </div>
         )}
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredCarts.length}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={(size) => setPageSize(size)}
+        />
       </div>
     </div>
   );

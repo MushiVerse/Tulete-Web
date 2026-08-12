@@ -25,6 +25,12 @@ const AdminLayoutContent: React.FC = () => {
       desc: 'KPI metrics & traffic summary',
     },
     {
+      title: 'Orders Management',
+      path: '/admin/orders',
+      icon: ShoppingBag,
+      desc: 'Online & POS Laundry office orders',
+    },
+    {
       title: 'Search Intelligence',
       path: '/admin/searches',
       icon: Search,
@@ -68,50 +74,50 @@ const AdminLayoutContent: React.FC = () => {
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
     }`}>
       {/* Top Header */}
-      <header className={`h-16 border-b sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between shrink-0 transition-colors ${
+      <header className={`h-16 border-b sticky top-0 z-40 px-3 sm:px-4 lg:px-8 flex items-center justify-between shrink-0 transition-colors ${
         isDark 
           ? 'border-slate-800/80 bg-slate-900/80 backdrop-blur-xl' 
           : 'border-slate-200/80 bg-white/80 backdrop-blur-xl shadow-xs'
       }`}>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className={`lg:hidden p-2 rounded-xl border transition-all ${
+            className={`lg:hidden p-2 rounded-xl border transition-all shrink-0 ${
               isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
             }`}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/admin')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-purple-600 p-0.5 shadow-md shadow-primary/20">
+          <div className="flex items-center gap-2.5 sm:gap-3 cursor-pointer min-w-0" onClick={() => navigate('/admin')}>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-primary to-purple-600 p-0.5 shadow-md shadow-primary/20 shrink-0">
               <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
                 isDark ? 'bg-slate-950' : 'bg-white'
               }`}>
-                <ShieldCheck className="w-5 h-5 text-primary" />
+                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className={`font-black text-base tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Tulete Web Admin
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className={`font-black text-sm sm:text-base tracking-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Tulete Admin
                 </span>
-                <span className="px-2 py-0.5 text-[10px] font-extrabold bg-primary/20 text-primary border border-primary/30 rounded-full">
-                  CMS v{pkg.version || '2.4.5'}
+                <span className="hidden xs:inline-block px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold bg-primary/20 text-primary border border-primary/30 rounded-full shrink-0">
+                  v{pkg.version || '2.5.0'}
                 </span>
               </div>
-              <p className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`hidden sm:block text-[11px] font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Intelligent Platform Analytics
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer ${
               isDark 
                 ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-amber-400' 
                 : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 shadow-xs'
@@ -119,11 +125,11 @@ const AdminLayoutContent: React.FC = () => {
             title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
           >
             {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
-            <span className="hidden sm:inline">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+            <span className="hidden md:inline">{isDark ? 'Light' : 'Dark'}</span>
           </button>
 
           {/* Live Status indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-semibold">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Live Syncing</span>
           </div>
@@ -143,10 +149,10 @@ const AdminLayoutContent: React.FC = () => {
 
           <div className={`h-6 w-[1px] hidden sm:block ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
 
-          {/* User profile pill */}
-          <div className="flex items-center gap-3 pl-2">
-            <div className="text-right hidden md:block">
-              <p className={`text-xs font-extrabold truncate max-w-[160px] ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          {/* User profile pill & logout */}
+          <div className="flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2">
+            <div className="text-right hidden xl:block">
+              <p className={`text-xs font-extrabold truncate max-w-[140px] ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Admin'}
               </p>
               <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wider">
@@ -156,7 +162,7 @@ const AdminLayoutContent: React.FC = () => {
 
             <button
               onClick={handleLogout}
-              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all cursor-pointer ${
                 isDark 
                   ? 'bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 border-slate-700/60 text-slate-300' 
                   : 'bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border-slate-200 text-slate-700'
@@ -230,20 +236,28 @@ const AdminLayoutContent: React.FC = () => {
             })}
           </div>
 
-          <div className={`p-4 rounded-2xl border ${
-            isDark 
-              ? 'bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800/80' 
-              : 'bg-slate-50 border-slate-200'
-          }`}>
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-500 mb-1">
-              <Sparkles className="w-4 h-4" />
-              <span>Real-Time Insight Engine</span>
-            </div>
-            <p className={`text-[11px] font-medium leading-relaxed ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
+          <div className="space-y-2">
+            <div className={`p-4 rounded-2xl border ${
+              isDark 
+                ? 'bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800/80' 
+                : 'bg-slate-50 border-slate-200'
             }`}>
-              Analytics metrics are dynamically updated from customer actions in Firestore.
-            </p>
+              <div className="flex items-center gap-2 text-xs font-extrabold text-amber-500 mb-1">
+                <Sparkles className="w-4 h-4 shrink-0" />
+                <span>Tulete Engine</span>
+              </div>
+              <p className={`text-[11px] font-medium leading-relaxed ${
+                isDark ? 'text-slate-400' : 'text-slate-500'
+              }`}>
+                Analytics metrics are dynamically updated from customer actions in Firestore.
+              </p>
+            </div>
+
+            <div className="w-full">
+              <span className="w-full flex items-center justify-center py-2 px-3 text-xs font-black uppercase tracking-wider bg-primary/15 text-primary border border-primary/30 rounded-xl shadow-xs text-center">
+                CMS v{pkg.version || '2.5.0'}
+              </span>
+            </div>
           </div>
         </aside>
 
@@ -300,13 +314,39 @@ const AdminLayoutContent: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={handleLogout}
-                className="w-full h-11 rounded-xl bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-extrabold flex items-center justify-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out Admin</span>
-              </button>
+              <div className="pt-4 border-t border-slate-800/60 space-y-3">
+                {/* Mobile Drawer Tulete Engine Card */}
+                <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
+                  isDark 
+                    ? 'bg-slate-950/80 border-slate-800' 
+                    : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-amber-500">
+                    <Sparkles className="w-4 h-4 shrink-0" />
+                    <span>Tulete Engine</span>
+                  </div>
+                  <p className={`text-[11px] font-medium leading-normal ${
+                    isDark ? 'text-slate-400' : 'text-slate-500'
+                  }`}>
+                    Intelligent Platform Analytics & telemetry system.
+                  </p>
+                </div>
+
+                {/* Full-width Version Code below Tulete Engine Card */}
+                <div className="w-full">
+                  <span className="w-full flex items-center justify-center py-2 px-3 text-xs font-black uppercase tracking-wider bg-primary/15 text-primary border border-primary/30 rounded-xl shadow-xs text-center">
+                    CMS v{pkg.version || '2.5.0'}
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full h-11 rounded-xl bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out Admin</span>
+                </button>
+              </div>
             </div>
             <div className="flex-1" onClick={() => setMobileOpen(false)} />
           </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, collection, query, limit } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Search, Eye, Heart, ShoppingCart, ShoppingBag, Star, 
   TrendingUp, Calendar, ArrowUpRight, Clock, RefreshCw, BarChart2, ShieldCheck, Check, XCircle
@@ -116,6 +116,8 @@ export const AdminDashboardPage: React.FC = () => {
     cartAbandoned: true,
     ordersCancelled: true,
   });
+
+  const [hoveredDay, setHoveredDay] = useState<any>(null);
 
   const toggleMetric = (key: MetricKey) => {
     setActiveMetrics(prev => ({
@@ -443,6 +445,45 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Dedicated Telemetry Info Window Banner above the graph bars */}
+        <AnimatePresence mode="wait">
+          {hoveredDay ? (
+            <motion.div 
+              key={hoveredDay.id}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className={`p-3 rounded-2xl border shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-extrabold ${
+                isDark ? 'bg-slate-900/95 border-slate-700 text-white' : 'bg-white/95 border-slate-300 text-slate-900'
+              }`}
+            >
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="px-2.5 py-1 rounded-lg bg-primary/20 text-primary border border-primary/30 font-black">
+                  {hoveredDay.id}
+                </span>
+                <span className={`text-xs font-bold ${textMuted}`}>Hovered Telemetry:</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                {activeMetrics.visitors && <span className="text-sky-400 font-extrabold">Visitors: <strong className={textPrimary}>{hoveredDay.visitors || 0}</strong></span>}
+                {activeMetrics.searches && <span className="text-purple-400 font-extrabold">Searches: <strong className={textPrimary}>{hoveredDay.searches || 0}</strong></span>}
+                {activeMetrics.itemViews && <span className="text-amber-400 font-extrabold">Views: <strong className={textPrimary}>{hoveredDay.itemViews || 0}</strong></span>}
+                {activeMetrics.favorites && <span className="text-rose-400 font-extrabold">Favorites: <strong className={textPrimary}>{hoveredDay.favorites || 0}</strong></span>}
+                {activeMetrics.ratings && <span className="text-yellow-400 font-extrabold">Ratings: <strong className={textPrimary}>{hoveredDay.ratings || 0}</strong></span>}
+                {activeMetrics.orders && <span className="text-emerald-400 font-extrabold">Orders: <strong className={textPrimary}>{hoveredDay.orders || 0}</strong></span>}
+                {activeMetrics.cartAbandoned && <span className="text-rose-500 font-extrabold">Carts: <strong className={textPrimary}>{hoveredDay.cartAbandoned || 0}</strong></span>}
+                {activeMetrics.ordersCancelled && <span className="text-red-500 font-extrabold">Cancelled: <strong className={textPrimary}>{hoveredDay.ordersCancelled || 0}</strong></span>}
+              </div>
+            </motion.div>
+          ) : (
+            <div className={`p-2.5 rounded-2xl border border-dashed text-center text-xs font-semibold ${
+              isDark ? 'border-slate-800/80 text-slate-500 bg-slate-950/40' : 'border-slate-200 text-slate-400 bg-slate-50/60'
+            }`}>
+              Hover over any daily bar column below to view live breakdown metrics.
+            </div>
+          )}
+        </AnimatePresence>
+
         {dailyTimeline.length === 0 ? (
           <div className={`h-48 flex items-center justify-center border border-dashed rounded-2xl text-xs font-semibold ${
             isDark ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'
@@ -450,34 +491,22 @@ export const AdminDashboardPage: React.FC = () => {
             No daily traffic recordings available yet.
           </div>
         ) : (
-          <div className={`h-64 flex items-end gap-2 sm:gap-4 pt-10 pb-2 px-2 overflow-x-auto scrollbar-none border-b ${
+          <div className={`h-60 flex items-end gap-2 sm:gap-4 pt-2 pb-2 px-4 overflow-x-auto scrollbar-none border-b ${
             isDark ? 'border-slate-800' : 'border-slate-200'
           }`}>
             {dailyTimeline.map((day) => {
               return (
-                <div key={day.id} className="flex-1 min-w-[50px] sm:min-w-[70px] flex flex-col items-center gap-2 group relative">
-                  {/* Hover Detail Tooltip */}
-                  <div className={`absolute -top-24 opacity-0 group-hover:opacity-100 transition-opacity p-2.5 rounded-xl border pointer-events-none z-30 shadow-xl whitespace-nowrap text-[10px] font-bold ${
-                    isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                  }`}>
-                    <p className="border-b pb-1 mb-1 border-slate-700/50 font-black text-xs text-primary">{day.id}</p>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                      {activeMetrics.visitors && <p className="text-sky-400">Visitors: {day.visitors || 0}</p>}
-                      {activeMetrics.searches && <p className="text-purple-400">Searches: {day.searches || 0}</p>}
-                      {activeMetrics.itemViews && <p className="text-amber-400">Views: {day.itemViews || 0}</p>}
-                      {activeMetrics.favorites && <p className="text-rose-400">Favorites: {day.favorites || 0}</p>}
-                      {activeMetrics.ratings && <p className="text-yellow-400">Ratings: {day.ratings || 0}</p>}
-                      {activeMetrics.orders && <p className="text-emerald-400">Orders: {day.orders || 0}</p>}
-                      {activeMetrics.cartAbandoned && <p className="text-rose-500">Carts: {day.cartAbandoned || 0}</p>}
-                      {activeMetrics.ordersCancelled && <p className="text-red-500">Cancelled: {day.ordersCancelled || 0}</p>}
-                    </div>
-                  </div>
-
+                <div 
+                  key={day.id} 
+                  onMouseEnter={() => setHoveredDay(day)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                  className="flex-1 min-w-[55px] sm:min-w-[75px] flex flex-col items-center gap-2 group relative cursor-pointer"
+                >
                   {/* Multi-Bar Graph Series Column */}
-                  <div className="w-full flex items-end justify-center gap-0.5 sm:gap-1 h-[190px]">
+                  <div className="w-full flex items-end justify-center gap-0.5 sm:gap-1 h-[170px]">
                     {selectedMetricKeys.map((k) => {
                       const val = Number(day[k]) || 0;
-                      const heightPx = Math.max(6, Math.round((val / maxValInTimeline) * 180));
+                      const heightPx = Math.max(6, Math.round((val / maxValInTimeline) * 160));
                       const cfg = METRIC_CONFIGS[k];
 
                       return (
@@ -506,14 +535,14 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Search Analytics Quick Access */}
         <div className={`p-6 rounded-3xl border shadow-xl flex flex-col justify-between gap-6 ${cardBg}`}>
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider shrink-0">
                 <Search className="w-4 h-4" />
                 <span>Search Intelligence</span>
               </div>
               <button
                 onClick={() => navigate('/admin/searches')}
-                className="text-xs font-extrabold text-purple-500 hover:text-purple-400 flex items-center gap-1 group cursor-pointer"
+                className="text-xs font-extrabold text-purple-500 hover:text-purple-400 flex items-center gap-1 group cursor-pointer shrink-0 ml-auto"
               >
                 <span>View Full Ranking</span>
                 <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -537,14 +566,14 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Item Analytics Quick Access */}
         <div className={`p-6 rounded-3xl border shadow-xl flex flex-col justify-between gap-6 ${cardBg}`}>
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider shrink-0">
                 <Eye className="w-4 h-4" />
                 <span>Item Performance</span>
               </div>
               <button
                 onClick={() => navigate('/admin/items')}
-                className="text-xs font-extrabold text-amber-500 hover:text-amber-400 flex items-center gap-1 group cursor-pointer"
+                className="text-xs font-extrabold text-amber-500 hover:text-amber-400 flex items-center gap-1 group cursor-pointer shrink-0 ml-auto"
               >
                 <span>View Product Insights</span>
                 <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -568,17 +597,19 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Abandoned Cart Analytics Quick Access */}
         <div className={`p-6 rounded-3xl border shadow-xl flex flex-col justify-between gap-6 ${cardBg}`}>
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-rose-500 text-xs font-bold uppercase tracking-wider">
-                <ShoppingBag className="w-4 h-4" />
-                <span>Abandoned Carts</span>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2 flex-wrap text-rose-500 text-xs font-bold uppercase tracking-wider min-w-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Abandoned Carts</span>
+                </div>
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap shrink-0">
                   +{todayCartAbandoned} Today
                 </span>
               </div>
               <button
                 onClick={() => navigate('/admin/abandoned-carts')}
-                className="text-xs font-extrabold text-rose-500 hover:text-rose-400 flex items-center gap-1 group cursor-pointer"
+                className="text-xs font-extrabold text-rose-500 hover:text-rose-400 flex items-center gap-1 group cursor-pointer shrink-0 ml-auto"
               >
                 <span>View Uncheckout Carts</span>
                 <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -602,17 +633,19 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Canceled Orders Telemetry Quick Access */}
         <div className={`p-6 rounded-3xl border shadow-xl flex flex-col justify-between gap-6 ${cardBg}`}>
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-wider">
-                <XCircle className="w-4 h-4" />
-                <span>Canceled Orders</span>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2 flex-wrap text-red-500 text-xs font-bold uppercase tracking-wider min-w-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <XCircle className="w-4 h-4" />
+                  <span>Canceled Orders</span>
+                </div>
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 whitespace-nowrap shrink-0">
                   +{todayCancelledOrders} Today
                 </span>
               </div>
               <button
                 onClick={() => navigate('/admin/cancellations')}
-                className="text-xs font-extrabold text-red-500 hover:text-red-400 flex items-center gap-1 group cursor-pointer"
+                className="text-xs font-extrabold text-red-500 hover:text-red-400 flex items-center gap-1 group cursor-pointer shrink-0 ml-auto"
               >
                 <span>View Canceled Orders</span>
                 <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />

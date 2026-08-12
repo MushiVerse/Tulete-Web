@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { 
-  Activity, Users, Search, Eye, Heart, ShoppingCart, Star, Clock 
+  Activity, Users, Search, Eye, Heart, ShoppingCart, Star, Clock, XCircle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminTheme } from '../context/AdminThemeContext';
+import { AdminPagination } from '../components/AdminPagination';
 
 export const AdminLiveActivityPage: React.FC = () => {
   const { theme } = useAdminTheme();
@@ -15,6 +16,9 @@ export const AdminLiveActivityPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [eventTypeFilter, setEventTypeFilter] = useState('all');
   const [userNamesMap, setUserNamesMap] = useState<Record<string, string>>({});
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     const fetchUserNames = async () => {
@@ -84,6 +88,13 @@ export const AdminLiveActivityPage: React.FC = () => {
     return ev.eventType === eventTypeFilter;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [eventTypeFilter]);
+
+  const totalPages = Math.ceil(filteredEvents.length / pageSize) || 1;
+  const paginatedEvents = filteredEvents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const getEventBadge = (type: string) => {
     switch (type) {
       case 'visit':
@@ -96,6 +107,8 @@ export const AdminLiveActivityPage: React.FC = () => {
         return { icon: Heart, label: 'Wishlist Fav', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' };
       case 'order':
         return { icon: ShoppingCart, label: 'Order Placed', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+      case 'order_cancelled':
+        return { icon: XCircle, label: 'Order Cancelled', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' };
       case 'rating':
         return { icon: Star, label: 'Rating Given', color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' };
       default:
@@ -134,7 +147,8 @@ export const AdminLiveActivityPage: React.FC = () => {
             <option value="search">Searches</option>
             <option value="item_view">Item Views</option>
             <option value="favorite">Favorites</option>
-            <option value="order">Orders</option>
+            <option value="order">Orders Placed</option>
+            <option value="order_cancelled">Cancelled Orders</option>
             <option value="rating">Ratings</option>
           </select>
         </div>
@@ -160,7 +174,7 @@ export const AdminLiveActivityPage: React.FC = () => {
         ) : (
           <div className="space-y-3">
             <AnimatePresence mode="popLayout">
-              {filteredEvents.map((ev, idx) => {
+              {paginatedEvents.map((ev, idx) => {
                 const config = getEventBadge(ev.eventType);
                 const Icon = config.icon;
                 const timeStr = ev.timestamp?.toDate ? ev.timestamp.toDate().toLocaleTimeString() : 'Just now';
@@ -175,7 +189,7 @@ export const AdminLiveActivityPage: React.FC = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.2, delay: idx * 0.02 }}
+                    transition={{ duration: 0.2, delay: idx * 0.015 }}
                     className={`p-4 rounded-2xl border flex items-center justify-between gap-4 transition-colors ${
                       isDark ? 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
                     }`}
@@ -223,6 +237,15 @@ export const AdminLiveActivityPage: React.FC = () => {
             </AnimatePresence>
           </div>
         )}
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredEvents.length}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={(size) => setPageSize(size)}
+        />
       </div>
     </div>
   );

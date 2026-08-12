@@ -4,6 +4,7 @@ import { db } from '../../../core/firebase/config';
 import { Search, Download, Hash, Flame, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAdminTheme } from '../context/AdminThemeContext';
+import { AdminPagination } from '../components/AdminPagination';
 
 export const AdminSearchAnalyticsPage: React.FC = () => {
   const { theme } = useAdminTheme();
@@ -13,6 +14,9 @@ export const AdminSearchAnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState('');
   const [contextFilter, setContextFilter] = useState<string>('all');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     setLoading(true);
@@ -46,6 +50,13 @@ export const AdminSearchAnalyticsPage: React.FC = () => {
     const queryStr = String(item.query || item.id || '').toLowerCase();
     return queryStr.includes(q);
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterQuery, contextFilter]);
+
+  const totalPages = Math.ceil(filteredSearches.length / pageSize) || 1;
+  const paginatedSearches = filteredSearches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const totalSearchesRecorded = searches.reduce((acc, curr) => acc + (curr.searchCount || 0), 0);
   const uniqueTermsCount = searches.length;
@@ -199,18 +210,19 @@ export const AdminSearchAnalyticsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className={`divide-y text-xs font-medium ${isDark ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-                {filteredSearches.map((item, idx) => {
+                {paginatedSearches.map((item, idx) => {
+                  const absoluteIndex = (currentPage - 1) * pageSize + idx + 1;
                   const uidsCount = item.uids ? (Array.isArray(item.uids) ? item.uids.length : 1) : 0;
                   return (
                     <motion.tr
                       key={item.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.02 }}
+                      transition={{ delay: idx * 0.015 }}
                       className={isDark ? 'hover:bg-slate-800/40 transition-colors' : 'hover:bg-slate-50 transition-colors'}
                     >
                       <td className={`py-4 px-6 font-black ${textMuted}`}>
-                        #{idx + 1}
+                        #{absoluteIndex}
                       </td>
                       <td className={`py-4 px-6 font-bold ${textPrimary}`}>
                         <span className={`px-2.5 py-1 rounded-lg font-mono text-xs border ${
@@ -241,6 +253,15 @@ export const AdminSearchAnalyticsPage: React.FC = () => {
             </table>
           </div>
         )}
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredSearches.length}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={(size) => setPageSize(size)}
+        />
       </div>
     </div>
   );
