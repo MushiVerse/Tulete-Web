@@ -252,6 +252,13 @@ export const StoreDetailsPage = () => {
   // States
   const [activeTab, setActiveTab] = useState<'menu' | 'hours' | 'reviews' | 'gallery'>('menu');
   const [productSearch, setProductSearch] = useState('');
+
+  // Track in-store product search queries in analytics
+  useEffect(() => {
+    if (productSearch.trim().length >= 3) {
+      analyticsService.trackSearchQuery(productSearch.trim(), 'store_details_page');
+    }
+  }, [productSearch]);
   const [selectedProductCategory, setSelectedProductCategory] = useState<string | null>(null);
   const [geocodedAddress, setGeocodedAddress] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);

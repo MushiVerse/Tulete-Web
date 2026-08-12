@@ -16,6 +16,7 @@ export interface SearchOptions {
   page?: number;
   aroundLatLng?: string;
   includeStoresAndBrands?: boolean;
+  context?: string;
 }
 
 export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: boolean }): boolean {
@@ -72,13 +73,13 @@ export const searchTuleteItems = async (
   query: string, 
   filtersOrOptions?: string | SearchOptions
 ) => {
-  if (query && typeof query === 'string' && query.trim().length >= 2) {
-    analyticsService.trackSearchQuery(query.trim(), 'algolia');
-  }
-
   const options = typeof filtersOrOptions === 'string' 
     ? { filters: filtersOrOptions } 
     : filtersOrOptions || {};
+
+  if (query && typeof query === 'string' && query.trim().length >= 3 && options.context) {
+    analyticsService.trackSearchQuery(query.trim(), options.context);
+  }
 
   const filterStr = options.filters || '';
   const allowStoresAndBrands = 

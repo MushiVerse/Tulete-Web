@@ -417,11 +417,8 @@ export const StoreListingPage = () => {
 
   // Track store search queries in analytics
   useEffect(() => {
-    if (searchQuery.trim().length >= 2) {
-      const timer = setTimeout(() => {
-        analyticsService.trackSearchQuery(searchQuery.trim(), 'store_listing');
-      }, 600);
-      return () => clearTimeout(timer);
+    if (searchQuery.trim().length >= 3) {
+      analyticsService.trackSearchQuery(searchQuery.trim(), 'store_listing_page');
     }
   }, [searchQuery]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

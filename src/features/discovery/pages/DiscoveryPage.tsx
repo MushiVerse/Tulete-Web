@@ -108,6 +108,7 @@ import { formatPrice } from '../../../shared/utils/formatPrice';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { toast } from 'sonner';
 import { resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
+import { analyticsService } from '../../../services/analyticsService';
 
 // Trending quick-filter chips
 const TRENDING_FILTERS = [
@@ -227,6 +228,9 @@ export const DiscoveryPage = () => {
     setVisibleCount(20);
     if (localQuery.trim()) {
       scrollToTopSmooth();
+    }
+    if (localQuery.trim().length >= 3) {
+      analyticsService.trackSearchQuery(localQuery.trim(), 'discovery_page');
     }
   }, [localQuery]);
 

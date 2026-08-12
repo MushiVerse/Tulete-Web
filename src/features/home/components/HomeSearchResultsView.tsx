@@ -54,7 +54,8 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
         const result: any = await searchTuleteItems(query, {
           filters: filterStr,
           hitsPerPage: 20,
-          page: 0
+          page: 0,
+          context: 'home_page'
         });
 
         if (isCancelled) return;
