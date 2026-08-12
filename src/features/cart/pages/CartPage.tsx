@@ -236,14 +236,14 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
         )}
       </div>
 
-      {/* Delete button — revealed on row hover */}
+      {/* Delete button — grey by default, soft opacity red background with red icon on hover/active */}
       <button
         onClick={() => removeFromCart(item.productId)}
-        className="text-destructive hover:text-primary p-1.5 sm:p-2 rounded-full hover:bg-primary/10 transition-all self-start shrink-0 focus:opacity-100"
-        title="Remove item"
+        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-muted text-muted-foreground hover:bg-red-500/15 hover:text-red-600 dark:hover:bg-red-500/25 dark:hover:text-red-400 border border-border/40 hover:border-red-500/30 flex items-center justify-center transition-all self-start shrink-0 cursor-pointer shadow-xs active:scale-90"
+        title={`Remove ${item.name}`}
         aria-label={`Remove ${item.name} from cart`}
       >
-        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </button>
     </Card>
   );
