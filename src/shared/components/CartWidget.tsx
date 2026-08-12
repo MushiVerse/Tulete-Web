@@ -19,10 +19,10 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
 
   if (isCartClosed) {
     return (
-      <div className={`bg-card border border-border rounded-3xl p-4 shadow-sm ${className}`}>
+      <div className={`bg-card border border-border rounded-3xl p-3 shadow-sm flex items-stretch gap-2 ${className}`}>
         <button
           onClick={() => setIsCartClosed(false)}
-          className="w-full flex items-center justify-between text-xs font-extrabold text-foreground hover:text-primary transition-colors cursor-pointer group"
+          className="flex-1 flex items-center justify-between text-xs font-extrabold text-foreground hover:text-primary transition-colors cursor-pointer group"
         >
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -31,6 +31,13 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
             <span>Your Cart ({cartItems.length})</span>
           </div>
           <span className="text-primary font-bold">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
+        </button>
+        <button
+          onClick={() => clearCart()}
+          title="Clear all items from cart"
+          className="self-stretch px-3 rounded-2xl bg-destructive/10 hover:bg-destructive text-destructive hover:text-white border border-border/40 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+        >
+          <Trash2 className="w-4 h-4" />
         </button>
       </div>
     );

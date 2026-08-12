@@ -1504,30 +1504,28 @@ export const HomePage = () => {
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
-              className="xl:hidden fixed bottom-20 left-4 right-4 z-50"
+              className="xl:hidden fixed bottom-20 left-4 right-4 z-50 flex items-stretch gap-2"
             >
-              <div className="flex items-stretch gap-2">
-                <Button
-                  onClick={handleCheckout}
-                  className="flex-1 py-4 md:py-6 text-sm md:text-base font-extrabold shadow-2xl flex items-center justify-between px-4 md:px-6 rounded-3xl bg-primary text-primary-foreground"
-                >
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="bg-background/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs">
-                      {cartItems.length}
-                    </div>
-                    <span>Checkout</span>
+              <Button
+                onClick={handleCheckout}
+                className="flex-1 py-4 md:py-6 text-sm md:text-base font-extrabold shadow-2xl flex items-center justify-between px-4 md:px-6 rounded-3xl bg-primary text-primary-foreground"
+              >
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="bg-background/20 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs">
+                    {cartItems.length}
                   </div>
-                  <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
-                </Button>
-                
-                <button
-                  onClick={() => clearCart()}
-                  title="Clear Cart"
-                  className="w-14 shrink-0 bg-card border border-border shadow-2xl rounded-3xl flex items-center justify-center text-destructive hover:text-primary transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
+                  <span>Checkout</span>
+                </div>
+                <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+              </Button>
+              
+              <button
+                onClick={() => clearCart()}
+                title="Clear all items from cart"
+                className="self-stretch px-5 rounded-3xl bg-card text-destructive hover:bg-destructive hover:text-white border border-border shadow-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

@@ -1635,7 +1635,7 @@ export const FavoritesPage = () => {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            className="fixed bottom-20 xl:bottom-6 right-3 xl:right-6 z-50"
+            className="fixed bottom-20 xl:bottom-6 right-3 xl:right-6 z-50 flex items-stretch gap-2"
           >
             <button
               onClick={() => setIsCartClosed(false)}
@@ -1646,6 +1646,13 @@ export const FavoritesPage = () => {
               </div>
               <span>Open Cart ({cartItems.length})</span>
               <span className="bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-extrabold">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
+            </button>
+            <button
+              onClick={clearCart}
+              title="Clear all items from cart"
+              className="self-stretch px-3.5 rounded-full bg-card text-destructive hover:bg-destructive hover:text-white border border-border shadow-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
           </motion.div>
         )}

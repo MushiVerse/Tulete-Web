@@ -1728,11 +1728,11 @@ export const StoreDetailsPage = () => {
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
-              className="xl:hidden fixed bottom-20 left-4 right-4 z-50"
+              className="xl:hidden fixed bottom-20 left-4 right-4 z-50 flex items-stretch gap-2"
             >
               <Button
                 onClick={handleCheckout}
-                className="w-full py-6 text-base font-extrabold shadow-2xl flex items-center justify-between px-6 rounded-3xl bg-primary text-primary-foreground"
+                className="flex-1 py-6 text-base font-extrabold shadow-2xl flex items-center justify-between px-6 rounded-3xl bg-primary text-primary-foreground"
               >
                 <div className="flex items-center gap-3">
                   <div className="bg-background/20 px-3 py-1 rounded-full text-xs">
@@ -1742,6 +1742,13 @@ export const StoreDetailsPage = () => {
                 </div>
                 <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
               </Button>
+              <button
+                onClick={() => clearCart()}
+                title="Clear all items from cart"
+                className="self-stretch px-5 rounded-3xl bg-card text-destructive hover:bg-destructive hover:text-white border border-border shadow-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
