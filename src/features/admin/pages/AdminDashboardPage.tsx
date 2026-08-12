@@ -229,9 +229,13 @@ export const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Visitors */}
-        <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
+        <motion.div 
+          whileHover={{ y: -2 }} 
+          onClick={() => navigate('/admin/activity')}
+          className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between cursor-pointer hover:border-sky-500/50 transition-all ${cardBg}`}
+        >
           <div className="flex items-center justify-between text-sky-400 mb-3">
             <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
               <Users className="w-5 h-5" />
@@ -242,14 +246,19 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div>
             <p className={`text-2xl font-black ${textPrimary}`}>{totalVisitors.toLocaleString()}</p>
-            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted}`}>
-              Total Visitors
+            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted} flex items-center justify-between`}>
+              <span>Total Visitors</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-sky-400" />
             </p>
           </div>
         </motion.div>
 
         {/* Card 2: Searches */}
-        <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
+        <motion.div 
+          whileHover={{ y: -2 }} 
+          onClick={() => navigate('/admin/searches')}
+          className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between cursor-pointer hover:border-purple-500/50 transition-all ${cardBg}`}
+        >
           <div className="flex items-center justify-between text-purple-400 mb-3">
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
               <Search className="w-5 h-5" />
@@ -260,14 +269,19 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div>
             <p className={`text-2xl font-black ${textPrimary}`}>{totalSearches.toLocaleString()}</p>
-            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted}`}>
-              Search Queries
+            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted} flex items-center justify-between`}>
+              <span>Search Queries</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-purple-400" />
             </p>
           </div>
         </motion.div>
 
         {/* Card 3: Item Views */}
-        <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
+        <motion.div 
+          whileHover={{ y: -2 }} 
+          onClick={() => navigate('/admin/items')}
+          className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between cursor-pointer hover:border-amber-500/50 transition-all ${cardBg}`}
+        >
           <div className="flex items-center justify-between text-amber-400 mb-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <Eye className="w-5 h-5" />
@@ -278,13 +292,14 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div>
             <p className={`text-2xl font-black ${textPrimary}`}>{totalItemViews.toLocaleString()}</p>
-            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted}`}>
-              Item Views
+            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted} flex items-center justify-between`}>
+              <span>Item Views</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
             </p>
           </div>
         </motion.div>
 
-        {/* Card 4: Favorites */}
+        {/* Card 4: Favorites (Static - No dedicated page) */}
         <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
           <div className="flex items-center justify-between text-rose-400 mb-3">
             <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
@@ -302,7 +317,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Card 5: Orders */}
+        {/* Card 5: Orders Tracked (Static - No dedicated page) */}
         <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
           <div className="flex items-center justify-between text-emerald-400 mb-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
@@ -320,7 +335,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Card 6: Ratings */}
+        {/* Card 6: Ratings Received (Static - No dedicated page) */}
         <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
           <div className="flex items-center justify-between text-yellow-400 mb-3">
             <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
@@ -339,7 +354,11 @@ export const AdminDashboardPage: React.FC = () => {
         </motion.div>
 
         {/* Card 7: Cancelled Orders */}
-        <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
+        <motion.div 
+          whileHover={{ y: -2 }} 
+          onClick={() => navigate('/admin/cancellations')}
+          className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between cursor-pointer hover:border-red-500/50 transition-all ${cardBg}`}
+        >
           <div className="flex items-center justify-between text-red-500 mb-3">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
               <XCircle className="w-5 h-5" />
@@ -350,8 +369,32 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div>
             <p className={`text-2xl font-black ${textPrimary}`}>{totalCancelledOrders.toLocaleString()}</p>
-            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted}`}>
-              Cancelled Orders
+            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted} flex items-center justify-between`}>
+              <span>Cancelled Orders</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-red-500" />
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Card 8: Abandoned Carts */}
+        <motion.div 
+          whileHover={{ y: -2 }} 
+          onClick={() => navigate('/admin/abandoned-carts')}
+          className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between cursor-pointer hover:border-rose-500/50 transition-all ${cardBg}`}
+        >
+          <div className="flex items-center justify-between text-rose-500 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+              +{todayCartAbandoned} Today
+            </span>
+          </div>
+          <div>
+            <p className={`text-2xl font-black ${textPrimary}`}>{(overviewData?.totalCartAbandoned || 0).toLocaleString()}</p>
+            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted} flex items-center justify-between`}>
+              <span>Abandoned Carts</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-rose-500" />
             </p>
           </div>
         </motion.div>
@@ -552,6 +595,40 @@ export const AdminDashboardPage: React.FC = () => {
             className="w-full h-12 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-500 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <span>Open Abandoned Carts</span>
+            <ArrowUpRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Canceled Orders Telemetry Quick Access */}
+        <div className={`p-6 rounded-3xl border shadow-xl flex flex-col justify-between gap-6 ${cardBg}`}>
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-wider">
+                <XCircle className="w-4 h-4" />
+                <span>Canceled Orders</span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20">
+                  +{todayCancelledOrders} Today
+                </span>
+              </div>
+              <button
+                onClick={() => navigate('/admin/cancellations')}
+                className="text-xs font-extrabold text-red-500 hover:text-red-400 flex items-center gap-1 group cursor-pointer"
+              >
+                <span>View Canceled Orders</span>
+                <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </button>
+            </div>
+            <h3 className={`text-lg font-black ${textPrimary}`}>Order Cancellation Previews & Audit</h3>
+            <p className={`text-xs font-medium mt-1 ${textMuted}`}>
+              Review canceled orders with complete user names, store names, order item lists, and cancellation reason analysis.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/admin/cancellations')}
+            className="w-full h-12 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <span>Open Canceled Orders</span>
             <ArrowUpRight className="w-4 h-4" />
           </button>
         </div>

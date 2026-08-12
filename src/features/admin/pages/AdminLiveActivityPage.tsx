@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { 
   Activity, Users, Search, Eye, Heart, ShoppingCart, Star, Clock 
@@ -14,6 +14,43 @@ export const AdminLiveActivityPage: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [eventTypeFilter, setEventTypeFilter] = useState('all');
+  const [userNamesMap, setUserNamesMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchUserNames = async () => {
+      try {
+        const map: Record<string, string> = {};
+        const [analyticsUsersSnap, usersAndRolesSnap] = await Promise.all([
+          getDocs(collection(db, 'analytics_users')).catch(() => null),
+          getDocs(collection(db, 'UsersandRoles')).catch(() => null),
+        ]);
+
+        if (analyticsUsersSnap) {
+          analyticsUsersSnap.docs.forEach((d) => {
+            const data = d.data();
+            const name = data.userName || data.name || data.displayName || data.userEmail || data.email;
+            if (name) map[d.id] = name;
+            if (data.userId && name) map[data.userId] = name;
+          });
+        }
+
+        if (usersAndRolesSnap) {
+          usersAndRolesSnap.docs.forEach((d) => {
+            const data = d.data();
+            const name = data.displayName || data.name || data.uname || data.email;
+            const uid = data.uid || d.id;
+            if (name && uid) map[uid] = name;
+          });
+        }
+
+        setUserNamesMap(map);
+      } catch (e) {
+        // Fallback silently
+      }
+    };
+
+    fetchUserNames();
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -128,6 +165,10 @@ export const AdminLiveActivityPage: React.FC = () => {
                 const Icon = config.icon;
                 const timeStr = ev.timestamp?.toDate ? ev.timestamp.toDate().toLocaleTimeString() : 'Just now';
 
+                const uId = ev.userId || ev.uid || 'guest_user';
+                const rawName = ev.userName || ev.name || ev.displayName || ev.userEmail || ev.email || userNamesMap[uId];
+                const displayName = rawName && rawName !== uId ? rawName : (uId === 'guest_user' ? 'Guest' : uId);
+
                 return (
                   <motion.div
                     key={ev.id || idx}
@@ -149,7 +190,7 @@ export const AdminLiveActivityPage: React.FC = () => {
                             {config.label}
                           </span>
                           <span className={`text-xs font-bold truncate ${textPrimary}`}>
-                            User: {ev.userId || 'guest_user'}
+                            User: {displayName} ({uId})
                           </span>
                         </div>
                         <p className={`text-xs font-medium mt-1 truncate ${textMuted}`}>

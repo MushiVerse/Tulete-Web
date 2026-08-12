@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, ShoppingBag, ShoppingCart, Activity, LogOut, 
-  ShieldCheck, Menu, X, ExternalLink, ChevronRight, Sun, Moon, Sparkles
+  ShieldCheck, Menu, X, ExternalLink, ChevronRight, Sun, Moon, Sparkles, XCircle
 } from 'lucide-react';
 import { adminAuthService } from '../services/adminAuthService';
 import { auth } from '../../../core/firebase/config';
@@ -41,6 +41,12 @@ const AdminLayoutContent: React.FC = () => {
       path: '/admin/abandoned-carts',
       icon: ShoppingCart,
       desc: 'Uncheckout carts & revenue recovery',
+    },
+    {
+      title: 'Cancelled Orders',
+      path: '/admin/cancellations',
+      icon: XCircle,
+      desc: 'Canceled order previews & user/store details',
     },
     {
       title: 'Live Customer Stream',
@@ -197,18 +203,28 @@ const AdminLayoutContent: React.FC = () => {
                     }`
                   }
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Icon className="w-5 h-5 shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs font-bold leading-none">{item.title}</p>
-                      <p className={`text-[10px] font-medium mt-1 truncate ${
-                        isDark ? 'text-slate-400 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-slate-600'
-                      }`}>
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
+                  {({ isActive: linkActive }) => (
+                    <>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon className="w-5 h-5 shrink-0" />
+                        <div className="truncate">
+                          <p className="text-xs font-bold leading-none">{item.title}</p>
+                          <p className={`text-[10px] mt-1 truncate ${
+                            linkActive
+                              ? 'text-white/95 font-semibold'
+                              : isDark
+                                ? 'text-slate-400 group-hover:text-slate-300'
+                                : 'text-slate-500 group-hover:text-slate-700'
+                          }`}>
+                            {item.desc}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className={`w-4 h-4 shrink-0 transition-opacity ${
+                        linkActive ? 'opacity-100 text-white' : 'opacity-40 group-hover:opacity-100'
+                      }`} />
+                    </>
+                  )}
                 </NavLink>
               );
             })}
@@ -255,9 +271,9 @@ const AdminLayoutContent: React.FC = () => {
                         to={item.path}
                         end={item.exact}
                         onClick={() => setMobileOpen(false)}
-                        className={({ isActive }) =>
+                        className={({ isActive: linkActive }) =>
                           `flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all border ${
-                            isActive
+                            linkActive
                               ? 'bg-primary text-white border-primary shadow-md'
                               : isDark 
                                 ? 'bg-slate-950/60 border-slate-800 text-slate-400'
@@ -265,8 +281,19 @@ const AdminLayoutContent: React.FC = () => {
                           }`
                         }
                       >
-                        <Icon className="w-5 h-5" />
-                        <span>{item.title}</span>
+                        {({ isActive: linkActive }) => (
+                          <>
+                            <Icon className="w-5 h-5 shrink-0" />
+                            <div className="truncate">
+                              <p className="font-bold leading-none">{item.title}</p>
+                              <p className={`text-[10px] mt-1 truncate ${
+                                linkActive ? 'text-white/95 font-semibold' : 'text-slate-400'
+                              }`}>
+                                {item.desc}
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </NavLink>
                     );
                   })}

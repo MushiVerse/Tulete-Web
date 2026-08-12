@@ -64,6 +64,7 @@ const AdminDashboard = React.lazy(() => import('../features/admin/pages/AdminDas
 const AdminSearchAnalytics = React.lazy(() => import('../features/admin/pages/AdminSearchAnalyticsPage').then(m => ({ default: m.AdminSearchAnalyticsPage })));
 const AdminItemAnalytics = React.lazy(() => import('../features/admin/pages/AdminItemAnalyticsPage').then(m => ({ default: m.AdminItemAnalyticsPage })));
 const AdminAbandonedCarts = React.lazy(() => import('../features/admin/pages/AdminAbandonedCartsPage').then(m => ({ default: m.AdminAbandonedCartsPage })));
+const AdminCancellations = React.lazy(() => import('../features/admin/pages/AdminCancellationsPage').then(m => ({ default: m.AdminCancellationsPage })));
 const AdminLiveActivity = React.lazy(() => import('../features/admin/pages/AdminLiveActivityPage').then(m => ({ default: m.AdminLiveActivityPage })));
 const AdminLogin = React.lazy(() => import('../features/admin/pages/AdminLoginPage').then(m => ({ default: m.AdminLoginPage })));
 
@@ -148,6 +149,7 @@ export const router = createBrowserRouter([
           { path: 'searches', element: withSuspense(AdminSearchAnalytics) },
           { path: 'items', element: withSuspense(AdminItemAnalytics) },
           { path: 'abandoned-carts', element: withSuspense(AdminAbandonedCarts) },
+          { path: 'cancellations', element: withSuspense(AdminCancellations) },
           { path: 'activity', element: withSuspense(AdminLiveActivity) },
         ],
       },

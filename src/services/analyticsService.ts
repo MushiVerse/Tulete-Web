@@ -53,13 +53,19 @@ async function logActivityEvent(eventData: {
   ratingStars?: number;
   quantity?: number;
   context?: string;
+  userName?: string;
+  userEmail?: string;
 }): Promise<void> {
   try {
     const eventId = `${eventData.userId}_${eventData.eventType}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const eventRef = doc(db, 'analytics_events', eventId);
 
+    const userInfo = getCurrentUserInfo(eventData.userId);
+
     const payload: any = {
       ...eventData,
+      userName: eventData.userName || userInfo.name,
+      userEmail: eventData.userEmail || userInfo.email,
       timestamp: serverTimestamp(),
     };
 
