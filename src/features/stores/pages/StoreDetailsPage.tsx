@@ -34,6 +34,20 @@ import { toast } from 'sonner';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getNormalizedRating, toFirestoreDouble } from '../../../shared/utils/ratingUtils';
 
+const getScrollParent = (node: HTMLElement | null): HTMLElement | Window => {
+  if (!node) return window;
+  let current: HTMLElement | null = node.parentElement;
+  while (current && current !== document.body && current !== document.documentElement) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return window;
+};
+
 const StoreProductCardItem = ({
   prod,
   store,
@@ -754,43 +768,43 @@ export const StoreDetailsPage = () => {
   useEffect(() => {
     if (activeTab !== 'menu' || !menuLoadMoreRef.current) return;
     const sentinel = menuLoadMoreRef.current;
-    const scrollParent = sentinel.closest('.overflow-y-auto') || window;
+    const scrollParent = getScrollParent(sentinel);
 
-    const handleCheck = () => {
+    const checkAndLoadMore = () => {
       if (productVisibleCount >= filteredProducts.length) return;
-      const rect = sentinel.getBoundingClientRect();
-      const parentHeight = scrollParent === window ? window.innerHeight : (scrollParent as HTMLElement).clientHeight;
-      if (rect.top <= parentHeight + 800) {
+      const sentinelRect = sentinel.getBoundingClientRect();
+      const parentBottom = scrollParent === window 
+        ? window.innerHeight 
+        : (scrollParent as HTMLElement).getBoundingClientRect().bottom;
+
+      if (sentinelRect.top <= parentBottom + 800) {
         setProductVisibleCount((prev) => Math.min(prev + 20, filteredProducts.length));
       }
     };
 
+    // Immediate check on mount / count update
+    checkAndLoadMore();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && productVisibleCount < filteredProducts.length) {
-          setProductVisibleCount((prev) => Math.min(prev + 20, filteredProducts.length));
+        if (entries[0].isIntersecting) {
+          checkAndLoadMore();
         }
       },
       { 
         root: scrollParent === window ? null : (scrollParent as Element),
-        rootMargin: '800px'
+        rootMargin: '800px 0px 800px 0px',
+        threshold: 0
       }
     );
 
     observer.observe(sentinel);
-    if (scrollParent === window) {
-      window.addEventListener('scroll', handleCheck, { passive: true });
-    } else {
-      (scrollParent as HTMLElement).addEventListener('scroll', handleCheck, { passive: true });
-    }
+    const scrollTarget = scrollParent === window ? window : (scrollParent as HTMLElement);
+    scrollTarget.addEventListener('scroll', checkAndLoadMore, { passive: true });
 
     return () => {
       observer.disconnect();
-      if (scrollParent === window) {
-        window.removeEventListener('scroll', handleCheck);
-      } else {
-        (scrollParent as HTMLElement).removeEventListener('scroll', handleCheck);
-      }
+      scrollTarget.removeEventListener('scroll', checkAndLoadMore);
     };
   }, [activeTab, filteredProducts.length, productVisibleCount]);
 
@@ -798,45 +812,44 @@ export const StoreDetailsPage = () => {
   useEffect(() => {
     if (activeTab !== 'gallery' || !galleryLoadMoreRef.current) return;
     const sentinel = galleryLoadMoreRef.current;
-    const scrollParent = sentinel.closest('.overflow-y-auto') || window;
-
+    const scrollParent = getScrollParent(sentinel);
     const totalGalleryItems = products.length + (store?.gallery?.length || 0);
 
-    const handleCheck = () => {
+    const checkAndLoadMore = () => {
       if (galleryVisibleCount >= totalGalleryItems) return;
-      const rect = sentinel.getBoundingClientRect();
-      const parentHeight = scrollParent === window ? window.innerHeight : (scrollParent as HTMLElement).clientHeight;
-      if (rect.top <= parentHeight + 800) {
+      const sentinelRect = sentinel.getBoundingClientRect();
+      const parentBottom = scrollParent === window 
+        ? window.innerHeight 
+        : (scrollParent as HTMLElement).getBoundingClientRect().bottom;
+
+      if (sentinelRect.top <= parentBottom + 800) {
         setGalleryVisibleCount((prev) => Math.min(prev + 20, totalGalleryItems));
       }
     };
 
+    // Immediate check on mount / count update
+    checkAndLoadMore();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && galleryVisibleCount < totalGalleryItems) {
-          setGalleryVisibleCount((prev) => Math.min(prev + 20, totalGalleryItems));
+        if (entries[0].isIntersecting) {
+          checkAndLoadMore();
         }
       },
       { 
         root: scrollParent === window ? null : (scrollParent as Element),
-        rootMargin: '800px' 
+        rootMargin: '800px 0px 800px 0px',
+        threshold: 0
       }
     );
 
     observer.observe(sentinel);
-    if (scrollParent === window) {
-      window.addEventListener('scroll', handleCheck, { passive: true });
-    } else {
-      (scrollParent as HTMLElement).addEventListener('scroll', handleCheck, { passive: true });
-    }
+    const scrollTarget = scrollParent === window ? window : (scrollParent as HTMLElement);
+    scrollTarget.addEventListener('scroll', checkAndLoadMore, { passive: true });
 
     return () => {
       observer.disconnect();
-      if (scrollParent === window) {
-        window.removeEventListener('scroll', handleCheck);
-      } else {
-        (scrollParent as HTMLElement).removeEventListener('scroll', handleCheck);
-      }
+      scrollTarget.removeEventListener('scroll', checkAndLoadMore);
     };
   }, [activeTab, products.length, store?.gallery?.length, galleryVisibleCount]);
 

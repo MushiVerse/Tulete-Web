@@ -223,6 +223,20 @@ const Horizontal2RowRelatedSection = ({ title, items }: { title: string; items: 
   );
 };
 
+const getScrollParent = (node: HTMLElement | null): HTMLElement | Window => {
+  if (!node) return window;
+  let current: HTMLElement | null = node.parentElement;
+  while (current && current !== document.body && current !== document.documentElement) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return window;
+};
+
 /* Endless Vertical Grid Section for "More of ..." */
 const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] }) => {
   const validItems = items.filter((p) => {
@@ -248,14 +262,15 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
     const sentinel = loadMoreRef.current;
     if (!sentinel) return;
 
-    // Find parent scroll container (.overflow-y-auto or window)
-    const scrollParent = sentinel.closest('.overflow-y-auto') || window;
+    const scrollParent = getScrollParent(sentinel);
 
     const handleScroll = () => {
       if (isLoadingMore || visibleCount >= validItems.length) return;
       const rect = sentinel.getBoundingClientRect();
-      const parentHeight = scrollParent === window ? window.innerHeight : (scrollParent as HTMLElement).clientHeight;
-      if (rect.top <= parentHeight + 400) {
+      const parentBottom = scrollParent === window 
+        ? window.innerHeight 
+        : (scrollParent as HTMLElement).getBoundingClientRect().bottom;
+      if (rect.top <= parentBottom + 400) {
         loadNextBatch();
       }
     };
@@ -268,24 +283,18 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
       },
       { 
         root: scrollParent === window ? null : (scrollParent as Element),
-        rootMargin: '400px' 
+        rootMargin: '400px 0px 400px 0px',
+        threshold: 0
       }
     );
 
     observer.observe(sentinel);
-    if (scrollParent === window) {
-      window.addEventListener('scroll', handleScroll, { passive: true });
-    } else {
-      (scrollParent as HTMLElement).addEventListener('scroll', handleScroll, { passive: true });
-    }
+    const scrollTarget = scrollParent === window ? window : (scrollParent as HTMLElement);
+    scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       observer.disconnect();
-      if (scrollParent === window) {
-        window.removeEventListener('scroll', handleScroll);
-      } else {
-        (scrollParent as HTMLElement).removeEventListener('scroll', handleScroll);
-      }
+      scrollTarget.removeEventListener('scroll', handleScroll);
     };
   }, [validItems.length, visibleCount, isLoadingMore]);
 
