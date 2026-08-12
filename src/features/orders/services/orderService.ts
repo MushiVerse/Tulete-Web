@@ -225,15 +225,17 @@ class OrderService extends BaseFirestoreService<Order> {
 
     await setDoc(docRef, payload);
 
-    // Track analytics for ordered items by ID
+    // Track analytics for ordered items by ID & mark cart as converted
     if (Array.isArray(data.items)) {
       for (const item of data.items) {
         const itemId = item.productId || (item as any).id || (item as any).foodId;
         if (itemId) {
-          analyticsService.trackItemOrder(String(itemId), item.quantity || 1, item);
+          analyticsService.trackItemOrder(String(itemId), item.quantity || 1, item, data.userId);
         }
       }
     }
+
+    analyticsService.trackCartConverted(docRef.id, data.userId);
 
     return { id: docRef.id, ...payload } as Order;
   }

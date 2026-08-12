@@ -31,10 +31,10 @@ function getCurrentUserInfo(explicitUserId?: string): { userId: string; email?: 
 
   const userId = (explicitUserId && explicitUserId !== 'guest_user')
     ? explicitUserId
-    : (storeUser?.id || storeUser?.uid || firebaseUser?.uid || 'guest_user');
+    : (storeUser?.id || (storeUser as any)?.uid || firebaseUser?.uid || 'guest_user');
 
   const email = storeUser?.email || firebaseUser?.email || undefined;
-  const name = storeUser?.name || storeUser?.uname || firebaseUser?.displayName || undefined;
+  const name = storeUser?.displayName || (storeUser as any)?.name || (storeUser as any)?.uname || firebaseUser?.displayName || undefined;
 
   return { userId, email, name };
 }
@@ -597,6 +597,133 @@ export const analyticsService = {
       ]);
     } catch (err) {
       console.warn('[Analytics] Failed to track store view:', err);
+    }
+  },
+
+  /**
+   * Track cart updates for abandoned cart analytics.
+   * Records active cart items, total cart value, and customer details in analytics_cart_abandoned/{userId}.
+   */
+  async trackCartUpdate(cartItems: any[], explicitUserId?: string): Promise<void> {
+    try {
+      const userInfo = getCurrentUserInfo(explicitUserId);
+      const userCartRef = doc(db, 'analytics_cart_abandoned', userInfo.userId);
+      const overviewRef = doc(db, 'analytics', 'overview');
+
+      if (cartItems && cartItems.length > 0) {
+        const itemSummaries = cartItems.map((item: any) => ({
+          productId: item.productId || item.id,
+          name: item.name || item.title || 'Item',
+          price: Number(item.price) || 0,
+          quantity: Number(item.quantity) || 1,
+          storeId: item.storeId || '',
+          storeName: item.storeName || item.store || '',
+        }));
+
+        const totalCartValue = itemSummaries.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const cartItemCount = itemSummaries.reduce((sum, item) => sum + item.quantity, 0);
+
+        const payload: any = {
+          userId: userInfo.userId,
+          status: 'active',
+          cartItemCount,
+          totalCartValue,
+          items: itemSummaries,
+          lastCartUpdate: serverTimestamp(),
+        };
+        if (userInfo.name) payload.userName = userInfo.name;
+        if (userInfo.email) payload.userEmail = userInfo.email;
+
+        await Promise.all([
+          setDoc(userCartRef, payload, { merge: true }),
+          setDoc(
+            overviewRef,
+            {
+              abandonedCartUserIds: arrayUnion(userInfo.userId),
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+          updateUserAnalytics(userInfo, {
+            activeCartValue: totalCartValue,
+            activeCartItemsCount: cartItemCount,
+          }),
+          logActivityEvent({
+            userId: userInfo.userId,
+            eventType: 'cart_update',
+            quantity: cartItemCount,
+            context: `${totalCartValue} TZS`,
+          }),
+        ]);
+      } else {
+        // Cart was cleared
+        await Promise.all([
+          setDoc(
+            userCartRef,
+            {
+              userId: userInfo.userId,
+              status: 'cleared',
+              cartItemCount: 0,
+              totalCartValue: 0,
+              items: [],
+              lastCartUpdate: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+          updateUserAnalytics(userInfo, {
+            activeCartValue: 0,
+            activeCartItemsCount: 0,
+          }),
+        ]);
+      }
+    } catch (err) {
+      console.warn('[Analytics] Failed to track cart update:', err);
+    }
+  },
+
+  /**
+   * Track when a cart is converted into a completed order.
+   * Marks status in analytics_cart_abandoned/{userId} as 'converted'.
+   */
+  async trackCartConverted(orderId: string, explicitUserId?: string): Promise<void> {
+    try {
+      const userInfo = getCurrentUserInfo(explicitUserId);
+      const userCartRef = doc(db, 'analytics_cart_abandoned', userInfo.userId);
+      const overviewRef = doc(db, 'analytics', 'overview');
+
+      await Promise.all([
+        setDoc(
+          userCartRef,
+          {
+            userId: userInfo.userId,
+            status: 'converted',
+            convertedOrderId: orderId,
+            convertedAt: serverTimestamp(),
+            lastCartUpdate: serverTimestamp(),
+          },
+          { merge: true }
+        ),
+        setDoc(
+          overviewRef,
+          {
+            abandonedCartUserIds: arrayRemove(userInfo.userId),
+            totalConvertedCarts: increment(1),
+            lastUpdated: serverTimestamp(),
+          },
+          { merge: true }
+        ),
+        updateUserAnalytics(userInfo, {
+          activeCartValue: 0,
+          activeCartItemsCount: 0,
+        }),
+        logActivityEvent({
+          userId: userInfo.userId,
+          eventType: 'cart_converted',
+          context: orderId,
+        }),
+      ]);
+    } catch (err) {
+      console.warn('[Analytics] Failed to track cart conversion:', err);
     }
   },
 

@@ -6,6 +6,7 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { calculateDeliveryFeeAlgorithm, getDeliveryFee, calculateLaundryServiceFee } from '../../location/hooks/useDynamicPrice';
+import { analyticsService } from '../../../services/analyticsService';
 
 export interface CartItem {
   productId: string; // Composite ID for the cart (e.g., id-iron-pack)
@@ -535,3 +536,14 @@ export const useCartStore = create<CartState>()(
     }
   )
 );
+
+// Automatically track abandoned cart updates in Firestore whenever cart state changes
+let cartDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+useCartStore.subscribe((state, prevState) => {
+  if (state.items !== prevState?.items) {
+    if (cartDebounceTimer) clearTimeout(cartDebounceTimer);
+    cartDebounceTimer = setTimeout(() => {
+      analyticsService.trackCartUpdate(state.items);
+    }, 800);
+  }
+});
