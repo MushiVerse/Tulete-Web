@@ -23,6 +23,7 @@ import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
 import { HelpSafetyWidget } from '@/shared/components/HelpSafetyWidget';
 import { SocialLinksWidget } from '@/shared/components/SocialLinksWidget';
+import { analyticsService } from '../../../services/analyticsService';
 import { PlatformStatsWidget } from '@/shared/components/PlatformStatsWidget';
 
 /* ─── Shared Configs ──────────────────────────────────────── */
@@ -413,6 +414,16 @@ export const StoreListingPage = () => {
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Track store search queries in analytics
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      const timer = setTimeout(() => {
+        analyticsService.trackSearchQuery(searchQuery.trim(), 'store_listing');
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [searchQuery]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 

@@ -1,6 +1,7 @@
 import { algoliasearch } from 'algoliasearch';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { analyticsService } from '../../services/analyticsService';
 
 const APP_ID = import.meta.env.VITE_ALGOLIA_APP_ID || 'IU2RKVQF8F';
 const SEARCH_KEY = import.meta.env.VITE_ALGOLIA_SEARCH_KEY || '25b7fb23ef5b9383d5d399c29a1472ad';
@@ -71,6 +72,10 @@ export const searchTuleteItems = async (
   query: string, 
   filtersOrOptions?: string | SearchOptions
 ) => {
+  if (query && typeof query === 'string' && query.trim().length >= 2) {
+    analyticsService.trackSearchQuery(query.trim(), 'algolia');
+  }
+
   const options = typeof filtersOrOptions === 'string' 
     ? { filters: filtersOrOptions } 
     : filtersOrOptions || {};

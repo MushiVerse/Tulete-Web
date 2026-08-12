@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageContainer } from '../shared/components/layout';
 import { 
   Search, HelpCircle, MessageCircle, Phone, ArrowLeft, 
@@ -8,6 +8,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../shared/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { analyticsService } from '../services/analyticsService';
 
 const WHATSAPP_SUPPORT_NUM = '255764587748';
 
@@ -72,6 +73,15 @@ export const HelpCenterPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      const timer = setTimeout(() => {
+        analyticsService.trackSearchQuery(searchQuery.trim(), 'help_center');
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [searchQuery]);
 
   const filteredFaqs = FAQS.filter(faq => {
     const matchesCategory = !activeCategory || faq.category === activeCategory;

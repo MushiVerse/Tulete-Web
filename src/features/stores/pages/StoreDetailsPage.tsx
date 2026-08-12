@@ -34,6 +34,7 @@ import { db } from '../../../core/firebase/config';
 import { toast } from 'sonner';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getNormalizedRating, toFirestoreDouble } from '../../../shared/utils/ratingUtils';
+import { analyticsService } from '../../../services/analyticsService';
 
 const getScrollParent = (node: HTMLElement | null): HTMLElement | Window => {
   if (!node) return window;
@@ -240,6 +241,13 @@ export const StoreDetailsPage = () => {
   const routeStoreData = location.state?.storeData as Store | undefined;
   const fromProduct = location.state?.fromProduct as any | undefined;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Track store view analytics
+  useEffect(() => {
+    if (id) {
+      analyticsService.trackStoreView(id, routeStoreData);
+    }
+  }, [id, routeStoreData]);
 
   // States
   const [activeTab, setActiveTab] = useState<'menu' | 'hours' | 'reviews' | 'gallery'>('menu');

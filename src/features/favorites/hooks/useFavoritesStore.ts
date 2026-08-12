@@ -5,6 +5,7 @@ import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'fireb
 import { buildCompleteProductPayload, resolveImageUrl, resolveItemCategory } from '../../../shared/utils/productPayload';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { isLaundryItem } from '../../cart/store/useCartStore';
+import { analyticsService } from '../../../services/analyticsService';
 
 interface FavoritesStore {
   favorites: FavoriteItem[];
@@ -155,6 +156,9 @@ export const useFavoritesStore = create<FavoritesStore>()(
           favorites: current.filter((f) => f.itemId !== targetItemId && f.id !== targetItemId && (f as any).foodId !== targetItemId && (f as any).objectID !== targetItemId),
         });
 
+        // Track unfavorite event in analytics
+        analyticsService.trackUnfavorite(targetItemId);
+
         if (userId && userId !== 'guest_user') {
           try {
             const isStore = exists.type === 'store' || (exists as any).recordType === 'store' || (exists as any).category === 'Store' || (exists as any).cat === 'Store';
@@ -181,6 +185,9 @@ export const useFavoritesStore = create<FavoritesStore>()(
           console.info('Laundry items are exempt from userFavorites.');
           return;
         }
+
+        // Track favorite event in analytics
+        analyticsService.trackFavorite(targetItemId, item);
 
         // Optimistic add
         const { rating: normRating, reviewCount: normReviewCount } = getNormalizedRating(item);

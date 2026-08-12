@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Clock, TrendingUp, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSearchStore } from '../store/useSearchStore';
-import { useDebounce } from '../../../shared/hooks/useDebounce'; // We need to create this
+import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { analyticsService } from '../../../services/analyticsService';
 
 export const SearchOverlay = () => {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ export const SearchOverlay = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
+      analyticsService.trackSearchQuery(inputValue.trim(), 'header_overlay');
       addSearchHistory(inputValue);
       closeSearch();
       navigate(`/explore?q=${encodeURIComponent(inputValue.trim())}`);
@@ -49,6 +51,7 @@ export const SearchOverlay = () => {
   };
 
   const handleHistoryClick = (term: string) => {
+    analyticsService.trackSearchQuery(term.trim(), 'history_click');
     setInputValue(term);
     setQuery(term);
     addSearchHistory(term);

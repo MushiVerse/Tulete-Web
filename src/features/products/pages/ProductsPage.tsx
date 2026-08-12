@@ -31,6 +31,7 @@ import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { resolveItemCategory, resolveImageUrl } from '../../../shared/utils/productPayload';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
+import { analyticsService } from '../../../services/analyticsService';
 
 const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuantity, navigate }: any) => {
   const { user } = useAuthStore();
@@ -278,6 +279,13 @@ export const ProductsPage = () => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Track product page search queries in analytics
+  useEffect(() => {
+    if (debouncedSearchQuery.trim().length >= 2) {
+      analyticsService.trackSearchQuery(debouncedSearchQuery.trim(), 'products_page');
+    }
+  }, [debouncedSearchQuery]);
 
   // Query ecommerceCategory (main) & ecommerceSubCategory (sub) from Firestore
   const { data: ecommerceCats = [] } = useQuery({

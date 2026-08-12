@@ -5,6 +5,7 @@ import { useCartStore, isLaundryItem, isFoodItem, isProductItem } from '../../ca
 import { doc, getDoc, getDocs, onSnapshot, query, collection, where, orderBy, setDoc, serverTimestamp, updateDoc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { roundTZSPrice } from '../../../shared/utils/formatPrice';
+import { analyticsService } from '../../../services/analyticsService';
 
 export type OrderStatus = 
   | 'Pending'
@@ -223,6 +224,17 @@ class OrderService extends BaseFirestoreService<Order> {
     });
 
     await setDoc(docRef, payload);
+
+    // Track analytics for ordered items by ID
+    if (Array.isArray(data.items)) {
+      for (const item of data.items) {
+        const itemId = item.productId || (item as any).id || (item as any).foodId;
+        if (itemId) {
+          analyticsService.trackItemOrder(String(itemId), item.quantity || 1, item);
+        }
+      }
+    }
+
     return { id: docRef.id, ...payload } as Order;
   }
 

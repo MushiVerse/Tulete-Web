@@ -30,6 +30,7 @@ import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteF
 import { db } from '../../../core/firebase/config';
 import { getNormalizedRating, toFirestoreDouble } from '../../../shared/utils/ratingUtils';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
+import { analyticsService } from '../../../services/analyticsService';
 
 /* 2-Row Horizontal Grid Section with 15-Item Pagination for "Related" items */
 const Horizontal2RowRelatedSection = ({ title, items }: { title: string; items: any[] }) => {
@@ -414,6 +415,14 @@ export const ProductDetailPage = () => {
   const itemCat = (product as any)?.cat || product?.category || (stateProduct as any)?.cat || (stateProduct as any)?.category || '';
   const isLaundry = isLaundryProduct || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat) || isLaundryItem(product) || isLaundryItem(stateProduct);
 
+  // Track item view analytics when product page opens
+  const activeItemId = String(decodedId || id || '').trim();
+  useEffect(() => {
+    if (activeItemId) {
+      analyticsService.trackItemView(activeItemId, product || stateProduct);
+    }
+  }, [activeItemId, product, stateProduct]);
+
   const handleRateProduct = async (stars: number) => {
     if (!isAuthenticated) {
       openModal('login');
@@ -444,6 +453,9 @@ export const ProductDetailPage = () => {
       const rateAsDouble = toFirestoreDouble(stars);
       const updatedRates = [...currentRates.map((val: any) => toFirestoreDouble(val)), rateAsDouble];
       await setDoc(docRef, { rates: updatedRates }, { merge: true });
+
+      // Record rating analytics event
+      analyticsService.trackRating(productIdToRate, stars, product || stateProduct);
 
       queryClient.invalidateQueries({ queryKey: ['product', productIdToRate] });
 
