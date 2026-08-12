@@ -25,9 +25,9 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
 
   const getFilterStr = useCallback(() => {
     if (filterValue === 'food') {
-      return `(recordType:food OR _collection:foods OR isFood:true OR category:Food OR cat:Food)`;
+      return `recordType:food`;
     } else if (filterValue === 'product') {
-      return `(recordType:product OR category:Product OR cat:Product)`;
+      return `recordType:product`;
     } else if (filterValue === 'laundry') {
       return `(recordType:cloth OR recordType:laundry OR category:Laundry OR category:Nguo OR cat:Nguo)`;
     }

@@ -44,7 +44,8 @@ export function isFuzzyMatch(query: string, targetText: string): boolean {
   return queryWords.every((qWord) => {
     return targetWords.some((tWord) => {
       // Direct substring or prefix match
-      if (tWord.includes(qWord) || qWord.includes(tWord)) return true;
+      if (tWord.startsWith(qWord) || tWord.includes(qWord)) return true;
+      if (qWord.length >= 3 && qWord.startsWith(tWord)) return true;
 
       // Typo tolerance based on query word length
       const maxDistance = qWord.length <= 2 ? 0 : qWord.length <= 5 ? 1 : 2;

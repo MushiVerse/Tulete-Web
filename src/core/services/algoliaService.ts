@@ -25,13 +25,15 @@ export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: 
 
   const allowStoresAndBrands = options?.allowStoresAndBrands ?? false;
 
-  // 1. Exclude store and brand documents ONLY when searching for regular products
-  const recordType = String(item.recordType || item.type || '').toLowerCase();
+  // 1. Exclude store and brand documents ONLY when searching for regular products & food
+  const recordType = String(item.recordType || item.type || item._collection || '').toLowerCase();
   const cat = String(item.category || item.cat || '').toLowerCase();
   const isExplicitStore = 
     recordType === 'store' || 
     recordType === 'foodstore' || 
+    recordType === 'foodstores' ||
     recordType === 'brand' || 
+    recordType === 'brands' ||
     item.isStore === true || 
     cat === 'store';
 
@@ -133,10 +135,13 @@ async function searchFirestoreFallback(
 
     // Filter by record type / category if explicit filter requested
     if (isFoodFilter) {
+      const recType = String(item.recordType || item._collection || item.type || '').toLowerCase();
       const catStr = String(item.category || item.cat || item.foodCategory || item.speccat || item.mainCategory || '').toLowerCase();
       const isFood = 
-        item.recordType === 'food' || 
-        item._collection === 'foods' || 
+        recType.includes('food') || 
+        recType.includes('store') ||
+        item._collection === 'foods' ||
+        item._collection === 'foodStores' ||
         item.isFood === true ||
         catStr.includes('food') ||
         catStr.includes('dish') ||
@@ -146,7 +151,12 @@ async function searchFirestoreFallback(
         catStr.includes('breakfast') ||
         catStr.includes('kitchen') ||
         catStr.includes('swahili') ||
-        catStr.includes('healthy');
+        catStr.includes('healthy') ||
+        catStr.includes('local') ||
+        catStr.includes('fast') ||
+        catStr.includes('nyama') ||
+        catStr.includes('pizza') ||
+        catStr.includes('burger');
       if (!isFood) return false;
     } else if (isProductFilter) {
       const isProduct = item.recordType === 'product' || item._collection === 'products' || String(item.category || item.cat || '').toLowerCase().includes('product') || String(item.category || item.cat || '').toLowerCase().includes('shopping');
@@ -215,7 +225,7 @@ export const searchTuleteItems = async (
     analyticsService.trackSearchQuery(query.trim(), options.context);
   }
 
-  const filterStr = options.filters || '';
+  const filterStr = String(options.filters || '').toLowerCase();
   const allowStoresAndBrands = 
     Boolean(options.includeStoresAndBrands) || 
     filterStr.includes('recordType:brand') || 

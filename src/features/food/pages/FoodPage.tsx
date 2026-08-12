@@ -461,7 +461,7 @@ export const FoodPage = () => {
   const { data: foodsData, isLoading } = useFirestoreQuery(
     ['foods', 'page', activeCategory],
     productService,
-    { filters: [{ field: '_collection', operator: '==', value: 'foods' }] as any, limit: 100 }
+    { filters: [{ field: '_collection', operator: '==', value: 'foods' }] as any, limit: 500 }
   );
 
   const rawMeals = foodsData?.data || [];
@@ -518,11 +518,7 @@ export const FoodPage = () => {
       'desc'
     ]);
     
-    // Filter by delivery fee <= 1600
-    const deliveryFee = getDeliveryFee(currentLocation, meal.location, meal.storeId, false, true);
-    const matchesFee = deliveryFee <= 1600;
-
-    return matchesSearch && matchesFee;
+    return matchesSearch;
   }).sort((a, b) => {
     const timeA = (a as any).time || (a as any).createdAt || '';
     const timeB = (b as any).time || (b as any).createdAt || '';
