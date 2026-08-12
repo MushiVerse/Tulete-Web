@@ -139,7 +139,7 @@ export const AdminItemAnalyticsPage: React.FC = () => {
           <div>
             <p className={`text-2xl font-black ${textPrimary}`}>{totalOrdersRecorded.toLocaleString()}</p>
             <p className={`text-xs font-semibold uppercase tracking-wider mt-0.5 ${textMuted}`}>
-              Total Orders Converted
+              Total Orders Placed
             </p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">

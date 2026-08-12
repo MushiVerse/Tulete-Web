@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { collection, onSnapshot, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { 
@@ -18,8 +18,57 @@ export const AdminCancellationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState('');
   const [whoFilter, setWhoFilter] = useState('all');
+
+  const fromInputRef = useRef<HTMLInputElement>(null);
+  const toInputRef = useRef<HTMLInputElement>(null);
+
+  const openFromPicker = () => {
+    const input = fromInputRef.current;
+    if (!input) return;
+    try {
+      if (typeof (input as any).showPicker === 'function') {
+        (input as any).showPicker();
+      } else {
+        input.focus();
+      }
+    } catch {
+      input.focus();
+    }
+  };
+
+  const openToPicker = () => {
+    const input = toInputRef.current;
+    if (!input) return;
+    try {
+      if (typeof (input as any).showPicker === 'function') {
+        (input as any).showPicker();
+      } else {
+        input.focus();
+      }
+    } catch {
+      input.focus();
+    }
+  };
+
+  const getTodayDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getNDaysAgoString = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [startDate, setStartDate] = useState<string>('2026-08-12');
-  const [endDate, setEndDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>(getTodayDateString());
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   useEffect(() => {
@@ -74,7 +123,7 @@ export const AdminCancellationsPage: React.FC = () => {
                   storeName: i.storeName || i.store || data.storeName || data.store || 'Store',
                 })),
                 storeNames: stores,
-                createdAt: data.createdAt || data.updatedAt || null,
+                createdAt: data.createdAt || data.timestamp || data.time || data.date || data.orderDate || data.updatedAt || null,
                 collectionSource: collectionName,
               });
             }
@@ -89,8 +138,8 @@ export const AdminCancellationsPage: React.FC = () => {
 
       // Sort descending by timestamp / createdAt
       list.sort((a, b) => {
-        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (typeof a.createdAt === 'number' ? a.createdAt : 0);
-        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (typeof b.createdAt === 'number' ? b.createdAt : 0);
+        const timeA = getRecordTimestamp(a);
+        const timeB = getRecordTimestamp(b);
         return timeB - timeA;
       });
 
@@ -105,21 +154,61 @@ export const AdminCancellationsPage: React.FC = () => {
   }, []);
 
   const getRecordTimestamp = (record: any): number => {
-    const val = record.createdAt || record.timestamp || record.time || record.date || record.updatedAt;
-    if (!val) return 0;
-    if (typeof val === 'object') {
-      if (typeof val.toDate === 'function') return val.toDate().getTime();
-      if (typeof val.toMillis === 'function') return val.toMillis();
-      if (typeof val.seconds === 'number') return val.seconds * 1000;
+    if (!record) return 0;
+    const val = record.createdAt ?? record.timestamp ?? record.time ?? record.date ?? record.updatedAt ?? record.orderDate ?? record.created_at ?? record.dateCreated;
+    
+    if (val !== null && val !== undefined) {
+      if (typeof val === 'object') {
+        if (typeof val.toDate === 'function') {
+          try { return val.toDate().getTime(); } catch {}
+        }
+        if (typeof val.toMillis === 'function') {
+          try { return val.toMillis(); } catch {}
+        }
+        if (typeof val.seconds === 'number') {
+          return val.seconds * 1000;
+        }
+        if (typeof val._seconds === 'number') {
+          return val._seconds * 1000;
+        }
+        if (val instanceof Date) {
+          return val.getTime();
+        }
+      }
+      
+      if (typeof val === 'number') {
+        return val < 10000000000 ? val * 1000 : val;
+      }
+      
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        const p = new Date(trimmed).getTime();
+        if (!isNaN(p) && p > 0) return p;
+        
+        const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (ddmmyyyyMatch) {
+          const [, day, month, year, hours = '0', minutes = '0', seconds = '0'] = ddmmyyyyMatch;
+          const parsedDate = new Date(
+            Number(year),
+            Number(month) - 1,
+            Number(day),
+            Number(hours),
+            Number(minutes),
+            Number(seconds)
+          );
+          if (!isNaN(parsedDate.getTime())) return parsedDate.getTime();
+        }
+
+        const pf = new Date(trimmed.replace(' ', 'T')).getTime();
+        if (!isNaN(pf) && pf > 0) return pf;
+      }
     }
-    if (typeof val === 'number') return val < 10000000000 ? val * 1000 : val;
-    if (typeof val === 'string') {
-      const p = new Date(val).getTime();
-      if (!isNaN(p) && p > 0) return p;
-      const formatted = val.replace(' ', 'T');
-      const pf = new Date(formatted).getTime();
-      if (!isNaN(pf) && pf > 0) return pf;
+
+    if (typeof record.id === 'string') {
+      const numId = Number(record.id);
+      if (!isNaN(numId) && numId > 1600000000000) return numId;
     }
+
     return 0;
   };
 
@@ -127,15 +216,18 @@ export const AdminCancellationsPage: React.FC = () => {
     // 1. Date Range Filter (From startDate To endDate)
     if (startDate || endDate) {
       const itemTime = getRecordTimestamp(c);
-      if (itemTime > 0) {
-        if (startDate) {
-          const startTimestamp = new Date(`${startDate}T00:00:00`).getTime();
-          if (itemTime < startTimestamp) return false;
-        }
-        if (endDate) {
-          const endTimestamp = new Date(`${endDate}T23:59:59.999`).getTime();
-          if (itemTime > endTimestamp) return false;
-        }
+      if (itemTime === 0) return false;
+
+      if (startDate) {
+        const [sYear, sMonth, sDay] = startDate.split('-').map(Number);
+        const startTimestamp = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0).getTime();
+        if (itemTime < startTimestamp) return false;
+      }
+
+      if (endDate) {
+        const [eYear, eMonth, eDay] = endDate.split('-').map(Number);
+        const endTimestamp = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999).getTime();
+        if (itemTime > endTimestamp) return false;
       }
     }
 
@@ -251,56 +343,27 @@ export const AdminCancellationsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Controls: Search, Date Range Filter & Initiator Filter */}
-      <div className={`p-4 rounded-3xl border shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 ${cardBg}`}>
-        <div className="relative flex-1 w-full">
-          <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${textMuted}`} />
-          <input
-            type="text"
-            value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
-            placeholder="Search by customer name, store name, order ID, reason, or item..."
-            className={`w-full h-11 pl-10 pr-4 rounded-2xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/50 ${inputBg}`}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0">
-          {/* Date Range Picker (From & To) */}
-          <div className="flex flex-wrap items-center gap-2 bg-muted/60 border border-border px-3.5 py-1.5 rounded-2xl">
-            <Calendar className="w-4 h-4 text-rose-500 shrink-0" />
-            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-              <span>From:</span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className={`h-9 px-2 rounded-xl text-xs font-extrabold focus:outline-none ${inputBg}`}
-              />
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-              <span>To:</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className={`h-9 px-2 rounded-xl text-xs font-extrabold focus:outline-none ${inputBg}`}
-              />
-            </div>
-            {(startDate || endDate) && (
-              <button
-                onClick={() => { setStartDate(''); setEndDate(''); }}
-                className="text-[10px] font-extrabold text-rose-500 hover:underline px-1 cursor-pointer"
-                title="Clear date range to view all time"
-              >
-                Reset
-              </button>
-            )}
+      {/* Modern Date Range Picker & Search Toolbar */}
+      <div className={`p-5 rounded-3xl border shadow-xl space-y-4 ${cardBg}`}>
+        {/* Top Row: Search & Filters */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+          {/* Search Box */}
+          <div className="relative flex-1 w-full">
+            <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${textMuted}`} />
+            <input
+              type="text"
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Search by customer name, store name, order ID, reason, or item..."
+              className={`w-full h-11 pl-10 pr-4 rounded-2xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/50 ${inputBg}`}
+            />
           </div>
 
+          {/* Initiator Filter */}
           <select
             value={whoFilter}
             onChange={(e) => setWhoFilter(e.target.value)}
-            className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/50 ${inputBg}`}
+            className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/50 shrink-0 w-full lg:w-auto ${inputBg}`}
           >
             <option value="all">All Initiators</option>
             <option value="customer">Cancelled by Customer</option>
@@ -308,6 +371,119 @@ export const AdminCancellationsPage: React.FC = () => {
             <option value="admin">Cancelled by Admin</option>
             <option value="driver">Cancelled by Driver</option>
           </select>
+        </div>
+
+        {/* Bottom Row: Modern Date Range Picker & Quick Presets */}
+        <div className={`flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-200/80'}`}>
+          {/* Custom Date Pickers */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className={`flex items-center gap-3 px-3.5 py-1.5 rounded-2xl border ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-slate-100 border-slate-200'}`}>
+              {/* From Pill */}
+              <div 
+                onClick={openFromPicker}
+                className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-rose-500 transition-colors"
+                title="Click to open calendar picker panel"
+              >
+                <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-rose-400' : 'text-rose-600'}`} />
+                <span className={textMuted}>From:</span>
+                <input
+                  ref={fromInputRef}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openFromPicker();
+                  }}
+                  style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer ${inputBg}`}
+                />
+              </div>
+
+              <span className={`font-bold ${textMuted}`}>—</span>
+
+              {/* To Pill */}
+              <div 
+                onClick={openToPicker}
+                className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-rose-500 transition-colors"
+                title="Click to open calendar picker panel"
+              >
+                <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-rose-400' : 'text-rose-600'}`} />
+                <span className={textMuted}>To:</span>
+                <input
+                  ref={toInputRef}
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openToPicker();
+                  }}
+                  style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer ${inputBg}`}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Date Presets */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`text-[11px] font-bold mr-1 ${textMuted}`}>Presets:</span>
+            <button
+              onClick={() => { setStartDate('2026-08-12'); setEndDate(getTodayDateString()); }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+                startDate === '2026-08-12' && endDate === getTodayDateString()
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
+                  : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Default (12 Aug – Today)
+            </button>
+
+            <button
+              onClick={() => { setStartDate(getTodayDateString()); setEndDate(getTodayDateString()); }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+                startDate === getTodayDateString() && endDate === getTodayDateString()
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
+                  : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Today
+            </button>
+
+            <button
+              onClick={() => { setStartDate(getNDaysAgoString(7)); setEndDate(getTodayDateString()); }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+                startDate === getNDaysAgoString(7) && endDate === getTodayDateString()
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
+                  : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Last 7 Days
+            </button>
+
+            <button
+              onClick={() => { setStartDate(getNDaysAgoString(30)); setEndDate(getTodayDateString()); }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+                startDate === getNDaysAgoString(30) && endDate === getTodayDateString()
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
+                  : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Last 30 Days
+            </button>
+
+            <button
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+                !startDate && !endDate
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
+                  : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All Time
+            </button>
+          </div>
         </div>
       </div>
 
@@ -329,9 +505,10 @@ export const AdminCancellationsPage: React.FC = () => {
             No canceled orders matching current search filter.
           </div>
         ) : (
-          <div className="divide-y divide-border/40 overflow-x-auto">
+          <div className={`divide-y overflow-x-auto ${isDark ? 'divide-slate-800/80' : 'divide-slate-200'}`}>
             {filteredCancellations.map((c) => {
-              const dateStr = c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString() : 'Recent';
+              const itemTs = getRecordTimestamp(c);
+              const dateStr = itemTs > 0 ? new Date(itemTs).toLocaleString() : (c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString() : 'Recent');
               const itemsList = c.items || [];
               const storeNames = Array.from(new Set(itemsList.map((i: any) => i.storeName || i.store).filter(Boolean)));
               const primaryStore = storeNames.join(', ') || 'Store / Kitchen';
@@ -340,8 +517,8 @@ export const AdminCancellationsPage: React.FC = () => {
                 <div
                   key={c.id}
                   onClick={() => setSelectedOrder(c)}
-                  className={`p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors cursor-pointer hover:bg-rose-500/5 ${
-                    isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
+                  className={`p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors cursor-pointer ${
+                    isDark ? 'hover:bg-slate-800/60' : 'hover:bg-rose-50/50'
                   }`}
                 >
                   {/* Left Column: Customer & Order Details */}
@@ -356,37 +533,37 @@ export const AdminCancellationsPage: React.FC = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-1.5 font-extrabold text-sm text-foreground">
+                      <div className="flex items-center gap-1.5 font-extrabold text-sm">
                         <Users className="w-4 h-4 text-rose-500 shrink-0" />
                         <span className="notranslate" translate="no">
-                          Customer: <strong className={textPrimary}>{c.userName || 'Customer'}</strong> ({c.userEmail || c.userId || 'guest_user'})
+                          Customer: <strong className={textPrimary}>{c.userName || 'Customer'}</strong> <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>({c.userId || 'guest_user'})</span>
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 font-bold text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
                         <Store className="w-4 h-4 text-amber-500 shrink-0" />
                         <span className="notranslate" translate="no">
-                          Store: <strong className="text-amber-500 font-extrabold">{primaryStore}</strong>
+                          Store: <strong className={isDark ? 'text-amber-400 font-extrabold' : 'text-amber-600 font-extrabold'}>{primaryStore}</strong>
                         </span>
                       </div>
                     </div>
 
                     {/* Reason & Item Snippet */}
-                    <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-3 pt-1">
-                      <span className="italic text-rose-400">"{c.reason || 'No reason specified'}"</span>
-                      <span>•</span>
-                      <span>{itemsList.length} items ({itemsList.slice(0, 2).map((i: any) => i.name).join(', ')}{itemsList.length > 2 ? '...' : ''})</span>
+                    <div className="text-xs flex flex-wrap items-center gap-3 pt-1">
+                      <span className={`italic font-bold ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>"{c.reason || 'No reason specified'}"</span>
+                      <span className={isDark ? 'text-slate-600' : 'text-slate-400'}>•</span>
+                      <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{itemsList.length} items ({itemsList.slice(0, 2).map((i: any) => i.name).join(', ')}{itemsList.length > 2 ? '...' : ''})</span>
                     </div>
                   </div>
 
                   {/* Right Column: Amount, Date & Preview Action */}
-                  <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0">
+                  <div className={`flex items-center justify-between sm:justify-end gap-4 shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
                     <div className="text-left sm:text-right">
-                      <span className="text-base font-black text-rose-500 block">
+                      <span className={`text-base font-black block ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
                         {APP_SETTINGS.currency} {formatPrice(c.totalAmount || 0)}
                       </span>
-                      <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3 inline-block" /> {dateStr}
+                      <span className={`text-[11px] font-bold flex items-center gap-1 justify-end ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <Clock className="w-3.5 h-3.5 inline-block text-rose-500" /> {dateStr}
                       </span>
                     </div>
 
@@ -411,7 +588,7 @@ export const AdminCancellationsPage: React.FC = () => {
       {/* FULL CANCELED ORDER PREVIEW MODAL */}
       <AnimatePresence>
         {selectedOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -419,7 +596,7 @@ export const AdminCancellationsPage: React.FC = () => {
               className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl p-6 sm:p-8 space-y-6 ${cardBg}`}
             >
               {/* Modal Header */}
-              <div className="flex items-start justify-between gap-4 border-b pb-4 border-border">
+              <div className={`flex items-start justify-between gap-4 border-b pb-4 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full text-xs font-black bg-rose-500/10 text-rose-500 border border-rose-500/20 uppercase tracking-widest">
@@ -429,14 +606,16 @@ export const AdminCancellationsPage: React.FC = () => {
                   <h2 className={`text-xl font-black mt-2 ${textPrimary}`}>
                     Order #{selectedOrder.orderId || selectedOrder.id}
                   </h2>
-                  <p className="text-xs text-muted-foreground font-semibold mt-0.5">
+                  <p className={`text-xs font-semibold mt-0.5 ${textMuted}`}>
                     Cancelled on {selectedOrder.createdAt?.toDate ? selectedOrder.createdAt.toDate().toLocaleString() : 'Recent'}
                   </p>
                 </div>
 
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="w-9 h-9 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-foreground transition-all cursor-pointer shrink-0"
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900'
+                  }`}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -445,43 +624,43 @@ export const AdminCancellationsPage: React.FC = () => {
               {/* 1. Who Info: Customer Details & Store Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Customer Box */}
-                <div className="p-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 space-y-2">
+                <div className={`p-4 rounded-2xl border ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50/80 border-rose-200'} space-y-2`}>
                   <div className="flex items-center gap-2 text-rose-500 font-extrabold text-xs uppercase tracking-wider">
                     <Users className="w-4 h-4" />
                     <span>Customer Details (Who Ordered)</span>
                   </div>
                   <div className="text-xs space-y-1">
                     <p className={`font-black text-sm ${textPrimary}`}>{selectedOrder.userName || 'Customer'}</p>
-                    <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-rose-400" /> {selectedOrder.userEmail || 'No email registered'}
+                    <p className={`font-medium flex items-center gap-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <Mail className="w-3.5 h-3.5 text-rose-500" /> {selectedOrder.userEmail || 'No email registered'}
                     </p>
-                    <p className="text-muted-foreground font-medium">
-                      User ID: <code className="bg-muted px-1.5 py-0.5 rounded font-mono font-bold text-foreground">{selectedOrder.userId || 'guest_user'}</code>
+                    <p className={`font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      User ID: <code className={`px-1.5 py-0.5 rounded font-mono font-bold border ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}>{selectedOrder.userId || 'guest_user'}</code>
                     </p>
                   </div>
                 </div>
 
                 {/* Store Box */}
-                <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-2">
+                <div className={`p-4 rounded-2xl border ${isDark ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50/80 border-amber-200'} space-y-2`}>
                   <div className="flex items-center gap-2 text-amber-500 font-extrabold text-xs uppercase tracking-wider">
                     <Store className="w-4 h-4" />
                     <span>Store / Kitchen Details</span>
                   </div>
                   <div className="text-xs space-y-1">
-                    <p className={`font-black text-sm text-amber-500`}>
+                    <p className="font-black text-sm text-amber-500">
                       {(selectedOrder.storeNames || Array.from(new Set((selectedOrder.items || []).map((i: any) => i.storeName || i.store).filter(Boolean)))).join(', ') || 'Store'}
                     </p>
-                    <p className="text-muted-foreground font-medium">
-                      Item Count: <strong className="text-foreground">{selectedOrder.itemCount || (selectedOrder.items || []).length} items</strong>
+                    <p className={`font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Item Count: <strong className={textPrimary}>{selectedOrder.itemCount || (selectedOrder.items || []).length} items</strong>
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* 2. Cancellation Reason & Who Cancelled */}
-              <div className="p-4 rounded-2xl border border-border bg-card/60 space-y-2">
+              <div className={`p-4 rounded-2xl border space-y-2 ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  <span className={`text-xs font-extrabold flex items-center gap-1.5 uppercase tracking-wider ${textPrimary}`}>
                     <ShieldAlert className="w-4 h-4 text-rose-500" />
                     <span>Cancellation Context</span>
                   </span>
@@ -489,29 +668,29 @@ export const AdminCancellationsPage: React.FC = () => {
                     Initiated by: {selectedOrder.cancelledBy || 'customer'}
                   </span>
                 </div>
-                <p className="text-xs text-foreground font-semibold italic bg-background p-3 rounded-xl border border-border/60">
+                <p className={`text-xs font-bold italic p-3 rounded-xl border ${isDark ? 'bg-slate-900 border-slate-800 text-rose-300' : 'bg-white border-rose-100 text-rose-700'}`}>
                   "{selectedOrder.reason || 'Customer requested order cancellation'}"
                 </p>
               </div>
 
               {/* 3. Items List Breakdown */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Order Items Breakdown</h4>
-                <div className="border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                <h4 className={`text-xs font-black uppercase tracking-wider ${textMuted}`}>Order Items Breakdown</h4>
+                <div className={`border rounded-2xl overflow-hidden divide-y ${isDark ? 'border-slate-800 divide-slate-800' : 'border-slate-200 divide-slate-200'}`}>
                   {(selectedOrder.items || []).map((item: any, idx: number) => (
                     <div key={idx} className="p-3.5 flex items-center justify-between gap-4 text-xs">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                          <Package className="w-4 h-4 text-muted-foreground" />
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
+                          <Package className={`w-4 h-4 ${textMuted}`} />
                         </div>
                         <div className="min-w-0">
                           <p className={`font-extrabold truncate ${textPrimary}`}>{item.name || 'Item'}</p>
-                          <p className="text-[11px] text-muted-foreground font-medium">Store: {item.storeName || item.store || 'Store'}</p>
+                          <p className={`text-[11px] font-semibold ${textMuted}`}>Store: {item.storeName || item.store || 'Store'}</p>
                         </div>
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="font-extrabold text-foreground">
+                        <span className={`font-extrabold ${textPrimary}`}>
                           {item.quantity || 1} x {APP_SETTINGS.currency} {formatPrice(item.price || 0)}
                         </span>
                         <span className="block font-black text-rose-500 text-xs">
