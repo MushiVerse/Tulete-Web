@@ -57,6 +57,15 @@ const TermsOfService = React.lazy(() => import('../pages/TermsOfServicePage').th
 const CookiesSettings = React.lazy(() => import('../pages/CookiesSettingsPage').then(m => ({ default: m.CookiesSettingsPage })));
 const NotFound = React.lazy(() => import('../pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
+// Admin CMS Imports
+const AdminGuard = React.lazy(() => import('../features/admin/components/AdminGuard').then(m => ({ default: m.AdminGuard })));
+const AdminLayout = React.lazy(() => import('../features/admin/layouts/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const AdminDashboard = React.lazy(() => import('../features/admin/pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
+const AdminSearchAnalytics = React.lazy(() => import('../features/admin/pages/AdminSearchAnalyticsPage').then(m => ({ default: m.AdminSearchAnalyticsPage })));
+const AdminItemAnalytics = React.lazy(() => import('../features/admin/pages/AdminItemAnalyticsPage').then(m => ({ default: m.AdminItemAnalyticsPage })));
+const AdminLiveActivity = React.lazy(() => import('../features/admin/pages/AdminLiveActivityPage').then(m => ({ default: m.AdminLiveActivityPage })));
+const AdminLogin = React.lazy(() => import('../features/admin/pages/AdminLoginPage').then(m => ({ default: m.AdminLoginPage })));
+
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense fallback={<LoadingScreen />}>
     <Component />
@@ -118,6 +127,26 @@ export const router = createBrowserRouter([
           { path: 'settings', element: <Suspense fallback={<ProfileSkeleton />}><Settings /></Suspense> },
           { path: 'checkout', element: withSuspense(Checkout) },
           { path: 'tracking/:id', element: <Suspense fallback={<OrderTrackingSkeleton />}><OrderTracking /></Suspense> },
+        ],
+      },
+      {
+        path: 'admin/login',
+        element: withSuspense(AdminLogin),
+      },
+      {
+        path: 'admin',
+        element: (
+          <Suspense fallback={<LoadingScreen />}>
+            <AdminGuard>
+              <AdminLayout />
+            </AdminGuard>
+          </Suspense>
+        ),
+        children: [
+          { index: true, element: withSuspense(AdminDashboard) },
+          { path: 'searches', element: withSuspense(AdminSearchAnalytics) },
+          { path: 'items', element: withSuspense(AdminItemAnalytics) },
+          { path: 'activity', element: withSuspense(AdminLiveActivity) },
         ],
       },
       {
