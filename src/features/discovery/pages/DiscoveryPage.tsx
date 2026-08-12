@@ -182,7 +182,8 @@ export const DiscoveryPage = () => {
   }, []);
 
   // Cart & Auth
-  const { items: cartItems, addToCart, clearCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, clearCart, getTotals, removeFromCart } = useCartStore();
+  const [isCartClosed, setIsCartClosed] = useState(false);
   const { openModal } = useAuthModalStore();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -1110,107 +1111,144 @@ export const DiscoveryPage = () => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* ── Premium Floating Cart Panel ── */}
-        <AnimatePresence>
-          {hasItems && (
-            <motion.div
-              initial={{ y: 100, opacity: 0, scale: 0.95 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 100, opacity: 0, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="fixed bottom-20 xl:bottom-6 left-3 right-3 xl:left-auto xl:right-6 xl:w-[400px] z-50"
-            >
-              <div
-                className="relative overflow-hidden rounded-[2rem] shadow-2xl border border-white/10"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(249,115,22,0.97) 0%, rgba(234,88,12,0.97) 60%, rgba(251,146,60,0.97) 100%)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                }}
-              >
-                {/* Decorative top glow */}
-                <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-yellow-300/30 blur-2xl pointer-events-none" />
-                <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full bg-red-700/30 blur-2xl pointer-events-none" />
+            {/* Floating Cart Widget */}
+            <AnimatePresence>
+              {hasItems && !isCartClosed && (
+                <motion.div
+                  initial={{ y: 100, opacity: 0, scale: 0.95 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 100, opacity: 0, scale: 0.95 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="fixed bottom-20 xl:bottom-6 left-3 right-3 xl:left-auto xl:right-6 xl:w-[400px] z-50"
+                >
+                  <div
+                    className="relative overflow-hidden rounded-[2rem] shadow-2xl border border-white/10"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(249,115,22,0.97) 0%, rgba(234,88,12,0.97) 60%, rgba(251,146,60,0.97) 100%)',
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                    }}
+                  >
+                    {/* Decorative top glow */}
+                    <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-yellow-300/30 blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full bg-red-700/30 blur-2xl pointer-events-none" />
 
-                <div className="relative z-10 px-4 pt-4 pb-4">
+                    <div className="relative z-10 px-4 pt-4 pb-4">
 
-                  {/* Header row */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative">
-                        <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                          <ShoppingCart className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
+                      {/* Header row */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="relative">
+                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                              <ShoppingCart className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
+                            </div>
+                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white text-primary text-[10px] font-black flex items-center justify-center shadow-lg">
+                              {cartItems.reduce((a, i) => a + i.quantity, 0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-white font-extrabold text-sm leading-none">Your Cart</p>
+                            <p className="text-white/70 text-[11px] font-medium mt-0.5">
+                              {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
+                            </p>
+                          </div>
                         </div>
-                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white text-primary text-[10px] font-black flex items-center justify-center shadow-lg">
-                          {cartItems.reduce((a, i) => a + i.quantity, 0)}
-                        </span>
+                        <button
+                          onClick={() => setIsCartClosed(true)}
+                          title="Close Cart temporarily"
+                          className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center transition-all active:scale-90 cursor-pointer text-white"
+                        >
+                          <X className="w-4 h-4 text-white" />
+                        </button>
                       </div>
-                      <div>
-                        <p className="text-white font-extrabold text-sm leading-none">Your Cart</p>
-                        <p className="text-white/70 text-[11px] font-medium mt-0.5">
-                          {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
-                        </p>
+
+                      {/* Item preview list — each with per-item delete button on the right */}
+                      <div className="space-y-1.5 mb-3 max-h-[220px] overflow-y-auto scrollbar-none">
+                        {cartItems.map((item) => (
+                          <div key={item.productId} className="flex items-center justify-between gap-2 bg-white/10 rounded-xl px-2.5 py-1.5 backdrop-blur-sm">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <img
+                                src={item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=60'}
+                                alt={item.name}
+                                className="w-8 h-8 rounded-lg object-cover shrink-0 shadow-sm"
+                              />
+                              <span className="text-white text-xs font-bold truncate">{item.name}</span>
+                              <span className="shrink-0 bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                                ×{item.quantity}
+                              </span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFromCart(item.productId);
+                              }}
+                              title={`Remove ${item.name}`}
+                              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500/80 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
+
+                      {/* Clear All Items Button below all items */}
+                      <button
+                        onClick={clearCart}
+                        className="w-full mb-3 py-1.5 rounded-xl bg-black/25 hover:bg-red-600/80 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
+                        title="Clear all items from cart"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Clear All Items
+                      </button>
+
+                      {/* Divider */}
+                      <div className="h-px bg-white/20 mb-3" />
+
+                      {/* Total + CTA */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Total</p>
+                          <p className="text-white font-black text-lg leading-tight">
+                            {APP_SETTINGS.currency} {formatPrice(cartTotal)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleCheckout}
+                          className="flex items-center gap-2 px-5 py-3 bg-white text-primary rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/90 active:scale-95 transition-all cursor-pointer"
+                        >
+                          Checkout
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+
                     </div>
-                    <button
-                      onClick={clearCart}
-                      title="Clear Cart"
-                      className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center transition-all active:scale-90"
-                    >
-                      <X className="w-4 h-4 text-white" />
-                    </button>
                   </div>
+                </motion.div>
+              )}
 
-                  {/* Item preview — up to 3 items */}
-                  <div className="space-y-1.5 mb-3">
-                    {cartItems.slice(0, 3).map((item) => (
-                      <div key={item.productId} className="flex items-center gap-2.5 bg-white/10 rounded-xl px-2.5 py-1.5 backdrop-blur-sm">
-                        <img
-                          src={item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=60'}
-                          alt={item.name}
-                          className="w-8 h-8 rounded-lg object-cover shrink-0 shadow-sm"
-                        />
-                        <span className="flex-1 text-white text-xs font-bold truncate">{item.name}</span>
-                        <span className="shrink-0 bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                          ×{item.quantity}
-                        </span>
-                      </div>
-                    ))}
-                    {cartItems.length > 3 && (
-                      <p className="text-white/60 text-[11px] font-semibold text-center">
-                        +{cartItems.length - 3} more item{cartItems.length - 3 > 1 ? 's' : ''}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Divider */}
-                  <div className="h-px bg-white/20 mb-3" />
-
-                  {/* Total + CTA */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Total</p>
-                      <p className="text-white font-black text-lg leading-tight">
-                        {APP_SETTINGS.currency} {formatPrice(cartTotal)}
-                      </p>
+              {/* Re-open collapsed cart button when temporarily closed */}
+              {hasItems && isCartClosed && (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className="fixed bottom-20 xl:bottom-6 right-3 xl:right-6 z-50"
+                >
+                  <button
+                    onClick={() => setIsCartClosed(false)}
+                    className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 rounded-full shadow-2xl flex items-center gap-2.5 text-xs font-black hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/20"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                      <ShoppingCart className="w-3.5 h-3.5 text-white" />
                     </div>
-                    <button
-                      onClick={handleCheckout}
-                      className="flex items-center gap-2 px-5 py-3 bg-white text-primary rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/90 active:scale-95 transition-all"
-                    >
-                      Checkout
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    <span>Open Cart ({cartItems.length})</span>
+                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-extrabold">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
         {/* ── Quick View Modal (Bottom Sheet on Mobile) ── */}
         <AnimatePresence>
@@ -1309,6 +1347,7 @@ export const DiscoveryPage = () => {
           )}
         </AnimatePresence>
       </div>
-    </PageWrapper>
-  );
+    </div>
+  </PageWrapper>
+);
 };

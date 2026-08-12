@@ -33,6 +33,7 @@ import { useLanguageStore } from '../../../core/i18n/useLanguageStore';
 import { HomeSearchResultsView } from '../components/HomeSearchResultsView';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
+import { CartWidget } from '../../../shared/components/CartWidget';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { useNotificationsRealtime } from '../../notifications/hooks/useNotificationsRealtime';
@@ -1402,43 +1403,7 @@ export const HomePage = () => {
           <div className="space-y-6 pb-20">
               
               {/* LIVE CART WIDGET */}
-              {hasItems && (
-                <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Cart</h2>
-                    <ShoppingBag className="w-4 h-4 text-primary" />
-                  </div>
-
-                  <div className="space-y-3 mb-4 max-h-[250px] overflow-y-auto scrollbar-none">
-                    {cartItems.map((cartItem) => (
-                      <MiniCartRow 
-                        key={cartItem.productId} 
-                        cartItem={cartItem} 
-                        removeFromCart={removeFromCart} 
-                      />
-                    ))}
-                  </div>
-                  
-                  <div className="pt-4 border-t border-border/50">
-                    <div className="flex justify-between items-center mb-5">
-                      <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
-                    </div>
-                    <Button
-                      onClick={handleCheckout}
-                      className="w-full rounded-xl py-4 font-extrabold shadow-md flex items-center justify-center gap-2"
-                    >
-                      Checkout Now <ArrowRight className="w-4 h-4" />
-                    </Button>
-                    <button
-                      onClick={() => clearCart()}
-                      className="w-full mt-3 text-xs font-semibold text-destructive hover:text-primary transition-colors py-2 rounded-xl hover:bg-primary/10 flex items-center justify-center gap-1.5"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Clear Cart
-                    </button>
-                  </div>
-                </div>
-              )}
+              <CartWidget onCheckout={handleCheckout} />
 
               {/* QUICK ACTION CARDS (Hidden if cart is full to save space, or shown below) */}
               {!hasItems && (

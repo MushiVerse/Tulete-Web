@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from '../../../shared/components/ui/Dialog';
 import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOverlay';
+import { CartWidget } from '../../../shared/components/CartWidget';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 
@@ -599,63 +600,7 @@ export const LaundryPage = () => {
           <div className="space-y-6">
             
             {/* CART WIDGET */}
-            <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Cart</h2>
-                <ShoppingCart className="w-4 h-4 text-primary" />
-              </div>
-
-              {totalCartItems > 0 ? (
-                <>
-                  <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
-                    {cartItems.map((cartItem) => (
-                      <div key={cartItem.productId} className="group/row flex justify-between items-center text-sm py-1 rounded-lg hover:bg-muted/50 px-1 transition-colors">
-                        <span className="font-bold text-muted-foreground line-clamp-1 flex-1">
-                          {cartItem.quantity}x {cartItem.name}
-                        </span>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <span className="font-extrabold text-foreground">
-                            {APP_SETTINGS.currency} {formatPrice(calculateItemTotal(cartItem))}
-                          </span>
-                          <button
-                            onClick={() => removeFromCart(cartItem.productId)}
-                            title="Remove item"
-                            aria-label={`Remove ${cartItem.name}`}
-                            className="focus:opacity-100 w-6 h-6 flex items-center justify-center rounded-full text-destructive hover:text-primary hover:bg-primary/10 transition-all ml-1"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="pt-4 border-t border-border/50">
-                    <div className="flex justify-between items-center mb-5">
-                      <span className="text-sm font-bold text-muted-foreground">Total</span>
-                      <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
-                    </div>
-                    <Button
-                      onClick={() => navigate('/cart')}
-                      className="w-full rounded-xl py-6 font-extrabold shadow-md flex items-center justify-center gap-2"
-                    >
-                      Checkout Now <ArrowRight className="w-4 h-4" />
-                    </Button>
-                    <button
-                      onClick={() => clearCart()}
-                      className="w-full mt-3 text-xs font-semibold text-destructive hover:text-primary transition-colors py-2 rounded-xl hover:bg-primary/10 flex items-center justify-center gap-1.5"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Clear Cart
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <ShoppingCart className="w-10 h-10 text-muted mx-auto mb-3" />
-                  <p className="text-sm font-bold text-muted-foreground">Your cart is empty</p>
-                  <p className="text-xs text-muted-foreground mt-1">Add items to get started</p>
-                </div>
-              )}
-            </div>
+            <CartWidget onCheckout={() => navigate('/cart')} />
 
             {/* TRUST STATS BAND */}
             <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
