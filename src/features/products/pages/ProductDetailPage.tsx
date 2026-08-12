@@ -122,7 +122,7 @@ const Horizontal2RowRelatedSection = ({ title, items }: { title: string; items: 
   if (validItems.length === 0) return null;
 
   return (
-    <div className="space-y-4 p-5 sm:p-6 rounded-3xl bg-card/60 dark:bg-card/40 border border-border/50 shadow-xs relative overflow-hidden">
+    <div className="space-y-4 pt-4 border-t border-border/40">
       {/* Header with Title, Swipe Hint Badge & Nav Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-3">
@@ -178,12 +178,12 @@ const Horizontal2RowRelatedSection = ({ title, items }: { title: string; items: 
       <div className="relative group/scroll">
         {/* Subtle Right Edge Gradient Fade Overlay */}
         {canScrollRight && (
-          <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-card via-card/70 to-transparent z-10 rounded-2xl" />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-background via-background/70 to-transparent z-10 rounded-l-2xl" />
         )}
 
         {/* Subtle Left Edge Gradient Fade Overlay */}
         {canScrollLeft && (
-          <div className="pointer-events-none absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-card via-card/70 to-transparent z-10 rounded-2xl" />
+          <div className="pointer-events-none absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-background via-background/70 to-transparent z-10 rounded-r-2xl" />
         )}
 
         <div
@@ -294,7 +294,7 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
   if (validItems.length === 0) return null;
 
   return (
-    <div className="space-y-4 p-5 sm:p-6 rounded-3xl bg-card/60 dark:bg-card/40 border border-border/50 shadow-xs">
+    <div className="space-y-4 pt-4 border-t border-border/40">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
