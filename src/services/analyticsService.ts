@@ -607,8 +607,10 @@ export const analyticsService = {
   async trackCartUpdate(cartItems: any[], explicitUserId?: string): Promise<void> {
     try {
       const userInfo = getCurrentUserInfo(explicitUserId);
+      const today = getTodayDateString();
       const userCartRef = doc(db, 'analytics_cart_abandoned', userInfo.userId);
       const overviewRef = doc(db, 'analytics', 'overview');
+      const dailyRef = doc(db, 'analytics_daily', today);
 
       if (cartItems && cartItems.length > 0) {
         const itemSummaries = cartItems.map((item: any) => ({
@@ -640,6 +642,16 @@ export const analyticsService = {
             overviewRef,
             {
               abandonedCartUserIds: arrayUnion(userInfo.userId),
+              totalCartAbandoned: increment(1),
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+          setDoc(
+            dailyRef,
+            {
+              date: today,
+              cartAbandoned: increment(1),
               lastUpdated: serverTimestamp(),
             },
             { merge: true }
