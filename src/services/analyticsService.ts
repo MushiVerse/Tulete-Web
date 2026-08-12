@@ -21,6 +21,9 @@ function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let lastRecordedQuery = '';
+
 export const analyticsService = {
   /**
    * Track visitor session on app load/open.
@@ -292,53 +295,76 @@ export const analyticsService = {
   },
 
   /**
-   * Track user search queries across all search inputs.
+   * Track user search queries across all search inputs with intelligent debouncing.
+   * - Ignores queries < 3 characters (incomplete single/double letter fragments)
+   * - Waits 1000ms after user stops typing before recording to Firestore
+   * - Supports immediate execution when user submits form or selects a search result
+   * - Deduplicates repeated identical queries
    */
-  async trackSearchQuery(query: string, context: string = 'general'): Promise<void> {
+  trackSearchQuery(query: string, context: string = 'general', immediate: boolean = false): void {
     if (!query || typeof query !== 'string') return;
     const cleanQuery = query.trim().toLowerCase();
-    if (cleanQuery.length < 2) return; // Skip single characters or whitespace
+    
+    // Ignore incomplete 1-2 character fragments
+    if (cleanQuery.length < 3) return;
 
-    try {
-      const safeKey = sanitizeKey(cleanQuery);
-      const today = getTodayDateString();
+    // Ignore if identical to the exact query recorded recently
+    if (cleanQuery === lastRecordedQuery) return;
 
-      const overviewRef = doc(db, 'analytics', 'overview');
-      const dailyRef = doc(db, 'analytics_daily', today);
-      const searchRef = doc(db, 'analytics_searches', safeKey);
+    const executeWrite = async () => {
+      lastRecordedQuery = cleanQuery;
+      try {
+        const safeKey = sanitizeKey(cleanQuery);
+        const today = getTodayDateString();
 
-      await Promise.all([
-        setDoc(
-          overviewRef,
-          {
-            totalSearches: increment(1),
-            [`searches.${safeKey}`]: increment(1),
-            lastUpdated: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        setDoc(
-          dailyRef,
-          {
-            date: today,
-            searches: increment(1),
-            lastUpdated: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        setDoc(
-          searchRef,
-          {
-            query: cleanQuery,
-            context,
-            searchCount: increment(1),
-            lastSearchedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-      ]);
-    } catch (err) {
-      console.warn('[Analytics] Failed to track search query:', err);
+        const overviewRef = doc(db, 'analytics', 'overview');
+        const dailyRef = doc(db, 'analytics_daily', today);
+        const searchRef = doc(db, 'analytics_searches', safeKey);
+
+        await Promise.all([
+          setDoc(
+            overviewRef,
+            {
+              totalSearches: increment(1),
+              [`searches.${safeKey}`]: increment(1),
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+          setDoc(
+            dailyRef,
+            {
+              date: today,
+              searches: increment(1),
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+          setDoc(
+            searchRef,
+            {
+              query: cleanQuery,
+              context,
+              searchCount: increment(1),
+              lastSearchedAt: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+        ]);
+      } catch (err) {
+        console.warn('[Analytics] Failed to track search query:', err);
+      }
+    };
+
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+    }
+
+    if (immediate) {
+      executeWrite();
+    } else {
+      searchDebounceTimer = setTimeout(executeWrite, 1000); // 1-second pause delay
     }
   },
 

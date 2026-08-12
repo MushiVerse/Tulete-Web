@@ -43,7 +43,7 @@ export const SearchOverlay = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
-      analyticsService.trackSearchQuery(inputValue.trim(), 'header_overlay');
+      analyticsService.trackSearchQuery(inputValue.trim(), 'header_overlay', true);
       addSearchHistory(inputValue);
       closeSearch();
       navigate(`/explore?q=${encodeURIComponent(inputValue.trim())}`);
@@ -51,7 +51,7 @@ export const SearchOverlay = () => {
   };
 
   const handleHistoryClick = (term: string) => {
-    analyticsService.trackSearchQuery(term.trim(), 'history_click');
+    analyticsService.trackSearchQuery(term.trim(), 'history_click', true);
     setInputValue(term);
     setQuery(term);
     addSearchHistory(term);
