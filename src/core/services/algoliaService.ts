@@ -44,7 +44,7 @@ export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: 
   if (!id || String(id).trim().length === 0) return false;
 
   // 3. Must have a valid, non-placeholder name
-  const name = item.name || item.nam1;
+  const name = item.name || item.nam1 || item.title || item.name1;
   if (!name || typeof name !== 'string' || name.trim().length === 0) return false;
   const lowerName = name.trim().toLowerCase();
   if (['null', 'undefined', 'test', 'no name', 'unknown', 'dummy', 'temp', 'delete'].includes(lowerName)) return false;
@@ -133,7 +133,20 @@ async function searchFirestoreFallback(
 
     // Filter by record type / category if explicit filter requested
     if (isFoodFilter) {
-      const isFood = item.recordType === 'food' || item._collection === 'foods' || String(item.category || item.cat || '').toLowerCase().includes('food');
+      const catStr = String(item.category || item.cat || item.foodCategory || item.speccat || item.mainCategory || '').toLowerCase();
+      const isFood = 
+        item.recordType === 'food' || 
+        item._collection === 'foods' || 
+        item.isFood === true ||
+        catStr.includes('food') ||
+        catStr.includes('dish') ||
+        catStr.includes('beverage') ||
+        catStr.includes('drink') ||
+        catStr.includes('dessert') ||
+        catStr.includes('breakfast') ||
+        catStr.includes('kitchen') ||
+        catStr.includes('swahili') ||
+        catStr.includes('healthy');
       if (!isFood) return false;
     } else if (isProductFilter) {
       const isProduct = item.recordType === 'product' || item._collection === 'products' || String(item.category || item.cat || '').toLowerCase().includes('product') || String(item.category || item.cat || '').toLowerCase().includes('shopping');
@@ -148,14 +161,24 @@ async function searchFirestoreFallback(
     return isItemFuzzyMatch(query, item, [
       'name',
       'nam1',
+      'title',
       'brand',
       'pbrand',
       'store',
       'storeName',
+      'restaurant',
       'category',
       'cat',
       'subCat',
+      'subcat',
       'subCategory',
+      'subsubCat',
+      'foodCategory',
+      'foodSubCategory',
+      'foodSubSubCategory',
+      'speccat',
+      'mainCategory',
+      'tags',
       'description',
       'desc',
     ]);

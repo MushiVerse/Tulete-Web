@@ -4,7 +4,7 @@ import { db } from '../../../core/firebase/config';
 import { motion } from 'framer-motion';
 import { 
   Users, Search, Eye, Heart, ShoppingCart, ShoppingBag, Star, 
-  TrendingUp, Calendar, ArrowUpRight, Clock, RefreshCw, BarChart2, ShieldCheck, Check
+  TrendingUp, Calendar, ArrowUpRight, Clock, RefreshCw, BarChart2, ShieldCheck, Check, XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminTheme } from '../context/AdminThemeContext';
@@ -17,7 +17,7 @@ function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
-type MetricKey = 'visitors' | 'searches' | 'itemViews' | 'favorites' | 'ratings' | 'orders' | 'cartAbandoned';
+type MetricKey = 'visitors' | 'searches' | 'itemViews' | 'favorites' | 'ratings' | 'orders' | 'cartAbandoned' | 'ordersCancelled';
 
 interface MetricConfig {
   key: MetricKey;
@@ -85,6 +85,14 @@ const METRIC_CONFIGS: Record<MetricKey, MetricConfig> = {
     border: 'border-rose-500/30',
     bgChip: 'bg-rose-500/10 text-rose-500 border-rose-500/30',
   },
+  ordersCancelled: {
+    key: 'ordersCancelled',
+    label: 'Cancelled Orders',
+    color: 'text-red-500',
+    gradient: 'from-red-600 to-red-400',
+    border: 'border-red-500/30',
+    bgChip: 'bg-red-500/10 text-red-500 border-red-500/30',
+  },
 };
 
 export const AdminDashboardPage: React.FC = () => {
@@ -106,6 +114,7 @@ export const AdminDashboardPage: React.FC = () => {
     ratings: true,
     orders: true,
     cartAbandoned: true,
+    ordersCancelled: true,
   });
 
   const toggleMetric = (key: MetricKey) => {
@@ -168,8 +177,10 @@ export const AdminDashboardPage: React.FC = () => {
   const todayOrders = todayData?.orders || 0;
   const totalRatings = overviewData?.totalRatings || 0;
   const todayRatings = todayData?.ratings || 0;
-  const totalCartAbandoned = overviewData?.totalCartAbandoned || overviewData?.abandonedCartUserIds?.length || 0;
-  const todayCartAbandoned = todayData?.cartAbandoned || 0;
+  const totalCartAbandoned = Math.max(0, overviewData?.totalCartAbandoned || overviewData?.abandonedCartUserIds?.length || 0);
+  const todayCartAbandoned = Math.max(0, todayData?.cartAbandoned || 0);
+  const totalCancelledOrders = overviewData?.totalCancelledOrders || 0;
+  const todayCancelledOrders = todayData?.ordersCancelled || 0;
 
   // Calculate max metric value in timeline across active metrics for bar normalization
   const selectedMetricKeys = (Object.keys(activeMetrics) as MetricKey[]).filter(k => activeMetrics[k]);
@@ -218,7 +229,7 @@ export const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
         {/* Card 1: Visitors */}
         <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
           <div className="flex items-center justify-between text-sky-400 mb-3">
@@ -326,6 +337,24 @@ export const AdminDashboardPage: React.FC = () => {
             </p>
           </div>
         </motion.div>
+
+        {/* Card 7: Cancelled Orders */}
+        <motion.div whileHover={{ y: -2 }} className={`p-5 rounded-2xl border shadow-md flex flex-col justify-between ${cardBg}`}>
+          <div className="flex items-center justify-between text-red-500 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+              <XCircle className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20">
+              +{todayCancelledOrders} Today
+            </span>
+          </div>
+          <div>
+            <p className={`text-2xl font-black ${textPrimary}`}>{totalCancelledOrders.toLocaleString()}</p>
+            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${textMuted}`}>
+              Cancelled Orders
+            </p>
+          </div>
+        </motion.div>
       </div>
 
       {/* Expanded Multi-Series Daily Traffic Timeline Graph */}
@@ -340,7 +369,7 @@ export const AdminDashboardPage: React.FC = () => {
               Daily Traffic & Engagement Timeline (Last 14 Days)
             </h2>
             <p className={`text-xs font-medium mt-0.5 ${textMuted}`}>
-              Toggle metrics below to compare daily performance across visitors, searches, item views, wishlists, ratings, and orders.
+              Toggle metrics below to compare daily performance across visitors, searches, item views, wishlists, ratings, orders, and cancellations.
             </p>
           </div>
 
@@ -397,6 +426,7 @@ export const AdminDashboardPage: React.FC = () => {
                       {activeMetrics.ratings && <p className="text-yellow-400">Ratings: {day.ratings || 0}</p>}
                       {activeMetrics.orders && <p className="text-emerald-400">Orders: {day.orders || 0}</p>}
                       {activeMetrics.cartAbandoned && <p className="text-rose-500">Carts: {day.cartAbandoned || 0}</p>}
+                      {activeMetrics.ordersCancelled && <p className="text-red-500">Cancelled: {day.ordersCancelled || 0}</p>}
                     </div>
                   </div>
 

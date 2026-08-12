@@ -25,7 +25,7 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
 
   const getFilterStr = useCallback(() => {
     if (filterValue === 'food') {
-      return `(recordType:food OR category:Food OR cat:Food)`;
+      return `(recordType:food OR _collection:foods OR isFood:true OR category:Food OR cat:Food)`;
     } else if (filterValue === 'product') {
       return `(recordType:product OR category:Product OR cat:Product)`;
     } else if (filterValue === 'laundry') {
@@ -214,8 +214,10 @@ export const HomeSearchResultsView: React.FC<HomeSearchResultsViewProps> = ({ qu
             const { rating, reviewCount } = getNormalizedRating(item);
             const product = {
               ...item,
-              id: item.objectID || item.id,
-              imgUrl: item.imgURL || item.image || item.imgUrl || '',
+              id: item.objectID || item.id || item.foodId,
+              name: item.name || item.nam1 || item.title || item.name1 || 'Food Item',
+              imgUrl: item.imgUrl || item.imgURL || item.image || item.imageUrl || item.img || '',
+              store: item.store || item.storeName || item.restaurant || '',
               rating,
               reviewCount
             };

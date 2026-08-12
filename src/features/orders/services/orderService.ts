@@ -860,12 +860,14 @@ class OrderService extends BaseFirestoreService<Order> {
    * 3. newcomfirmedorders (global)           — sets cancel: true, total: 0 on all docs linked by webOrderId or docId
    * 4. Restores item stock quantity in foods, products, or cloths collections.
    */
-  async cancelOrder(orderId: string): Promise<void> {
+  async cancelOrder(orderId: string, cancelledBy: string = 'customer', reason?: string): Promise<void> {
     try {
       // 1. Update the web app's order document in 'orders' if it exists
       const orderRef = doc(db, 'orders', orderId);
       const orderSnap = await getDoc(orderRef);
+      let orderData: any = null;
       if (orderSnap.exists()) {
+        orderData = orderSnap.data();
         await setDoc(orderRef, { status: 'Cancelled', cancel: true, price: '0', total: 0, updatedAt: serverTimestamp() }, { merge: true });
       }
 
@@ -874,6 +876,7 @@ class OrderService extends BaseFirestoreService<Order> {
       const ncSnap = await getDoc(ncRef);
       if (ncSnap.exists()) {
         const ncData = ncSnap.data();
+        if (!orderData) orderData = ncData;
         await setDoc(ncRef, { status: 'Cancelled', cancel: true, total: 0, updatedAt: serverTimestamp() }, { merge: true });
         await this.restoreStockQuantity(ncSnap.id, ncData);
       }
@@ -894,10 +897,14 @@ class OrderService extends BaseFirestoreService<Order> {
       if (!globalSnap.empty) {
         for (const d of globalSnap.docs) {
           const itemData = d.data();
+          if (!orderData) orderData = itemData;
           await updateDoc(d.ref, { cancel: true, status: 'Cancelled', total: 0, updatedAt: serverTimestamp() });
           await this.restoreStockQuantity(d.id, itemData);
         }
       }
+
+      // 5. Track cancellation analytics & audit trail
+      await analyticsService.trackOrderCancelled(orderId, orderData, cancelledBy, reason, orderData?.userId);
     } catch (e) {
       console.error('Failed to cancel order:', e);
       throw e;

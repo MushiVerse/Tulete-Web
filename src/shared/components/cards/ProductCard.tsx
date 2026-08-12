@@ -82,6 +82,9 @@ export const ProductCard = ({
   const magicPrice = useDynamicPrice(product.price, product.storeId, isLaundryCategory, product.location, undefined, itemCat);
   const magicOldPrice = product.oldprice ? useDynamicPrice(product.oldprice, product.storeId, isLaundryCategory, product.location, undefined, itemCat) : undefined;
 
+  const displayImgUrl = product.imgUrl || (product as any).imageUrl || (product as any).imgURL || (product as any).image || (product as any).img || '';
+  const displayStoreName = product.store || (product as any).storeName || (product as any).restaurant || '';
+
   // Format price
   const formattedPrice = `${currentLanguage.symbol} ${formatPrice(magicPrice)}`;
 
@@ -102,7 +105,7 @@ export const ProductCard = ({
             {/* Left Image Thumbnail */}
             <div className="relative w-28 sm:w-36 h-28 sm:h-32 rounded-2xl overflow-hidden bg-muted/50 shrink-0">
               <img 
-                src={product.imgUrl} 
+                src={displayImgUrl} 
                 alt={product.name}
                 className="object-cover w-full h-full transition-transform duration-500 ease-out group-hover:scale-105"
                 loading="lazy"
@@ -140,7 +143,7 @@ export const ProductCard = ({
                   <div className="flex items-center gap-1 min-w-0">
                     <Store className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     <span className="notranslate text-xs font-bold text-muted-foreground truncate" translate="no">
-                      {product.store}
+                      {displayStoreName}
                     </span>
                   </div>
                   <div className="flex items-center gap-1 bg-background/90 backdrop-blur text-foreground border border-border/40 px-2 py-0.5 rounded-full shrink-0 shadow-sm">
@@ -264,7 +267,7 @@ export const ProductCard = ({
           {/* Image Container */}
           <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/50 shrink-0">
             <img 
-              src={product.imgUrl} 
+              src={displayImgUrl} 
               alt={product.name}
               className="object-cover w-full h-full transition-transform duration-500 ease-out group-hover:scale-105"
               loading="lazy"
@@ -310,7 +313,7 @@ export const ProductCard = ({
               <div className="flex items-center gap-1 flex-1 min-w-0">
                 <Store className="w-3 h-3 text-muted-foreground shrink-0" />
                 <span className="notranslate text-[11px] font-bold text-muted-foreground truncate" translate="no">
-                  {product.store}
+                  {displayStoreName}
                 </span>
               </div>
               <div className="flex items-center gap-1 bg-background/90 backdrop-blur text-foreground border border-border/40 px-1.5 py-0.5 rounded-full shrink-0 shadow-sm">

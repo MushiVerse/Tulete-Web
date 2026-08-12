@@ -612,6 +612,10 @@ export const analyticsService = {
       const overviewRef = doc(db, 'analytics', 'overview');
       const dailyRef = doc(db, 'analytics_daily', today);
 
+      const cartSnap = await getDoc(userCartRef);
+      const wasActive = cartSnap.exists() && cartSnap.data()?.status === 'active';
+      const createdDate = cartSnap.exists() ? (cartSnap.data()?.createdDate || today) : today;
+
       if (cartItems && cartItems.length > 0) {
         const itemSummaries = cartItems.map((item: any) => ({
           productId: item.productId || item.id,
@@ -632,30 +636,13 @@ export const analyticsService = {
           totalCartValue,
           items: itemSummaries,
           lastCartUpdate: serverTimestamp(),
+          createdDate,
         };
         if (userInfo.name) payload.userName = userInfo.name;
         if (userInfo.email) payload.userEmail = userInfo.email;
 
-        await Promise.all([
+        const operations: Promise<any>[] = [
           setDoc(userCartRef, payload, { merge: true }),
-          setDoc(
-            overviewRef,
-            {
-              abandonedCartUserIds: arrayUnion(userInfo.userId),
-              totalCartAbandoned: increment(1),
-              lastUpdated: serverTimestamp(),
-            },
-            { merge: true }
-          ),
-          setDoc(
-            dailyRef,
-            {
-              date: today,
-              cartAbandoned: increment(1),
-              lastUpdated: serverTimestamp(),
-            },
-            { merge: true }
-          ),
           updateUserAnalytics(userInfo, {
             activeCartValue: totalCartValue,
             activeCartItemsCount: cartItemCount,
@@ -666,10 +653,36 @@ export const analyticsService = {
             quantity: cartItemCount,
             context: `${totalCartValue} TZS`,
           }),
-        ]);
+        ];
+
+        // Only increment abandoned cart count if it transitions from inactive -> active
+        if (!wasActive) {
+          operations.push(
+            setDoc(
+              overviewRef,
+              {
+                abandonedCartUserIds: arrayUnion(userInfo.userId),
+                totalCartAbandoned: increment(1),
+                lastUpdated: serverTimestamp(),
+              },
+              { merge: true }
+            ),
+            setDoc(
+              dailyRef,
+              {
+                date: today,
+                cartAbandoned: increment(1),
+                lastUpdated: serverTimestamp(),
+              },
+              { merge: true }
+            )
+          );
+        }
+
+        await Promise.all(operations);
       } else {
-        // Cart was cleared
-        await Promise.all([
+        // Cart was cleared / emptied
+        const operations: Promise<any>[] = [
           setDoc(
             userCartRef,
             {
@@ -686,7 +699,33 @@ export const analyticsService = {
             activeCartValue: 0,
             activeCartItemsCount: 0,
           }),
-        ]);
+        ];
+
+        // If it was previously active, remove from abandoned tracking & decrement counts
+        if (wasActive) {
+          const cartDateRef = doc(db, 'analytics_daily', createdDate);
+          operations.push(
+            setDoc(
+              overviewRef,
+              {
+                abandonedCartUserIds: arrayRemove(userInfo.userId),
+                totalCartAbandoned: increment(-1),
+                lastUpdated: serverTimestamp(),
+              },
+              { merge: true }
+            ),
+            setDoc(
+              cartDateRef,
+              {
+                cartAbandoned: increment(-1),
+                lastUpdated: serverTimestamp(),
+              },
+              { merge: true }
+            )
+          );
+        }
+
+        await Promise.all(operations);
       }
     } catch (err) {
       console.warn('[Analytics] Failed to track cart update:', err);
@@ -695,15 +734,21 @@ export const analyticsService = {
 
   /**
    * Track when a cart is converted into a completed order.
-   * Marks status in analytics_cart_abandoned/{userId} as 'converted'.
+   * Marks status in analytics_cart_abandoned/{userId} as 'converted' and removes from abandoned recordings.
    */
   async trackCartConverted(orderId: string, explicitUserId?: string): Promise<void> {
     try {
       const userInfo = getCurrentUserInfo(explicitUserId);
+      const today = getTodayDateString();
       const userCartRef = doc(db, 'analytics_cart_abandoned', userInfo.userId);
       const overviewRef = doc(db, 'analytics', 'overview');
 
-      await Promise.all([
+      const cartSnap = await getDoc(userCartRef);
+      const wasActive = cartSnap.exists() && (cartSnap.data()?.status === 'active' || (cartSnap.data()?.cartItemCount || 0) > 0);
+      const createdDate = cartSnap.exists() ? (cartSnap.data()?.createdDate || today) : today;
+      const cartDateRef = doc(db, 'analytics_daily', createdDate);
+
+      const operations: Promise<any>[] = [
         setDoc(
           userCartRef,
           {
@@ -712,15 +757,9 @@ export const analyticsService = {
             convertedOrderId: orderId,
             convertedAt: serverTimestamp(),
             lastCartUpdate: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        setDoc(
-          overviewRef,
-          {
-            abandonedCartUserIds: arrayRemove(userInfo.userId),
-            totalConvertedCarts: increment(1),
-            lastUpdated: serverTimestamp(),
+            cartItemCount: 0,
+            totalCartValue: 0,
+            items: [], // Remove items from abandoned recording so it is no longer an active abandoned cart
           },
           { merge: true }
         ),
@@ -733,9 +772,135 @@ export const analyticsService = {
           eventType: 'cart_converted',
           context: orderId,
         }),
-      ]);
+      ];
+
+      // Remove from active abandoned recordings and decrement count
+      if (wasActive) {
+        operations.push(
+          setDoc(
+            overviewRef,
+            {
+              abandonedCartUserIds: arrayRemove(userInfo.userId),
+              totalCartAbandoned: increment(-1),
+              totalConvertedCarts: increment(1),
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+          setDoc(
+            cartDateRef,
+            {
+              cartAbandoned: increment(-1),
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          )
+        );
+      } else {
+        operations.push(
+          setDoc(
+            overviewRef,
+            {
+              totalConvertedCarts: increment(1),
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          )
+        );
+      }
+
+      await Promise.all(operations);
     } catch (err) {
       console.warn('[Analytics] Failed to track cart conversion:', err);
+    }
+  },
+
+  /**
+   * Track order cancellation for telemetry & analytics.
+   * Records what was cancelled (items, orderId, totalAmount), who cancelled (userId, userName, email, cancelledBy role),
+   * and increments cancellation counts in overview, daily timeline, and user profiles.
+   */
+  async trackOrderCancelled(
+    orderId: string,
+    orderData?: any,
+    cancelledBy: string = 'customer',
+    reason?: string,
+    explicitUserId?: string
+  ): Promise<void> {
+    if (!orderId) return;
+    try {
+      const userInfo = getCurrentUserInfo(explicitUserId || orderData?.userId);
+      const today = getTodayDateString();
+      const overviewRef = doc(db, 'analytics', 'overview');
+      const dailyRef = doc(db, 'analytics_daily', today);
+      const cancelLogRef = doc(db, 'analytics_cancellations', `${orderId}_${Date.now()}`);
+
+      const items = orderData?.items || orderData?.cartItems || [];
+      const itemSummaries = Array.isArray(items) ? items.map((item: any) => ({
+        productId: item.productId || item.id || item.foodId || '',
+        name: item.name || item.title || 'Item',
+        price: Number(item.price) || 0,
+        quantity: Number(item.quantity) || 1,
+        storeId: item.storeId || '',
+        storeName: item.storeName || item.store || '',
+      })) : [];
+
+      const totalAmount = Number(orderData?.total || orderData?.price || orderData?.totalAmount || 0);
+
+      const cancelPayload: any = {
+        orderId,
+        userId: userInfo.userId,
+        userName: userInfo.name || orderData?.userName || orderData?.name || 'Customer',
+        userEmail: userInfo.email || orderData?.userEmail || orderData?.email || '',
+        cancelledBy,
+        reason: reason || 'Customer requested cancellation',
+        totalAmount,
+        itemCount: itemSummaries.length,
+        items: itemSummaries,
+        createdAt: serverTimestamp(),
+      };
+
+      await Promise.all([
+        // 1. Audit record in analytics_cancellations collection
+        setDoc(cancelLogRef, cancelPayload, { merge: true }),
+
+        // 2. Global overview analytics updates
+        setDoc(
+          overviewRef,
+          {
+            totalCancelledOrders: increment(1),
+            totalCancelledItems: increment(itemSummaries.reduce((acc: number, i: any) => acc + i.quantity, 0)),
+            lastUpdated: serverTimestamp(),
+          },
+          { merge: true }
+        ),
+
+        // 3. Daily breakdown update
+        setDoc(
+          dailyRef,
+          {
+            date: today,
+            ordersCancelled: increment(1),
+            lastUpdated: serverTimestamp(),
+          },
+          { merge: true }
+        ),
+
+        // 4. Update user profile analytics for cancellation frequency
+        updateUserAnalytics(userInfo, {
+          totalCancelledOrders: increment(1),
+          lastCancelledAt: serverTimestamp(),
+        }),
+
+        // 5. Audit log event
+        logActivityEvent({
+          userId: userInfo.userId,
+          eventType: 'order_cancelled',
+          context: `Order ${orderId} cancelled by ${cancelledBy}`,
+        }),
+      ]);
+    } catch (err) {
+      console.warn('[Analytics] Failed to track order cancellation:', err);
     }
   },
 

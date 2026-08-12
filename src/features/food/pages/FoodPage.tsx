@@ -31,6 +31,7 @@ import { useCurrencyLanguageStore } from '../../../core/config/currencyStore';
 import { HelpSafetyWidget } from '../../../shared/components/HelpSafetyWidget';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { analyticsService } from '../../../services/analyticsService';
+import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 
 // --- Static Fallback Data ---
 const FOOD_CATEGORIES = [
@@ -496,8 +497,26 @@ export const FoodPage = () => {
       if (!matched) return false;
     }
 
-    const matchesSearch = meal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          meal.store.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !searchQuery.trim() || isItemFuzzyMatch(searchQuery, meal, [
+      'name',
+      'nam1',
+      'title',
+      'store',
+      'storeName',
+      'restaurant',
+      'category',
+      'cat',
+      'subCat',
+      'subcat',
+      'subCategory',
+      'subsubCat',
+      'foodCategory',
+      'foodSubCategory',
+      'speccat',
+      'mainCategory',
+      'description',
+      'desc'
+    ]);
     
     // Filter by delivery fee <= 1600
     const deliveryFee = getDeliveryFee(currentLocation, meal.location, meal.storeId, false, true);
