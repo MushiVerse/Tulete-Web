@@ -73,7 +73,7 @@ export const ImageGallery = ({
       {/* Main Image Slider */}
       <div 
         onClick={() => setIsViewerOpen(true)}
-        className="relative w-full aspect-square overflow-hidden bg-muted md:rounded-2xl shadow-sm border border-border/50 group cursor-pointer"
+        className="relative w-full aspect-square overflow-hidden bg-muted rounded-2xl sm:rounded-3xl shadow-sm border border-border/50 group cursor-pointer"
       >
         
         {/* Image Counter Overlay Badge (e.g. 3/4, 1/19) */}

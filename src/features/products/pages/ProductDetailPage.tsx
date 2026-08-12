@@ -2,7 +2,7 @@ import { formatPrice } from '../../../shared/utils/formatPrice';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ArrowRight, Sparkles, Plus, Minus } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ChevronLeft, ArrowRight, Sparkles, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageContainer } from '../../../shared/components/layout';
 import { ImageGallery } from '../../discovery/components/ImageGallery';
@@ -29,6 +29,199 @@ import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteF
 import { db } from '../../../core/firebase/config';
 import { getNormalizedRating, toFirestoreDouble } from '../../../shared/utils/ratingUtils';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
+
+/* 2-Row Horizontal Grid Section with 15-Item Pagination for "Related" items */
+const Horizontal2RowRelatedSection = ({ title, items }: { title: string; items: any[] }) => {
+  const validItems = items.filter((p) => {
+    if (!p) return false;
+    const isUnavailable = p.availability === false || p.availability === "false" || String(p.availability).toLowerCase() === "false";
+    return !isUnavailable;
+  });
+
+  const [visibleCount, setVisibleCount] = useState(15);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const loadNextBatch = () => {
+    if (isLoadingMore || visibleCount >= validItems.length) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + 15, validItems.length));
+      setIsLoadingMore(false);
+    }, 300);
+  };
+
+  const updateScrollState = () => {
+    if (!containerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = containerRef.current;
+    setCanScrollLeft(scrollLeft > 10);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 15);
+  };
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    const container = containerRef.current;
+    if (!container) return;
+
+    updateScrollState();
+
+    const handleScroll = () => {
+      updateScrollState();
+      if (isLoadingMore || visibleCount >= validItems.length) return;
+      const scrollRight = container.scrollWidth - (container.scrollLeft + container.clientWidth);
+      if (scrollRight <= 400) {
+        loadNextBatch();
+      }
+    };
+
+    let observer: IntersectionObserver | null = null;
+    if (sentinel) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && visibleCount < validItems.length) {
+            loadNextBatch();
+          }
+        },
+        { 
+          root: container,
+          rootMargin: '0px 400px 0px 0px',
+          threshold: 0.01 
+        }
+      );
+      observer.observe(sentinel);
+    }
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', updateScrollState, { passive: true });
+
+    return () => {
+      if (observer) observer.disconnect();
+      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [validItems.length, visibleCount, isLoadingMore]);
+
+  const scrollLeft = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ left: -500, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ left: 500, behavior: 'smooth' });
+    }
+  };
+
+  const visibleItems = validItems.slice(0, visibleCount);
+
+  if (validItems.length === 0) return null;
+
+  return (
+    <div className="space-y-4 p-5 sm:p-6 rounded-3xl bg-card/60 dark:bg-card/40 border border-border/50 shadow-xs relative overflow-hidden">
+      {/* Header with Title, Swipe Hint Badge & Nav Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            {title}
+          </h2>
+
+          {/* Sleek Pure Informational Pill (Non-Clickable / No Hover State) */}
+          {validItems.length > 2 && (
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-muted/60 border border-border/60 text-muted-foreground text-xs font-medium select-none pointer-events-none cursor-default">
+              <span className="text-primary font-extrabold tracking-tighter text-[11px] ml-0.5">{">>>"}</span>
+              <span>Swipe right to view more</span>
+              
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <span className="text-xs font-bold text-muted-foreground">
+            Showing {visibleItems.length} of {validItems.length}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={scrollLeft}
+              disabled={!canScrollLeft}
+              className={`p-2 rounded-full border transition-all cursor-pointer ${
+                canScrollLeft 
+                  ? 'bg-muted hover:bg-card border-border text-foreground shadow-xs' 
+                  : 'bg-muted/30 border-border/30 text-muted-foreground/40 cursor-not-allowed'
+              }`}
+              title="Scroll Left"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={scrollRight}
+              className={`p-2 rounded-full border transition-all cursor-pointer flex items-center gap-1 ${
+                canScrollRight 
+                  ? 'bg-primary text-primary-foreground border-primary shadow-md hover:scale-105 active:scale-95' 
+                  : 'bg-muted hover:bg-card border-border text-foreground'
+              }`}
+              title="Scroll Right for More"
+            >
+              <span className="text-[11px] font-extrabold px-0.5">More</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2-Row Horizontal Scroll Grid Container with Edge Fade Mask */}
+      <div className="relative group/scroll">
+        {/* Subtle Right Edge Gradient Fade Overlay */}
+        {canScrollRight && (
+          <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-card via-card/70 to-transparent z-10 rounded-2xl" />
+        )}
+
+        {/* Subtle Left Edge Gradient Fade Overlay */}
+        {canScrollLeft && (
+          <div className="pointer-events-none absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-card via-card/70 to-transparent z-10 rounded-2xl" />
+        )}
+
+        <div
+          ref={containerRef}
+          className="flex items-stretch gap-4 overflow-x-auto scrollbar-none pb-4 pt-1 snap-x scroll-smooth"
+        >
+          {visibleItems.map((prod) => (
+            <div key={prod.id} className="w-[220px] sm:w-[250px] shrink-0 snap-start">
+              <ProductCard product={prod} />
+            </div>
+          ))}
+
+          {/* Right Scroll Sentinel / Interactive Load More Card */}
+          {visibleCount < validItems.length ? (
+            <button
+              ref={loadMoreRef as any}
+              onClick={scrollRight}
+              className="flex flex-col items-center justify-center gap-3 w-40 shrink-0 min-h-[260px] bg-primary/5 hover:bg-primary/10 rounded-2xl border border-dashed border-primary/40 p-4 snap-start transition-all cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                {isLoadingMore ? (
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <ArrowRight className="w-5 h-5" />
+                )}
+              </div>
+              <span className="text-xs font-extrabold text-foreground group-hover:text-primary transition-colors text-center leading-tight">
+                {isLoadingMore ? 'Loading items...' : `Scroll right for more (${validItems.length - visibleCount} left)`}
+              </span>
+            </button>
+          ) : (
+            <div ref={loadMoreRef as any} className="w-1 h-full shrink-0" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* Endless Vertical Grid Section for "More of ..." */
 const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] }) => {
@@ -101,7 +294,7 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
   if (validItems.length === 0) return null;
 
   return (
-    <div className="space-y-4 pt-4 border-t border-border/40">
+    <div className="space-y-4 p-5 sm:p-6 rounded-3xl bg-card/60 dark:bg-card/40 border border-border/50 shadow-xs">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
@@ -1022,8 +1215,8 @@ export const ProductDetailPage = () => {
             // 2. NON-LAUNDRY & BOTH subSubCat AND subCat EXIST:
             // i. Related (filtered using subSubCat, HORIZONTAL SCROLL) - ONLY shown if >= 1 other real item exists
             // ii. More of [subCat] (filtered using subCat, ENDLESS VERTICAL SCROLL, NO DUPLICATE DATA)
-            if (subSubVal || subCatVal) {
-              // Section 1: "Related" matches subSubCat (only real items, no dummy fallbacks)
+            if (subSubVal || subCatVal || collectionPool.length > 0) {
+              // Section 1: "Related" matches subSubCat or store items
               let subSubMatches = subSubVal ? collectionPool.filter((p) => {
                 const pSubSub = p.subSubCat || p.speccat || p.subsubcat || p.subSubCategory;
                 return pSubSub && String(pSubSub).trim().toLowerCase() === String(subSubVal).trim().toLowerCase();
@@ -1036,9 +1229,17 @@ export const ProductDetailPage = () => {
                 });
               }
 
-              // Do NOT duplicate or create dummy items; if 0 other items exist, finalSubSubList is empty
-              const finalSubSubList = subSubMatches;
+              // Fallback: If no subSub matches, use store-matched items for Related
+              if (subSubMatches.length === 0 && collectionPool.length > 1) {
+                const currentStore = String(displayProduct.store || displayProduct.storeId || '').toLowerCase();
+                subSubMatches = collectionPool.filter((p) => {
+                  if (!p || p.id === displayProduct.id) return false;
+                  const pStore = String(p.store || p.storeId || '').toLowerCase();
+                  return Boolean(currentStore && pStore && pStore === currentStore);
+                });
+              }
 
+              const finalSubSubList = subSubMatches;
               const relatedIds = new Set(finalSubSubList.map((p) => p.id));
 
               // Section 2: "More of [subCat]" matches subCat, excluding relatedIds
@@ -1053,18 +1254,19 @@ export const ProductDetailPage = () => {
               }
 
               const finalSubCatList = subCatMatches;
-
               const mainCatLabel = subCatVal || displayProduct.category || (activeCollection === 'products' ? 'Products' : 'Foods');
 
               return (
                 <div className="mt-8 mb-24 lg:mb-12 space-y-10">
-                  {/* i. Related Section (Endless Grid with 20-item pagination & circular loader) */}
-                  {finalSubSubList.length > 0 && subSubVal && (
-                    <EndlessMoreOfSection title="Related" items={finalSubSubList} />
+                  {/* i. Related Section (2-Row Horizontal Grid with 15-item batch pagination & right-scroll trigger) */}
+                  {finalSubSubList.length > 0 && (
+                    <Horizontal2RowRelatedSection title="Related" items={finalSubSubList} />
                   )}
 
                   {/* ii. More of [subCat] Section (Endless Vertical Grid, Zero Duplicates) */}
-                  <EndlessMoreOfSection title={`More of ${mainCatLabel}`} items={finalSubCatList} />
+                  {finalSubCatList.length > 0 && (
+                    <EndlessMoreOfSection title={`More of ${mainCatLabel}`} items={finalSubCatList} />
+                  )}
                 </div>
               );
             }

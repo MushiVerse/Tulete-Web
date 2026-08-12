@@ -1462,9 +1462,21 @@ export const StoreDetailsPage = () => {
           // Combined gallery objects for rich interactive viewer modal
           const allGalleryObjects = [
             ...topRatedItems.map(p => {
-              const rawCat = p.category || p.cat || store.category;
-              const pCat = (rawCat === 'Nguo' || rawCat === 'nguo') ? 'Laundry' : rawCat;
-              const isLaundry = isLaundryItem(p) || rawCat === 'Nguo' || rawCat === 'nguo' || rawCat === 'Laundry' || p._collection === 'cloths' || p.recordType === 'cloth';
+              const subSub = p.subSubCat || p.subSubCategory || p.speccat || p.subsubcat;
+              const sub = p.subCat || p.subCategory || p.scat || p.subcat;
+              const cat = p.cat || p.category;
+
+              const specificCat = (() => {
+                if (subSub && typeof subSub === 'string' && !['product', 'products'].includes(subSub.trim().toLowerCase())) return subSub.trim();
+                if (sub && typeof sub === 'string' && !['product', 'products'].includes(sub.trim().toLowerCase())) return sub.trim();
+                if (cat && typeof cat === 'string' && !['product', 'products'].includes(cat.trim().toLowerCase())) return cat.trim();
+                const sCat = store.subCat || store.cat || store.category;
+                if (sCat && typeof sCat === 'string' && !['product', 'products'].includes(sCat.trim().toLowerCase())) return sCat.trim();
+                return cat || store.cat || store.category || 'Item';
+              })();
+
+              const pCat = (specificCat === 'Nguo' || specificCat === 'nguo') ? 'Laundry' : specificCat;
+              const isLaundry = isLaundryItem(p) || pCat === 'Laundry' || p._collection === 'cloths' || p.recordType === 'cloth';
               const priceWithDelivery = getItemPriceWithDelivery(
                 p.price || 0,
                 currentLocation,
@@ -1564,8 +1576,22 @@ export const StoreDetailsPage = () => {
                         const img = prod.imgUrl || prod.imgURL || (Array.isArray(prod.images) && prod.images[0]);
                         const { rating } = getNormalizedRating(prod);
                         const prodName = prod.name || prod.title || 'Top Rated Item';
-                        const pCat = prod.category || prod.cat || (store.cat || store.category);
-                        const isLaundry = isLaundryItem(prod) || pCat === 'Nguo' || pCat === 'Laundry' || prod._collection === 'cloths' || prod.recordType === 'cloth';
+                        
+                        const subSub = prod.subSubCat || prod.subSubCategory || prod.speccat || prod.subsubcat;
+                        const sub = prod.subCat || prod.subCategory || prod.scat || prod.subcat;
+                        const cat = prod.cat || prod.category;
+
+                        const specificCat = (() => {
+                          if (subSub && typeof subSub === 'string' && !['product', 'products'].includes(subSub.trim().toLowerCase())) return subSub.trim();
+                          if (sub && typeof sub === 'string' && !['product', 'products'].includes(sub.trim().toLowerCase())) return sub.trim();
+                          if (cat && typeof cat === 'string' && !['product', 'products'].includes(cat.trim().toLowerCase())) return cat.trim();
+                          const sCat = store.subCat || store.cat || store.category;
+                          if (sCat && typeof sCat === 'string' && !['product', 'products'].includes(sCat.trim().toLowerCase())) return sCat.trim();
+                          return cat || store.cat || store.category || 'Item';
+                        })();
+                        
+                        const pCat = (specificCat === 'Nguo' || specificCat === 'nguo') ? 'Laundry' : specificCat;
+                        const isLaundry = isLaundryItem(prod) || pCat === 'Laundry' || prod._collection === 'cloths' || prod.recordType === 'cloth';
                         const dynamicP = getItemPriceWithDelivery(
                           prod.price || 0,
                           currentLocation,
@@ -1591,7 +1617,7 @@ export const StoreDetailsPage = () => {
                               }}
                             />
                             {/* Bottom Compact Gradient Overlay Tint */}
-                            <div className="absolute inset-x-0 -bottom-1 h-1/4 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none transition-opacity duration-300" />
+                            <div className="absolute inset-x-0 -bottom-1 h-1/4 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none transition-opacity duration-300 rounded-b-2xl" />
 
                             {/* Top Badges */}
                             <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center gap-1">
@@ -1600,8 +1626,8 @@ export const StoreDetailsPage = () => {
                                 <span className="text-slate-900 dark:text-white font-extrabold">{rating.toFixed(1)}</span>
                               </span>
                               {pCat && (
-                                <span className="bg-black/50 backdrop-blur-md text-white/90 font-bold text-[9px] px-2 py-0.5 rounded-full truncate max-w-[80px]">
-                                  {pCat === 'Nguo' || pCat === 'nguo' ? 'Laundry' : pCat}
+                                <span className="bg-black/50 backdrop-blur-md text-white/90 font-bold text-[9px] px-2 py-0.5 rounded-full truncate max-w-[90px]" title={pCat}>
+                                  {pCat}
                                 </span>
                               )}
                             </div>
@@ -1636,7 +1662,7 @@ export const StoreDetailsPage = () => {
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
                             {/* Bottom Compact Gradient Overlay Tint */}
-                            <div className="absolute inset-x-0 -bottom-1 h-1/5 bg-gradient-to-t from-black/55 to-transparent pointer-events-none transition-opacity duration-300" />
+                            <div className="absolute inset-x-0 -bottom-1 h-1/5 bg-gradient-to-t from-black/55 to-transparent pointer-events-none transition-opacity duration-300 rounded-b-2xl" />
                             <div className="absolute bottom-2.5 left-2.5 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] text-white font-semibold">
                               Store Photo
                             </div>
