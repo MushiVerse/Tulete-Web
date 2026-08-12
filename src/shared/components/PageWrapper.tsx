@@ -10,7 +10,7 @@ const pageVariants = {
 const pageTransition: Transition = {
   type: 'tween',
   ease: 'easeInOut',
-  duration: 0.2,
+  duration: 0.05,
 };
 
 interface PageWrapperProps {

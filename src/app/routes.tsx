@@ -24,38 +24,38 @@ const Pages = React.lazy(() => import('../pages').then(module => ({
   )
 })));
 
-// Standard Lazy Imports (Best Practice)
-const Home = React.lazy(() => import('../pages').then(m => ({ default: m.HomePage })));
+// Direct Feature & Page Imports for Lightning Fast Code-Splitting & Zero-Delay Navigation
+const Home = React.lazy(() => import('../features/home/pages/HomePage').then(m => ({ default: m.HomePage })));
 const Landing = React.lazy(() => import('../pages').then(m => ({ default: m.LandingPage })));
 
 const Discovery = React.lazy(() => import('../features/discovery/pages/DiscoveryPage').then(m => ({ default: m.DiscoveryPage })));
 const ProductDetail = React.lazy(() => import('../features/products/pages/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
-const Orders = React.lazy(() => import('../pages').then(m => ({ default: m.OrdersPage })));
-const Cart = React.lazy(() => import('../pages').then(m => ({ default: m.CartPage })));
-const Favorites = React.lazy(() => import('../pages').then(m => ({ default: m.FavoritesPage })));
-const Messages = React.lazy(() => import('../pages').then(m => ({ default: m.MessagesPage })));
-const Profile = React.lazy(() => import('../pages').then(m => ({ default: m.ProfilePage })));
-const Settings = React.lazy(() => import('../pages').then(m => ({ default: m.SettingsPage })));
-const StoreDetails = React.lazy(() => import('../pages').then(m => ({ default: m.StoreDetailsPage })));
-const Checkout = React.lazy(() => import('../pages').then(m => ({ default: m.CheckoutPage })));
-const OrderTracking = React.lazy(() => import('../pages').then(m => ({ default: m.OrderTrackingPage })));
-const StoreListing = React.lazy(() => import('../pages').then(m => ({ default: m.StoreListingPage })));
-const ChatScreen = React.lazy(() => import('../pages').then(m => ({ default: m.ChatScreenPage })));
-const Reviews = React.lazy(() => import('../pages').then(m => ({ default: m.ReviewsPage })));
-const Location = React.lazy(() => import('../pages').then(m => ({ default: m.LocationPage })));
-const Notifications = React.lazy(() => import('../pages').then(m => ({ default: m.NotificationsPage })));
+const Orders = React.lazy(() => import('../features/orders/pages/OrdersPage').then(m => ({ default: m.OrdersPage })));
+const Cart = React.lazy(() => import('../features/cart/pages/CartPage').then(m => ({ default: m.CartPage })));
+const Favorites = React.lazy(() => import('../features/favorites/pages/FavoritesPage').then(m => ({ default: m.FavoritesPage })));
+const Messages = React.lazy(() => import('../features/messages/pages/ConversationsPage').then(m => ({ default: m.ConversationsPage })));
+const Profile = React.lazy(() => import('../features/users/pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const Settings = React.lazy(() => import('../features/users/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const StoreDetails = React.lazy(() => import('../features/stores/pages/StoreDetailsPage').then(m => ({ default: m.StoreDetailsPage })));
+const Checkout = React.lazy(() => import('../features/cart/pages/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
+const OrderTracking = React.lazy(() => import('../features/tracking/pages/OrderTrackingPage').then(m => ({ default: m.OrderTrackingPage })));
+const StoreListing = React.lazy(() => import('../features/stores/pages/StoreListingPage').then(m => ({ default: m.StoreListingPage })));
+const ChatScreen = React.lazy(() => import('../features/messages/pages/ChatScreen').then(m => ({ default: m.ChatScreen })));
+const Reviews = React.lazy(() => import('../features/reviews/pages/ReviewsPage').then(m => ({ default: m.ReviewsPage })));
+const Location = React.lazy(() => import('../features/location/pages/LocationPage').then(m => ({ default: m.LocationPage })));
+const Notifications = React.lazy(() => import('../features/notifications/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const Laundry = React.lazy(() => import('../features/laundry/pages/LaundryPage').then(m => ({ default: m.LaundryPage })));
 const Food = React.lazy(() => import('../features/food/pages/FoodPage').then(m => ({ default: m.FoodPage })));
 const Products = React.lazy(() => import('../features/products/pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
 const BrandDetails = React.lazy(() => import('../pages').then(m => ({ default: m.BrandDetailsPage })));
-const HelpCenter = React.lazy(() => import('../pages').then(m => ({ default: m.HelpCenterPage })));
-const SafetyInfo = React.lazy(() => import('../pages').then(m => ({ default: m.SafetyInfoPage })));
-const Cancellation = React.lazy(() => import('../pages').then(m => ({ default: m.CancellationPage })));
-const Contact = React.lazy(() => import('../pages').then(m => ({ default: m.ContactPage })));
-const PrivacyPolicy = React.lazy(() => import('../pages').then(m => ({ default: m.PrivacyPolicyPage })));
-const TermsOfService = React.lazy(() => import('../pages').then(m => ({ default: m.TermsOfServicePage })));
-const CookiesSettings = React.lazy(() => import('../pages').then(m => ({ default: m.CookiesSettingsPage })));
-const NotFound = React.lazy(() => import('../pages').then(m => ({ default: m.NotFoundPage })));
+const HelpCenter = React.lazy(() => import('../pages/HelpCenterPage').then(m => ({ default: m.HelpCenterPage })));
+const SafetyInfo = React.lazy(() => import('../pages/SafetyInfoPage').then(m => ({ default: m.SafetyInfoPage })));
+const Cancellation = React.lazy(() => import('../pages/CancellationPage').then(m => ({ default: m.CancellationPage })));
+const Contact = React.lazy(() => import('../pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const PrivacyPolicy = React.lazy(() => import('../pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsOfService = React.lazy(() => import('../pages/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
+const CookiesSettings = React.lazy(() => import('../pages/CookiesSettingsPage').then(m => ({ default: m.CookiesSettingsPage })));
+const NotFound = React.lazy(() => import('../pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense fallback={<LoadingScreen />}>

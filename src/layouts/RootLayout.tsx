@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AuthModal } from '../features/auth/components/AuthModal';
 import { useAuthModalStore } from '../features/auth/store/useAuthModalStore';
@@ -11,6 +11,18 @@ export const RootLayout = () => {
   
   // Subscribe to currency/language state to trigger instant real-time price re-renders across all views
   const currentLanguage = useCurrencyLanguageStore((state) => state.currentLanguage);
+
+  // Disable automatic browser scroll restoration so every page starts at top
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  // Synchronously reset scroll position to top before browser paint (0ms latency, zero DOM thrashing)
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (location.pathname === '/login') {
