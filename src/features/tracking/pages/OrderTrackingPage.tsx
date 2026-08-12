@@ -14,6 +14,51 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { parseLaundryItems, getLaundryItemImage, getLaundryFallbackSvg } from '../../orders/pages/OrdersPage';
+import { storeService } from '../../stores/services/storeService';
+import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
+
+/**
+ * Resolves the actual store image for a given order (never using product item images)
+ */
+export function getActualStoreImage(order: any, storeDoc?: any, mockStore?: any): string {
+  // 1. Direct store image fields on order object
+  const orderStoreImg = order?.storeImgURL || order?.storeImage || order?.storeImg || order?.storeLogo || order?.storePic;
+  if (orderStoreImg && typeof orderStoreImg === 'string' && orderStoreImg.trim()) {
+    return orderStoreImg.trim();
+  }
+
+  // 2. Firestore Store Document image
+  const dbImg = storeDoc?.imgURL || storeDoc?.imgUrl || storeDoc?.image || storeDoc?.img;
+  if (dbImg && typeof dbImg === 'string' && dbImg.trim()) {
+    return dbImg.trim();
+  }
+
+  // 3. Mock store image
+  const mockImg = mockStore?.imgURL || mockStore?.imgUrl || mockStore?.image;
+  if (mockImg && typeof mockImg === 'string' && mockImg.trim()) {
+    return mockImg.trim();
+  }
+
+  // 4. Fallback category-specific store avatars (never using product items images)
+  const catName = String(order?.cat || order?.category || storeDoc?.category || storeDoc?.cat || '').toLowerCase();
+  const storeNameLower = String(order?.storeName || storeDoc?.store || '').toLowerCase();
+
+  if (catName.includes('nguo') || catName.includes('laund') || storeNameLower.includes('dobi') || storeNameLower.includes('laundry') || storeNameLower.includes('safi')) {
+    return 'https://images.unsplash.com/photo-1545173168-9f1947eebd01?w=300';
+  }
+  if (catName.includes('electr') || storeNameLower.includes('fundi') || storeNameLower.includes('power') || storeNameLower.includes('electric')) {
+    return 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300';
+  }
+  if (catName.includes('beaut') || catName.includes('salon') || storeNameLower.includes('glam') || storeNameLower.includes('salon')) {
+    return 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300';
+  }
+  if (catName.includes('food') || catName.includes('restaur') || storeNameLower.includes('kibanda') || storeNameLower.includes('food') || storeNameLower.includes('diko')) {
+    return 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300';
+  }
+
+  return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300';
+}
 
 export function OrderTrackingSkeleton() {
   return (
@@ -61,6 +106,30 @@ export const OrderTrackingPage = () => {
   const { order, isLoading: isOrderLoading } = useOrderSingleRealtime(id);
   const { tracking, isLoading: isTrackingLoading } = useOrderTrackingRealtime(id);
   const { liveItems, isLoading: isLiveLoading } = useLiveFlutterOrderTracking(order?.userId, id);
+
+  const { data: dbStore } = useFirestoreDocument(
+    ['store', order?.storeId || ''],
+    storeService,
+    order?.storeId || ''
+  );
+  const { data: dbStoresByName } = useFirestoreQuery(
+    ['store_by_name', order?.storeName || ''],
+    storeService,
+    {
+      filters: order?.storeName 
+        ? [{ field: 'store', operator: '==' as const, value: order.storeName }]
+        : []
+    }
+  );
+  const dbStoreByName = dbStoresByName?.data && dbStoresByName.data.length > 0 ? dbStoresByName.data[0] : null;
+  const realStoreDoc = dbStore || dbStoreByName;
+
+  const mockStoreMatch = storeService.getMockStores().find(s => 
+    (order?.storeId && s.id === order.storeId) || 
+    (order?.storeName && s.store?.toLowerCase() === order.storeName.toLowerCase())
+  );
+
+  const actualStoreImg = getActualStoreImage(order, realStoreDoc, mockStoreMatch);
 
   const firstLiveItem = liveItems?.find(i => i.ordersts && Array.isArray(i.ordersts) && i.ordersts.length > 0)
     || liveItems?.find(i => i.status && i.status.toLowerCase() !== 'pending')
@@ -444,29 +513,130 @@ export const OrderTrackingPage = () => {
         <div className="space-y-6">
           {/* Driver Contact details (Hidden for now) */}
 
-          {/* Delivery Details */}
+          {/* Delivery Details & Items */}
           <Card className="p-6 border border-border shadow-sm bg-card">
-            <h3 className="font-bold text-foreground text-base mb-4">Request Summary</h3>
+            {/* Store Header Banner Image */}
+            <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
+              <img
+                src={actualStoreImg}
+                alt={order.storeName || 'Store'}
+                className="w-12 h-12 rounded-2xl object-cover border border-border shrink-0 bg-muted shadow-xs"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1542838132-92c53300491e?w=120";
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <h4 className="notranslate font-extrabold text-foreground text-sm truncate" translate="no">{order.storeName || 'Tulete Service'}</h4>
+                <p className="text-[11px] text-muted-foreground font-semibold">Order #{order.id.slice(-8).toUpperCase()}</p>
+              </div>
+            </div>
+
+            <h3 className="font-bold text-foreground text-sm mb-3 uppercase tracking-wider">Request Summary</h3>
             
-            <div className="space-y-4 text-xs">
-              <div className="flex justify-between border-b border-border pb-2">
+            {/* Order Items List with Image Thumbnails */}
+            {(() => {
+              let displayItems: { name: string; quantity: number; price?: number; imageUrl?: string; services?: string[] }[] = [];
+              
+              if (order.items && order.items.length > 0) {
+                // Check if order.items contains a single pack summary string (e.g. "Suit (Iron) x2, Shirt (Wash) x3")
+                const isSinglePackSummary = order.items.length === 1 && (order.items[0].name || '').includes(',');
+                if (isSinglePackSummary) {
+                  const { items: laundryBreakdown } = parseLaundryItems(order.items[0].name);
+                  if (laundryBreakdown.length > 0) {
+                    displayItems = laundryBreakdown.map(l => ({
+                      name: l.name,
+                      quantity: l.qty,
+                      services: l.services,
+                    }));
+                  } else {
+                    displayItems = order.items.map(i => ({
+                      name: i.name,
+                      quantity: i.quantity || 1,
+                      price: i.price,
+                      imageUrl: i.imageUrl || (i as any).imgUrl || (i as any).imgURL,
+                    }));
+                  }
+                } else {
+                  displayItems = order.items.map(i => ({
+                    name: i.name,
+                    quantity: i.quantity || 1,
+                    price: i.price,
+                    imageUrl: i.imageUrl || (i as any).imgUrl || (i as any).imgURL,
+                  }));
+                }
+              } else {
+                const laundryNameField = (order as any).name || '';
+                const { items: laundryBreakdown } = parseLaundryItems(laundryNameField);
+                displayItems = laundryBreakdown.map(l => ({
+                  name: l.name,
+                  quantity: l.qty,
+                  services: l.services,
+                }));
+              }
+
+              if (displayItems.length === 0) return null;
+
+              return (
+                <div className="space-y-2 mb-4 border-b border-border pb-4">
+                  <span className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-wider block mb-1">
+                    Order Items ({displayItems.reduce((acc, i) => acc + i.quantity, 0)})
+                  </span>
+                  {displayItems.map((item: any, idx: number) => {
+                    const itemImg = getLaundryItemImage(item.name, item, order.items);
+                    return (
+                      <div key={idx} className="flex items-center gap-2.5 bg-muted/40 p-2 rounded-xl border border-border/40">
+                        <img
+                          src={itemImg}
+                          alt={item.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-border shrink-0 bg-card shadow-2xs"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = getLaundryFallbackSvg(item.name);
+                          }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="notranslate font-bold text-xs text-foreground truncate" translate="no">{item.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            <span className="text-[10px] text-muted-foreground font-semibold">Qty: {item.quantity}</span>
+                            {item.services && item.services.map((srv: string, sIdx: number) => (
+                              <span key={sIdx} className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                                {srv}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        {item.price !== undefined && (
+                          <span className="font-extrabold text-xs text-foreground shrink-0">
+                            {formatPrice(item.price * item.quantity)} {APP_SETTINGS.currency}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between border-b border-border/60 pb-2">
                 <span className="text-muted-foreground">Store Name:</span>
                 <span className="notranslate font-bold text-slate-950 dark:text-white" translate="no">{order.storeName}</span>
               </div>
-              <div className="flex justify-between border-b border-border pb-2">
+              <div className="flex justify-between border-b border-border/60 pb-2">
                 <span className="text-muted-foreground">Recipient Phone:</span>
                 <span className="font-bold text-slate-950 dark:text-white">{order.contactPhone || order.no || 'Not provided'}</span>
               </div>
-              <div className="flex justify-between border-b border-border pb-2">
+              <div className="flex justify-between border-b border-border/60 pb-2">
                 <span className="text-muted-foreground">Payment Status:</span>
                 <span className={`font-semibold ${(order?.show === false || (liveItems && liveItems.length > 0 && liveItems.some(i => i.show === false))) ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'} flex items-center gap-1`}>
                   <ShieldCheck className="w-3.5 h-3.5" />
                   {(order?.show === false || (liveItems && liveItems.length > 0 && liveItems.some(i => i.show === false))) ? 'Paid' : 'Pending'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Price:</span>
-                <span className="font-extrabold text-slate-950 dark:text-white">
+              <div className="flex justify-between pt-1">
+                <span className="text-muted-foreground font-semibold">Total Price:</span>
+                <span className="font-extrabold text-slate-950 dark:text-white text-sm">
                   {formatPrice(order.totalAmount || (order as any).total || (order as any).price || (liveItems && liveItems.length > 0 ? (liveItems[0].total || liveItems[0].price || 0) : 0))} {APP_SETTINGS.currency}
                 </span>
               </div>

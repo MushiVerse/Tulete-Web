@@ -166,6 +166,102 @@ export function parseLaundryItems(nameField: string) {
   return { items, isExpress };
 }
 
+// Fail-safe SVG Data URIs for garment types (guaranteed 100% load even offline or if photo URLs fail)
+export const LAUNDRY_GARMENT_SVGS = {
+  suit: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23eef2ff;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+  shirt: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%230284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23f0f9ff;"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>`,
+  trouser: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%238b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23f5f3ff;"><path d="M4 2h16v3L14 22h-4L4 5V2z"/><path d="M12 2v20"/></svg>`,
+  bedding: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%2310b981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23ecfdf5;"><path d="M2 4v16"/><path d="M2 8h20v12H2"/><path d="M2 12h20"/><path d="M6 8v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/></svg>`,
+  dress: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%23f43f5e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23fff1f2;"><path d="M12 2a3 3 0 0 0-3 3v2L4 22h16L15 7V5a3 3 0 0 0-3-3z"/></svg>`,
+  jacket: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%23f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23fffbeb;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M12 2v20"/><path d="M6 10h12"/></svg>`,
+  shoe: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%23ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23fff7ed;"><path d="M2 18h20v2H2z"/><path d="M4 18V8a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v10"/></svg>`,
+  default: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%230ea5e9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:%23f0f9ff;"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>`
+};
+
+/**
+ * Returns a guaranteed fail-safe SVG Data URI fallback based on item name
+ */
+export function getLaundryFallbackSvg(itemName: string): string {
+  const nameLower = String(itemName || '').toLowerCase().trim();
+  if (nameLower.includes('suit') || nameLower.includes('blazer') || nameLower.includes('suti')) return LAUNDRY_GARMENT_SVGS.suit;
+  if (nameLower.includes('shirt') || nameLower.includes('top') || nameLower.includes('shati')) return LAUNDRY_GARMENT_SVGS.shirt;
+  if (nameLower.includes('trouser') || nameLower.includes('pant') || nameLower.includes('jean') || nameLower.includes('short') || nameLower.includes('suruali')) return LAUNDRY_GARMENT_SVGS.trouser;
+  if (nameLower.includes('duvet') || nameLower.includes('bed') || nameLower.includes('sheet') || nameLower.includes('blanket') || nameLower.includes('comforter') || nameLower.includes('shuka')) return LAUNDRY_GARMENT_SVGS.bedding;
+  if (nameLower.includes('dress') || nameLower.includes('gown') || nameLower.includes('skirt') || nameLower.includes('gauni')) return LAUNDRY_GARMENT_SVGS.dress;
+  if (nameLower.includes('jacket') || nameLower.includes('coat') || nameLower.includes('sweater') || nameLower.includes('hoodie')) return LAUNDRY_GARMENT_SVGS.jacket;
+  if (nameLower.includes('shoe') || nameLower.includes('sneaker') || nameLower.includes('viatu')) return LAUNDRY_GARMENT_SVGS.shoe;
+  return LAUNDRY_GARMENT_SVGS.default;
+}
+
+/**
+ * Resolves item image for laundry and general order items
+ * Checks direct item properties, matching order items, or maps item names to high quality contextual images.
+ */
+export function getLaundryItemImage(itemName: string, itemObj?: any, orderItems?: any[]): string {
+  // 1. Direct image on the specific item object if present and non-generic
+  const directImg = itemObj?.imageUrl || itemObj?.imgUrl || itemObj?.imgURL || itemObj?.image || itemObj?.pic;
+  if (directImg && typeof directImg === 'string' && directImg.trim() && !directImg.includes('placeholder')) {
+    return directImg.trim();
+  }
+
+  const nameLower = String(itemName || '').toLowerCase().trim();
+
+  // 2. Check orderItems array for exact item match (ignoring generic pack items containing commas or multi-item text)
+  if (Array.isArray(orderItems) && orderItems.length > 0) {
+    const matched = orderItems.find(i => {
+      if (!i || typeof i.name !== 'string') return false;
+      const iNameLower = i.name.toLowerCase().trim();
+      // Skip generic pack summary items or items containing commas/multiple items
+      if (iNameLower.includes(',') || iNameLower.includes('pack') || iNameLower === 'laundry' || iNameLower === 'nguo') {
+        return false;
+      }
+      return iNameLower === nameLower || (nameLower.length > 2 && iNameLower.includes(nameLower));
+    });
+
+    const matchedImg = matched?.imageUrl || matched?.imgUrl || matched?.imgURL || matched?.image || matched?.pic;
+    if (matchedImg && typeof matchedImg === 'string' && matchedImg.trim()) {
+      return matchedImg.trim();
+    }
+  }
+
+  // 3. Garment-specific distinct images (Data URI or Photo)
+  if (nameLower.includes('suit') || nameLower.includes('blazer') || nameLower.includes('suti')) {
+    return 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=300&q=80';
+  }
+  if (nameLower.includes('t-shirt') || nameLower.includes('tshirt') || nameLower.includes('polo') || nameLower.includes('tee')) {
+    return 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=300&q=80';
+  }
+  if (nameLower.includes('shirt') || nameLower.includes('shati') || nameLower.includes('blouse') || nameLower.includes('top') || nameLower.includes('kanzu') || nameLower.includes('kaftan')) {
+    return 'https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=300&q=80';
+  }
+  if (nameLower.includes('jean') || nameLower.includes('denim')) {
+    return 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=300&q=80';
+  }
+  if (nameLower.includes('trouser') || nameLower.includes('suruali') || nameLower.includes('pant') || nameLower.includes('short') || nameLower.includes('slacks')) {
+    return 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=300&q=80';
+  }
+  if (nameLower.includes('duvet') || nameLower.includes('comforter') || nameLower.includes('blanket') || nameLower.includes('shuka')) {
+    return 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=300&q=80';
+  }
+  if (nameLower.includes('sheet') || nameLower.includes('bed') || nameLower.includes('pillow')) {
+    return 'https://images.unsplash.com/photo-1616627547584-bf28cee262db?w=300&q=80';
+  }
+  if (nameLower.includes('curtain') || nameLower.includes('drape')) {
+    return 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=300&q=80';
+  }
+  if (nameLower.includes('dress') || nameLower.includes('gown') || nameLower.includes('skirt') || nameLower.includes('kitenge') || nameLower.includes('gauni')) {
+    return 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&q=80';
+  }
+  if (nameLower.includes('jacket') || nameLower.includes('coat') || nameLower.includes('sweater') || nameLower.includes('hoodie') || nameLower.includes('kabuti')) {
+    return 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&q=80';
+  }
+  if (nameLower.includes('shoe') || nameLower.includes('sneaker') || nameLower.includes('boot') || nameLower.includes('viatu')) {
+    return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=80';
+  }
+
+  return getLaundryFallbackSvg(itemName);
+}
+
 /**
  * Determines whether an order is eligible for cancellation.
  * An order can be cancelled if:
@@ -602,23 +698,37 @@ export const OrdersPage = () => {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {(isExpanded ? laundryBreakdown : laundryBreakdown.slice(0, 4)).map((item, idx) => (
-                            <div key={idx} className="bg-card border border-border/50 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
-                              <div className="flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-500 font-extrabold text-xs flex items-center justify-center shrink-0">
-                                  ×{item.qty}
-                                </span>
-                                <span className="notranslate font-bold text-xs text-foreground" translate="no">{item.name}</span>
-                              </div>
-                              <div className="flex items-center gap-1 flex-wrap justify-end">
-                                {item.services.map((srv, sIdx) => (
-                                  <span key={sIdx} className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">
-                                    {srv}
+                          {(isExpanded ? laundryBreakdown : laundryBreakdown.slice(0, 4)).map((item, idx) => {
+                            const itemImg = getLaundryItemImage(item.name, item, order.items);
+
+                            return (
+                              <div key={idx} className="bg-card border border-border/50 rounded-xl p-2.5 flex items-center justify-between shadow-2xs gap-2">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <img
+                                    src={itemImg}
+                                    alt={item.name}
+                                    className="w-10 h-10 rounded-xl object-cover border border-border shrink-0 bg-sky-500/10 shadow-2xs"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.onerror = null;
+                                      target.src = getLaundryFallbackSvg(item.name);
+                                    }}
+                                  />
+                                  <span className="w-5 h-5 rounded-md bg-sky-500/10 text-sky-500 font-extrabold text-[11px] flex items-center justify-center shrink-0">
+                                    ×{item.qty}
                                   </span>
-                                ))}
+                                  <span className="notranslate font-bold text-xs text-foreground truncate" translate="no">{item.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1 flex-wrap justify-end shrink-0">
+                                  {item.services.map((srv, sIdx) => (
+                                    <span key={sIdx} className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">
+                                      {srv}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     ) : (
@@ -628,14 +738,27 @@ export const OrdersPage = () => {
                           const rawItemCat = String(i.cat || (i as any).category || '').toLowerCase().trim();
                           const isItemFood = ['food', 'chakula', 'diko', 'restaurant', 'meal', 'lunch', 'dinner', 'asap', 'mchana', 'usiku'].includes(rawItemCat) || (isFood && !['product', 'bidhaa', 'electronics', 'supermarket', 'groceries', 'pharmacy', 'cosmetics', 'beauty', 'fashion', 'hardware', 'general', 'store'].includes(rawItemCat));
                           const itemEmoji = isItemFood ? '🍕 Food Item' : '🛍️ Product Item';
+                          const itemImg = getLaundryItemImage(i.name, i, order.items);
 
                           return (
-                            <div key={idx} className="flex items-center justify-between text-xs bg-card border border-border/40 p-2.5 rounded-xl shadow-2xs">
-                              <div className="flex flex-col min-w-0 pr-2">
-                                <span className="notranslate font-bold text-foreground truncate" translate="no">{i.name}</span>
-                                <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                                  {itemEmoji} • Qty: {i.quantity}
-                                </span>
+                            <div key={idx} className="flex items-center justify-between text-xs bg-card border border-border/40 p-2.5 rounded-xl shadow-2xs gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <img
+                                  src={itemImg}
+                                  alt={i.name}
+                                  className="w-10 h-10 rounded-xl object-cover border border-border shrink-0 bg-muted shadow-2xs"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.onerror = null;
+                                    target.src = getLaundryFallbackSvg(i.name);
+                                  }}
+                                />
+                                <div className="flex flex-col min-w-0 pr-2">
+                                  <span className="notranslate font-bold text-foreground truncate" translate="no">{i.name}</span>
+                                  <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                                    {itemEmoji} • Qty: {i.quantity}
+                                  </span>
+                                </div>
                               </div>
                               <span className="font-extrabold text-foreground shrink-0">{formatPrice(i.price * i.quantity)} {APP_SETTINGS.currency}</span>
                             </div>
