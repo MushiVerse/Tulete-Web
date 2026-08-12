@@ -1405,7 +1405,7 @@ export const HomePage = () => {
               {hasItems && (
                 <div className="bg-card border border-border rounded-3xl p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Order</h2>
+                    <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Cart</h2>
                     <ShoppingBag className="w-4 h-4 text-primary" />
                   </div>
 

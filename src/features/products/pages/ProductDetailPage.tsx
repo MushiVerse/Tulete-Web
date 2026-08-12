@@ -2,7 +2,7 @@ import { formatPrice } from '../../../shared/utils/formatPrice';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ChevronLeft, ArrowRight, Sparkles, Plus, Minus } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ChevronLeft, ArrowRight, Sparkles, Plus, Minus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageContainer } from '../../../shared/components/layout';
 import { ImageGallery } from '../../discovery/components/ImageGallery';
@@ -361,7 +361,7 @@ export const ProductDetailPage = () => {
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
   const queryClient = useQueryClient();
-  const { items: cartItems, addToCart, removeFromCart, updateQuantity, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   
   // Subscribe to location store so price and cart total update instantly on location change
   const { currentLocation } = useLocationStore();
@@ -1244,6 +1244,12 @@ export const ProductDetailPage = () => {
                     >
                       Checkout Now <ArrowRight className="w-4 h-4" />
                     </Button>
+                    <button
+                      onClick={() => clearCart()}
+                      className="w-full mt-3 text-xs font-semibold text-destructive hover:text-primary transition-colors py-2 rounded-xl hover:bg-primary/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Clear Cart
+                    </button>
                   </div>
                 </>
               ) : (
