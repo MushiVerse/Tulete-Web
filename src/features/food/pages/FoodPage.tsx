@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
+  Search, SearchX, ArrowRight, ChevronRight, ChevronDown, CheckCircle2, 
   MapPin, Star, Plus, Minus, Trash2, ShieldCheck, 
   ShoppingBag, Flame, Clock, Navigation, Phone, Heart, X
 } from 'lucide-react';
@@ -32,6 +32,29 @@ import { HelpSafetyWidget } from '../../../shared/components/HelpSafetyWidget';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { analyticsService } from '../../../services/analyticsService';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
+import { locationService } from '../../location/services/locationService';
+
+// Helper to parse coordinates from any location format
+const parseCoords = (locVal: any): { lat: number; lng: number } | null => {
+  if (!locVal) return null;
+  if (typeof locVal === 'string') {
+    const parts = locVal.split(',');
+    if (parts.length >= 2) {
+      const lat = parseFloat(parts[0].trim());
+      const lng = parseFloat(parts[1].trim());
+      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+    }
+  } else if (typeof locVal === 'object') {
+    let lat = locVal.lat ?? locVal.latitude;
+    let lng = locVal.lng ?? locVal.longitude;
+    if (typeof lat === 'string') lat = parseFloat(lat);
+    if (typeof lng === 'string') lng = parseFloat(lng);
+    if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+  return null;
+};
 
 // --- Static Fallback Data ---
 const FOOD_CATEGORIES = [
@@ -164,8 +187,19 @@ const MealCard = ({ meal, cartItem, updateQuantity, addToCart }: any) => {
       <div className="flex flex-col flex-1">
         <p className="notranslate text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-1.5" translate="no">{meal.store}</p>
         <h3 className="notranslate font-extrabold text-base text-foreground line-clamp-2 leading-snug mb-1.5 group-hover:text-primary transition-colors" translate="no">{meal.name}</h3>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 font-medium">
-          <Clock className="w-3.5 h-3.5" /> 20-30 min
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4 font-medium">
+          {meal.distanceKm !== undefined && meal.distanceKm < 900 && (
+            <span className="flex items-center gap-1 text-primary font-extrabold">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              {meal.distanceKm < 1 ? `${Math.round(meal.distanceKm * 1000)}m` : `${meal.distanceKm.toFixed(1)} km`}
+            </span>
+          )}
+          <span className="flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            {meal.distanceKm !== undefined && meal.distanceKm < 900
+              ? `${Math.max(10, Math.round((meal.distanceKm / 25) * 60) + 5)} min`
+              : '20-30 min'}
+          </span>
         </div>
         
         <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border">
@@ -468,70 +502,161 @@ export const FoodPage = () => {
 
   const { currentLocation } = useLocationStore();
 
-  const filteredMeals = rawMeals.filter(meal => {
-    if (meal.availability === false || (meal as any).availability === 'false' || (meal as any).available === false || (meal as any).isAvailable === false) return false;
+  const userPos = React.useMemo(() => {
+    if (currentLocation && typeof currentLocation.lat === 'number' && typeof currentLocation.lng === 'number') {
+      return { lat: currentLocation.lat, lng: currentLocation.lng };
+    }
+    return { lat: -6.18541, lng: 35.7671293 };
+  }, [currentLocation]);
 
-    // Filter by active category / active sub category
-    if (activeSubCategory) {
-      const mealSub = ((meal as any).subsubCat || (meal as any).subCat || (meal as any).subCategory || meal.category || '').toLowerCase().trim();
-      const targetSub = activeSubCategory.toLowerCase().trim();
-      if (mealSub !== targetSub && !mealSub.includes(targetSub)) return false;
-    } else if (activeCategory && activeCategory !== 'all') {
-      const targetCat = activeCategory.toLowerCase().trim();
-      const fields = [
-        (meal as any).subCat,
-        (meal as any).subcat,
-        (meal as any).subCategory,
-        (meal as any).foodSubCategory,
-        (meal as any).foodSubCat,
-        (meal as any).subsubCat,
-        (meal as any).speccat,
-        meal.category,
-        (meal as any).mainCategory,
-        (meal as any).cat,
-      ]
-        .filter(Boolean)
-        .map((v: any) => String(v).toLowerCase().trim());
+  const foodStoresMap = React.useMemo(() => {
+    const map = new Map<string, { lat: number; lng: number }>();
+    foodStoresList.forEach((store: any) => {
+      const coords = parseCoords(store.location) ||
+                     parseCoords(store.loc) ||
+                     parseCoords(store.coords) ||
+                     parseCoords(store.coordinates);
 
-      const matched = fields.some(f => f === targetCat || f.includes(targetCat) || targetCat.includes(f));
-      if (!matched) return false;
+      let sLat = coords?.lat ?? store.lat ?? store.latitude;
+      let sLng = coords?.lng ?? store.lng ?? store.longitude;
+      if (typeof sLat === 'string') sLat = parseFloat(sLat);
+      if (typeof sLng === 'string') sLng = parseFloat(sLng);
+
+      const validCoords = (typeof sLat === 'number' && typeof sLng === 'number' && !isNaN(sLat) && !isNaN(sLng))
+        ? { lat: sLat, lng: sLng }
+        : null;
+
+      if (validCoords) {
+        const keys = [
+          store.id,
+          store.name,
+          store.store,
+          store.storeName,
+          store.brand,
+        ].filter(Boolean).map(k => String(k).toLowerCase().trim());
+
+        keys.forEach(k => map.set(k, validCoords));
+      }
+    });
+    return map;
+  }, [foodStoresList]);
+
+  const getMealDistanceKm = React.useCallback((meal: any): number => {
+    let mealCoords = parseCoords(meal.location) ||
+                     parseCoords(meal.loc) ||
+                     parseCoords(meal.coords) ||
+                     parseCoords(meal.coordinates);
+
+    if (!mealCoords) {
+      let mLat = meal.lat ?? meal.latitude;
+      let mLng = meal.lng ?? meal.longitude;
+      if (typeof mLat === 'string') mLat = parseFloat(mLat);
+      if (typeof mLng === 'string') mLng = parseFloat(mLng);
+      if (typeof mLat === 'number' && typeof mLng === 'number' && !isNaN(mLat) && !isNaN(mLng)) {
+        mealCoords = { lat: mLat, lng: mLng };
+      }
     }
 
-    const matchesSearch = !searchQuery.trim() || isItemFuzzyMatch(searchQuery, meal, [
-      'name',
-      'nam1',
-      'title',
-      'store',
-      'storeName',
-      'restaurant',
-      'category',
-      'cat',
-      'subCat',
-      'subcat',
-      'subCategory',
-      'subsubCat',
-      'foodCategory',
-      'foodSubCategory',
-      'speccat',
-      'mainCategory',
-      'description',
-      'desc'
-    ]);
-    
-    return matchesSearch;
-  }).sort((a, b) => {
-    const timeA = (a as any).time || (a as any).createdAt || '';
-    const timeB = (b as any).time || (b as any).createdAt || '';
-    if (timeA && timeB) {
-      const timeDiff = String(timeB).localeCompare(String(timeA));
-      if (timeDiff !== 0) return timeDiff;
-    } else if (timeB) {
-      return 1;
-    } else if (timeA) {
-      return -1;
+    if (!mealCoords) {
+      const storeKeys = [
+        meal.storeId,
+        meal.store,
+        meal.storeName,
+        meal.restaurant,
+        meal.brand,
+        meal.pbrand,
+      ].filter(Boolean).map(k => String(k).toLowerCase().trim());
+
+      for (const key of storeKeys) {
+        if (foodStoresMap.has(key)) {
+          mealCoords = foodStoresMap.get(key)!;
+          break;
+        }
+      }
     }
-    return 0;
-  });
+
+    if (mealCoords && typeof mealCoords.lat === 'number' && typeof mealCoords.lng === 'number') {
+      return locationService.calculateDistance(userPos, mealCoords);
+    }
+
+    return 999;
+  }, [userPos, foodStoresMap]);
+
+  const filteredMeals = rawMeals
+    .filter(meal => {
+      if (meal.availability === false || (meal as any).availability === 'false' || (meal as any).available === false || (meal as any).isAvailable === false) return false;
+
+      // Filter by active category / active sub category
+      if (activeSubCategory) {
+        const mealSub = ((meal as any).subsubCat || (meal as any).subCat || (meal as any).subCategory || meal.category || '').toLowerCase().trim();
+        const targetSub = activeSubCategory.toLowerCase().trim();
+        if (mealSub !== targetSub && !mealSub.includes(targetSub)) return false;
+      } else if (activeCategory && activeCategory !== 'all') {
+        const targetCat = activeCategory.toLowerCase().trim();
+        const fields = [
+          (meal as any).subCat,
+          (meal as any).subcat,
+          (meal as any).subCategory,
+          (meal as any).foodSubCategory,
+          (meal as any).foodSubCat,
+          (meal as any).subsubCat,
+          (meal as any).speccat,
+          meal.category,
+          (meal as any).mainCategory,
+          (meal as any).cat,
+        ]
+          .filter(Boolean)
+          .map((v: any) => String(v).toLowerCase().trim());
+
+        const matched = fields.some(f => f === targetCat || f.includes(targetCat) || targetCat.includes(f));
+        if (!matched) return false;
+      }
+
+      const matchesSearch = !searchQuery.trim() || isItemFuzzyMatch(searchQuery, meal, [
+        'name',
+        'nam1',
+        'title',
+        'store',
+        'storeName',
+        'restaurant',
+        'category',
+        'cat',
+        'subCat',
+        'subcat',
+        'subCategory',
+        'subsubCat',
+        'foodCategory',
+        'foodSubCategory',
+        'speccat',
+        'mainCategory',
+        'description',
+        'desc'
+      ]);
+      
+      return matchesSearch;
+    })
+    .map(meal => ({
+      ...meal,
+      distanceKm: getMealDistanceKm(meal),
+    }))
+    .sort((a, b) => {
+      // Sort nearest first (ascending distance)
+      const distDiff = a.distanceKm - b.distanceKm;
+      if (Math.abs(distDiff) > 0.001) return distDiff;
+
+      // Fallback: sort newest first if distances are equal
+      const timeA = (a as any).time || (a as any).createdAt || '';
+      const timeB = (b as any).time || (b as any).createdAt || '';
+      if (timeA && timeB) {
+        const timeDiff = String(timeB).localeCompare(String(timeA));
+        if (timeDiff !== 0) return timeDiff;
+      } else if (timeB) {
+        return 1;
+      } else if (timeA) {
+        return -1;
+      }
+      return 0;
+    });
 
   // Reset pagination when category or search query changes
   useEffect(() => {
@@ -656,40 +781,32 @@ export const FoodPage = () => {
             </div>
           </div>
 
-          {debouncedSearchQuery.trim().length > 0 ? (
-            <div className="animate-in fade-in zoom-in duration-300">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-extrabold text-foreground">Search Results</h2>
-                <span className="text-sm font-medium text-muted-foreground">For "{debouncedSearchQuery}"</span>
-              </div>
-              <HomeSearchResultsView query={debouncedSearchQuery} filterValue="food" />
-            </div>
-          ) : (
-            <>
-              {/* Promo Banners */}
-              <div ref={promoRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory scroll-smooth">
-            {PROMOS.map((promo, i) => (
-              <motion.div
-                key={promo.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[45%]"
-              >
-                <div className="relative h-64 rounded-3xl overflow-hidden group shadow-sm border border-border">
-                  <img src={promo.image} alt={promo.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                    <span className="self-start bg-white/15 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-full mb-2 uppercase tracking-widest border border-white/20">
-                      {promo.badge}
-                    </span>
-                    <h3 className="font-extrabold text-2xl leading-tight mb-1 text-white">{promo.title}</h3>
-                    <p className="text-sm font-medium text-white/80">{promo.subtitle}</p>
+          {/* Promo Banners (hidden when user types search query) */}
+          {!searchQuery.trim() && (
+            <div ref={promoRef} className="flex gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory scroll-smooth">
+              {PROMOS.map((promo, i) => (
+                <motion.div
+                  key={promo.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[45%]"
+                >
+                  <div className="relative h-64 rounded-3xl overflow-hidden group shadow-sm border border-border">
+                    <img src={promo.image} alt={promo.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                      <span className="self-start bg-white/15 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-full mb-2 uppercase tracking-widest border border-white/20">
+                        {promo.badge}
+                      </span>
+                      <h3 className="font-extrabold text-2xl leading-tight mb-1 text-white">{promo.title}</h3>
+                      <p className="text-sm font-medium text-white/80">{promo.subtitle}</p>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
           {/* Mobile Categories Pill Bar */}
           <div className="lg:hidden flex items-center gap-2 overflow-x-auto scrollbar-none pb-2">
@@ -725,7 +842,8 @@ export const FoodPage = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold flex items-center gap-2">
-                <Star className="w-5 h-5 text-orange-500 fill-orange-500" /> Top Rated Meals
+                <Star className="w-5 h-5 text-orange-500 fill-orange-500" />
+                {searchQuery.trim() ? `Search Results for "${searchQuery}"` : 'Top Rated Meals'}
               </h2>
               <span className="text-sm font-bold text-muted-foreground">
                 Showing {Math.min(visibleCount, filteredMeals.length)} of {filteredMeals.length} Items
@@ -739,8 +857,21 @@ export const FoodPage = () => {
                 ))}
               </div>
             ) : filteredMeals.length === 0 ? (
-              <div className="text-center py-16 bg-card border border-border border-dashed rounded-3xl">
-                <p className="text-muted-foreground font-medium">No meal near your area yet</p>
+              <div className="text-center py-16 bg-card border border-border rounded-3xl shadow-sm p-6">
+                <SearchX className="w-14 h-14 text-muted-foreground/30 mx-auto mb-3" />
+                <h3 className="text-lg font-extrabold text-foreground mb-1">
+                  {searchQuery ? 'No meals found' : 'No meals available'}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-5">
+                  {searchQuery
+                    ? `No meals or restaurants matching "${searchQuery}". Try a different keyword.`
+                    : 'Meals will appear here once available in your area.'}
+                </p>
+                {searchQuery && (
+                  <Button onClick={() => setSearchQuery('')} className="rounded-full px-6 text-xs font-extrabold">
+                    Clear Search
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">
@@ -762,8 +893,6 @@ export const FoodPage = () => {
               </div>
             )}
           </div>
-          </>
-          )}
         </div>
 
         {/* ── RIGHT SIDEBAR (WIDGETS & CART) ── */}

@@ -719,6 +719,13 @@ export const HomePage = () => {
           return num < 10000000000 ? num * 1000 : num;
         }
       }
+      const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+      if (ddmmyyyyMatch) {
+        const [, day, month, year, hours = '0', minutes = '0', seconds = '0'] = ddmmyyyyMatch;
+        const d = new Date(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes), Number(seconds));
+        if (!isNaN(d.getTime()) && d.getTime() > 0) return d.getTime();
+      }
+
       const parsedDate = new Date(trimmed).getTime();
       if (!isNaN(parsedDate) && parsedDate > 0) return parsedDate;
       const formatted = trimmed.replace(' ', 'T');
@@ -730,8 +737,8 @@ export const HomePage = () => {
 
   const sortItemsByTimeDesc = <T extends Record<string, any>>(items: T[]): T[] => {
     return [...items].sort((a, b) => {
-      const rawA = a.time || a.time1 || a.timestamp || a.createdAt || a.updatedAt || a.date;
-      const rawB = b.time || b.time1 || b.timestamp || b.createdAt || b.updatedAt || b.date;
+      const rawA = a.time ?? a.time1 ?? a.timestamp ?? a.createdAt ?? a.updatedAt ?? a.date;
+      const rawB = b.time ?? b.time1 ?? b.timestamp ?? b.createdAt ?? b.updatedAt ?? b.date;
 
       const timeA = parseTimestamp(rawA);
       const timeB = parseTimestamp(rawB);
