@@ -85,7 +85,7 @@ const getSearchRelevanceScore = (item: any, query: string): number => {
 };
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Filter, Grid, List, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map as MapIcon, Store, Heart, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Filter, Grid, List, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map as MapIcon, Store, Heart, ExternalLink, ChevronDown, ChevronUp, Plus, Minus } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { useFilterStore } from '../store/useFilterStore';
@@ -182,7 +182,7 @@ export const DiscoveryPage = () => {
   }, []);
 
   // Cart & Auth
-  const { items: cartItems, addToCart, clearCart, getTotals, removeFromCart } = useCartStore();
+  const { items: cartItems, addToCart, clearCart, getTotals, removeFromCart, updateQuantity } = useCartStore();
   const [isCartClosed, setIsCartClosed] = useState(false);
   const [showAllMobileCartItems, setShowAllMobileCartItems] = useState(false);
   const { openModal } = useAuthModalStore();
@@ -1369,24 +1369,85 @@ export const DiscoveryPage = () => {
                   )}
 
                   <div className="mt-6 flex flex-col gap-3">
-                    <div className="flex gap-3">
+                    <div className="flex items-center gap-3">
                       {!isLaundryItem(quickViewProduct) && (
                         <button
                           onClick={() => handleToggleFavorite(quickViewProduct)}
-                          className="p-4 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0"
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0 cursor-pointer shadow-xs"
+                          title={isFavorited(quickViewProduct.id || quickViewProduct.objectID || quickViewProduct.itemId) ? 'Remove from favorites' : 'Add to favorites'}
                         >
                           <Heart className={`w-6 h-6 ${isFavorited(quickViewProduct.id || quickViewProduct.objectID || quickViewProduct.itemId) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
                         </button>
                       )}
-                      <Button
-                        onClick={() => {
-                          handleAddToCart(quickViewProduct);
-                          setQuickViewProduct(null);
-                        }}
-                        className="flex-1 py-6 text-lg font-bold rounded-2xl shadow-lg shadow-primary/25"
-                      >
-                        Add to Cart
-                      </Button>
+                      {(() => {
+                        const qvId = quickViewProduct.id || quickViewProduct.objectID;
+                        const qvCartItem = cartItems.find((i) => i.productId === qvId || i.baseProductId === qvId);
+                        const stockVal = quickViewProduct.quantity !== undefined ? quickViewProduct.quantity : quickViewProduct.idadi;
+                        const isSoldOut = stockVal !== undefined && stockVal <= 0;
+
+                        if (qvCartItem && qvCartItem.quantity > 0) {
+                          return (
+                            <div className="flex-1 h-14 sm:h-16 bg-muted/60 p-1.5 rounded-2xl border border-border flex items-center justify-between shadow-inner">
+                              <button
+                                onClick={() => {
+                                  if (qvCartItem.quantity > 1) {
+                                    updateQuantity(qvCartItem.productId, qvCartItem.quantity - 1);
+                                  } else {
+                                    removeFromCart(qvCartItem.productId);
+                                  }
+                                }}
+                                className="w-11 h-11 sm:w-13 sm:h-13 rounded-xl bg-background border border-border flex items-center justify-center font-extrabold text-foreground hover:bg-primary/10 hover:text-primary active:scale-95 transition-all shadow-xs cursor-pointer shrink-0"
+                                title="Decrease quantity"
+                              >
+                                <Minus className="w-5 h-5" />
+                              </button>
+
+                              <div className="flex flex-col items-center justify-center px-2">
+                                <span className="font-extrabold text-base sm:text-lg text-foreground leading-none">
+                                  {qvCartItem.quantity}
+                                </span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+                                  in cart
+                                </span>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  if (stockVal !== undefined && qvCartItem.quantity >= stockVal) {
+                                    toast.warning(`Limit reached! Maximum available stock is ${stockVal}.`);
+                                    return;
+                                  }
+                                  updateQuantity(qvCartItem.productId, qvCartItem.quantity + 1);
+                                }}
+                                className={`w-11 h-11 sm:w-13 sm:h-13 rounded-xl flex items-center justify-center font-extrabold transition-all shadow-md cursor-pointer shrink-0 ${
+                                  stockVal !== undefined && qvCartItem.quantity >= stockVal
+                                    ? 'bg-muted text-muted-foreground hover:bg-muted/80 cursor-not-allowed'
+                                    : 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
+                                }`}
+                                title={stockVal !== undefined && qvCartItem.quantity >= stockVal ? "Stock limit reached" : "Increase quantity"}
+                              >
+                                <Plus className="w-5 h-5" />
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <Button
+                            disabled={isSoldOut}
+                            onClick={() => {
+                              handleAddToCart(quickViewProduct);
+                            }}
+                            className={`flex-1 h-14 sm:h-16 text-base sm:text-lg font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 ${
+                              isSoldOut
+                                ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                                : 'bg-primary text-primary-foreground shadow-primary/25 hover:bg-primary/90 active:scale-95'
+                            }`}
+                          >
+                            <Plus className="w-5 h-5" /> {isSoldOut ? 'Sold Out' : 'Add to Cart'}
+                          </Button>
+                        );
+                      })()}
                     </div>
 
                     <button
