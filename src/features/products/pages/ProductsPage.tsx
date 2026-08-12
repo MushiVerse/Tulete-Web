@@ -238,7 +238,7 @@ const PROMOS = [
 export const ProductsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { items: cartItems, clearCart, getTotals } = useCartStore();
+  const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
   const [expandedDepartments, setExpandedDepartments] = useState<Record<string, boolean>>({});
@@ -355,7 +355,6 @@ export const ProductsPage = () => {
 
   
   // Cart & Auth
-  const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const { openModal } = useAuthModalStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   
@@ -754,26 +753,26 @@ export const ProductsPage = () => {
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
-              className="xl:hidden fixed bottom-20 left-4 right-4 z-50 flex items-stretch gap-2"
+              className="xl:hidden fixed bottom-20 left-3 right-3 sm:left-4 sm:right-4 z-50 flex items-stretch gap-2"
             >
               <Button
                 onClick={handleCheckout}
-                className="flex-1 py-6 text-base font-extrabold shadow-2xl flex items-center justify-between px-6 rounded-3xl bg-primary text-primary-foreground"
+                className="flex-1 py-4 px-4 sm:px-5 text-sm sm:text-base font-extrabold shadow-2xl flex items-center justify-between rounded-2xl bg-primary text-primary-foreground"
               >
-                <div className="flex items-center gap-3">
-                  <div className="bg-background/20 px-3 py-1 rounded-full text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-background/20 px-2.5 py-0.5 rounded-full text-xs font-black">
                     {cartItems.length}
                   </div>
-                  <span>Checkout</span>
+                  <span className="font-extrabold">Checkout</span>
                 </div>
-                <span>{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1 w-4 h-4" /></span>
+                <span className="font-extrabold text-sm sm:text-base">{APP_SETTINGS.currency} {formatPrice(cartTotal)} <ArrowRight className="inline-block ml-1.5 w-4 h-4" /></span>
               </Button>
               <button
                 onClick={() => clearCart()}
                 title="Clear all items from cart"
-                className="self-stretch px-5 rounded-3xl bg-card text-destructive hover:bg-destructive hover:text-white border border-border shadow-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+                className="self-stretch px-4 rounded-2xl bg-card text-destructive hover:bg-destructive hover:text-white border border-border shadow-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="w-4.5 h-4.5" />
               </button>
             </motion.div>
           )}

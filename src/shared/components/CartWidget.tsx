@@ -19,10 +19,10 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
 
   if (isCartClosed) {
     return (
-      <div className={`bg-card border border-border rounded-3xl p-3 shadow-sm flex items-stretch gap-2 ${className}`}>
+      <div className={`bg-card border border-border rounded-2xl p-3 shadow-sm flex items-stretch gap-2 ${className}`}>
         <button
           onClick={() => setIsCartClosed(false)}
-          className="flex-1 flex items-center justify-between text-xs font-extrabold text-foreground hover:text-primary transition-colors cursor-pointer group"
+          className="flex-1 flex items-center justify-between text-xs sm:text-sm font-extrabold text-foreground hover:text-primary transition-colors cursor-pointer group"
         >
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -30,12 +30,12 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
             </div>
             <span>Your Cart ({cartItems.length})</span>
           </div>
-          <span className="text-primary font-bold">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
+          <span className="text-primary text-xs sm:text-sm font-extrabold">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
         </button>
         <button
           onClick={() => clearCart()}
           title="Clear all items from cart"
-          className="self-stretch px-3 rounded-2xl bg-destructive/10 hover:bg-destructive text-destructive hover:text-white border border-border/40 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+          className="self-stretch px-3 rounded-xl bg-destructive/10 hover:bg-destructive text-destructive hover:text-white border border-border/40 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -44,12 +44,12 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
   }
 
   return (
-    <div className={`bg-card border border-border rounded-3xl p-5 shadow-sm relative ${className}`}>
+    <div className={`bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-sm relative ${className}`}>
       {/* Header with Title, Icon & Close Button */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3.5 sm:mb-4">
         <div className="flex items-center gap-2">
           <ShoppingBag className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-extrabold text-foreground uppercase tracking-wider">Your Cart</h2>
+          <h2 className="text-xs sm:text-sm font-extrabold text-foreground uppercase tracking-wider">Your Cart</h2>
         </div>
         <button
           onClick={() => setIsCartClosed(true)}
@@ -64,7 +64,7 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
       {hasItems ? (
         <>
           {/* Cart Item Rows */}
-          <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
+          <div className="space-y-1.5 sm:space-y-2 mb-3.5 sm:mb-4 max-h-[300px] overflow-y-auto scrollbar-none">
             {cartItems.map((cartItem) => (
               <MiniCartRow 
                 key={cartItem.productId} 
@@ -75,20 +75,20 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
           </div>
 
           {/* Footer with Total, Checkout & Clear All */}
-          <div className="pt-4 border-t border-border/50">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-bold text-muted-foreground">Total</span>
-              <span className="text-xl font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
+          <div className="pt-3.5 sm:pt-4 border-t border-border/50">
+            <div className="flex justify-between items-center mb-3.5 sm:mb-4">
+              <span className="text-xs sm:text-sm font-bold text-muted-foreground">Total</span>
+              <span className="text-base sm:text-lg font-extrabold text-foreground">{APP_SETTINGS.currency} {formatPrice(cartTotal)}</span>
             </div>
             <Button
               onClick={onCheckout}
-              className="w-full rounded-xl py-6 font-extrabold shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full rounded-xl py-4 text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               Checkout Now <ArrowRight className="w-4 h-4" />
             </Button>
             <button
               onClick={() => clearCart()}
-              className="w-full mt-3 text-xs font-bold text-destructive hover:text-destructive/80 transition-colors py-2.5 rounded-xl bg-destructive/10 hover:bg-destructive/15 flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full mt-2.5 sm:mt-3 text-xs font-bold text-destructive hover:text-destructive/80 transition-colors py-2 rounded-xl bg-destructive/10 hover:bg-destructive/15 flex items-center justify-center gap-1.5 cursor-pointer"
               title="Clear all items from cart"
             >
               <Trash2 className="w-3.5 h-3.5" /> Clear Cart
@@ -96,9 +96,9 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
           </div>
         </>
       ) : (
-        <div className="text-center py-8">
-          <ShoppingBag className="w-10 h-10 text-muted mx-auto mb-3" />
-          <p className="text-sm font-bold text-muted-foreground">Your cart is empty</p>
+        <div className="text-center py-6 sm:py-8">
+          <ShoppingBag className="w-9 h-9 sm:w-10 sm:h-10 text-muted mx-auto mb-2.5 sm:mb-3" />
+          <p className="text-xs sm:text-sm font-bold text-muted-foreground">Your cart is empty</p>
           <p className="text-xs text-muted-foreground mt-1">Add items to get started</p>
         </div>
       )}

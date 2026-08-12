@@ -19,13 +19,13 @@ export const MiniCartRow: React.FC<MiniCartRowProps> = ({ cartItem, removeFromCa
   const rowTotal = dynamicPrices[cartItem.productId] ?? (cartItem.price * cartItem.quantity);
 
   return (
-    <div className="group/row flex justify-between items-center text-sm py-1.5 rounded-xl hover:bg-muted/60 px-2.5 transition-colors border border-transparent hover:border-border/40">
-      <span className="font-bold text-muted-foreground line-clamp-1 flex-1 text-xs">
+    <div className="group/row flex justify-between items-center text-xs sm:text-sm py-1.5 rounded-xl hover:bg-muted/60 px-2.5 transition-colors border border-transparent hover:border-border/40">
+      <span className="font-bold text-muted-foreground line-clamp-1 flex-1 text-xs sm:text-sm">
         <span className="text-primary font-extrabold mr-1.5">{cartItem.quantity}x</span>
         <span className="notranslate" translate="no">{cartItem.name}</span>
       </span>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        <span className="font-extrabold text-foreground text-xs">
+        <span className="font-extrabold text-foreground text-xs sm:text-sm">
           {currentLanguage.symbol} {formatPrice(rowTotal)}
         </span>
         <button
@@ -35,7 +35,7 @@ export const MiniCartRow: React.FC<MiniCartRowProps> = ({ cartItem, removeFromCa
           }}
           title="Remove item"
           aria-label={`Remove ${cartItem.name}`}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
+          className="w-6.5 h-6.5 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
