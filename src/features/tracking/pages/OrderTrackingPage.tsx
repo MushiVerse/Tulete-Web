@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
-import { parseLaundryItems, getLaundryItemImage, getLaundryFallbackSvg } from '../../orders/pages/OrdersPage';
+import { parseLaundryItems, getLaundryItemImage, LaundryItemImage } from '../../orders/pages/OrdersPage';
 import { storeService } from '../../stores/services/storeService';
 import { useFirestoreDocument, useFirestoreQuery } from '../../../core/hooks/useFirestoreQuery';
 
@@ -585,16 +585,7 @@ export const OrderTrackingPage = () => {
                     const itemImg = getLaundryItemImage(item.name, item, order.items);
                     return (
                       <div key={idx} className="flex items-center gap-2.5 bg-muted/40 p-2 rounded-xl border border-border/40">
-                        <img
-                          src={itemImg}
-                          alt={item.name}
-                          className="w-10 h-10 rounded-xl object-cover border border-border shrink-0 bg-card shadow-2xs"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.onerror = null;
-                            target.src = getLaundryFallbackSvg(item.name);
-                          }}
-                        />
+                        <LaundryItemImage name={item.name} src={itemImg} className="w-10 h-10 rounded-xl" />
                         <div className="min-w-0 flex-1">
                           <p className="notranslate font-bold text-xs text-foreground truncate" translate="no">{item.name}</p>
                           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
