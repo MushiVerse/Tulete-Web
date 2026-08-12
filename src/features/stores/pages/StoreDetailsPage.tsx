@@ -724,7 +724,6 @@ export const StoreDetailsPage = () => {
       ctx.fillStyle = '#0f172a';
       ctx.textAlign = 'center';
       ctx.fillText(`📍 ${storeName}`, center.x, center.y - 20);
-
       animationId = requestAnimationFrame(drawSingleMap);
     };
 
@@ -736,6 +735,110 @@ export const StoreDetailsPage = () => {
       window.removeEventListener('resize', resizeCanvas);
     };
   }, [activeTab, store]);
+
+  // Categories of store-specific items
+  const productCategories = Array.from(new Set(products.filter(p => p && p.category).map((p) => p.category)));
+
+  // Filter products safely
+  const filteredProducts = products.filter((p) => {
+    if (!p) return false;
+    const categoryMatch = !selectedProductCategory || p.category === selectedProductCategory;
+    const pName = String(p.name || '').toLowerCase();
+    const pDesc = String(p.description || '').toLowerCase();
+    const q = String(productSearch || '').toLowerCase();
+    const searchMatch = pName.includes(q) || pDesc.includes(q);
+    return categoryMatch && searchMatch;
+  });
+
+  // Intersection Observer & Scroll Listener for Menu items infinite scroll
+  useEffect(() => {
+    if (activeTab !== 'menu' || !menuLoadMoreRef.current) return;
+    const sentinel = menuLoadMoreRef.current;
+    const scrollParent = sentinel.closest('.overflow-y-auto') || window;
+
+    const handleCheck = () => {
+      if (productVisibleCount >= filteredProducts.length) return;
+      const rect = sentinel.getBoundingClientRect();
+      const parentHeight = scrollParent === window ? window.innerHeight : (scrollParent as HTMLElement).clientHeight;
+      if (rect.top <= parentHeight + 800) {
+        setProductVisibleCount((prev) => Math.min(prev + 20, filteredProducts.length));
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && productVisibleCount < filteredProducts.length) {
+          setProductVisibleCount((prev) => Math.min(prev + 20, filteredProducts.length));
+        }
+      },
+      { 
+        root: scrollParent === window ? null : (scrollParent as Element),
+        rootMargin: '800px'
+      }
+    );
+
+    observer.observe(sentinel);
+    if (scrollParent === window) {
+      window.addEventListener('scroll', handleCheck, { passive: true });
+    } else {
+      (scrollParent as HTMLElement).addEventListener('scroll', handleCheck, { passive: true });
+    }
+
+    return () => {
+      observer.disconnect();
+      if (scrollParent === window) {
+        window.removeEventListener('scroll', handleCheck);
+      } else {
+        (scrollParent as HTMLElement).removeEventListener('scroll', handleCheck);
+      }
+    };
+  }, [activeTab, filteredProducts.length, productVisibleCount]);
+
+  // Intersection Observer & Scroll Listener for Gallery items infinite scroll
+  useEffect(() => {
+    if (activeTab !== 'gallery' || !galleryLoadMoreRef.current) return;
+    const sentinel = galleryLoadMoreRef.current;
+    const scrollParent = sentinel.closest('.overflow-y-auto') || window;
+
+    const totalGalleryItems = products.length + (store?.gallery?.length || 0);
+
+    const handleCheck = () => {
+      if (galleryVisibleCount >= totalGalleryItems) return;
+      const rect = sentinel.getBoundingClientRect();
+      const parentHeight = scrollParent === window ? window.innerHeight : (scrollParent as HTMLElement).clientHeight;
+      if (rect.top <= parentHeight + 800) {
+        setGalleryVisibleCount((prev) => Math.min(prev + 20, totalGalleryItems));
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && galleryVisibleCount < totalGalleryItems) {
+          setGalleryVisibleCount((prev) => Math.min(prev + 20, totalGalleryItems));
+        }
+      },
+      { 
+        root: scrollParent === window ? null : (scrollParent as Element),
+        rootMargin: '800px' 
+      }
+    );
+
+    observer.observe(sentinel);
+    if (scrollParent === window) {
+      window.addEventListener('scroll', handleCheck, { passive: true });
+    } else {
+      (scrollParent as HTMLElement).addEventListener('scroll', handleCheck, { passive: true });
+    }
+
+    return () => {
+      observer.disconnect();
+      if (scrollParent === window) {
+        window.removeEventListener('scroll', handleCheck);
+      } else {
+        (scrollParent as HTMLElement).removeEventListener('scroll', handleCheck);
+      }
+    };
+  }, [activeTab, products.length, store?.gallery?.length, galleryVisibleCount]);
 
   // Loading state skeleton that closely resembles the page content layout
   if (isStoreLoading || isProductsLoading) {
@@ -881,38 +984,6 @@ export const StoreDetailsPage = () => {
       setIsSubmittingStoreRating(false);
     }
   };
-
-
-
-  // Categories of store-specific items
-  const productCategories = Array.from(new Set(products.filter(p => p && p.category).map((p) => p.category)));
-
-  // Filter products safely
-  const filteredProducts = products.filter((p) => {
-    if (!p) return false;
-    const categoryMatch = !selectedProductCategory || p.category === selectedProductCategory;
-    const pName = String(p.name || '').toLowerCase();
-    const pDesc = String(p.description || '').toLowerCase();
-    const q = String(productSearch || '').toLowerCase();
-    const searchMatch = pName.includes(q) || pDesc.includes(q);
-    return categoryMatch && searchMatch;
-  });
-
-  // Intersection Observer for Menu items infinite scroll
-  useEffect(() => {
-    if (activeTab !== 'menu' || !menuLoadMoreRef.current) return;
-    const sentinel = menuLoadMoreRef.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && productVisibleCount < filteredProducts.length) {
-          setProductVisibleCount((prev) => prev + 20);
-        }
-      },
-      { rootMargin: '250px', threshold: 0.1 }
-    );
-    observer.observe(sentinel);
-    return () => observer.unobserve(sentinel);
-  }, [activeTab, filteredProducts.length, productVisibleCount]);
 
   return (
     <PageContainer>
@@ -1520,7 +1591,7 @@ export const StoreDetailsPage = () => {
                               }}
                             />
                             {/* Bottom Compact Gradient Overlay Tint */}
-                            <div className="absolute inset-x-0 -bottom-1 h-1/4 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none transition-opacity duration-300" />
+                            <div className="absolute inset-x-0 -bottom-1 h-1/4 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none transition-opacity duration-300" />
 
                             {/* Top Badges */}
                             <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center gap-1">
@@ -1565,8 +1636,8 @@ export const StoreDetailsPage = () => {
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
                             {/* Bottom Compact Gradient Overlay Tint */}
-                            <div className="absolute inset-x-0 -bottom-1 h-1/5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none transition-opacity duration-300" />
-                            <div className="absolute bottom-2.5 left-2.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] text-white font-semibold">
+                            <div className="absolute inset-x-0 -bottom-1 h-1/5 bg-gradient-to-t from-black/55 to-transparent pointer-events-none transition-opacity duration-300" />
+                            <div className="absolute bottom-2.5 left-2.5 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] text-white font-semibold">
                               Store Photo
                             </div>
                           </div>
