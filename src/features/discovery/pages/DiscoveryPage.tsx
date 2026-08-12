@@ -205,11 +205,36 @@ export const DiscoveryPage = () => {
   // Pagination state (20 items initially, loads +20 on scroll)
   const [visibleCount, setVisibleCount] = useState(20);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const mainContentRef = useRef<HTMLDivElement | null>(null);
+  const resultsHeaderRef = useRef<HTMLDivElement | null>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset pagination when search query, active tab, or filters change
+  const scrollToTopSmooth = () => {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+
+    scrollTimerRef.current = setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (mainContentRef.current) {
+          mainContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }, 150);
+  };
+
+  // Scroll to top smoothly when search query changes
   useEffect(() => {
     setVisibleCount(20);
-  }, [localQuery, category, minPrice, maxPrice, isAvailableOnly, activeTab]);
+    if (localQuery.trim()) {
+      scrollToTopSmooth();
+    }
+  }, [localQuery]);
+
+  // Reset pagination & scroll to top when category, tabs, or filters change
+  useEffect(() => {
+    setVisibleCount(20);
+    scrollToTopSmooth();
+  }, [category, minPrice, maxPrice, isAvailableOnly, activeTab]);
 
   // Infinite scroll observer to increment visible items by 20 on scroll reach
   useEffect(() => {
@@ -754,7 +779,7 @@ export const DiscoveryPage = () => {
         <FilterSidebar isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} />
 
         {/* Main Content Area */}
-        <div className="flex-auto min-w-0 max-w-full w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none flex flex-col">
+        <div ref={mainContentRef} className="flex-auto min-w-0 max-w-full w-full h-auto lg:h-full overflow-visible lg:overflow-y-auto scrollbar-none flex flex-col">
 
           <div className="w-full max-w-7xl mx-auto pb-24 px-4 sm:px-6 md:px-8 lg:px-12 pt-4 md:pt-6">
 
@@ -958,7 +983,7 @@ export const DiscoveryPage = () => {
             </AnimatePresence>
 
             {/* Results Header */}
-            <div className="flex items-center justify-between mb-3">
+            <div ref={resultsHeaderRef} className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-extrabold flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-warning fill-warning" />
                 {localQuery ? 'Search Results' : 'Trending Now'}
