@@ -383,10 +383,10 @@ export const StoreDetailsPage = () => {
     ...baseStore,
     id: resolvedStoreId,
     store: realDbStore?.store || routeStoreData?.store || passedStoreData?.store || passedStoreData?.name || fromProduct?.store || baseStore.store,
-    rating: realDbStore?.rating ?? passedStoreData?.rating ?? baseStore.rating,
-    reviewCount: realDbStore?.reviewCount ?? passedStoreData?.reviewCount ?? baseStore.reviewCount,
+    rating: realDbStore ? (realDbStore.rating ?? 0) : (passedStoreData?.rating ?? (mockMatch ? baseStore.rating : 0)),
+    reviewCount: realDbStore ? (realDbStore.reviewCount ?? 0) : (passedStoreData?.reviewCount ?? (mockMatch ? baseStore.reviewCount : 0)),
     rates: realDbStore?.rates ?? baseStore.rates,
-    imgURL: passedStoreData?.imgURL || passedStoreData?.imgUrl || passedStoreData?.image || baseStore.imgURL || (baseStore as any)?.imgUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+    imgURL: passedStoreData?.imgURL || passedStoreData?.imgUrl || passedStoreData?.image || realDbStore?.imgURL || baseStore.imgURL || (baseStore as any)?.imgUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
     category: passedStoreData?.cat || passedStoreData?.category || baseStore.category || baseStore.cat || 'Food',
     cat: passedStoreData?.cat || passedStoreData?.category || baseStore.cat || baseStore.category || 'Food',
     availability: passedStoreData?.availability !== undefined ? Boolean(passedStoreData.availability) : baseStore.availability,
@@ -560,13 +560,14 @@ export const StoreDetailsPage = () => {
     fetchAlgoliaStoreItems();
   }, [rawStoreName, targetStoreName, targetStoreId, decodedId, fromProduct?.store]);
 
-  // Combine items from foods, products, cloths collections, Algolia hits, and mock fallbacks
+  // Combine items from foods, products, cloths collections, Algolia hits, and mock fallbacks (only if store matches built-in mock store)
+  const mockProductsForStore = mockMatch ? productService.getMockProducts(mockMatch.id) : [];
   const rawCombinedDocs = [
     ...algoliaStoreProducts,
     ...(foodsData?.data || []),
     ...(productsData?.data || []),
     ...(clothsData?.data || []),
-    ...productService.getMockProducts(store?.id || id)
+    ...mockProductsForStore
   ];
 
   // Deduplicate by item ID / objectID and ensure valid product object (strictly excluding store records and store name items)
@@ -641,25 +642,15 @@ export const StoreDetailsPage = () => {
     return matchesName || matchesId || matchesFromProduct;
   });
 
-  // Strict products list: Show store products matching this specific store, or category fallback
+  // Strict products list: Show items belonging to this specific store only
   let products = matchedStoreProducts;
 
-  if (products.length === 0 && allCollectionDocs.length > 0) {
-    const storeCategoryLower = (store?.category || store?.cat || '').toLowerCase();
-    products = allCollectionDocs.filter(item => {
-      const itemCat = String(item.category || item.cat || '').toLowerCase();
-      if (storeCategoryLower.includes('laund') || storeCategoryLower.includes('nguo')) {
-        return itemCat.includes('laund') || itemCat.includes('nguo') || itemCat.includes('suit') || itemCat.includes('wash') || itemCat.includes('bedding');
-      }
-      if (storeCategoryLower.includes('food') || storeCategoryLower.includes('restaur')) {
-        return itemCat.includes('food') || itemCat.includes('meal') || itemCat.includes('platter') || itemCat.includes('quick');
-      }
-      return true;
-    });
-  }
-
   if (products.length === 0 && fromProduct) {
-    products = [fromProduct];
+    const fromProdStore = String(fromProduct?.store || '').toLowerCase().trim();
+    const fromProdStoreId = String(fromProduct?.storeId || '').toLowerCase().trim();
+    if (fromProdStore === targetStoreName || (targetStoreId && fromProdStoreId === targetStoreId)) {
+      products = [fromProduct];
+    }
   }
 
   // Strictly return NO items inside if store is not yet registered in foodStores Firestore collection
@@ -1089,8 +1080,8 @@ export const StoreDetailsPage = () => {
           <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
             <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md border border-white/10">
               <Star className="w-4 h-4 fill-primary stroke-primary text-primary" />
-              <span>{store.rating}</span>
-              <span className="text-slate-400 font-normal">({store.reviewCount} Reviews)</span>
+              <span>{store.rating > 0 ? store.rating : 'New'}</span>
+              <span className="text-slate-400 font-normal">({store.reviewCount > 0 ? `${store.reviewCount} Reviews` : 'New Store'})</span>
             </div>
 
             <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md border border-white/10">
@@ -1248,9 +1239,32 @@ export const StoreDetailsPage = () => {
 
                 {/* Menu Items Grid */}
                 {filteredProducts.length === 0 ? (
-                  <div className="text-center py-10 bg-muted border border-slate-150 dark:border-slate-800 rounded-2xl">
-                    <p className="text-xs text-muted-foreground">No matching services or items found.</p>
-                  </div>
+                  productSearch ? (
+                    <div className="text-center py-12 bg-card border border-border rounded-3xl p-6 space-y-2">
+                      <Search className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
+                      <h4 className="font-extrabold text-foreground text-sm">No items found matching "{productSearch}"</h4>
+                      <p className="text-xs text-muted-foreground">Try adjusting your search filter or clear the search input.</p>
+                      <button 
+                        onClick={() => setProductSearch('')}
+                        className="text-xs text-primary font-bold hover:underline pt-1 cursor-pointer"
+                      >
+                        Clear search filter
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-14 bg-card border border-border rounded-3xl p-8 space-y-3 shadow-xs">
+                      <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-inner">
+                        <ShoppingBag className="w-8 h-8 stroke-1.5" />
+                      </div>
+                      <div className="max-w-md mx-auto space-y-1.5">
+                        <h4 className="font-extrabold text-foreground text-base">No Items Registered Yet</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          This store is registered on Tulete, but hasn't added any items or products to its catalog yet.
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/80 font-medium">Please check back soon for catalog updates!</p>
+                    </div>
+                  )
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1434,31 +1448,39 @@ export const StoreDetailsPage = () => {
             </div>
 
             {/* Reviews List */}
-            <div className="space-y-4">
-              {(store.reviews || []).map((rev) => (
-                <Card key={rev.id} className="p-4 border border-border bg-card shadow-sm">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        {rev.userName.charAt(0)}
+            {(store.reviews || []).length === 0 ? (
+              <div className="text-center py-12 bg-card border border-border rounded-3xl p-6 space-y-2">
+                <Star className="w-8 h-8 text-muted-foreground/40 mx-auto" />
+                <h4 className="font-extrabold text-sm text-foreground">No Reviews Yet</h4>
+                <p className="text-xs text-muted-foreground">Be the first customer to rate and review this store!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(store.reviews || []).map((rev) => (
+                  <Card key={rev.id} className="p-4 border border-border bg-card shadow-sm">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                          {rev.userName.charAt(0)}
+                        </div>
+                        <h4 className="font-bold text-sm text-foreground">{rev.userName}</h4>
                       </div>
-                      <h4 className="font-bold text-sm text-foreground">{rev.userName}</h4>
+                      <span className="text-[10px] text-slate-400">{rev.date}</span>
                     </div>
-                    <span className="text-[10px] text-slate-400">{rev.date}</span>
-                  </div>
 
-                  <div className="flex items-center gap-0.5 mb-2">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? 'fill-primary stroke-primary text-primary' : 'text-slate-350'}`} />
-                    ))}
-                  </div>
+                    <div className="flex items-center gap-0.5 mb-2">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? 'fill-primary stroke-primary text-primary' : 'text-slate-350'}`} />
+                      ))}
+                    </div>
 
-                  <p className="text-xs text-slate-650 dark:text-slate-400 leading-relaxed">
-                    {rev.comment}
-                  </p>
-                </Card>
-              ))}
-            </div>
+                    <p className="text-xs text-slate-650 dark:text-slate-400 leading-relaxed">
+                      {rev.comment}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
