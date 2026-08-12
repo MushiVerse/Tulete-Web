@@ -1187,7 +1187,7 @@ export const DiscoveryPage = () => {
                                 removeFromCart(item.productId);
                               }}
                               title={`Remove ${item.name}`}
-                              className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg bg-white/10 hover:bg-red-500/80 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                              className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg bg-white/10 text-white/80 hover:text-red-400 hover:bg-red-500/20 border border-transparent hover:border-red-500/30 flex items-center justify-center transition-all shrink-0 cursor-pointer active:scale-95"
                             >
                               <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             </button>
