@@ -28,6 +28,7 @@ import { MobileSearchOverlay } from '../../../shared/components/MobileSearchOver
 import { CartWidget } from '../../../shared/components/CartWidget';
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
+import { analyticsService } from '../../../services/analyticsService';
 
 const STATS = [
   { value: '5', label: 'Local Cleaners', icon: Shirt },
@@ -206,6 +207,16 @@ export const LaundryPage = () => {
   const [ads, setAds] = useState<{ imgURL: string; store: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+
+  // Track laundry page search queries in analytics
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      const timer = setTimeout(() => {
+        analyticsService.trackSearchQuery(searchQuery.trim(), 'laundry_page');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchQuery]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All Services');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);

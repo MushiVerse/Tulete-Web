@@ -30,6 +30,7 @@ import { FacebookIcon, InstagramIcon, TikTokIcon, YoutubeIcon } from '../../../s
 import { useCurrencyLanguageStore } from '../../../core/config/currencyStore';
 import { HelpSafetyWidget } from '../../../shared/components/HelpSafetyWidget';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
+import { analyticsService } from '../../../services/analyticsService';
 
 // --- Static Fallback Data ---
 const FOOD_CATEGORIES = [
@@ -282,6 +283,13 @@ export const FoodPage = () => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Track food page search queries in analytics
+  useEffect(() => {
+    if (debouncedSearchQuery.trim().length >= 2) {
+      analyticsService.trackSearchQuery(debouncedSearchQuery.trim(), 'food_page');
+    }
+  }, [debouncedSearchQuery]);
 
   // Query foodCategory, foodSubCategory, and foodSubSubCategory from Firestore
   const { data: foodCats = [] } = useQuery({
