@@ -87,7 +87,7 @@ const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuant
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className="h-full rounded-3xl border p-3 sm:p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all group cursor-pointer bg-card border-border"
-      onClick={() => navigate(`/product/${product.id}`)}
+      onClick={() => navigate(`/product/${encodeURIComponent(product.id)}`, { state: { product } })}
     >
         <div className="w-full aspect-[4/3] shrink-0 rounded-2xl overflow-hidden relative bg-muted">
           <img src={product.imgUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />

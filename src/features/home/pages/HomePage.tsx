@@ -546,7 +546,7 @@ export const HomePage = () => {
 
   const handleProductClick = (p: Product) => {
     saveToUserViewed(p);
-    navigate(`/product/${encodeURIComponent(p.id)}`);
+    navigate(`/product/${encodeURIComponent(p.id)}`, { state: { product: p } });
   };
 
   const handleAddToCart = (p: Product) => {

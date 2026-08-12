@@ -98,7 +98,7 @@ const StoreProductCardItem = ({
     <Card 
       onClick={() => {
         if (productId && productId !== 'undefined') {
-          navigate(`/product/${encodeURIComponent(productId)}`);
+          navigate(`/product/${encodeURIComponent(productId)}`, { state: { product: prod } });
         }
       }}
       className="p-4 border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all flex gap-4 items-center cursor-pointer group"
@@ -1790,7 +1790,7 @@ export const StoreDetailsPage = () => {
             const handleViewDetails = () => {
               if (productId && productId !== 'undefined') {
                 setViewerOpen(false);
-                navigate(`/product/${encodeURIComponent(productId)}`);
+                navigate(`/product/${encodeURIComponent(productId)}`, { state: { product: currentProd } });
               }
             };
 

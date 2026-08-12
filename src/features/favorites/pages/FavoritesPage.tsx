@@ -851,7 +851,7 @@ export const FavoritesPage = () => {
                             if (item) {
                               setQuickViewProduct(item);
                             } else {
-                              navigate(`/product/${encodeURIComponent(f.itemId)}`);
+                              navigate(`/product/${encodeURIComponent(f.itemId)}`, { state: { product: f } });
                             }
                           }
                         }}
@@ -863,7 +863,7 @@ export const FavoritesPage = () => {
                             const targetId = !isGeneric ? f.itemId : (storeName || f.itemId || 's1');
                             navigate(`/store/${encodeURIComponent(targetId)}`, { state: { storeData: { ...f, store: storeName } } });
                           } else {
-                            navigate(`/product/${encodeURIComponent(f.itemId)}`);
+                            navigate(`/product/${encodeURIComponent(f.itemId)}`, { state: { product: f } });
                           }
                         }}
                         onAddToCart={(f, finalPrice) => {

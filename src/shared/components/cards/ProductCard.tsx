@@ -88,7 +88,7 @@ export const ProductCard = ({
   const Wrapper = onClick ? 'div' : Link;
   const wrapperProps = onClick 
     ? { onClick: () => onClick(product), className: "block h-full cursor-pointer" } 
-    : { to: `/product/${encodeURIComponent(product.id)}`, className: "block h-full" };
+    : { to: `/product/${encodeURIComponent(product.id)}`, state: { product }, className: "block h-full" };
 
   if (viewMode === 'list') {
     return (

@@ -1296,7 +1296,7 @@ export const DiscoveryPage = () => {
                       onClick={() => {
                         const targetId = quickViewProduct.id || quickViewProduct.objectID;
                         setQuickViewProduct(null);
-                        navigate(`/product/${encodeURIComponent(targetId)}`);
+                        navigate(`/product/${encodeURIComponent(targetId)}`, { state: { product: quickViewProduct } });
                       }}
                       className="w-full py-3.5 px-4 rounded-2xl border border-primary/30 bg-primary/10 text-primary font-extrabold text-sm hover:bg-primary/20 transition-all flex items-center justify-center gap-2 shadow-xs"
                     >

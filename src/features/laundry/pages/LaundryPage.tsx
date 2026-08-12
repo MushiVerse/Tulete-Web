@@ -76,7 +76,7 @@ const LaundryItemCard = ({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      onClick={() => navigate(`/product/${encodeURIComponent(item.id)}`)}
+      onClick={() => navigate(`/product/${encodeURIComponent(item.id)}`, { state: { product: item } })}
       className={`group rounded-3xl border p-3 sm:p-4 shadow-sm hover:shadow-md transition-all flex flex-col bg-card border-border h-full cursor-pointer`}
     >
       <div className="flex flex-col gap-4 flex-1">

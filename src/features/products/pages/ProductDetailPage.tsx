@@ -1,7 +1,7 @@
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import { getCategoryEmoji } from '../../../shared/utils/categoryEmoji';
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Share2, Heart, Star, MapPin, Store as StoreIcon, ShieldCheck, Tag, ChevronRight, ChevronLeft, ArrowRight, Sparkles, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageContainer } from '../../../shared/components/layout';
@@ -23,9 +23,9 @@ import { APP_SETTINGS } from '@/core/config/settings';
 import { MiniCartRow } from '../../../shared/components/MiniCartRow';
 import { useThemeStore } from '../../../core/theme/useThemeStore';
 import { locationService } from '../../location/services/locationService';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { buildCompleteProductPayload } from '../../../shared/utils/productPayload';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, getCountFromServer } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, getCountFromServer, query, where, limit } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
 import { getNormalizedRating, toFirestoreDouble } from '../../../shared/utils/ratingUtils';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
@@ -327,6 +327,18 @@ const EndlessMoreOfSection = ({ title, items }: { title: string; items: any[] })
   );
 };
 
+const extractSubSubCat = (p: any): string => {
+  if (!p) return '';
+  const val = p.subSubCat || p.subsubcat || p.subSubCategory || p.speccat || p.specCat || p.subSubCcat;
+  return val && typeof val === 'string' ? val.trim() : (typeof val === 'number' ? String(val).trim() : '');
+};
+
+const extractSubCat = (p: any): string => {
+  if (!p) return '';
+  const val = p.subCat || p.subcat || p.subCategory || p.scat || p.foodSubCategory || p.ecommerceSubCategory;
+  return val && typeof val === 'string' ? val.trim() : (typeof val === 'number' ? String(val).trim() : '');
+};
+
 const PRODUCT_CATEGORIES = [
   { id: 'all', name: 'All Products', icon: '🛍️' },
   { id: 'electronics', name: 'Electronics', icon: '📱' },
@@ -341,8 +353,14 @@ export const ProductDetailPage = () => {
   const { id } = useParams();
   const decodedId = id ? decodeURIComponent(id) : '';
   const navigate = useNavigate();
-  const [isFavorite, setIsFavorite] = useState(false);
+  const location = useLocation();
+  const stateProduct = (location.state as any)?.product || (location.state as any)?.item || (location.state as any)?.storeData;
+
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [userRating, setUserRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
+  const queryClient = useQueryClient();
   const { items: cartItems, addToCart, removeFromCart, updateQuantity, getTotals } = useCartStore();
   
   // Subscribe to location store so price and cart total update instantly on location change
@@ -367,9 +385,9 @@ export const ProductDetailPage = () => {
   // Fetch specific product using decoded ID
   const { data: product, isLoading, error } = useFirestoreDocument(['product', decodedId || id || ''], productService, decodedId || id || '');
 
-  // Determine target collection based on opened item category
-  const rawCat = (product as any)?.cat || product?.category || '';
-  const rawColl = (product as any)?._collection || '';
+  // Determine target collection based on opened item category & location state
+  const rawCat = (product as any)?.cat || product?.category || (stateProduct as any)?.cat || (stateProduct as any)?.category || '';
+  const rawColl = (product as any)?._collection || (stateProduct as any)?._collection || '';
 
   let targetCollection = 'foods';
   if (rawColl === 'products' || rawCat === 'Product' || rawCat === 'Products') {
@@ -380,96 +398,44 @@ export const ProductDetailPage = () => {
     targetCollection = 'foods';
   }
 
-  const targetSubSubCat = (product as any)?.subSubCat || (product as any)?.subSubCategory || (product as any)?.speccat;
-  const targetSubCat = (product as any)?.subCat || (product as any)?.subCategory || (product as any)?.scat;
+  const targetSubSubCat = extractSubSubCat(product) || extractSubSubCat(stateProduct);
+  const targetSubCat = extractSubCat(product) || extractSubCat(stateProduct);
   const isLaundryProduct = targetCollection === 'cloths';
-  const itemCat = (product as any)?.cat || product?.category || '';
-  const isLaundry = isLaundryProduct || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat) || isLaundryItem(product);
-
-  // ── Record to userViewed ──
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id || !product?.id) return;
-
-    const currentSubCat = (product as any)?.subCat || (product as any)?.subCategory || targetSubCat;
-    if (currentSubCat) {
-      try {
-        localStorage.setItem('tulete_recommended_subcat', String(currentSubCat));
-      } catch (e) {}
-    }
-
-    if (isLaundry) return;
-
-    const docRef = doc(db, 'userViewed', user.id, 'recentlyViewed', product.id);
-    const userViewedPayload = buildCompleteProductPayload(product, user.id);
-    setDoc(docRef, userViewedPayload, { merge: true }).catch(() => {});
-  }, [isAuthenticated, user?.id, product?.id, isLaundryProduct, targetSubCat]);
-
-  // Sync isFavorite with useFavoritesStore
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id || !product?.id) return;
-    const storeHasFav = isFavorited(product.id);
-    setIsFavorite(storeHasFav);
-  }, [isAuthenticated, user?.id, product?.id, favorites, isFavorited]);
-
-  const handleToggleFavorite = async () => {
-    if (isLaundry) return;
-    if (!isAuthenticated) {
-      openModal('login');
-      return;
-    }
-    const targetProduct = product || (displayProduct as any);
-    if (!user?.id || !targetProduct?.id) return;
-
-    try {
-      const willBeFav = !isFavorited(targetProduct.id);
-      setIsFavorite(willBeFav);
-      await toggleFavorite(user.id, targetProduct);
-      if (willBeFav) {
-        toast.success(`Added ${targetProduct.name || 'item'} to favorites`);
-      } else {
-        toast.success(`Removed ${targetProduct.name || 'item'} from wishlist`);
-      }
-    } catch (err) {
-      console.error('Error toggling favorite:', err);
-      toast.error('Failed to update wishlist');
-    }
-  };
-
-  // Rating logic matching Flutter addRatesToProducts
-  const [userRating, setUserRating] = useState<number>(0);
-  const [hoverRating, setHoverRating] = useState<number>(0);
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const itemCat = (product as any)?.cat || product?.category || (stateProduct as any)?.cat || (stateProduct as any)?.category || '';
+  const isLaundry = isLaundryProduct || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat) || isLaundryItem(product) || isLaundryItem(stateProduct);
 
   const handleRateProduct = async (stars: number) => {
     if (!isAuthenticated) {
       openModal('login');
       return;
     }
-    const targetItem = product || displayProduct;
-    if (!targetItem?.id || isSubmittingRating) return;
+
+    const productIdToRate = String(decodedId || id || displayProduct?.id || '').trim();
+    if (!productIdToRate || isSubmittingRating) return;
 
     setIsSubmittingRating(true);
     setUserRating(stars);
 
     try {
-      const targetColl = targetCollection === 'products' ? 'products' : 'foods';
-      const docRef = doc(db, targetColl, targetItem.id);
+      const docRef = doc(db, targetCollection, productIdToRate);
       const snap = await getDoc(docRef);
 
       let currentRates: number[] = [];
       if (snap.exists()) {
         const data = snap.data();
-        const rawRate = data.rate;
-        if (typeof rawRate === 'number' || typeof rawRate === 'string') {
-          await updateDoc(docRef, { rate: deleteField() }).catch(() => {});
-        } else if (Array.isArray(rawRate)) {
-          currentRates = rawRate.map((val: any) => toFirestoreDouble(val)).filter((n) => !isNaN(n));
+        const rawRates = data.rates;
+        if (Array.isArray(rawRates)) {
+          currentRates = rawRates.map((val: any) => toFirestoreDouble(val)).filter((n) => !isNaN(n));
+        } else if (rawRates && typeof rawRates === 'object') {
+          currentRates = Object.values(rawRates).map((val: any) => toFirestoreDouble(val)).filter((n) => !isNaN(n));
         }
       }
 
       const rateAsDouble = toFirestoreDouble(stars);
       const updatedRates = [...currentRates.map((val: any) => toFirestoreDouble(val)), rateAsDouble];
-      await setDoc(docRef, { rate: updatedRates }, { merge: true });
+      await setDoc(docRef, { rates: updatedRates }, { merge: true });
+
+      queryClient.invalidateQueries({ queryKey: ['product', productIdToRate] });
 
       toast.success('Thanks, Rated');
     } catch (err) {
@@ -480,44 +446,54 @@ export const ProductDetailPage = () => {
     }
   };
 
-  // 1. Fetch subSubCat products from targetCollection (for Related section)
-  const { data: subSubCatProducts } = useFirestoreQuery(
-    ['products', 'related-subsub', targetCollection, targetSubSubCat],
-    productService,
-    { 
-      limit: 100, 
-      filters: targetSubSubCat ? [
-        { field: '_collection', operator: '==', value: targetCollection },
-        { field: 'subSubCat', operator: '==', value: targetSubSubCat }
-      ] : undefined 
-    },
-    { enabled: !isLaundryProduct && !!targetSubSubCat }
-  );
+  // Candidate pool query: targeted Firestore queries for targetSubSubCat & targetSubCat across field variations + collection batch
+  const { data: candidatePool = [] } = useQuery({
+    queryKey: ['relatedCandidatePool', targetCollection, targetSubSubCat, targetSubCat],
+    queryFn: async () => {
+      try {
+        const poolMap = new Map<string, any>();
+        const addDocsToMap = (snapDocs: any[]) => {
+          snapDocs.forEach((d) => {
+            if (!poolMap.has(d.id)) {
+              const parsed = (productService as any).parse({ id: d.id, _collection: targetCollection, ...d.data() });
+              poolMap.set(d.id, parsed);
+            }
+          });
+        };
 
-  // 2. Fetch subCat products from targetCollection (for More of [subCat] section)
-  const { data: subCatProducts } = useFirestoreQuery(
-    ['products', 'related-subcat', targetCollection, targetSubCat],
-    productService,
-    { 
-      limit: 100, 
-      filters: targetSubCat ? [
-        { field: '_collection', operator: '==', value: targetCollection },
-        { field: 'subCat', operator: '==', value: targetSubCat }
-      ] : undefined 
-    },
-    { enabled: !isLaundryProduct && !!targetSubCat }
-  );
+        const queriesToRun: Promise<any>[] = [];
+        const collRef = collection(db, targetCollection);
 
-  // 3. Fetch category products from targetCollection (fallback / Laundries section)
-  const { data: catProducts } = useFirestoreQuery(
-    ['products', 'related-cat', targetCollection, rawCat],
-    productService,
-    { 
-      limit: 100, 
-      filters: [{ field: '_collection', operator: '==', value: targetCollection }]
+        if (targetSubSubCat) {
+          ['subSubCat', 'subsubcat', 'speccat', 'subSubCategory'].forEach((field) => {
+            queriesToRun.push(getDocs(query(collRef, where(field, '==', targetSubSubCat), limit(100))).catch(() => null));
+          });
+        }
+
+        if (targetSubCat) {
+          ['subCat', 'subcat', 'subCategory', 'scat', 'foodSubCategory'].forEach((field) => {
+            queriesToRun.push(getDocs(query(collRef, where(field, '==', targetSubCat), limit(100))).catch(() => null));
+          });
+        }
+
+        queriesToRun.push(getDocs(query(collRef, limit(250))).catch(() => null));
+
+        const snapshots = await Promise.all(queriesToRun);
+        snapshots.forEach((snap) => {
+          if (snap && snap.docs) {
+            addDocsToMap(snap.docs);
+          }
+        });
+
+        return Array.from(poolMap.values());
+      } catch (err) {
+        console.error('Error fetching candidate pool:', err);
+        return [];
+      }
     },
-    { enabled: true }
-  );
+    enabled: true,
+    staleTime: 1000 * 60 * 2,
+  });
 
   // Fetch ecommerceCategory (name field) & foodSubCategory (subCat field) from Firestore for Departments filter
   const { data: ecommerceCats = [] } = useQuery({
@@ -627,7 +603,7 @@ export const ProductDetailPage = () => {
     : '0+';
 
   // Compute display product (or fallback) unconditionally
-  const displayProduct = product || {
+  const displayProduct = product || stateProduct || {
     id: decodedId || id || 'dummy-1',
     name: decodedId && decodedId.trim().length > 2 ? decodedId : 'Premium Leather Smart Watch - Series 9',
     description: 'Experience the ultimate quality with fast delivery straight to your door.',
@@ -656,6 +632,17 @@ export const ProductDetailPage = () => {
       return;
     }
     navigate('/cart');
+  };
+
+  const isFavorite = isFavorited(String(displayProduct?.id || decodedId || id || '').trim());
+
+  const handleToggleFavorite = () => {
+    if (!isAuthenticated) {
+      openModal('login');
+      return;
+    }
+    if (isLaundry) return;
+    toggleFavorite(user?.id || 'guest_user', displayProduct);
   };
 
   if (isLoading) {
@@ -853,7 +840,7 @@ export const ProductDetailPage = () => {
               {/* Title & Price */}
               <div>
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {displayProduct.tags?.map(tag => (
+                  {displayProduct.tags?.map((tag: string) => (
                     <Badge key={tag} variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none">
                       {tag}
                     </Badge>
@@ -1157,132 +1144,68 @@ export const ProductDetailPage = () => {
             </div>
           </div>
 
-          {/* ── DYNAMIC RELATED PRODUCTS (SubSubCat -> SubCat -> Cat Matching) ── */}
-          {/* ── SECTIONS BELOW PRODUCT DISPLAY ── */}
+          {/* ── DYNAMIC RELATED PRODUCTS (Exact subSubCat for "Related", Exact subCat for "More of ...") ── */}
           {(() => {
-            const itemCat = (displayProduct as any).cat || displayProduct.category || '';
-            const rawColl = (displayProduct as any)._collection || '';
-
-            let activeCollection = 'foods';
-            if (rawColl === 'products' || itemCat === 'Product' || itemCat === 'Products') {
-              activeCollection = 'products';
-            } else if (rawColl === 'cloths' || itemCat === 'Nguo' || itemCat === 'Laundry' || ['Suits', 'Bag Wash', 'Bedding'].includes(itemCat)) {
-              activeCollection = 'cloths';
-            } else {
-              activeCollection = 'foods';
-            }
-
-            const isLaundry = activeCollection === 'cloths';
-            const subSubVal = (displayProduct as any).subSubCat || (displayProduct as any).subSubCategory || (displayProduct as any).speccat || (displayProduct as any).subsubcat;
-            const subCatVal = (displayProduct as any).subCat || (displayProduct as any).subCategory || (displayProduct as any).scat || (displayProduct as any).subcat;
-
-            // Raw items pool from target collection
-            const rawPool: any[] = [
-              ...((subSubCatProducts as any)?.data || []),
-              ...((subCatProducts as any)?.data || []),
-              ...((catProducts as any)?.data || [])
-            ];
-
-            // Deduplicate items pool by ID and exclude displayProduct.id and unavailable items
-            const collectionPoolMap = new Map<string, any>();
-            rawPool.forEach((item) => {
-              if (item && item.id && item.id !== displayProduct.id) {
-                const isUnavailable = item.availability === false || item.availability === "false" || String(item.availability).toLowerCase() === "false";
-                if (!isUnavailable) {
-                  collectionPoolMap.set(item.id, item);
-                }
-              }
-            });
-            const collectionPool = Array.from(collectionPoolMap.values());
-
-            // 1. LAUNDRY ITEMS (category === "Nguo" or collection === "cloths"):
-            // Return ONLY 1 section "Laundries" (endless vertical scroll, no sub-categorization)
             if (isLaundry) {
-              const finalLaundryList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 60 }).map((_, i) => ({
-                ...displayProduct,
-                id: `laundry-item-${i + 1}`,
-                name: `Laundry Service Item ${i + 1}`,
-                price: displayProduct.price + (i * 2000),
-              }));
+              const laundryItems = candidatePool.filter((p) => {
+                if (!p || p.id === displayProduct.id) return false;
+                const isUnavailable = p.availability === false || p.availability === "false" || String(p.availability).toLowerCase() === "false";
+                return !isUnavailable;
+              });
 
               return (
                 <div className="mt-8 mb-24 lg:mb-12 space-y-10">
-                  <EndlessMoreOfSection title="Laundries" items={finalLaundryList} />
+                  <EndlessMoreOfSection title="Laundries" items={laundryItems} />
                 </div>
               );
             }
 
-            // 2. NON-LAUNDRY & BOTH subSubCat AND subCat EXIST:
-            // i. Related (filtered using subSubCat, HORIZONTAL SCROLL) - ONLY shown if >= 1 other real item exists
-            // ii. More of [subCat] (filtered using subCat, ENDLESS VERTICAL SCROLL, NO DUPLICATE DATA)
-            if (subSubVal || subCatVal || collectionPool.length > 0) {
-              // Section 1: "Related" matches subSubCat or store items
-              let subSubMatches = subSubVal ? collectionPool.filter((p) => {
-                const pSubSub = p.subSubCat || p.speccat || p.subsubcat || p.subSubCategory;
-                return pSubSub && String(pSubSub).trim().toLowerCase() === String(subSubVal).trim().toLowerCase();
-              }) : [];
+            const currentSubSubClean = targetSubSubCat.trim().toLowerCase();
+            const currentSubCatClean = targetSubCat.trim().toLowerCase();
 
-              if (subSubMatches.length === 0 && subSubCatProducts?.data?.length) {
-                subSubMatches = subSubCatProducts.data.filter((p: any) => {
+            // 1. Related section: STRICT EXACT MATCH on subSubCat from candidatePool
+            const finalSubSubList = currentSubSubClean
+              ? candidatePool.filter((p) => {
                   if (!p || p.id === displayProduct.id) return false;
-                  return !(p.availability === false || p.availability === "false" || String(p.availability).toLowerCase() === "false");
-                });
-              }
+                  const isUnavailable = p.availability === false || p.availability === "false" || String(p.availability).toLowerCase() === "false";
+                  if (isUnavailable) return false;
+                  const itemSubSub = extractSubSubCat(p).trim().toLowerCase();
+                  return itemSubSub === currentSubSubClean;
+                })
+              : [];
 
-              // Fallback: If no subSub matches, use store-matched items for Related
-              if (subSubMatches.length === 0 && collectionPool.length > 1) {
-                const currentStore = String(displayProduct.store || displayProduct.storeId || '').toLowerCase();
-                subSubMatches = collectionPool.filter((p) => {
-                  if (!p || p.id === displayProduct.id) return false;
-                  const pStore = String(p.store || p.storeId || '').toLowerCase();
-                  return Boolean(currentStore && pStore && pStore === currentStore);
-                });
-              }
+            const relatedIds = new Set(finalSubSubList.map((p) => p.id));
 
-              const finalSubSubList = subSubMatches;
-              const relatedIds = new Set(finalSubSubList.map((p) => p.id));
+            // 2. More of [subCat] section: STRICT EXACT MATCH on subCat from candidatePool (excluding relatedIds)
+            const finalSubCatList = currentSubCatClean
+              ? candidatePool.filter((p) => {
+                  if (!p || p.id === displayProduct.id || relatedIds.has(p.id)) return false;
+                  const isUnavailable = p.availability === false || p.availability === "false" || String(p.availability).toLowerCase() === "false";
+                  if (isUnavailable) return false;
+                  const itemSub = extractSubCat(p).trim().toLowerCase();
+                  return itemSub === currentSubCatClean;
+                })
+              : [];
 
-              // Section 2: "More of [subCat]" matches subCat, excluding relatedIds
-              let subCatMatches = subCatVal ? collectionPool.filter((p) => {
-                if (relatedIds.has(p.id)) return false;
-                const pSub = p.subCat || p.subCategory || p.scat || p.subcat;
-                return pSub && String(pSub).trim().toLowerCase() === String(subCatVal).trim().toLowerCase();
-              }) : [];
+            const sectionTitle = targetSubCat 
+              ? `More of ${targetSubCat}` 
+              : `More of ${displayProduct.category || (targetCollection === 'products' ? 'Products' : 'Foods')}`;
 
-              if (subCatMatches.length === 0) {
-                subCatMatches = collectionPool.filter((p) => !relatedIds.has(p.id));
-              }
-
-              const finalSubCatList = subCatMatches;
-              const mainCatLabel = subCatVal || displayProduct.category || (activeCollection === 'products' ? 'Products' : 'Foods');
-
-              return (
-                <div className="mt-8 mb-24 lg:mb-12 space-y-10">
-                  {/* i. Related Section (2-Row Horizontal Grid with 15-item batch pagination & right-scroll trigger) */}
-                  {finalSubSubList.length > 0 && (
-                    <Horizontal2RowRelatedSection title="Related" items={finalSubSubList} />
-                  )}
-
-                  {/* ii. More of [subCat] Section (Endless Vertical Grid, Zero Duplicates) */}
-                  {finalSubCatList.length > 0 && (
-                    <EndlessMoreOfSection title={`More of ${mainCatLabel}`} items={finalSubCatList} />
-                  )}
-                </div>
-              );
+            if (finalSubSubList.length === 0 && finalSubCatList.length === 0) {
+              return null;
             }
-
-            // 3. Fallback single section
-            const mainCatLabel = displayProduct.category || (activeCollection === 'products' ? 'Products' : 'Foods');
-            const finalCatList = collectionPool.length > 0 ? collectionPool : Array.from({ length: 60 }).map((_, i) => ({
-              ...displayProduct,
-              id: `cat-item-${i + 1}`,
-              name: `${mainCatLabel} Item ${i + 1}`,
-              price: Math.max(5000, displayProduct.price + ((i + 1) * 5000)),
-            }));
 
             return (
               <div className="mt-8 mb-24 lg:mb-12 space-y-10">
-                <EndlessMoreOfSection title={`More of ${mainCatLabel}`} items={finalCatList} />
+                {/* i. Related Section (Horizontal Scroll, exact subSubCat matches ONLY) */}
+                {finalSubSubList.length > 0 && (
+                  <Horizontal2RowRelatedSection title="Related" items={finalSubSubList} />
+                )}
+
+                {/* ii. More of [subCat] Section (Endless Vertical Grid, exact subCat matches ONLY) */}
+                {finalSubCatList.length > 0 && (
+                  <EndlessMoreOfSection title={sectionTitle} items={finalSubCatList} />
+                )}
               </div>
             );
           })()}
