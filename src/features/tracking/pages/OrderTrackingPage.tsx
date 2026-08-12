@@ -582,19 +582,31 @@ export const OrderTrackingPage = () => {
                     Order Items ({displayItems.reduce((acc, i) => acc + i.quantity, 0)})
                   </span>
                   {displayItems.map((item: any, idx: number) => {
-                    const itemImg = getLaundryItemImage(item.name, item, order.items);
+                    const hasProductImg = Boolean(item.imageUrl && !item.imageUrl.includes('placeholder'));
                     return (
-                      <div key={idx} className="flex items-center gap-2.5 bg-muted/40 p-2 rounded-xl border border-border/40">
-                        <LaundryItemImage name={item.name} src={itemImg} className="w-10 h-10 rounded-xl" />
-                        <div className="min-w-0 flex-1">
-                          <p className="notranslate font-bold text-xs text-foreground truncate" translate="no">{item.name}</p>
-                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                            <span className="text-[10px] text-muted-foreground font-semibold">Qty: {item.quantity}</span>
-                            {item.services && item.services.map((srv: string, sIdx: number) => (
-                              <span key={sIdx} className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                                {srv}
-                              </span>
-                            ))}
+                      <div key={idx} className="flex items-center gap-2.5 bg-muted/40 p-2.5 rounded-xl border border-border/40 justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          {hasProductImg ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="w-10 h-10 rounded-xl object-cover border border-border shrink-0 bg-card shadow-2xs"
+                            />
+                          ) : (
+                            <span className="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 font-extrabold text-xs flex items-center justify-center shrink-0 border border-sky-500/20">
+                              ×{item.quantity}
+                            </span>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="notranslate font-bold text-xs text-foreground truncate" translate="no">{item.name}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                              {hasProductImg && <span className="text-[10px] text-muted-foreground font-semibold">Qty: {item.quantity}</span>}
+                              {item.services && item.services.map((srv: string, sIdx: number) => (
+                                <span key={sIdx} className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                                  {srv}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         {item.price !== undefined && (

@@ -738,13 +738,10 @@ export const OrdersPage = () => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {(isExpanded ? laundryBreakdown : laundryBreakdown.slice(0, 4)).map((item, idx) => {
-                            const itemImg = getLaundryItemImage(item.name, item, order.items);
-
                             return (
                               <div key={idx} className="bg-card border border-border/50 rounded-xl p-2.5 flex items-center justify-between shadow-2xs gap-2">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <LaundryItemImage name={item.name} src={itemImg} className="w-10 h-10 rounded-xl" />
-                                  <span className="w-5 h-5 rounded-md bg-sky-500/10 text-sky-500 font-extrabold text-[11px] flex items-center justify-center shrink-0">
+                                  <span className="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 font-extrabold text-xs flex items-center justify-center shrink-0 border border-sky-500/20">
                                     ×{item.qty}
                                   </span>
                                   <span className="notranslate font-bold text-xs text-foreground truncate" translate="no">{item.name}</span>
