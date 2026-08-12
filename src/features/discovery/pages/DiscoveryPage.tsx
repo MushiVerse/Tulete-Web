@@ -85,7 +85,7 @@ const getSearchRelevanceScore = (item: any, query: string): number => {
 };
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Filter, Grid, List, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map as MapIcon, Store, Heart, ExternalLink } from 'lucide-react';
+import { Filter, Grid, List, Search, Trash2, ArrowRight, Flame, Sparkles, Tag, Zap, ChevronRight, ShoppingCart, X, MapPin, Map as MapIcon, Store, Heart, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { PageWrapper } from '../../../shared/components/PageWrapper';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { useFilterStore } from '../store/useFilterStore';
@@ -184,6 +184,7 @@ export const DiscoveryPage = () => {
   // Cart & Auth
   const { items: cartItems, addToCart, clearCart, getTotals, removeFromCart } = useCartStore();
   const [isCartClosed, setIsCartClosed] = useState(false);
+  const [showAllMobileCartItems, setShowAllMobileCartItems] = useState(false);
   const { openModal } = useAuthModalStore();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -1134,22 +1135,22 @@ export const DiscoveryPage = () => {
                     <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-yellow-300/30 blur-2xl pointer-events-none" />
                     <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full bg-red-700/30 blur-2xl pointer-events-none" />
 
-                    <div className="relative z-10 px-4 pt-4 pb-4">
+                    <div className="relative z-10 px-3 pt-3 pb-3 sm:px-4 sm:pt-4 sm:pb-4">
 
                       {/* Header row */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2.5">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <div className="flex items-center gap-2 sm:gap-2.5">
                           <div className="relative">
-                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                              <ShoppingCart className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                              <ShoppingCart className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" strokeWidth={2.5} />
                             </div>
-                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white text-primary text-[10px] font-black flex items-center justify-center shadow-lg">
+                            <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-white text-primary text-[9px] sm:text-[10px] font-black flex items-center justify-center shadow-lg">
                               {cartItems.reduce((a, i) => a + i.quantity, 0)}
                             </span>
                           </div>
                           <div>
-                            <p className="text-white font-extrabold text-sm leading-none">Your Cart</p>
-                            <p className="text-white/70 text-[11px] font-medium mt-0.5">
+                            <p className="text-white font-extrabold text-xs sm:text-sm leading-none">Your Cart</p>
+                            <p className="text-white/70 text-[10px] sm:text-[11px] font-medium mt-0.5">
                               {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
                             </p>
                           </div>
@@ -1157,24 +1158,24 @@ export const DiscoveryPage = () => {
                         <button
                           onClick={() => setIsCartClosed(true)}
                           title="Close Cart temporarily"
-                          className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center transition-all active:scale-90 cursor-pointer text-white"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center transition-all active:scale-90 cursor-pointer text-white"
                         >
-                          <X className="w-4 h-4 text-white" />
+                          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                         </button>
                       </div>
 
-                      {/* Item preview list — each with per-item delete button on the right */}
-                      <div className="space-y-1.5 mb-3 max-h-[220px] overflow-y-auto scrollbar-none">
-                        {cartItems.map((item) => (
-                          <div key={item.productId} className="flex items-center justify-between gap-2 bg-white/10 rounded-xl px-2.5 py-1.5 backdrop-blur-sm">
-                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Item preview list — compact height on mobile (max 3 items when collapsed) */}
+                      <div className={`space-y-1 mb-2 sm:mb-3 scrollbar-none ${showAllMobileCartItems ? 'max-h-[200px] overflow-y-auto' : 'max-h-[125px] sm:max-h-[145px] xl:max-h-[220px] overflow-hidden xl:overflow-y-auto'}`}>
+                        {cartItems.map((item, index) => (
+                          <div key={item.productId} className={`items-center justify-between gap-2 bg-white/10 rounded-xl px-2 py-1 sm:px-2.5 sm:py-1.5 backdrop-blur-sm ${index >= 3 && !showAllMobileCartItems ? 'hidden xl:flex' : 'flex'}`}>
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                               <img
                                 src={item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=60'}
                                 alt={item.name}
-                                className="w-8 h-8 rounded-lg object-cover shrink-0 shadow-sm"
+                                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shrink-0 shadow-sm"
                               />
-                              <span className="text-white text-xs font-bold truncate">{item.name}</span>
-                              <span className="shrink-0 bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                              <span className="text-white text-[11px] sm:text-xs font-bold truncate">{item.name}</span>
+                              <span className="shrink-0 bg-white/20 text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-full">
                                 ×{item.quantity}
                               </span>
                             </div>
@@ -1184,41 +1185,62 @@ export const DiscoveryPage = () => {
                                 removeFromCart(item.productId);
                               }}
                               title={`Remove ${item.name}`}
-                              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500/80 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                              className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg bg-white/10 hover:bg-red-500/80 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             </button>
                           </div>
                         ))}
                       </div>
 
-                      {/* Clear All Items Button below all items */}
+                      {/* Interactive toggle button on mobile to expand / scroll all items */}
+                      {cartItems.length > 3 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllMobileCartItems(!showAllMobileCartItems)}
+                          className="w-full text-[10px] sm:text-[11px] font-extrabold text-white/95 hover:text-white text-center py-1 px-2 bg-black/20 hover:bg-black/35 rounded-xl backdrop-blur-sm xl:hidden transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner mb-2"
+                        >
+                          {showAllMobileCartItems ? (
+                            <>
+                              <span>Show fewer items</span>
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </>
+                          ) : (
+                            <>
+                              <span>+ {cartItems.length - 3} more {cartItems.length - 3 === 1 ? 'item' : 'items'} in cart</span>
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      {/* Clear All Items Button */}
                       <button
                         onClick={clearCart}
-                        className="w-full mb-3 py-1.5 rounded-xl bg-black/25 hover:bg-red-600/80 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
+                        className="w-full mb-2 sm:mb-3 py-1 sm:py-1.5 rounded-xl bg-black/25 hover:bg-red-600/80 text-white text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
                         title="Clear all items from cart"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Clear All Items
+                        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        Clear Cart
                       </button>
 
                       {/* Divider */}
-                      <div className="h-px bg-white/20 mb-3" />
+                      <div className="h-px bg-white/20 mb-2 sm:mb-3" />
 
                       {/* Total + CTA */}
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Total</p>
-                          <p className="text-white font-black text-lg leading-tight">
+                          <p className="text-white/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">Total</p>
+                          <p className="text-white font-black text-base sm:text-lg leading-tight">
                             {APP_SETTINGS.currency} {formatPrice(cartTotal)}
                           </p>
                         </div>
                         <button
                           onClick={handleCheckout}
-                          className="flex items-center gap-2 px-5 py-3 bg-white text-primary rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/90 active:scale-95 transition-all cursor-pointer"
+                          className="flex items-center gap-1.5 sm:gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-white text-primary rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg hover:bg-white/90 active:scale-95 transition-all cursor-pointer"
                         >
                           Checkout
-                          <ArrowRight className="w-4 h-4" />
+                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
 

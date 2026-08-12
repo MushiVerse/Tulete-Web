@@ -84,7 +84,7 @@ export const CartWidget: React.FC<CartWidgetProps> = ({ onCheckout, className = 
               className="w-full mt-3 text-xs font-bold text-destructive hover:text-destructive/80 transition-colors py-2.5 rounded-xl bg-destructive/10 hover:bg-destructive/15 flex items-center justify-center gap-1.5 cursor-pointer"
               title="Clear all items from cart"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Clear All Items
+              <Trash2 className="w-3.5 h-3.5" /> Clear Cart
             </button>
           </div>
         </>
