@@ -535,7 +535,7 @@ export const analyticsService = {
     if (immediate) {
       executeWrite();
     } else {
-      searchDebounceTimer = setTimeout(executeWrite, 1000);
+      searchDebounceTimer = setTimeout(executeWrite, 2500);
     }
   },
 

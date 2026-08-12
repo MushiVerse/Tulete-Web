@@ -2,6 +2,7 @@ import { algoliasearch } from 'algoliasearch';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { analyticsService } from '../../services/analyticsService';
+import { isItemFuzzyMatch } from '../../shared/utils/fuzzyMatch';
 
 const APP_ID = import.meta.env.VITE_ALGOLIA_APP_ID || 'IU2RKVQF8F';
 const SEARCH_KEY = import.meta.env.VITE_ALGOLIA_SEARCH_KEY || '25b7fb23ef5b9383d5d399c29a1472ad';
@@ -68,7 +69,117 @@ export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: 
   return true;
 }
 
-// Helper function to query the unified index
+// Cache for Firestore fallback items
+let firestoreCache: { data: any[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+async function getFirestoreFallbackItems(): Promise<any[]> {
+  const now = Date.now();
+  if (firestoreCache && now - firestoreCache.timestamp < CACHE_TTL_MS) {
+    return firestoreCache.data;
+  }
+
+  try {
+    const collectionsToFetch = [
+      { name: 'foods', type: 'food' },
+      { name: 'products', type: 'product' },
+      { name: 'cloths', type: 'cloth' },
+      { name: 'foodStores', type: 'store' }
+    ];
+
+    const results = await Promise.allSettled(
+      collectionsToFetch.map(async (col) => {
+        const snap = await getDocs(collection(db, col.name));
+        return snap.docs.map((d) => ({
+          objectID: d.id,
+          id: d.id,
+          recordType: col.type,
+          _collection: col.name,
+          ...d.data(),
+        }));
+      })
+    );
+
+    const items: any[] = [];
+    results.forEach((res) => {
+      if (res.status === 'fulfilled') {
+        items.push(...res.value);
+      }
+    });
+
+    firestoreCache = { data: items, timestamp: now };
+    return items;
+  } catch (e) {
+    console.warn('Firestore fallback fetch error:', e);
+    return firestoreCache ? firestoreCache.data : [];
+  }
+}
+
+async function searchFirestoreFallback(
+  query: string,
+  options: SearchOptions,
+  allowStoresAndBrands: boolean
+) {
+  const allItems = await getFirestoreFallbackItems();
+  const filterStr = String(options.filters || '').toLowerCase();
+
+  // Determine category constraints from filter string
+  const isFoodFilter = filterStr.includes('food');
+  const isProductFilter = filterStr.includes('product');
+  const isLaundryFilter = filterStr.includes('cloth') || filterStr.includes('laundry') || filterStr.includes('nguo');
+
+  let filtered = allItems.filter((item) => {
+    if (!isValidSearchItem(item, { allowStoresAndBrands })) return false;
+
+    // Filter by record type / category if explicit filter requested
+    if (isFoodFilter) {
+      const isFood = item.recordType === 'food' || item._collection === 'foods' || String(item.category || item.cat || '').toLowerCase().includes('food');
+      if (!isFood) return false;
+    } else if (isProductFilter) {
+      const isProduct = item.recordType === 'product' || item._collection === 'products' || String(item.category || item.cat || '').toLowerCase().includes('product') || String(item.category || item.cat || '').toLowerCase().includes('shopping');
+      if (!isProduct) return false;
+    } else if (isLaundryFilter) {
+      const isLaundry = item.recordType === 'cloth' || item._collection === 'cloths' || String(item.category || item.cat || '').toLowerCase().includes('laundry') || String(item.category || item.cat || '').toLowerCase().includes('nguo');
+      if (!isLaundry) return false;
+    }
+
+    if (!query || !query.trim()) return true;
+
+    return isItemFuzzyMatch(query, item, [
+      'name',
+      'nam1',
+      'brand',
+      'pbrand',
+      'store',
+      'storeName',
+      'category',
+      'cat',
+      'subCat',
+      'subCategory',
+      'description',
+      'desc',
+    ]);
+  });
+
+  const hitsPerPage = options.hitsPerPage || 20;
+  const page = options.page || 0;
+
+  const totalHits = filtered.length;
+  const totalPages = Math.ceil(totalHits / hitsPerPage) || 1;
+  const startIndex = page * hitsPerPage;
+  const paginatedHits = filtered.slice(startIndex, startIndex + hitsPerPage);
+
+  const resultArr: any = paginatedHits;
+  resultArr.hits = paginatedHits;
+  resultArr.page = page;
+  resultArr.nbPages = totalPages;
+  resultArr.nbHits = totalHits;
+  resultArr.rawCount = paginatedHits.length;
+
+  return resultArr;
+}
+
+// Helper function to query the unified index with Firestore fallback
 export const searchTuleteItems = async (
   query: string, 
   filtersOrOptions?: string | SearchOptions
@@ -87,39 +198,40 @@ export const searchTuleteItems = async (
     filterStr.includes('recordType:brand') || 
     filterStr.includes('recordType:store');
 
+  // Sanitize params specifically for Algolia request to prevent unknown parameter rejection
+  const algoliaParams: any = {
+    indexName: 'tulete_items',
+    query: query || '',
+  };
+  if (options.filters) algoliaParams.filters = options.filters;
+  if (options.numericFilters) algoliaParams.numericFilters = options.numericFilters;
+  if (options.hitsPerPage !== undefined) algoliaParams.hitsPerPage = options.hitsPerPage;
+  if (options.page !== undefined) algoliaParams.page = options.page;
+  if (options.aroundLatLng) algoliaParams.aroundLatLng = options.aroundLatLng;
+
   try {
     const { results } = await algoliaClient.search({
-      requests: [
-        {
-          indexName: 'tulete_items',
-          query,
-          ...options,
-        },
-      ],
+      requests: [algoliaParams],
     });
     const res = (results[0] as any) || {};
     const rawHits = (res.hits || []) as any[];
     const validHits = rawHits.filter(hit => isValidSearchItem(hit, { allowStoresAndBrands }));
 
-    // Attach pagination metadata onto array for components that need page/nbPages
-    const resultArr: any = validHits;
-    resultArr.hits = validHits;
-    resultArr.page = res.page ?? 0;
-    resultArr.nbPages = res.nbPages ?? 1;
-    resultArr.nbHits = res.nbHits ?? validHits.length;
-    resultArr.rawCount = rawHits.length;
-
-    return resultArr;
+    if (validHits.length > 0) {
+      const resultArr: any = validHits;
+      resultArr.hits = validHits;
+      resultArr.page = res.page ?? 0;
+      resultArr.nbPages = res.nbPages ?? 1;
+      resultArr.nbHits = res.nbHits ?? validHits.length;
+      resultArr.rawCount = rawHits.length;
+      return resultArr;
+    }
   } catch (error) {
-    console.error('Algolia Search Error:', error);
-    const emptyArr: any = [];
-    emptyArr.hits = [];
-    emptyArr.page = 0;
-    emptyArr.nbPages = 0;
-    emptyArr.nbHits = 0;
-    emptyArr.rawCount = 0;
-    return emptyArr;
+    console.warn('Algolia Search Warning/Fallback:', error);
   }
+
+  // Fallback to Firestore when Algolia returns 0 hits or errors out
+  return searchFirestoreFallback(query, options, allowStoresAndBrands);
 };
 
 /**
