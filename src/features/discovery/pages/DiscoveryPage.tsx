@@ -103,7 +103,7 @@ import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { locationService } from '../../location/services/locationService';
 import { DiscoveryMap } from '../components/DiscoveryMap';
-import { getDeliveryFee } from '../../location/hooks/useDynamicPrice';
+import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { toast } from 'sonner';
@@ -1067,12 +1067,14 @@ export const DiscoveryPage = () => {
                         const resolvedIsFood = isFoodItem(item);
                         const itemCategory = resolveItemCategory(item);
 
+                        const baseItemPrice = item.basePrice !== undefined ? Number(item.basePrice) : (item.price !== undefined ? Number(item.price) : 0);
                         const product = {
                           ...item,
                           id: item.objectID || item.id,
                           name: item.name || '',
                           description: item.description || '',
-                          price: item.price !== undefined ? Number(item.price) : 0,
+                          price: baseItemPrice,
+                          basePrice: baseItemPrice,
                           oldprice: item.oldprice !== undefined ? Number(item.oldprice) : undefined,
                           imgUrl: resolvedImg,
                           imageUrl: resolvedImg,
@@ -1321,12 +1323,40 @@ export const DiscoveryPage = () => {
                         <Store className="w-4 h-4" /> {quickViewProduct.store}
                       </p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-primary font-extrabold text-2xl">{APP_SETTINGS.currency} {formatPrice(quickViewProduct.price)}</p>
-                      {quickViewProduct.oldprice && quickViewProduct.oldprice > quickViewProduct.price && (
-                        <p className="text-muted-foreground line-through text-sm">{APP_SETTINGS.currency} {formatPrice(quickViewProduct.oldprice)}</p>
-                      )}
-                    </div>
+                    {(() => {
+                      const quickViewBasePrice = quickViewProduct.basePrice !== undefined ? Number(quickViewProduct.basePrice) : Number(quickViewProduct.price || 0);
+                      const quickViewCat = quickViewProduct.cat || quickViewProduct.category || 'Product';
+                      const isLaundryCat = quickViewCat === 'Nguo' || isLaundryItem(quickViewProduct);
+                      const quickViewDynamicPrice = getItemPriceWithDelivery(
+                        quickViewBasePrice,
+                        currentLocation,
+                        quickViewProduct.location,
+                        quickViewProduct.storeId,
+                        isLaundryCat,
+                        undefined,
+                        quickViewCat
+                      );
+                      const quickViewOldPrice = quickViewProduct.oldprice
+                        ? getItemPriceWithDelivery(
+                            Number(quickViewProduct.oldprice),
+                            currentLocation,
+                            quickViewProduct.location,
+                            quickViewProduct.storeId,
+                            isLaundryCat,
+                            undefined,
+                            quickViewCat
+                          )
+                        : undefined;
+
+                      return (
+                        <div className="text-right shrink-0">
+                          <p className="text-primary font-extrabold text-2xl">{APP_SETTINGS.currency} {formatPrice(quickViewDynamicPrice)}</p>
+                          {quickViewOldPrice && quickViewOldPrice > quickViewDynamicPrice && (
+                            <p className="text-muted-foreground line-through text-sm">{APP_SETTINGS.currency} {formatPrice(quickViewOldPrice)}</p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {quickViewProduct.description && (
@@ -1362,8 +1392,14 @@ export const DiscoveryPage = () => {
                     <button
                       onClick={() => {
                         const targetId = quickViewProduct.id || quickViewProduct.objectID;
+                        const quickViewBasePrice = quickViewProduct.basePrice !== undefined ? Number(quickViewProduct.basePrice) : Number(quickViewProduct.price || 0);
+                        const cleanProduct = {
+                          ...quickViewProduct,
+                          price: quickViewBasePrice,
+                          basePrice: quickViewBasePrice,
+                        };
                         setQuickViewProduct(null);
-                        navigate(`/product/${encodeURIComponent(targetId)}`, { state: { product: quickViewProduct } });
+                        navigate(`/product/${encodeURIComponent(targetId)}`, { state: { product: cleanProduct } });
                       }}
                       className="w-full py-3.5 px-4 rounded-2xl border border-primary/30 bg-primary/10 text-primary font-extrabold text-sm hover:bg-primary/20 transition-all flex items-center justify-center gap-2 shadow-xs"
                     >

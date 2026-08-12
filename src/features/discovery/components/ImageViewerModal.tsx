@@ -64,7 +64,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 md:p-6 select-none"
+        className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 md:p-6 select-none"
         onClick={onClose}
       >
         {/* Header Bar */}
