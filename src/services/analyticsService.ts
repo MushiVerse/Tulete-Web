@@ -1,4 +1,4 @@
-import { doc, setDoc, increment, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, increment, arrayUnion, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '../core/firebase/config';
 
 /**
@@ -245,23 +245,28 @@ export const analyticsService = {
   },
 
   /**
-   * Track rating submission for an item.
+   * Track rating submission for an item (recording count, rating value, rating sum, star breakdown & individual rating logs).
    */
   async trackRating(itemId: string, ratingStars: number, itemData?: any): Promise<void> {
     if (!itemId) return;
     try {
       const cleanId = String(itemId).trim();
       const safeKey = sanitizeKey(cleanId);
+      const stars = Math.min(5, Math.max(1, Number(ratingStars) || 5));
       const today = getTodayDateString();
 
       const overviewRef = doc(db, 'analytics', 'overview');
       const dailyRef = doc(db, 'analytics_daily', today);
       const itemRef = doc(db, 'analytics_items', cleanId);
+      const ratingLogRef = doc(db, 'analytics_ratings', `${cleanId}_${Date.now()}`);
 
       const itemPayload: any = {
         itemId: cleanId,
         ratingCount: increment(1),
-        lastRatingGiven: ratingStars,
+        ratingSum: increment(stars),
+        ratings: arrayUnion(stars),
+        [`starBreakdown.${stars}Star`]: increment(1),
+        lastRatingGiven: stars,
         lastRatedAt: serverTimestamp(),
       };
       if (itemData?.name || itemData?.title) {
@@ -273,7 +278,11 @@ export const analyticsService = {
           overviewRef,
           {
             totalRatings: increment(1),
+            totalRatingSum: increment(stars),
             [`ratedItems.${safeKey}`]: increment(1),
+            [`ratedItemsSum.${safeKey}`]: increment(stars),
+            [`ratedItemsLastValue.${safeKey}`]: stars,
+            [`starBreakdown.${stars}Star`]: increment(1),
             lastUpdated: serverTimestamp(),
           },
           { merge: true }
@@ -283,11 +292,22 @@ export const analyticsService = {
           {
             date: today,
             ratings: increment(1),
+            ratingSum: increment(stars),
             lastUpdated: serverTimestamp(),
           },
           { merge: true }
         ),
         setDoc(itemRef, itemPayload, { merge: true }),
+        setDoc(
+          ratingLogRef,
+          {
+            itemId: cleanId,
+            name: itemData?.name || itemData?.title || '',
+            rating: stars,
+            createdAt: serverTimestamp(),
+          },
+          { merge: true }
+        ),
       ]);
     } catch (err) {
       console.warn('[Analytics] Failed to track rating:', err);
