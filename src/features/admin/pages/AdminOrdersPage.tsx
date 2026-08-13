@@ -173,7 +173,16 @@ export const AdminOrdersPage: React.FC = () => {
     const data = d.data();
     const rawTime = data.time || data.timestamp || data.date || data.createdAt || data.orderDate || data.updatedAt;
     const tsMs = parseTimestampMs(rawTime, d.id);
-    const dateStr = tsMs > 0 ? new Date(tsMs).toLocaleString() : 'N/A';
+    const dateStr = tsMs > 0
+      ? new Date(tsMs).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+      : 'N/A';
 
     const items = data.items || data.cartItems || data.products || [];
     const storeNames = Array.from(new Set(items.map((i: any) => i.storeName || i.store || data.storeName || data.store || '').filter(Boolean)));
@@ -442,30 +451,35 @@ export const AdminOrdersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs: Online vs POS vs All */}
-      <div className={`p-2 rounded-2xl border flex flex-wrap items-center justify-between gap-3 ${cardBg}`}>
-        <div className="flex items-center gap-2">
+      {/* Tabs / Document Filter Chips: Online vs POS vs All */}
+      <div className={`p-2.5 sm:p-2 rounded-2xl border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 ${cardBg}`}>
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between sm:justify-center gap-2 transition-all cursor-pointer border w-full sm:w-auto ${
               activeTab === 'all'
                 ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
                 : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            All Orders ({totalCombinedCount})
+            <span>All Orders</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-black/20 text-white border border-white/20 font-black">
+              {totalCombinedCount}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveTab('online')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer border ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between sm:justify-start gap-2 transition-all cursor-pointer border w-full sm:w-auto ${
               activeTab === 'online'
                 ? 'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-600/20'
                 : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <Globe className="w-4 h-4" />
-            <span>Online Orders (newcomfirmedorders)</span>
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 shrink-0" />
+              <span>Online Orders</span>
+            </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-sky-500/20 text-white border border-sky-400/30 font-black">
               {totalOnlineCount}
             </span>
@@ -473,29 +487,31 @@ export const AdminOrdersPage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('pos')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer border ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between sm:justify-start gap-2 transition-all cursor-pointer border w-full sm:w-auto ${
               activeTab === 'pos'
                 ? 'bg-amber-600 text-white border-amber-600 shadow-lg shadow-amber-600/20'
                 : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <Building2 className="w-4 h-4" />
-            <span>POS Laundry Office Orders (orders)</span>
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 shrink-0" />
+              <span>POS Laundry Office</span>
+            </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-white border border-amber-400/30 font-black">
               {totalPosCount}
             </span>
           </button>
         </div>
 
-        <div className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+        <div className={`px-3 py-1.5 rounded-xl text-xs font-bold border text-center sm:text-left w-full sm:w-auto ${isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
           Collection: <strong className="text-primary font-black">{activeTab === 'online' ? 'newcomfirmedorders' : activeTab === 'pos' ? 'orders' : 'newcomfirmedorders + orders'}</strong>
         </div>
       </div>
 
       {/* Date Range Picker & Search Toolbar */}
-      <div className={`p-5 rounded-3xl border shadow-xl space-y-4 ${cardBg}`}>
+      <div className={`p-4 sm:p-5 rounded-3xl border shadow-xl space-y-4 ${cardBg}`}>
         {/* Top Row: Search & Select Filters */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
           {/* Search Box */}
           <div className="relative flex-1 w-full">
             <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${textMuted}`} />
@@ -508,12 +524,12 @@ export const AdminOrdersPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             {/* Store Filter */}
             <select
               value={storeFilter}
               onChange={(e) => setStoreFilter(e.target.value)}
-              className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 shrink-0 ${inputBg}`}
+              className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 w-full sm:w-auto min-w-0 max-w-full shrink-0 ${inputBg}`}
             >
               <option value="all">All Stores & POS Branches</option>
               {allStoreNames.map((s) => (
@@ -525,7 +541,7 @@ export const AdminOrdersPage: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 shrink-0 ${inputBg}`}
+              className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 w-full sm:w-auto min-w-0 max-w-full shrink-0 ${inputBg}`}
             >
               <option value="all">All Statuses</option>
               {allStatuses.map((st) => (
@@ -535,18 +551,20 @@ export const AdminOrdersPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Date Range Picker (NO DEFAULT START DATE) & Presets */}
-        <div className={`flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-200/80'}`}>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className={`flex items-center gap-3 px-3.5 py-1.5 rounded-2xl border ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-slate-100 border-slate-200'}`}>
+        {/* Date Range Picker & Presets */}
+        <div className={`flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-200/80'}`}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full xl:w-auto">
+            <div className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-2.5 sm:px-3.5 sm:py-1.5 rounded-2xl border w-full sm:w-auto ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-slate-100 border-slate-200'}`}>
               {/* From Pill */}
               <div 
                 onClick={openFromPicker}
-                className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-primary transition-colors"
+                className="flex items-center justify-between sm:justify-start gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-primary transition-colors w-full sm:w-auto"
                 title="Click to select custom start date"
               >
-                <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-primary' : 'text-primary'}`} />
-                <span className={textMuted}>From:</span>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 shrink-0 text-primary" />
+                  <span className={textMuted}>From:</span>
+                </div>
                 <input
                   ref={fromInputRef}
                   type="date"
@@ -557,20 +575,22 @@ export const AdminOrdersPage: React.FC = () => {
                     openFromPicker();
                   }}
                   style={{ colorScheme: isDark ? 'dark' : 'light' }}
-                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer ${inputBg}`}
+                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer w-full sm:w-auto ${inputBg}`}
                 />
               </div>
 
-              <span className={`font-bold ${textMuted}`}>—</span>
+              <span className={`hidden sm:inline font-bold ${textMuted}`}>—</span>
 
               {/* To Pill */}
               <div 
                 onClick={openToPicker}
-                className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-primary transition-colors"
+                className="flex items-center justify-between sm:justify-start gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-primary transition-colors w-full sm:w-auto"
                 title="Click to select custom end date"
               >
-                <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-primary' : 'text-primary'}`} />
-                <span className={textMuted}>To:</span>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 shrink-0 text-primary" />
+                  <span className={textMuted}>To:</span>
+                </div>
                 <input
                   ref={toInputRef}
                   type="date"
@@ -581,7 +601,7 @@ export const AdminOrdersPage: React.FC = () => {
                     openToPicker();
                   }}
                   style={{ colorScheme: isDark ? 'dark' : 'light' }}
-                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer ${inputBg}`}
+                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer w-full sm:w-auto ${inputBg}`}
                 />
               </div>
             </div>
@@ -589,7 +609,7 @@ export const AdminOrdersPage: React.FC = () => {
             {(startDate || endDate) && (
               <button
                 onClick={() => { setStartDate(''); setEndDate(''); }}
-                className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                className="px-3 py-2 sm:py-1.5 rounded-xl text-xs font-extrabold bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20 transition-all cursor-pointer w-full sm:w-auto text-center"
               >
                 Clear Dates
               </button>
@@ -597,22 +617,22 @@ export const AdminOrdersPage: React.FC = () => {
           </div>
 
           {/* Quick Date Presets */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`text-[11px] font-bold mr-1 ${textMuted}`}>Presets:</span>
+          <div className="flex flex-wrap items-center gap-1.5 w-full xl:w-auto">
+            <span className={`text-[11px] font-bold mr-1 ${textMuted} w-full sm:w-auto mb-1 sm:mb-0`}>Presets:</span>
             <button
               onClick={() => { setStartDate(''); setEndDate(''); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 !startDate && !endDate
                   ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              All Time (Ever Since)
+              All Time
             </button>
 
             <button
               onClick={() => { setStartDate(getTodayDateString()); setEndDate(getTodayDateString()); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 startDate === getTodayDateString() && endDate === getTodayDateString()
                   ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -623,7 +643,7 @@ export const AdminOrdersPage: React.FC = () => {
 
             <button
               onClick={() => { setStartDate(getNDaysAgoString(7)); setEndDate(getTodayDateString()); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 startDate === getNDaysAgoString(7) && endDate === getTodayDateString()
                   ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -634,7 +654,7 @@ export const AdminOrdersPage: React.FC = () => {
 
             <button
               onClick={() => { setStartDate(getNDaysAgoString(30)); setEndDate(getTodayDateString()); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 startDate === getNDaysAgoString(30) && endDate === getTodayDateString()
                   ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'

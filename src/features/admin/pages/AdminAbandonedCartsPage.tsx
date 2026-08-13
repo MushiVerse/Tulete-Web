@@ -228,7 +228,26 @@ export const AdminAbandonedCartsPage: React.FC = () => {
               <tbody className={`divide-y text-xs font-medium ${isDark ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                 {paginatedCarts.map((cart, idx) => {
                   const itemsList = cart.items || [];
-                  const timeStr = cart.lastCartUpdate?.toDate ? cart.lastCartUpdate.toDate().toLocaleString() : 'Recent';
+                  let dateObj: Date | null = null;
+                  if (cart.lastCartUpdate?.toDate) {
+                    dateObj = cart.lastCartUpdate.toDate();
+                  } else if (typeof cart.lastCartUpdate?.seconds === 'number') {
+                    dateObj = new Date(cart.lastCartUpdate.seconds * 1000);
+                  } else if (cart.lastCartUpdate) {
+                    const d = new Date(cart.lastCartUpdate);
+                    if (!isNaN(d.getTime())) dateObj = d;
+                  }
+
+                  const timeStr = dateObj
+                    ? dateObj.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      })
+                    : 'Recent';
                   const isConverted = cart.status === 'converted';
 
                   return (

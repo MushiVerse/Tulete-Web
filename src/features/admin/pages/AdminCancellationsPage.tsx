@@ -216,6 +216,30 @@ export const AdminCancellationsPage: React.FC = () => {
     return 0;
   };
 
+  const formatAdminDateTime = (val: any): string => {
+    if (!val) return 'Recent';
+    let d: Date | null = null;
+    if (typeof val === 'number' && val > 0) {
+      d = new Date(val);
+    } else if (typeof val?.toDate === 'function') {
+      d = val.toDate();
+    } else if (typeof val?.seconds === 'number') {
+      d = new Date(val.seconds * 1000);
+    } else if (val) {
+      const parsed = new Date(val);
+      if (!isNaN(parsed.getTime())) d = parsed;
+    }
+    if (!d) return 'Recent';
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
   const filteredCancellations = cancellations.filter((c) => {
     // 1. Date Range Filter (From startDate To endDate)
     if (startDate || endDate) {
@@ -355,9 +379,9 @@ export const AdminCancellationsPage: React.FC = () => {
       </div>
 
       {/* Modern Date Range Picker & Search Toolbar */}
-      <div className={`p-5 rounded-3xl border shadow-xl space-y-4 ${cardBg}`}>
+      <div className={`p-4 sm:p-5 rounded-3xl border shadow-xl space-y-4 ${cardBg}`}>
         {/* Top Row: Search & Filters */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
           {/* Search Box */}
           <div className="relative flex-1 w-full">
             <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${textMuted}`} />
@@ -374,7 +398,7 @@ export const AdminCancellationsPage: React.FC = () => {
           <select
             value={whoFilter}
             onChange={(e) => setWhoFilter(e.target.value)}
-            className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/50 shrink-0 w-full lg:w-auto ${inputBg}`}
+            className={`h-11 px-4 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/50 w-full lg:w-auto min-w-0 max-w-full shrink-0 ${inputBg}`}
           >
             <option value="all">All Initiators</option>
             <option value="customer">Cancelled by Customer</option>
@@ -384,19 +408,21 @@ export const AdminCancellationsPage: React.FC = () => {
           </select>
         </div>
 
-        {/* Bottom Row: Modern Date Range Picker & Quick Presets */}
-        <div className={`flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-200/80'}`}>
+        {/* Bottom Row: Date Range Picker & Presets */}
+        <div className={`flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-200/80'}`}>
           {/* Custom Date Pickers */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className={`flex items-center gap-3 px-3.5 py-1.5 rounded-2xl border ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-slate-100 border-slate-200'}`}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full xl:w-auto">
+            <div className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-2.5 sm:px-3.5 sm:py-1.5 rounded-2xl border w-full sm:w-auto ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-slate-100 border-slate-200'}`}>
               {/* From Pill */}
               <div 
                 onClick={openFromPicker}
-                className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-rose-500 transition-colors"
+                className="flex items-center justify-between sm:justify-start gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-rose-500 transition-colors w-full sm:w-auto"
                 title="Click to open calendar picker panel"
               >
-                <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-rose-400' : 'text-rose-600'}`} />
-                <span className={textMuted}>From:</span>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-rose-400' : 'text-rose-600'}`} />
+                  <span className={textMuted}>From:</span>
+                </div>
                 <input
                   ref={fromInputRef}
                   type="date"
@@ -407,20 +433,22 @@ export const AdminCancellationsPage: React.FC = () => {
                     openFromPicker();
                   }}
                   style={{ colorScheme: isDark ? 'dark' : 'light' }}
-                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer ${inputBg}`}
+                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer w-full sm:w-auto ${inputBg}`}
                 />
               </div>
 
-              <span className={`font-bold ${textMuted}`}>—</span>
+              <span className={`hidden sm:inline font-bold ${textMuted}`}>—</span>
 
               {/* To Pill */}
               <div 
                 onClick={openToPicker}
-                className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-rose-500 transition-colors"
+                className="flex items-center justify-between sm:justify-start gap-1.5 text-xs font-extrabold cursor-pointer group hover:text-rose-500 transition-colors w-full sm:w-auto"
                 title="Click to open calendar picker panel"
               >
-                <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-rose-400' : 'text-rose-600'}`} />
-                <span className={textMuted}>To:</span>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className={`w-4 h-4 shrink-0 group-hover:scale-110 transition-transform ${isDark ? 'text-rose-400' : 'text-rose-600'}`} />
+                  <span className={textMuted}>To:</span>
+                </div>
                 <input
                   ref={toInputRef}
                   type="date"
@@ -431,18 +459,27 @@ export const AdminCancellationsPage: React.FC = () => {
                     openToPicker();
                   }}
                   style={{ colorScheme: isDark ? 'dark' : 'light' }}
-                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer ${inputBg}`}
+                  className={`h-8 px-2 rounded-xl text-xs font-black focus:outline-none cursor-pointer w-full sm:w-auto ${inputBg}`}
                 />
               </div>
             </div>
+
+            {(startDate || endDate) && (
+              <button
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                className="px-3 py-2 sm:py-1.5 rounded-xl text-xs font-extrabold bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20 transition-all cursor-pointer w-full sm:w-auto text-center"
+              >
+                Clear Dates
+              </button>
+            )}
           </div>
 
           {/* Quick Date Presets */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`text-[11px] font-bold mr-1 ${textMuted}`}>Presets:</span>
+          <div className="flex flex-wrap items-center gap-1.5 w-full xl:w-auto">
+            <span className={`text-[11px] font-bold mr-1 ${textMuted} w-full sm:w-auto mb-1 sm:mb-0`}>Presets:</span>
             <button
               onClick={() => { setStartDate('2026-08-12'); setEndDate(getTodayDateString()); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 startDate === '2026-08-12' && endDate === getTodayDateString()
                   ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -453,7 +490,7 @@ export const AdminCancellationsPage: React.FC = () => {
 
             <button
               onClick={() => { setStartDate(getTodayDateString()); setEndDate(getTodayDateString()); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 startDate === getTodayDateString() && endDate === getTodayDateString()
                   ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -464,7 +501,7 @@ export const AdminCancellationsPage: React.FC = () => {
 
             <button
               onClick={() => { setStartDate(getNDaysAgoString(7)); setEndDate(getTodayDateString()); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 startDate === getNDaysAgoString(7) && endDate === getTodayDateString()
                   ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -475,7 +512,7 @@ export const AdminCancellationsPage: React.FC = () => {
 
             <button
               onClick={() => { setStartDate(getNDaysAgoString(30)); setEndDate(getTodayDateString()); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 startDate === getNDaysAgoString(30) && endDate === getTodayDateString()
                   ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -486,7 +523,7 @@ export const AdminCancellationsPage: React.FC = () => {
 
             <button
               onClick={() => { setStartDate(''); setEndDate(''); }}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border flex-1 sm:flex-none text-center ${
                 !startDate && !endDate
                   ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
                   : isDark ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -519,7 +556,7 @@ export const AdminCancellationsPage: React.FC = () => {
           <div className={`divide-y overflow-x-auto ${isDark ? 'divide-slate-800/80' : 'divide-slate-200'}`}>
             {paginatedCancellations.map((c) => {
               const itemTs = getRecordTimestamp(c);
-              const dateStr = itemTs > 0 ? new Date(itemTs).toLocaleString() : (c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString() : 'Recent');
+              const dateStr = formatAdminDateTime(itemTs > 0 ? itemTs : c.createdAt);
               const itemsList = c.items || [];
               const storeNames = Array.from(new Set(itemsList.map((i: any) => i.storeName || i.store).filter(Boolean)));
               const primaryStore = storeNames.join(', ') || 'Store / Kitchen';
@@ -627,7 +664,7 @@ export const AdminCancellationsPage: React.FC = () => {
                     Order #{selectedOrder.orderId || selectedOrder.id}
                   </h2>
                   <p className={`text-xs font-semibold mt-0.5 ${textMuted}`}>
-                    Cancelled on {selectedOrder.createdAt?.toDate ? selectedOrder.createdAt.toDate().toLocaleString() : 'Recent'}
+                    Cancelled on {formatAdminDateTime(getRecordTimestamp(selectedOrder) || selectedOrder.createdAt)}
                   </p>
                 </div>
 

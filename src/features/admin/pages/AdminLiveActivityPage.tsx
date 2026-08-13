@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
-import { 
-  Activity, Users, Search, Eye, Heart, ShoppingCart, Star, Clock, XCircle 
+import {
+  Activity, Users, Search, Eye, Heart, ShoppingCart, Star, Clock, XCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminTheme } from '../context/AdminThemeContext';
@@ -68,9 +68,16 @@ export const AdminLiveActivityPage: React.FC = () => {
       });
 
       list.sort((a, b) => {
-        const timeA = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : 0;
-        const timeB = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : 0;
-        return timeB - timeA;
+        const getTs = (item: any) => {
+          if (item.timestamp?.toDate) return item.timestamp.toDate().getTime();
+          if (typeof item.timestamp?.seconds === 'number') return item.timestamp.seconds * 1000;
+          if (item.timestamp) {
+            const t = new Date(item.timestamp).getTime();
+            if (!isNaN(t)) return t;
+          }
+          return 0;
+        };
+        return getTs(b) - getTs(a);
       });
 
       setEvents(list);
@@ -177,7 +184,30 @@ export const AdminLiveActivityPage: React.FC = () => {
               {paginatedEvents.map((ev, idx) => {
                 const config = getEventBadge(ev.eventType);
                 const Icon = config.icon;
-                const timeStr = ev.timestamp?.toDate ? ev.timestamp.toDate().toLocaleTimeString() : 'Just now';
+
+                let dateObj: Date | null = null;
+                if (ev.timestamp?.toDate) {
+                  dateObj = ev.timestamp.toDate();
+                } else if (typeof ev.timestamp?.seconds === 'number') {
+                  dateObj = new Date(ev.timestamp.seconds * 1000);
+                } else if (ev.timestamp) {
+                  const d = new Date(ev.timestamp);
+                  if (!isNaN(d.getTime())) dateObj = d;
+                }
+
+                let datePart = '';
+                let yearPart = '';
+                let timeOnly = '';
+
+                if (dateObj) {
+                  datePart = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  yearPart = dateObj.getFullYear().toString();
+                  timeOnly = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                }
+
+                const timeStr = dateObj
+                  ? `${datePart}, ${yearPart}, ${timeOnly}`
+                  : 'Just now';
 
                 const uId = ev.userId || ev.uid || 'guest_user';
                 const rawName = ev.userName || ev.name || ev.displayName || ev.userEmail || ev.email || userNamesMap[uId];
@@ -190,9 +220,8 @@ export const AdminLiveActivityPage: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2, delay: idx * 0.015 }}
-                    className={`p-4 rounded-2xl border flex items-center justify-between gap-4 transition-colors ${
-                      isDark ? 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                    }`}
+                    className={`p-4 rounded-2xl border flex items-center justify-between gap-4 transition-colors ${isDark ? 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                      }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${config.color}`}>
@@ -228,8 +257,24 @@ export const AdminLiveActivityPage: React.FC = () => {
                     </div>
 
                     <div className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${textMuted}`}>
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{timeStr}</span>
+                      <Clock className="w-3.5 h-3.5 shrink-0 hidden sm:block" />
+                      {dateObj ? (
+                        <>
+                          {/* Desktop View (Single row) */}
+                          <span className="hidden sm:inline">
+                            {timeStr}
+                          </span>
+
+                          {/* Mobile View (Shrunk into 2-3 rows to save space) */}
+                          <div className="flex flex-col items-end text-right text-[10px] leading-snug font-bold sm:hidden">
+                            <span>{datePart}</span>
+                            <span className="text-[9px] opacity-75">{yearPart}</span>
+                            <span className="text-emerald-500 font-extrabold text-[10px]">{timeOnly}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <span>Just now</span>
+                      )}
                     </div>
                   </motion.div>
                 );
