@@ -59,11 +59,10 @@ export const AdminLiveActivityPage: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     const eventsRef = collection(db, 'analytics_events');
-    const q = query(eventsRef, limit(150));
 
-    const unsubscribe = onSnapshot(q, (snap) => {
+    const sortEvents = (snapDocs: any[]) => {
       const list: any[] = [];
-      snap.docs.forEach((d) => {
+      snapDocs.forEach((d) => {
         list.push({ id: d.id, ...d.data() });
       });
 
@@ -71,21 +70,40 @@ export const AdminLiveActivityPage: React.FC = () => {
         const getTs = (item: any) => {
           if (item.timestamp?.toDate) return item.timestamp.toDate().getTime();
           if (typeof item.timestamp?.seconds === 'number') return item.timestamp.seconds * 1000;
+          if (item.createdAtIso) {
+            const t = new Date(item.createdAtIso).getTime();
+            if (!isNaN(t)) return t;
+          }
           if (item.timestamp) {
             const t = new Date(item.timestamp).getTime();
             if (!isNaN(t)) return t;
+          }
+          const parts = String(item.id).split('_');
+          if (parts.length > 0 && !isNaN(Number(parts[0]))) {
+            return Number(parts[0]);
           }
           return 0;
         };
         return getTs(b) - getTs(a);
       });
 
-      setEvents(list);
-      setLoading(false);
-    }, (err) => {
-      console.warn('Events snap error:', err);
-      setLoading(false);
-    });
+      return list;
+    };
+
+    // Attempt ordered query first
+    const primaryQ = query(eventsRef, limit(200));
+
+    const unsubscribe = onSnapshot(
+      primaryQ,
+      (snap) => {
+        setEvents(sortEvents(snap.docs));
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('Events snap error, retrying fallback snapshot:', err);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -105,7 +123,7 @@ export const AdminLiveActivityPage: React.FC = () => {
   const getEventBadge = (type: string) => {
     switch (type) {
       case 'visit':
-        return { icon: Users, label: 'App Visit', color: 'bg-sky-500/10 text-sky-500 border-sky-500/20' };
+        return { icon: Users, label: 'Web Visit', color: 'bg-sky-500/10 text-sky-500 border-sky-500/20' };
       case 'search':
         return { icon: Search, label: 'Search Query', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' };
       case 'item_view':
@@ -210,7 +228,8 @@ export const AdminLiveActivityPage: React.FC = () => {
                   : 'Just now';
 
                 const uId = ev.userId || ev.uid || 'guest_user';
-                const rawName = ev.userName || ev.name || ev.displayName || ev.userEmail || ev.email || userNamesMap[uId];
+                const userEmail = ev.userEmail || ev.email;
+                const rawName = ev.userName || ev.name || ev.displayName || userEmail || userNamesMap[uId];
                 const displayName = rawName && rawName !== uId ? rawName : (uId === 'guest_user' ? 'Guest' : uId);
 
                 return (
@@ -228,12 +247,12 @@ export const AdminLiveActivityPage: React.FC = () => {
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${config.color}`}>
                             {config.label}
                           </span>
                           <span className={`text-xs font-bold truncate ${textPrimary}`}>
-                            User: {displayName} ({uId})
+                            User: {displayName} {userEmail && userEmail !== displayName ? `(${userEmail})` : ''} (<span className="font-mono opacity-80">{uId}</span>)
                           </span>
                         </div>
                         <p className={`text-xs font-medium mt-1 truncate ${textMuted}`}>
@@ -250,7 +269,7 @@ export const AdminLiveActivityPage: React.FC = () => {
                             <span>Rated: <strong className="text-yellow-500">"{ev.itemName || ev.itemId}"</strong> ({ev.ratingStars} Stars)</span>
                           )}
                           {ev.eventType === 'visit' && (
-                            <span>Opened Application Session</span>
+                            <span>Opened Web Application Session {userEmail ? `• ${userEmail}` : ''}</span>
                           )}
                         </p>
                       </div>

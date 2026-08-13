@@ -57,23 +57,25 @@ async function logActivityEvent(eventData: {
   userEmail?: string;
 }): Promise<void> {
   try {
-    const eventId = `${eventData.userId}_${eventData.eventType}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const timestampMs = Date.now();
+    const eventId = `${timestampMs}_${eventData.userId}_${eventData.eventType}_${Math.random().toString(36).substring(2, 6)}`;
     const eventRef = doc(db, 'analytics_events', eventId);
 
     const userInfo = getCurrentUserInfo(eventData.userId);
 
     const payload: any = {
       ...eventData,
-      userName: eventData.userName || userInfo.name,
+      userName: eventData.userName || userInfo.name || (userInfo.email ? userInfo.email.split('@')[0] : undefined),
       userEmail: eventData.userEmail || userInfo.email,
       timestamp: serverTimestamp(),
+      createdAtIso: new Date(timestampMs).toISOString(),
     };
 
     Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
 
     await setDoc(eventRef, payload, { merge: true });
   } catch (err) {
-    // Silent fallback
+    console.warn('[Analytics] Failed to log activity event:', err);
   }
 }
 
@@ -115,28 +117,35 @@ export const analyticsService = {
       const overviewRef = doc(db, 'analytics', 'overview');
       const dailyRef = doc(db, 'analytics_daily', today);
 
+      const overviewPayload: any = {
+        totalVisitors: increment(1),
+        uidsVisited: arrayUnion(userInfo.userId),
+        lastUpdated: serverTimestamp(),
+      };
+
+      const dailyPayload: any = {
+        date: today,
+        visitors: increment(1),
+        uidsVisited: arrayUnion(userInfo.userId),
+        lastUpdated: serverTimestamp(),
+      };
+
+      if (userInfo.email) {
+        overviewPayload.emails = arrayUnion(userInfo.email);
+        dailyPayload.emails = arrayUnion(userInfo.email);
+      }
+
       await Promise.all([
-        setDoc(
-          overviewRef,
-          {
-            totalVisitors: increment(1),
-            uidsVisited: arrayUnion(userInfo.userId),
-            lastUpdated: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        setDoc(
-          dailyRef,
-          {
-            date: today,
-            visitors: increment(1),
-            uidsVisited: arrayUnion(userInfo.userId),
-            lastUpdated: serverTimestamp(),
-          },
-          { merge: true }
-        ),
+        setDoc(overviewRef, overviewPayload, { merge: true }),
+        setDoc(dailyRef, dailyPayload, { merge: true }),
         updateUserAnalytics(userInfo, { totalVisits: increment(1) }),
-        logActivityEvent({ userId: userInfo.userId, eventType: 'visit' }),
+        logActivityEvent({
+          userId: userInfo.userId,
+          eventType: 'visit',
+          userName: userInfo.name,
+          userEmail: userInfo.email,
+          context: userInfo.email ? `Email: ${userInfo.email}` : undefined,
+        }),
       ]);
     } catch (err) {
       console.warn('[Analytics] Failed to track visitor:', err);
