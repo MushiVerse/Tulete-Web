@@ -32,6 +32,8 @@ import { getNormalizedRating } from '../../../shared/utils/ratingUtils';
 import { resolveItemCategory, resolveImageUrl } from '../../../shared/utils/productPayload';
 import { isItemFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
 import { analyticsService } from '../../../services/analyticsService';
+import { BrandsView } from '../../brands/components/BrandsView';
+import { BrandDetailsView } from '../../brands/components/BrandDetailsView';
 
 const ProductGridItem = ({ product: rawProduct, cartItem, addToCart, updateQuantity, navigate }: any) => {
   const { user } = useAuthStore();
@@ -201,6 +203,7 @@ const PRODUCT_CATEGORIES = [
   { id: 'home', name: 'Home & Living', icon: '🛋️' },
   { id: 'beauty', name: 'Beauty', icon: '💄' },
   { id: 'groceries', name: 'Groceries', icon: '🛒' },
+  { id: 'brands', name: 'Go to Brands', icon: '🏷️' },
 ];
 
 const PROMOS = [
@@ -242,6 +245,7 @@ export const ProductsPage = () => {
   const { items: cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotals } = useCartStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<{ name: string; category: string } | null>(null);
   const [expandedDepartments, setExpandedDepartments] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -313,36 +317,49 @@ export const ProductsPage = () => {
   });
 
   const hierarchicalDepartments = React.useMemo(() => {
+    let baseList: any[] = [];
     if (ecommerceCats.length === 0) {
-      return PRODUCT_CATEGORIES.map(c => ({
+      baseList = PRODUCT_CATEGORIES.map(c => ({
         id: c.id,
         name: c.name,
         icon: getCategoryEmoji(c.name, c.icon),
         subCategories: []
       }));
+    } else {
+      baseList = ecommerceCats.map((mainDoc: any) => {
+        const mainName = mainDoc.name || mainDoc.category || mainDoc.subCat || mainDoc.id;
+        const subItems = ecommerceSubCats.filter((subDoc: any) => {
+          const refKey = subDoc.name || subDoc.category || subDoc.mainCategory || subDoc.mainCat;
+          return String(refKey).toLowerCase().trim() === String(mainName).toLowerCase().trim();
+        });
+
+        return {
+          id: mainDoc.id,
+          name: mainName,
+          icon: getCategoryEmoji(mainName, mainDoc.icon || mainDoc.emoji),
+          subCategories: subItems.map((sub: any) => {
+            const subName = sub.subCat || sub.subsubCat || sub.subCategory || sub.name || sub.id;
+            return {
+              id: sub.id,
+              name: subName,
+              emoji: getCategoryEmoji(subName, '🛍️')
+            };
+          })
+        };
+      });
     }
 
-    return ecommerceCats.map((mainDoc: any) => {
-      const mainName = mainDoc.name || mainDoc.category || mainDoc.subCat || mainDoc.id;
-      const subItems = ecommerceSubCats.filter((subDoc: any) => {
-        const refKey = subDoc.name || subDoc.category || subDoc.mainCategory || subDoc.mainCat;
-        return String(refKey).toLowerCase().trim() === String(mainName).toLowerCase().trim();
+    const hasGoToBrands = baseList.some((c: any) => c.name && c.name.toLowerCase().trim() === 'go to brands');
+    if (!hasGoToBrands) {
+      baseList.push({
+        id: 'go-to-brands',
+        name: 'Go to Brands',
+        icon: '🏷️',
+        subCategories: []
       });
+    }
 
-      return {
-        id: mainDoc.id,
-        name: mainName,
-        icon: getCategoryEmoji(mainName, mainDoc.icon || mainDoc.emoji),
-        subCategories: subItems.map((sub: any) => {
-          const subName = sub.subCat || sub.subsubCat || sub.subCategory || sub.name || sub.id;
-          return {
-            id: sub.id,
-            name: subName,
-            emoji: getCategoryEmoji(subName, '🛍️')
-          };
-        })
-      };
-    });
+    return baseList;
   }, [ecommerceCats, ecommerceSubCats]);
 
   useEffect(() => {
@@ -522,13 +539,13 @@ export const ProductsPage = () => {
       <div className="flex w-full bg-background relative items-stretch lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
         
         {/* ── LEFT SIDEBAR (CATEGORIES) ── */}
-        <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border px-6 pt-6 pb-28">
-          <div className="sticky top-24 space-y-2 max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none pb-4">
+        <div className="hidden lg:block flex-none w-[260px] shrink-0 border-r border-border h-full overflow-y-auto scrollbar-thin px-6 pt-6 pb-28">
+          <div className="space-y-2 pb-4">
             <h2 className="text-xs font-extrabold text-foreground mb-4 uppercase tracking-widest opacity-80">Departments</h2>
             
             {/* All Products button */}
             <button
-              onClick={() => { setActiveCategory('all'); setActiveSubCategory(null); }}
+              onClick={() => { setActiveCategory('all'); setActiveSubCategory(null); setSelectedBrand(null); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
                 activeCategory === 'all' && !activeSubCategory
                   ? 'bg-primary text-primary-foreground shadow-md scale-105' 
@@ -549,6 +566,7 @@ export const ProductsPage = () => {
                   onClick={() => {
                     setActiveCategory(isMainActive ? 'all' : cat.name);
                     setActiveSubCategory(null);
+                    setSelectedBrand(null);
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm cursor-pointer ${
                     isMainActive
@@ -572,7 +590,7 @@ export const ProductsPage = () => {
             <div className="flex items-center gap-2 mb-1">
               <ShoppingBag className="w-8 h-8 text-primary" />
               <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
-                Tulete Store
+                Shopping Sidewalk
               </h1>
             </div>
             <p className="text-sm text-muted-foreground">Everything you need, delivered straight to you.</p>
@@ -604,7 +622,21 @@ export const ProductsPage = () => {
             </div>
           </div>
 
-          {debouncedSearchQuery.trim().length > 0 ? (
+          {activeCategory && activeCategory.toLowerCase().trim() === 'go to brands' ? (
+            selectedBrand ? (
+              <BrandDetailsView
+                brandName={selectedBrand.name}
+                categoryParam={selectedBrand.category}
+                searchQuery={searchQuery}
+                onBack={() => { setSelectedBrand(null); setSearchQuery(''); }}
+              />
+            ) : (
+              <BrandsView
+                searchQuery={searchQuery}
+                onSelectBrand={(name, category) => { setSelectedBrand({ name, category }); setSearchQuery(''); }}
+              />
+            )
+          ) : debouncedSearchQuery.trim().length > 0 ? (
             <div className="animate-in fade-in zoom-in duration-300">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-extrabold text-foreground">Search Results</h2>

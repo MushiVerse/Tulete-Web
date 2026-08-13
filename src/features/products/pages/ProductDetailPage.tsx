@@ -357,6 +357,7 @@ const PRODUCT_CATEGORIES = [
   { id: 'home', name: 'Home & Living', icon: '🛋️' },
   { id: 'beauty', name: 'Beauty', icon: '💄' },
   { id: 'groceries', name: 'Groceries', icon: '🛒' },
+  { id: 'brands', name: 'Go to Brands', icon: '🏷️' },
 ];
 
 export const ProductDetailPage = () => {
@@ -585,6 +586,15 @@ export const ProductDetailPage = () => {
     });
 
     const combined = Array.from(categoriesMap.values());
+    const hasGoToBrands = combined.some(c => c.name && c.name.toLowerCase().trim() === 'go to brands');
+    if (!hasGoToBrands) {
+      combined.push({
+        id: 'go-to-brands',
+        name: 'Go to Brands',
+        icon: '🏷️',
+        source: 'ecommerce'
+      });
+    }
 
     if (combined.length > 0) {
       // Interleave / mix ecommerce and food subcategories together
@@ -797,7 +807,9 @@ export const ProductDetailPage = () => {
               <button
                 key={cat.id}
                 onClick={() => {
-                  if (cat.source === 'food') {
+                  if (cat.name.toLowerCase().trim() === 'go to brands') {
+                    navigate(`/products?category=${encodeURIComponent(cat.name)}`);
+                  } else if (cat.source === 'food') {
                     navigate(`/food?category=${encodeURIComponent(cat.name)}`);
                   } else {
                     navigate(`/products?category=${encodeURIComponent(cat.name)}`);
