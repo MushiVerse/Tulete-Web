@@ -240,7 +240,7 @@ export const ProfilePage = () => {
                   </button>
                 </div>
                 <div>
-                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block mb-1">City</label>
+                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Address</label>
                   <Input {...register('city')} className="text-xs" placeholder="Dodoma" />
                 </div>
                 <div>
