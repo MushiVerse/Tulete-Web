@@ -20,7 +20,93 @@ export interface TravelDetails {
   routePath: GeoLocation[];
 }
 
+import { useLocationStore } from '../store/useLocationStore';
+
 class LocationService {
+  /**
+   * Detect user's country and city dynamically using active location store first,
+   * high-accuracy device GPS second, and IP Geolocation as fallback.
+   */
+  async detectCountryAndCity(): Promise<{ country: string; city: string }> {
+    // 1. Check if user already has an active location set in LocationStore
+    try {
+      const activeLoc = useLocationStore.getState().currentLocation;
+      if (activeLoc?.address && !activeLoc.address.includes('(Default)')) {
+        const parts = activeLoc.address.split(',').map((p) => p.trim());
+        if (parts.length >= 2) {
+          const country = parts[parts.length - 1];
+          const city = parts[parts.length - 2];
+          if (city && country && city !== country) {
+            return { country, city };
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // 2. Try high-accuracy device GPS position first (exact location e.g. Dodoma vs Dar es Salaam)
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 60000,
+          });
+        });
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const address = await this.reverseGeocode(lat, lng);
+        if (address && address !== 'Selected Location') {
+          const parts = address.split(',').map((p) => p.trim());
+          if (parts.length >= 2) {
+            const country = parts[parts.length - 1];
+            const city = parts[parts.length - 2];
+            if (city && country) {
+              return { country, city };
+            }
+          }
+        }
+      } catch (e) {
+        // GPS prompt declined, timeout or error -> fall through to IP fallback
+      }
+    }
+
+    // 3. Fast IP Geolocation fallback
+    try {
+      const res = await fetch('https://ipwho.is/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && data.country) {
+          return {
+            country: data.country,
+            city: data.city || data.region || 'null',
+          };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.country_name) {
+          return {
+            country: data.country_name,
+            city: data.city || data.region || 'null',
+          };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return { country: 'Tanzania', city: 'Dodoma' };
+  }
+
   /**
    * Fast IP Geolocation fallback for desktop browsers / blocked permissions
    */

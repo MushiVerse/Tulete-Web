@@ -7,9 +7,10 @@ import {
   updateProfile,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../../../core/firebase/config';
 import { LoginCredentials, RegisterCredentials } from '../schemas';
+import { locationService } from '../../location/services/locationService';
 
 // User role definition
 export type UserRole = 'user' | 'provider' | 'admin';
@@ -20,6 +21,11 @@ export interface UserProfile {
   displayName: string | null;
   role: UserRole;
   createdAt: any;
+  avatarUrl?: string;
+  phone?: string;
+  city?: string;
+  bio?: string;
+  country?: string;
 }
 
 export const authService = {
@@ -32,7 +38,20 @@ export const authService = {
     const userRef = doc(db, 'users', emailKey, 'details', emailKey);
     const userSnap = await getDoc(userRef);
 
+    const googlePhoto = user.photoURL || null;
+
     if (!userSnap.exists()) {
+      // Detect user country & city dynamically via IP Geolocation
+      let detectedCountry = 'Tanzania';
+      let detectedCity = 'null';
+      try {
+        const geo = await locationService.detectCountryAndCity();
+        if (geo.country) detectedCountry = geo.country;
+        if (geo.city && geo.city !== 'null') detectedCity = geo.city;
+      } catch (e) {
+        console.warn('Country/city geolocation detection failed, using fallback:', e);
+      }
+
       // Create new profile document matching Flutter fields
       const newProfile = {
         name: name || user.displayName || 'Fill your name here!',
@@ -42,8 +61,12 @@ export const authService = {
         email: emailKey,
         password: "can't display password",
         location: 'null',
-        imgURL: user.photoURL || 'null',
-        signedUpOn: new Date().toISOString()
+        image: googlePhoto || 'null',
+        imgURL: 'null',
+        signedUpOn: new Date().toISOString(),
+        city: detectedCity,
+        bio: 'null',
+        country: detectedCountry
       };
       await setDoc(userRef, newProfile);
       
@@ -67,16 +90,53 @@ export const authService = {
         displayName: newProfile.name,
         role,
         createdAt: newProfile.signedUpOn,
+        avatarUrl: googlePhoto || undefined,
+        city: detectedCity !== 'null' ? detectedCity : undefined,
+        country: detectedCountry,
       };
     }
 
     const data = userSnap.data();
+
+    // If existing document missing image or image is 'null', and user has a Google photoURL, update the "image" field!
+    if (googlePhoto && (!data?.image || data.image === 'null' || data.image === '')) {
+      await updateDoc(userRef, { image: googlePhoto });
+    }
+
+    // If existing document missing country or city (or marked as 'null'), detect and update dynamically!
+    if (!data?.country || data.country === 'null' || !data?.city || data.city === 'null') {
+      try {
+        const geo = await locationService.detectCountryAndCity();
+        const updatesToSave: any = {};
+        if ((!data?.country || data.country === 'null') && geo.country) {
+          updatesToSave.country = geo.country;
+          data.country = geo.country;
+        }
+        if ((!data?.city || data.city === 'null') && geo.city && geo.city !== 'null') {
+          updatesToSave.city = geo.city;
+          data.city = geo.city;
+        }
+        if (Object.keys(updatesToSave).length > 0) {
+          await updateDoc(userRef, updatesToSave);
+        }
+      } catch (e) {
+        console.warn('Failed to detect/update missing location/country:', e);
+      }
+    }
+
+    const avatar = data?.image && data.image !== 'null' && data.image !== '' ? data.image : (googlePhoto || undefined);
+
     return {
       id: user.uid,
       email: emailKey,
       displayName: data?.name || user.displayName || '',
       role,
       createdAt: data?.signedUpOn || '',
+      avatarUrl: avatar,
+      phone: data?.phone && data.phone !== 'null' ? data.phone : undefined,
+      city: data?.city && data.city !== 'null' ? data.city : undefined,
+      bio: data?.bio && data.bio !== 'null' ? data.bio : undefined,
+      country: data?.country && data.country !== 'null' ? data.country : undefined,
     };
   },
 

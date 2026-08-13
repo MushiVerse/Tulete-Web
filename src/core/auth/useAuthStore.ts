@@ -6,6 +6,7 @@ interface User {
   id: string;
   email: string;
   displayName?: string;
+  avatarUrl?: string;
   role: 'user' | 'provider' | 'admin';
 }
 

@@ -14,6 +14,7 @@ import { useLocationStore } from '../../features/location/store/useLocationStore
 import { MapPin } from 'lucide-react';
 import { LanguageCurrencySelector } from './LanguageCurrencySelector';
 import { useCartStore } from '../../features/cart/store/useCartStore';
+import { useProfile } from '../../features/users/hooks/useProfile';
 
 /** Official Google Play badge from Google's CDN */
 const PlayStoreBadge = ({ className = '' }: { className?: string }) => (
@@ -30,6 +31,8 @@ export const TopNav = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { data: profile } = useProfile();
+  const avatarUrl = profile?.avatarUrl || user?.avatarUrl;
   const { openModal } = useAuthModalStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -169,10 +172,21 @@ export const TopNav = () => {
             <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 p-1.5 rounded-full hover:bg-muted transition-colors border border-border cursor-pointer"
+                className="flex items-center gap-2 p-1 rounded-full hover:bg-muted transition-colors border border-border cursor-pointer overflow-hidden"
+                title={profile?.displayName || user?.displayName || 'Profile'}
               >
-                <div className="size-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold text-sm">
-                  {user?.displayName ? user.displayName.charAt(0).toUpperCase() : <User className="size-4" />}
+                <div className="size-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold text-sm overflow-hidden shrink-0">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={profile?.displayName || user?.displayName || 'User'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : user?.displayName ? (
+                    user.displayName.charAt(0).toUpperCase()
+                  ) : (
+                    <User className="size-4" />
+                  )}
                 </div>
               </button>
 
@@ -185,9 +199,24 @@ export const TopNav = () => {
                     transition={{ duration: 0.15 }}
                     className="absolute right-0 mt-2 w-56 rounded-2xl bg-card border border-border shadow-xl py-2 z-50 overflow-hidden"
                   >
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-sm font-extrabold text-foreground truncate">{user?.displayName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    <div className="px-4 py-3 border-b border-border flex items-center gap-3">
+                      <div className="size-9 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold text-sm overflow-hidden shrink-0">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={profile?.displayName || user?.displayName || 'User'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : user?.displayName ? (
+                          user.displayName.charAt(0).toUpperCase()
+                        ) : (
+                          <User className="size-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-extrabold text-foreground truncate">{profile?.displayName || user?.displayName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                      </div>
                     </div>
 
                     <div className="py-1">
@@ -258,6 +287,31 @@ export const TopNav = () => {
             className="md:hidden absolute top-full left-0 right-0 border-t border-border bg-card shadow-2xl overflow-visible z-[60] max-h-[calc(100vh-4rem)] overflow-y-auto"
           >
             <nav className="flex flex-col p-4 gap-2">
+              {isAuthenticated && (
+                <Link
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  to="/profile"
+                  className="flex items-center gap-3 px-4 py-3 mb-2 rounded-2xl bg-muted/60 hover:bg-muted border border-border transition-colors"
+                >
+                  <div className="size-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold text-sm overflow-hidden shrink-0 border border-primary/20">
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={profile?.displayName || user?.displayName || 'User'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : user?.displayName ? (
+                      user.displayName.charAt(0).toUpperCase()
+                    ) : (
+                      <User className="size-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-extrabold text-foreground truncate">{profile?.displayName || user?.displayName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  </div>
+                </Link>
+              )}
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname === '/' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Home</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/explore" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/explore') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Explore</Link>
               <Link onClick={() => setIsMobileMenuOpen(false)} to="/food" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/food') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Food</Link>

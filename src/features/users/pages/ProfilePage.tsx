@@ -18,12 +18,14 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
+import { locationService } from '../../location/services/locationService';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().optional(),
   bio: z.string().max(200, 'Bio cannot exceed 200 characters').optional(),
   city: z.string().optional(),
+  country: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -54,22 +56,49 @@ export const ProfilePage = () => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<ProfileFormValues>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
   });
 
   const bioValue = watch('bio') || '';
 
+  const handleAutofillLocation = async () => {
+    setIsDetectingLocation(true);
+    try {
+      const geo = await locationService.detectCountryAndCity();
+      if (geo.city && geo.city !== 'null') {
+        setValue('city', geo.city, { shouldValidate: true });
+      }
+      if (geo.country) {
+        setValue('country', geo.country, { shouldValidate: true });
+      }
+    } catch (e) {
+      console.warn('Failed to detect location:', e);
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  };
+
   // Initialize form when profile loads or editing starts
   useEffect(() => {
     if (profile && isEditing) {
+      const initialCity = profile.city || '';
+      const initialCountry = profile.country || '';
+
       reset({
         displayName: profile.displayName || '',
         phone: profile.phone || '',
-        bio: profile.bio || '',
-        city: profile.city || '',
+        bio: (profile.bio && profile.bio !== 'null') ? profile.bio : '',
+        city: initialCity,
+        country: initialCountry,
       });
+
+      // Auto-detect and fill if city or country is missing!
+      if (!initialCity || !initialCountry) {
+        handleAutofillLocation();
+      }
     }
   }, [profile, isEditing, reset]);
 
@@ -196,9 +225,25 @@ export const ProfilePage = () => {
                   <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Phone Number</label>
                   <Input {...register('phone')} className="text-xs" placeholder="+255 7XX XXX XXX" />
                 </div>
+                <div className="md:col-span-2 flex items-center justify-between pt-2 border-t border-border/50">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Location Information</span>
+                  <button
+                    type="button"
+                    onClick={handleAutofillLocation}
+                    disabled={isDetectingLocation}
+                    className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isDetectingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MapPin className="w-3.5 h-3.5" />}
+                    Autofill Location
+                  </button>
+                </div>
                 <div>
                   <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block mb-1">City</label>
                   <Input {...register('city')} className="text-xs" placeholder="Dodoma" />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Country</label>
+                  <Input {...register('country')} className="text-xs" placeholder="Tanzania" />
                 </div>
               </div>
               <div>
@@ -233,8 +278,8 @@ export const ProfilePage = () => {
                   <MapPin className="w-3 h-3" /> {profile.city}{profile.country ? `, ${profile.country}` : ''}
                 </p>
               )}
-              {profile.bio && (
-                <p className="text-xs text-muted-foreground leading-relaxed bg-muted rounded-xl p-3 border border-border">
+              {profile.bio && profile.bio.trim() && profile.bio !== 'null' && (
+                <p className="text-xs text-muted-foreground leading-relaxed bg-muted/80 dark:bg-muted/40 rounded-xl p-3 border border-border mt-3">
                   {profile.bio}
                 </p>
               )}

@@ -1,6 +1,6 @@
 import { BaseFirestoreService } from '../../../core/services/BaseFirestoreService';
 import { BaseDocument } from '../../../core/services/types';
-import { storage, db } from '../../../core/firebase/config';
+import { storage, db, auth } from '../../../core/firebase/config';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { APP_SETTINGS } from '@/core/config/settings';
@@ -55,13 +55,25 @@ class UserService extends BaseFirestoreService<UserProfile> {
     if (!snap.exists()) return null;
     const data = snap.data();
     
+    let avatar = data.image && data.image !== 'null' ? data.image : '';
+
+    // If Firestore document image is missing or 'null', check auth.currentUser Google photoURL and sync it!
+    if (!avatar && auth.currentUser && auth.currentUser.email?.toLowerCase() === emailKey && auth.currentUser.photoURL) {
+      avatar = auth.currentUser.photoURL;
+      try {
+        await updateDoc(userRef, { image: avatar });
+      } catch (err) {
+        console.warn('Failed to sync google photoURL to image field:', err);
+      }
+    }
+
     return {
       id: data.uid || '',
       uid: data.uid || '',
       displayName: data.name || '',
       email: data.email || emailKey,
       phone: data.phone || '',
-      avatarUrl: data.imgURL || '',
+      avatarUrl: avatar,
       joinedAt: data.signedUpOn ? new Date(data.signedUpOn) : new Date(),
       isVerified: true,
       preferredLanguage: 'en',
@@ -78,7 +90,10 @@ class UserService extends BaseFirestoreService<UserProfile> {
     const updates: any = {};
     if (data.displayName !== undefined) updates.name = data.displayName;
     if (data.phone !== undefined) updates.phone = data.phone;
-    if (data.avatarUrl !== undefined) updates.imgURL = data.avatarUrl;
+    if (data.avatarUrl !== undefined) updates.image = data.avatarUrl;
+    if (data.city !== undefined) updates.city = data.city;
+    if (data.bio !== undefined) updates.bio = data.bio;
+    if (data.country !== undefined) updates.country = data.country;
     
     await updateDoc(userRef, updates);
   }
