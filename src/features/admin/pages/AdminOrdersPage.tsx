@@ -112,14 +112,21 @@ export const AdminOrdersPage: React.FC = () => {
   };
 
   // Helper to extract timestamp ms from various Firestore date formats
-  const parseTimestampMs = (val: any, docId: string): number => {
+  const parseTimestampMs = (val: any, docId?: string, rawDoc?: any): number => {
     if (val !== null && val !== undefined) {
+      // 1. Objects (Firestore Timestamp, Date, etc.)
       if (typeof val === 'object') {
         if (typeof val.toDate === 'function') {
-          try { return val.toDate().getTime(); } catch {}
+          try {
+            const t = val.toDate().getTime();
+            if (!isNaN(t) && t > 0) return t;
+          } catch {}
         }
         if (typeof val.toMillis === 'function') {
-          try { return val.toMillis(); } catch {}
+          try {
+            const t = val.toMillis();
+            if (!isNaN(t) && t > 0) return t;
+          } catch {}
         }
         if (typeof val.seconds === 'number') {
           return val.seconds * 1000;
@@ -128,67 +135,178 @@ export const AdminOrdersPage: React.FC = () => {
           return val._seconds * 1000;
         }
         if (val instanceof Date) {
-          return val.getTime();
+          const t = val.getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+        // Nested object containing time / timestamp properties
+        if (val.time || val.timestamp || val.date || val.createdAt || val.seconds || val._seconds) {
+          const sub = parseTimestampMs(val.time || val.timestamp || val.date || val.createdAt || val.seconds || val._seconds, docId, rawDoc);
+          if (sub > 0) return sub;
         }
       }
-      
-      if (typeof val === 'number') {
+
+      // 2. Numbers (epoch ms or seconds)
+      if (typeof val === 'number' && !isNaN(val) && val > 0) {
         return val < 10000000000 ? val * 1000 : val;
       }
-      
-      if (typeof val === 'string') {
-        const trimmed = val.trim();
-        const p = new Date(trimmed).getTime();
-        if (!isNaN(p) && p > 0) return p;
-        
-        const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-        if (ddmmyyyyMatch) {
-          const [, day, month, year, hours = '0', minutes = '0', seconds = '0'] = ddmmyyyyMatch;
-          const parsedDate = new Date(
-            Number(year),
-            Number(month) - 1,
-            Number(day),
-            Number(hours),
-            Number(minutes),
-            Number(seconds)
-          );
-          if (!isNaN(parsedDate.getTime())) return parsedDate.getTime();
-        }
 
-        const pf = new Date(trimmed.replace(' ', 'T')).getTime();
-        if (!isNaN(pf) && pf > 0) return pf;
+      // 3. Strings
+      if (typeof val === 'string') {
+        let trimmed = val.trim();
+        if (trimmed) {
+          // Fix Flutter DateTime microseconds format e.g. "2026-08-13 05:19:12.345678" -> "2026-08-13 05:19:12.345"
+          trimmed = trimmed.replace(/(\.\d{3})\d+/, '$1');
+
+          // Pure numeric epoch string e.g. "1739414389123" or "1739414389"
+          if (/^\d{9,13}$/.test(trimmed)) {
+            const num = Number(trimmed);
+            if (!isNaN(num) && num > 0) {
+              return num < 10000000000 ? num * 1000 : num;
+            }
+          }
+
+          // Try parsing ISO formatted string with 'T'
+          const isoFormatted = trimmed.replace(' ', 'T');
+          const pIso = new Date(isoFormatted).getTime();
+          if (!isNaN(pIso) && pIso > 0) return pIso;
+
+          // Standard JS Date parse
+          const pDirect = new Date(trimmed).getTime();
+          if (!isNaN(pDirect) && pDirect > 0) return pDirect;
+
+          // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+          const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})(?:\s+(?:at\s+)?(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:\s*(AM|PM))?)?$/i);
+          if (ddmmyyyyMatch) {
+            const [, day, month, year, hoursStr = '0', minutes = '0', seconds = '0', ampm] = ddmmyyyyMatch;
+            let hours = Number(hoursStr);
+            if (ampm) {
+              if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+              if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+            }
+            const parsedDate = new Date(
+              Number(year),
+              Number(month) - 1,
+              Number(day),
+              hours,
+              Number(minutes),
+              Number(seconds)
+            );
+            if (!isNaN(parsedDate.getTime())) return parsedDate.getTime();
+          }
+
+          // Extract embedded 9 to 13 digit epoch numbers inside string
+          const embeddedMatch = trimmed.match(/(1[5-9]\d{8,11})/);
+          if (embeddedMatch) {
+            const num = Number(embeddedMatch[1]);
+            if (!isNaN(num) && num > 0) {
+              return num < 10000000000 ? num * 1000 : num;
+            }
+          }
+        }
       }
     }
 
-    if (typeof docId === 'string') {
-      const numId = Number(docId);
-      if (!isNaN(numId) && numId > 1600000000000) return numId;
+    // Fallback: extract epoch number from docId, orderId, or webOrderId
+    const idsToCheck = [docId, rawDoc?.id, rawDoc?.orderId, rawDoc?.webOrderId].filter(Boolean);
+    for (const idStr of idsToCheck) {
+      const str = String(idStr).trim();
+      const numId = Number(str);
+      if (!isNaN(numId) && numId > 1500000000) {
+        return numId < 10000000000 ? numId * 1000 : numId;
+      }
+      const embeddedMatch = str.match(/(1[5-9]\d{8,11})/);
+      if (embeddedMatch) {
+        const num = Number(embeddedMatch[1]);
+        if (!isNaN(num) && num > 0) {
+          return num < 10000000000 ? num * 1000 : num;
+        }
+      }
     }
 
     return 0;
   };
 
+  // Helper to check if an order is cancelled
+  const isOrderCancelled = (order: AdminOrderRecord): boolean => {
+    const statusStr = String(order.status || '').toLowerCase();
+    const raw = order.rawDoc || {};
+    return (
+      statusStr.includes('cancel') ||
+      raw.cancel === true ||
+      raw.cancel === 'true' ||
+      raw.isCancelled === true ||
+      raw.isCancelled === 'true'
+    );
+  };
+
   // Helper to map document to AdminOrderRecord
   const mapDocToRecord = (d: any, source: 'online' | 'pos'): AdminOrderRecord => {
-    const data = d.data();
-    const rawTime = data.time || data.timestamp || data.date || data.createdAt || data.orderDate || data.updatedAt;
-    const tsMs = parseTimestampMs(rawTime, d.id);
-    const dateStr = tsMs > 0
-      ? new Date(tsMs).toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })
-      : 'N/A';
+    const data = d.data() || {};
+    const rawTime =
+      data.time ||
+      data.timestamp ||
+      data.date ||
+      data.createdAt ||
+      data.created_at ||
+      data.orderDate ||
+      data.order_date ||
+      data.updatedAt ||
+      data.updated_at ||
+      (Array.isArray(data.orderststime) && data.orderststime.length > 0 ? data.orderststime[0] : null) ||
+      (Array.isArray(data.orderstsTime) && data.orderstsTime.length > 0 ? data.orderstsTime[0] : null) ||
+      data.time1 ||
+      data.time_stamp ||
+      data.dateTime ||
+      data.datetime ||
+      data.placedAt ||
+      data.placed_at ||
+      data.dateCreated ||
+      data.date_created ||
+      (Array.isArray(data.history) && data.history.length > 0 ? (data.history[0].time || data.history[0].timestamp || data.history[0].date) : null);
+
+    let tsMs = parseTimestampMs(rawTime, d.id, data);
+    if (tsMs === 0) {
+      tsMs = parseTimestampMs(d.id, d.id, data);
+    }
+
+    let dateStr = '';
+    if (tsMs > 0) {
+      dateStr = new Date(tsMs).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else if (typeof rawTime === 'string' && rawTime.trim().length > 0 && rawTime.trim().toLowerCase() !== 'n/a') {
+      dateStr = rawTime.trim();
+    } else if (typeof data.date === 'string' && data.date.trim().length > 0 && data.date.trim().toLowerCase() !== 'n/a') {
+      dateStr = data.date.trim();
+    } else if (typeof data.time === 'string' && data.time.trim().length > 0 && data.time.trim().toLowerCase() !== 'n/a') {
+      dateStr = data.time.trim();
+    } else if (typeof data.orderDate === 'string' && data.orderDate.trim().length > 0) {
+      dateStr = data.orderDate.trim();
+    } else {
+      dateStr = 'N/A';
+    }
 
     const items = data.items || data.cartItems || data.products || [];
     const storeNames = Array.from(new Set(items.map((i: any) => i.storeName || i.store || data.storeName || data.store || '').filter(Boolean)));
     const primaryStore = storeNames.join(', ') || data.storeName || data.store || data.branch || (source === 'pos' ? 'POS Physical Branch' : 'Online Store');
 
-    const totalVal = Number(data.total || data.price || data.totalAmount || data.grandTotal || 0);
+    // Use field "total" from Firestore document for Total (TZS) column & order total
+    let totalVal = 0;
+    if (data.total !== undefined && data.total !== null && data.total !== '') {
+      totalVal = Number(data.total);
+    } else if (data.totalAmount !== undefined && data.totalAmount !== null && data.totalAmount !== '') {
+      totalVal = Number(data.totalAmount);
+    } else if (data.price !== undefined && data.price !== null && data.price !== '') {
+      totalVal = Number(data.price);
+    } else if (data.grandTotal !== undefined && data.grandTotal !== null && data.grandTotal !== '') {
+      totalVal = Number(data.grandTotal);
+    }
+    if (isNaN(totalVal)) totalVal = 0;
 
     return {
       id: d.id,
@@ -278,8 +396,16 @@ export const AdminOrdersPage: React.FC = () => {
     [...onlineOrders, ...posOrders].map((o) => o.status).filter(Boolean)
   )).sort();
 
+  // Helper to check if an order has invalid N/A date
+  const isInvalidNaOrder = (order: AdminOrderRecord): boolean => {
+    return !order.dateStr || order.dateStr.trim().toUpperCase() === 'N/A';
+  };
+
   // Filter pipeline
   const filteredOrders = tabOrders.filter((order) => {
+    // 0. Exclude orders with "N/A" date & time
+    if (isInvalidNaOrder(order)) return false;
+
     // 1. Date Range Filter (NO DEFAULT START DATE - if startDate is empty, returns all past orders!)
     if (startDate || endDate) {
       if (order.timestampMs > 0) {
@@ -322,14 +448,25 @@ export const AdminOrdersPage: React.FC = () => {
     return true;
   });
 
-  // Calculate Metrics
-  const totalOnlineCount = onlineOrders.length;
-  const totalPosCount = posOrders.length;
+  // Calculate Metrics - Exclude N/A date orders and cancelled orders from revenue sums
+  const validOnlineOrders = onlineOrders.filter((o) => !isInvalidNaOrder(o));
+  const validPosOrders = posOrders.filter((o) => !isInvalidNaOrder(o));
+
+  const totalOnlineCount = validOnlineOrders.length;
+  const totalPosCount = validPosOrders.length;
   const totalCombinedCount = totalOnlineCount + totalPosCount;
 
-  const totalOnlineRevenue = onlineOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const totalPosRevenue = posOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const totalFilteredRevenue = filteredOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalOnlineRevenue = validOnlineOrders
+    .filter((o) => !isOrderCancelled(o))
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+
+  const totalPosRevenue = validPosOrders
+    .filter((o) => !isOrderCancelled(o))
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+
+  const totalFilteredRevenue = filteredOrders
+    .filter((o) => !isInvalidNaOrder(o) && !isOrderCancelled(o))
+    .reduce((sum, o) => sum + o.totalAmount, 0);
 
   // Pagination slicing
   const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
@@ -710,6 +847,7 @@ export const AdminOrdersPage: React.FC = () => {
               <tbody className={`divide-y text-xs font-medium ${isDark ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                 {paginatedOrders.map((order, idx) => {
                   const isOnline = order.source === 'online';
+                  const cancelled = isOrderCancelled(order);
 
                   return (
                     <motion.tr
@@ -768,13 +906,13 @@ export const AdminOrdersPage: React.FC = () => {
                       </td>
 
                       {/* Total Amount */}
-                      <td className="py-4 px-6 text-right font-black text-emerald-500">
+                      <td className={`py-4 px-6 text-right font-black ${cancelled ? 'text-rose-500/80 line-through opacity-75' : 'text-emerald-500'}`}>
                         {APP_SETTINGS.currency} {formatPrice(order.totalAmount)}
                       </td>
 
                       {/* Status */}
                       <td className="py-4 px-6 text-center">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap inline-block border ${
                           order.status.toLowerCase().includes('cancel')
                             ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                             : order.status.toLowerCase().includes('complet') || order.status.toLowerCase().includes('deliver')
