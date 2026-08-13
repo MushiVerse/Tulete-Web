@@ -49,8 +49,10 @@ export interface Order extends BaseDocument {
   storeName: string;
   deliveryLocation: OrderLocation;
   locationImgUrl?: string;
-  paymentMethod: 'M-Pesa' | 'Cash';
+  paymentMethod: 'M-Pesa' | 'Cash' | 'Card' | 'Mobile Money' | 'Snippe Online';
   paymentStatus: 'Pending' | 'Paid' | 'Failed';
+  paymentReference?: string;
+  paidOnline?: boolean;
   contactPhone?: string;
   no?: string; // Legacy field for Flutter backward compatibility
   notes?: string;
@@ -238,6 +240,37 @@ class OrderService extends BaseFirestoreService<Order> {
     analyticsService.trackCartConverted(docRef.id, data.userId);
 
     return { id: docRef.id, ...payload } as Order;
+  }
+
+  /**
+   * Updates the payment status and optional payment reference for an order across
+   * both 'orders' and 'newcomfirmedorders' collections.
+   */
+  async updatePaymentStatus(orderId: string, paymentStatus: 'Pending' | 'Paid' | 'Failed', paymentReference?: string): Promise<void> {
+    const updatePayload: any = {
+      paymentStatus,
+      paidOnline: paymentStatus === 'Paid',
+      updatedAt: serverTimestamp(),
+    };
+    if (paymentReference) {
+      updatePayload.paymentReference = paymentReference;
+    }
+
+    try {
+      const ordersRef = doc(db, 'orders', orderId);
+      const ordersSnap = await getDoc(ordersRef);
+      if (ordersSnap.exists()) {
+        await updateDoc(ordersRef, updatePayload);
+      }
+
+      const ncRef = doc(db, 'newcomfirmedorders', orderId);
+      const ncSnap = await getDoc(ncRef);
+      if (ncSnap.exists()) {
+        await updateDoc(ncRef, updatePayload);
+      }
+    } catch (err) {
+      console.error(`Failed to update payment status for order ${orderId}:`, err);
+    }
   }
 
   /**

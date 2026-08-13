@@ -48,7 +48,7 @@ export const AdminLoginPage: React.FC = () => {
           <AdminLogo size="xl" isDark={true} showText={false} className="mb-2" />
           <h1 className="text-3xl font-black tracking-tight text-[#e89a3c]">Tulete Web Admin</h1>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Sign in with authorized <span className="text-slate-200 font-bold">UsersandRoles</span> Admin privileges
+            Sign in with authorized Admin privileges
           </p>
         </div>
 

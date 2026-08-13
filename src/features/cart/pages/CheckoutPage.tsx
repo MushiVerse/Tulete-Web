@@ -10,11 +10,11 @@ import { Label } from '../../../shared/components/ui/Label';
 import { Textarea } from '../../../shared/components/ui/Textarea';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
-import { ShoppingCart, MapPin, Phone, CreditCard, ChevronLeft, Truck, Sparkles, Zap, Clock } from 'lucide-react';
+import { ShoppingCart, Phone, CreditCard, ChevronLeft, Truck, Sparkles, Zap, Clock, Smartphone, Globe, CheckCircle2, AlertCircle, Loader2, ShieldCheck, X } from 'lucide-react';
 import { APP_SETTINGS } from '@/core/config/settings';
-import { locationService } from '../../location/services/locationService';
 import { useLocationStore, SavedLocation } from '../../location/store/useLocationStore';
 import { smsService } from '../../../services/smsService';
+import { snippeService, formatSnippePhoneNumber } from '../../payment/services/snippeService';
 
 const CheckoutItemRow = ({ item }: { item: any }) => {
   useLocationStore((state) => state.currentLocation);
@@ -58,7 +58,18 @@ export const CheckoutPage = () => {
   const { currentLocation } = useLocationStore();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deliveryRation, setDeliveryRation] = React.useState<number>(1000);
+  const [, setDeliveryRation] = React.useState<number>(1000);
+
+  // Payment Method Selection State
+  const [paymentMethodType, setPaymentMethodType] = useState<'POD' | 'MOBILE_MONEY' | 'CARD'>('POD');
+  const [mobileNetwork, setMobileNetwork] = useState<'mpesa' | 'airtel' | 'yas' | 'halotel'>('mpesa');
+  const [mobilePaymentPhone, setMobilePaymentPhone] = useState(savedPhoneNumber || '');
+
+  // USSD modal state
+  const [ussdModalOpen, setUssdModalOpen] = useState(false);
+  const [ussdStatus, setUssdStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
+  const [ussdMessage, setUssdMessage] = useState('');
+  const [createdOrderIdForModal, setCreatedOrderIdForModal] = useState('');
 
   // Fetch delivery ration on mount
   React.useEffect(() => {
@@ -67,12 +78,7 @@ export const CheckoutPage = () => {
     });
   }, []);
 
-  // Auto-open modal logic moved to MainLayout to enforce global location setting
-
   const selectedLocation = currentLocation || DEFAULT_CENTER;
-
-  // Standard mock store coordinate in Westlands
-  const storeLocation = { lat: -1.2635, lng: 36.8049 };
 
   // Delivery fee is already baked into the total via useCartStore.
   const finalTotalWithDelivery = total;
@@ -145,6 +151,9 @@ export const CheckoutPage = () => {
       const createdOrderIds: string[] = [];
       const numGroups = Object.keys(storeGroups).length;
 
+      const orderPaymentMethod: Order['paymentMethod'] = 
+        paymentMethodType === 'CARD' ? 'Card' : (paymentMethodType === 'MOBILE_MONEY' ? 'M-Pesa' : 'Cash');
+
       // Create a separate order per store group
       for (const groupKey of Object.keys(storeGroups)) {
         const group = storeGroups[groupKey];
@@ -215,7 +224,7 @@ export const CheckoutPage = () => {
             specificInstructions: selectedLocation.specificInstructions,
             locationImgUrl: selectedLocation.imageUrl || '',
           },
-          paymentMethod: 'Cash',
+          paymentMethod: orderPaymentMethod,
           paymentStatus: 'Pending',
           contactPhone: activePhone,
           notes: notes,
@@ -263,14 +272,84 @@ export const CheckoutPage = () => {
         await orderService.initializeOrderTracking(createdOrder.id);
       }
 
-      // Clear local cart
-      clearCart();
+      // Execute specific payment method flow
+      if (paymentMethodType === 'POD') {
+        clearCart();
+        if (createdOrderIds.length > 0) {
+          navigate(`/tracking/${createdOrderIds[0]}`);
+        } else {
+          navigate('/orders');
+        }
+      } else if (paymentMethodType === 'MOBILE_MONEY') {
+        const targetPhone = mobilePaymentPhone.trim() || activePhone;
+        const mainOrderId = createdOrderIds[0];
+        setCreatedOrderIdForModal(mainOrderId);
+        setUssdModalOpen(true);
+        setUssdStatus('pending');
+        setUssdMessage(`Initiating Mobile Money USSD Push to ${formatSnippePhoneNumber(targetPhone)}...`);
 
-      // Go to real-time tracking or orders list
-      if (createdOrderIds.length > 0) {
-        navigate(`/tracking/${createdOrderIds[0]}`);
-      } else {
-        navigate('/orders');
+        const res = await snippeService.createMobilePayment({
+          amount: finalTotalWithDelivery,
+          phoneNumber: targetPhone,
+          firstname: user.displayName?.split(' ')[0] || 'Customer',
+          lastname: user.displayName?.split(' ')[1] || 'User',
+          email: user.email || '',
+          orderId: mainOrderId,
+          network: mobileNetwork,
+        });
+
+        if (res.status === 'success' && res.data?.reference) {
+          const ref = res.data.reference;
+          setUssdMessage(`USSD Push sent to ${formatSnippePhoneNumber(targetPhone)}! Please check your phone screen and enter your PIN to authorize payment.`);
+          
+          let pollCount = 0;
+          const maxPolls = 15;
+          const pollInterval = setInterval(async () => {
+            pollCount++;
+            const statusRes = await snippeService.checkPaymentStatus(ref);
+            if (statusRes.data?.status === 'completed') {
+              clearInterval(pollInterval);
+              setUssdStatus('completed');
+              setUssdMessage('Payment received successfully! Your order is confirmed.');
+              await orderService.updatePaymentStatus(mainOrderId, 'Paid', ref);
+              clearCart();
+              setTimeout(() => {
+                setUssdModalOpen(false);
+                navigate(`/tracking/${mainOrderId}`);
+              }, 2000);
+            } else if (statusRes.data?.status === 'failed' || statusRes.data?.status === 'cancelled' || statusRes.data?.status === 'expired') {
+              clearInterval(pollInterval);
+              setUssdStatus('failed');
+              setUssdMessage(statusRes.message || 'Payment request was not completed.');
+            } else if (pollCount >= maxPolls) {
+              clearInterval(pollInterval);
+              setUssdMessage('USSD prompt sent. Once you complete entering your PIN, your payment status will automatically update on live tracking.');
+            }
+          }, 3000);
+        } else {
+          setUssdStatus('failed');
+          setUssdMessage(res.message || 'Could not initiate USSD Push notification. You can still track your order and pay on delivery.');
+        }
+      } else if (paymentMethodType === 'CARD') {
+        const mainOrderId = createdOrderIds[0];
+        const res = await snippeService.createPaymentSession({
+          amount: finalTotalWithDelivery,
+          customer: {
+            firstname: user.displayName?.split(' ')[0] || 'Customer',
+            lastname: user.displayName?.split(' ')[1] || 'User',
+            email: user.email || '',
+          },
+          orderId: mainOrderId,
+        });
+
+        if (res.status === 'success' && res.data?.checkout_url) {
+          clearCart();
+          window.location.href = res.data.checkout_url;
+        } else {
+          alert(res.message || 'Could not open Snippe online payment portal. Proceeding to order tracking.');
+          clearCart();
+          navigate(`/tracking/${mainOrderId}`);
+        }
       }
     } catch (error) {
       console.error('Failed to create order:', error);
@@ -372,7 +451,7 @@ export const CheckoutPage = () => {
               </div>
             </Card>
 
-            {/* Contact Details */}
+            {/* Payment Method - Snippe Online Payment Integration */}
             <Card className="p-6 border border-border shadow-sm">
               <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
                 <CreditCard className="w-5 h-5 text-primary" />
@@ -380,25 +459,143 @@ export const CheckoutPage = () => {
               </h2>
 
               <div className="flex flex-col gap-3">
+                {/* Pay on Delivery Option */}
                 <div
-                  className="flex-1 border border-primary bg-primary/5 p-4 rounded-xl flex items-center justify-between"
+                  onClick={() => setPaymentMethodType('POD')}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                    paymentMethodType === 'POD'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border hover:border-slate-300 dark:hover:border-slate-700 bg-card'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-800 dark:bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-extrabold">POD</div>
+                    <div className="w-9 h-9 bg-slate-800 dark:bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-extrabold shadow-xs">
+                      POD
+                    </div>
                     <div>
                       <span className="font-bold text-foreground text-sm block">Pay on Delivery</span>
                       <span className="text-xs text-muted-foreground">Pay via Cash or M-Pesa when your order arrives.</span>
                     </div>
                   </div>
-                  <div className="w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center bg-primary">
-                    <div className="w-2 h-2 rounded-full bg-white" />
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    paymentMethodType === 'POD' ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-600'
+                  }`}>
+                    {paymentMethodType === 'POD' && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-border">
-                  <p className="text-xs text-muted-foreground font-medium">
-                    <span className="font-bold text-primary">Note:</span> Online payment integrations (M-Pesa Express & Card) are currently in development and will be available in a future update!
-                  </p>
+                {/* Snippe Mobile Money USSD Push Option */}
+                <div
+                  onClick={() => setPaymentMethodType('MOBILE_MONEY')}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col gap-3 ${
+                    paymentMethodType === 'MOBILE_MONEY'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border hover:border-slate-300 dark:hover:border-slate-700 bg-card'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-emerald-600 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-xs">
+                        <Smartphone className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground text-sm">M-Pesa Express & Mobile Money</span>
+                          <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-300/80">
+                            Instant USSD Push
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">Automated PIN prompt on <span className="notranslate" translate="no">M-Pesa</span>, <span className="notranslate" translate="no">Airtel Money</span>, <span className="notranslate" translate="no">Mixx by Yas</span>, <span className="notranslate" translate="no">Halotel</span></span>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      paymentMethodType === 'MOBILE_MONEY' ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-600'
+                    }`}>
+                      {paymentMethodType === 'MOBILE_MONEY' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                  </div>
+
+                  {/* Network Badges & Mobile Input when selected */}
+                  {paymentMethodType === 'MOBILE_MONEY' && (
+                    <div className="pt-3 border-t border-border/60 flex flex-col gap-3 cursor-default" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 flex-wrap text-xs">
+                        <span className="text-muted-foreground font-medium text-[11px]">Select Network:</span>
+                        {[
+                          { id: 'mpesa', name: 'M-Pesa', color: 'bg-red-600 text-white' },
+                          { id: 'airtel', name: 'Airtel Money', color: 'bg-red-700 text-white' },
+                          { id: 'yas', name: 'Mixx by Yas', color: 'bg-blue-600 text-white' },
+                          { id: 'halotel', name: 'Halotel', color: 'bg-orange-500 text-white' },
+                        ].map((net) => (
+                          <button
+                            key={net.id}
+                            type="button"
+                            onClick={() => setMobileNetwork(net.id as any)}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all ${
+                              mobileNetwork === net.id
+                                ? `${net.color} border-transparent shadow-xs scale-105`
+                                : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                            }`}
+                          >
+                            <span className="notranslate" translate="no">{net.name}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="payPhone" className="text-xs font-semibold text-muted-foreground">
+                          Mobile Money Phone Number for USSD Prompt
+                        </Label>
+                        <Input
+                          id="payPhone"
+                          value={mobilePaymentPhone}
+                          onChange={(e) => setMobilePaymentPhone(e.target.value)}
+                          placeholder="e.g. 0781000000 or 255781000000"
+                          className="bg-background border-border text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          You will receive a prompt on your phone screen asking you to enter your PIN to confirm payment of <span className="font-bold text-foreground">{formatPrice(finalTotalWithDelivery)} TZS</span>.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Snippe Card & Hosted Payment Session Option */}
+                <div
+                  onClick={() => setPaymentMethodType('CARD')}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                    paymentMethodType === 'CARD'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border hover:border-slate-300 dark:hover:border-slate-700 bg-card'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-indigo-600 dark:bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-xs">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground text-sm">Credit / Debit Card & Online Checkout</span>
+                        <span className="text-[10px] font-extrabold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-300/80">
+                          Snippe Gateway
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">Secure online checkout via Visa, MasterCard & digital wallets</span>
+                    </div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    paymentMethodType === 'CARD' ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-600'
+                  }`}>
+                    {paymentMethodType === 'CARD' && <div className="w-2 h-2 rounded-full bg-white" />}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-border flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    Powered by Snippe Payments API
+                  </span>
+                  <span className="font-semibold text-[11px] text-primary">Encrypted 256-bit</span>
                 </div>
               </div>
             </Card>
@@ -451,11 +648,76 @@ export const CheckoutPage = () => {
                 className="w-full py-6 text-base font-bold shadow-lg flex items-center justify-center gap-2"
               >
                 <Truck className="w-5 h-5 animate-pulse" />
-                Place Order & Track Live
+                {paymentMethodType === 'MOBILE_MONEY'
+                  ? 'Pay via USSD & Place Order'
+                  : (paymentMethodType === 'CARD' ? 'Proceed to Online Payment' : 'Place Order & Track Live')}
               </Button>
             </Card>
           </div>
         </form>
+
+        {/* USSD Mobile Money Push Dialog / Modal */}
+        {ussdModalOpen && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <Card className="w-full max-w-md p-6 bg-card border-border shadow-2xl relative animate-in fade-in zoom-in duration-200">
+              <button
+                onClick={() => {
+                  setUssdModalOpen(false);
+                  clearCart();
+                  if (createdOrderIdForModal) {
+                    navigate(`/tracking/${createdOrderIdForModal}`);
+                  }
+                }}
+                className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex flex-col items-center text-center py-4 space-y-4">
+                {ussdStatus === 'pending' && (
+                  <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  </div>
+                )}
+                {ussdStatus === 'completed' && (
+                  <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                )}
+                {ussdStatus === 'failed' && (
+                  <div className="w-14 h-14 bg-red-100 dark:bg-red-950/60 rounded-full flex items-center justify-center text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-8 h-8" />
+                  </div>
+                )}
+
+                <h3 className="text-lg font-extrabold text-foreground">
+                  {ussdStatus === 'pending' && 'Waiting for USSD Payment Authorization'}
+                  {ussdStatus === 'completed' && 'Payment Completed!'}
+                  {ussdStatus === 'failed' && 'Payment Notification'}
+                </h3>
+
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {ussdMessage}
+                </p>
+
+                <div className="pt-2 w-full flex flex-col gap-2">
+                  <Button
+                    onClick={() => {
+                      setUssdModalOpen(false);
+                      clearCart();
+                      if (createdOrderIdForModal) {
+                        navigate(`/tracking/${createdOrderIdForModal}`);
+                      }
+                    }}
+                    className="w-full"
+                  >
+                    Track Order Live
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
       </ContentContainer>
     </PageContainer>
   );
