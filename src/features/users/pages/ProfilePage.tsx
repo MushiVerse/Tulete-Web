@@ -19,6 +19,7 @@ import {
 import { motion } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
 import { locationService } from '../../location/services/locationService';
+import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -49,6 +50,7 @@ export const ProfilePage = () => {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
   const { data: profile, isLoading, isError } = useProfile();
+  const favoriteCount = useFavoritesStore((state) => state.favorites.length);
   const updateProfile = useUpdateProfile();
   const uploadImage = useUploadProfileImage();
   
@@ -265,7 +267,15 @@ export const ProfilePage = () => {
                   <CheckCircle className="w-4 h-4 text-blue-500 fill-blue-500/20" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+
+              {profile.bio && profile.bio.trim() && profile.bio !== 'null' && (
+                <div className="w-full my-3 bg-muted/80 dark:bg-muted/40 rounded-xl p-3.5 border border-border shadow-xs">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">About / Bio</p>
+                  <p className="text-xs text-foreground font-medium leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 mt-1">
                 <Mail className="w-3 h-3" /> {profile.email}
               </p>
               {profile.phone && (
@@ -276,11 +286,6 @@ export const ProfilePage = () => {
               {profile.city && (
                 <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
                   <MapPin className="w-3 h-3" /> {profile.city}{profile.country ? `, ${profile.country}` : ''}
-                </p>
-              )}
-              {profile.bio && profile.bio.trim() && profile.bio !== 'null' && (
-                <p className="text-xs text-muted-foreground leading-relaxed bg-muted/80 dark:bg-muted/40 rounded-xl p-3 border border-border mt-3">
-                  {profile.bio}
                 </p>
               )}
             </div>
@@ -305,13 +310,13 @@ export const ProfilePage = () => {
         <StatCard
           icon={<Heart className="w-4 h-4 text-rose-500" />}
           label="Favorites"
-          value="0"
+          value={String(profile.totalFavorites || favoriteCount || 0)}
           color="bg-rose-50 dark:bg-rose-950/30"
         />
         <StatCard
           icon={<Star className="w-4 h-4 text-primary fill-primary" />}
           label="Reviews"
-          value="0"
+          value={String(profile.totalReviews || 0)}
           color="bg-primary/10"
         />
       </div>

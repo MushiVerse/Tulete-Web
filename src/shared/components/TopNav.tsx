@@ -15,6 +15,7 @@ import { MapPin } from 'lucide-react';
 import { LanguageCurrencySelector } from './LanguageCurrencySelector';
 import { useCartStore } from '../../features/cart/store/useCartStore';
 import { useProfile } from '../../features/users/hooks/useProfile';
+import { useFavoritesStore } from '../../features/favorites/hooks/useFavoritesStore';
 
 /** Official Google Play badge from Google's CDN */
 const PlayStoreBadge = ({ className = '' }: { className?: string }) => (
@@ -45,6 +46,7 @@ export const TopNav = () => {
   const { currentLocation, setPickerOpen } = useLocationStore();
   const { items: cartItems } = useCartStore();
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const favoriteCount = useFavoritesStore((state) => state.favorites.length);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -148,6 +150,13 @@ export const TopNav = () => {
             title="Favorites"
           >
             <Heart className="size-5" />
+            {favoriteCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 text-white text-[9px] font-extrabold w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-md animate-in zoom-in duration-300 pointer-events-none bg-rose-500"
+              >
+                {favoriteCount > 99 ? '99+' : favoriteCount}
+              </span>
+            )}
           </Link>
 
           {/* Cart Icon / Counter */}
@@ -327,7 +336,14 @@ export const TopNav = () => {
                   </span>
                 )}
               </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} to="/favorites" className={`px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/favorites') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>Favorites</Link>
+              <Link onClick={() => setIsMobileMenuOpen(false)} to="/favorites" className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-colors ${pathname.startsWith('/favorites') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+                <span>Favorites</span>
+                {favoriteCount > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                    {favoriteCount > 99 ? '99+' : favoriteCount}
+                  </span>
+                )}
+              </Link>
 
               {!isAuthenticated && (
                 <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-border">

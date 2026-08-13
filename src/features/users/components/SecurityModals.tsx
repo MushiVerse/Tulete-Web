@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,47 +13,55 @@ import {
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { KeyRound, Trash2 } from 'lucide-react';
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from 'firebase/auth';
+import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../../../core/firebase/config';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
+import { authService } from '../../auth/services/authService';
 
-// ---- Change Password Modal ----
-const passwordSchema = z.object({
-  currentPassword: z.string().min(6, 'Required'),
-  newPassword: z.string().min(6, 'Must be at least 6 characters'),
-  confirmPassword: z.string()
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+// Email regex pattern matching Flutter settingsHome.dart
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+const passwordResetSchema = z.object({
+  email: z.string()
+    .min(1, 'Fill in your email')
+    .refine((val) => emailRegex.test(val), { message: 'Invalid Email Format' }),
 });
 
-type PasswordForm = z.infer<typeof passwordSchema>;
+type PasswordResetForm = z.infer<typeof passwordResetSchema>;
 
 export const ChangePasswordModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<PasswordForm>({
-    resolver: zodResolver(passwordSchema)
-  });
+  const { user } = useAuthStore();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const onSubmit = async (data: PasswordForm) => {
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<PasswordResetForm>({
+    resolver: zodResolver(passwordResetSchema),
+    defaultValues: {
+      email: user?.email || auth.currentUser?.email || '',
+    }
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      setError('');
+      setSuccess(false);
+      const userEmail = user?.email || auth.currentUser?.email || '';
+      setValue('email', userEmail);
+    }
+  }, [isOpen, user?.email, setValue]);
+
+  const onSubmit = async (data: PasswordResetForm) => {
     setError('');
     setSuccess(false);
     try {
-      if (!auth.currentUser || !auth.currentUser.email) throw new Error('Not authenticated');
-      
-      // Re-authenticate
-      const credential = EmailAuthProvider.credential(auth.currentUser.email, data.currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
-      
-      // Update password
-      await updatePassword(auth.currentUser, data.newPassword);
-      
+      await authService.resetPassword(data.email);
       setSuccess(true);
-      reset();
-      setTimeout(onClose, 2000);
+      setTimeout(() => {
+        setSuccess(false);
+        onClose();
+      }, 2500);
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to update password';
+      const errorMsg = err instanceof Error ? err.message : 'Failed to send password reset email';
       setError(errorMsg);
     }
   };
@@ -65,36 +73,41 @@ export const ChangePasswordModal = ({ isOpen, onClose }: { isOpen: boolean; onCl
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <KeyRound className="w-6 h-6 text-primary" />
           </div>
-          <DialogTitle className="text-center">Change Password</DialogTitle>
-          <DialogDescription className="text-center">
-            Enter your current password and a new one to update your security credentials.
+          <DialogTitle className="text-center">Please fill your valid email</DialogTitle>
+          <DialogDescription className="text-center text-xs text-muted-foreground mt-1">
+            Click &quot;Send&quot; then check your emails for verification
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
-          {error && <div className="text-[11px] text-rose-500 bg-rose-50 p-2 rounded-lg">{error}</div>}
-          {success && <div className="text-[11px] text-success bg-success/10 border border-success/20 p-2 rounded-lg">Password updated successfully!</div>}
+          {error && <div className="text-[11px] text-rose-500 bg-rose-50 p-2.5 rounded-lg border border-rose-200">{error}</div>}
+          {success && (
+            <div className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg font-medium">
+              Sent, please check your emails, thanks!
+            </div>
+          )}
           
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">Current Password</label>
-            <Input type="password" {...register('currentPassword')} />
-            {errors.currentPassword && <p className="text-rose-500 text-[10px] mt-1">{errors.currentPassword.message}</p>}
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">New Password</label>
-            <Input type="password" {...register('newPassword')} />
-            {errors.newPassword && <p className="text-rose-500 text-[10px] mt-1">{errors.newPassword.message}</p>}
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">Confirm New Password</label>
-            <Input type="password" {...register('confirmPassword')} />
-            {errors.confirmPassword && <p className="text-rose-500 text-[10px] mt-1">{errors.confirmPassword.message}</p>}
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+              Email Address
+            </label>
+            <Input 
+              type="email" 
+              placeholder="Ex example@exmpl.ex" 
+              {...register('email')} 
+            />
+            {errors.email && <p className="text-rose-500 text-[10px] mt-1 font-medium">{errors.email.message}</p>}
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              Click &quot;Send&quot; then check your emails for verification
+            </p>
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+          <DialogFooter className="mt-6 flex gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Updating...' : 'Update Password'}
+              {isSubmitting ? 'Sending...' : 'Send'}
             </Button>
           </DialogFooter>
         </form>

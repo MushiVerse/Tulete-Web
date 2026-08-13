@@ -22,54 +22,99 @@ export interface TravelDetails {
 
 import { useLocationStore } from '../store/useLocationStore';
 
+function parseCityAndCountryFromAddress(address: string): { city?: string; country?: string } {
+  if (!address || address === 'Set Location' || address === 'Selected Location') return {};
+  const cleaned = address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').trim();
+  const parts = cleaned.split(',').map((p) => p.trim()).filter(Boolean);
+  
+  if (parts.length >= 2) {
+    const country = parts[parts.length - 1];
+    let city = parts[parts.length - 2];
+    if (/^\d+$/.test(city) && parts.length >= 3) {
+      city = parts[parts.length - 3];
+    }
+    return { country, city };
+  } else if (parts.length === 1) {
+    return { city: parts[0] };
+  }
+  return {};
+}
+
 class LocationService {
   /**
    * Detect user's country and city dynamically using active location store first,
-   * high-accuracy device GPS second, and IP Geolocation as fallback.
+   * high-accuracy device GPS with BigDataCloud & Nominatim second, and IP Geolocation as fallback.
    */
   async detectCountryAndCity(): Promise<{ country: string; city: string }> {
     // 1. Check if user already has an active location set in LocationStore
     try {
       const activeLoc = useLocationStore.getState().currentLocation;
       if (activeLoc?.address && !activeLoc.address.includes('(Default)')) {
-        const parts = activeLoc.address.split(',').map((p) => p.trim());
-        if (parts.length >= 2) {
-          const country = parts[parts.length - 1];
-          const city = parts[parts.length - 2];
-          if (city && country && city !== country) {
-            return { country, city };
-          }
+        const parsed = parseCityAndCountryFromAddress(activeLoc.address);
+        if (parsed.city) {
+          return {
+            country: parsed.country || 'Tanzania',
+            city: parsed.city,
+          };
         }
       }
     } catch (e) {
       // ignore
     }
 
-    // 2. Try high-accuracy device GPS position first (exact location e.g. Dodoma vs Dar es Salaam)
+    // 2. Try high-accuracy device GPS position first with direct BigDataCloud & Nominatim geocoding
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       try {
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 60000,
+            timeout: 8000,
+            maximumAge: 30000,
           });
         });
+
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        const address = await this.reverseGeocode(lat, lng);
-        if (address && address !== 'Selected Location') {
-          const parts = address.split(',').map((p) => p.trim());
-          if (parts.length >= 2) {
-            const country = parts[parts.length - 1];
-            const city = parts[parts.length - 2];
+
+        // Query BigDataCloud API for precise city name (e.g. Dodoma)
+        try {
+          const bdcRes = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+          );
+          if (bdcRes.ok) {
+            const bdcData = await bdcRes.json();
+            const city = bdcData.locality || bdcData.city || (bdcData.principalSubdivision ? bdcData.principalSubdivision.replace(/Region/i, '').trim() : '');
+            const country = bdcData.countryName;
             if (city && country) {
               return { country, city };
             }
           }
+        } catch (e) {
+          // ignore
+        }
+
+        // Query Nominatim API for precise city/town
+        try {
+          const nomRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          if (nomRes.ok) {
+            const nomData = await nomRes.json();
+            if (nomData && nomData.address) {
+              const a = nomData.address;
+              const city = a.city || a.town || a.municipality || a.county || a.state_district || (a.state ? a.state.replace(/Region/i, '').trim() : '');
+              const country = a.country || 'Tanzania';
+              if (city) {
+                return { country, city };
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
         }
       } catch (e) {
-        // GPS prompt declined, timeout or error -> fall through to IP fallback
+        // GPS unavailable or denied -> fall through to IP fallback
       }
     }
 
@@ -81,7 +126,7 @@ class LocationService {
         if (data && data.success && data.country) {
           return {
             country: data.country,
-            city: data.city || data.region || 'null',
+            city: data.city || data.region || 'Dodoma',
           };
         }
       }
@@ -96,7 +141,7 @@ class LocationService {
         if (data && data.country_name) {
           return {
             country: data.country_name,
-            city: data.city || data.region || 'null',
+            city: data.city || data.region || 'Dodoma',
           };
         }
       }
