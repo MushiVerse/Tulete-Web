@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Lock, Mail, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { adminAuthService } from '../services/adminAuthService';
+import { AdminLogo } from '../components/AdminLogo';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,12 +45,8 @@ export const AdminLoginPage: React.FC = () => {
         className="w-full max-w-md bg-slate-900/80 backdrop-blur-2xl border border-slate-800 rounded-3xl p-8 shadow-2xl shadow-black/50 relative z-10"
       >
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-purple-600 p-0.5 shadow-lg shadow-primary/25 mb-4">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-primary" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">Tulete CMS Admin</h1>
+          <AdminLogo size="xl" isDark={true} showText={false} className="mb-2" />
+          <h1 className="text-3xl font-black tracking-tight text-[#e89a3c]">Tulete Web Admin</h1>
           <p className="text-xs text-slate-400 mt-1 font-medium">
             Sign in with authorized <span className="text-slate-200 font-bold">UsersandRoles</span> Admin privileges
           </p>
@@ -78,7 +75,7 @@ export const AdminLoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@tulete.co.tz"
+                placeholder="admin@tulete.net"
                 className="w-full h-12 pl-12 pr-4 rounded-xl bg-slate-950/80 border border-slate-800 text-sm font-medium text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
               />
             </div>
@@ -113,7 +110,7 @@ export const AdminLoginPage: React.FC = () => {
               </>
             ) : (
               <>
-                <span>Access CMS Dashboard</span>
+                <span>Access Admin Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

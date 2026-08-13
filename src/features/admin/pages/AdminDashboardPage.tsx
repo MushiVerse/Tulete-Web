@@ -209,7 +209,7 @@ export const AdminDashboardPage: React.FC = () => {
             <span>Admin Intelligence Overview</span>
           </div>
           <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${textPrimary}`}>
-            Platform Analytics & Usage CMS
+            Platform Analytics & Administration
           </h1>
           <p className={`text-xs font-medium mt-1 ${textMuted}`}>
             Live telemetry aggregated across visitor activity, search queries, item views, wishlist favorites, ratings, and orders.

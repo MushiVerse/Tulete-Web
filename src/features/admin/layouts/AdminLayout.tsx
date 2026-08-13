@@ -7,6 +7,7 @@ import {
 import { adminAuthService } from '../services/adminAuthService';
 import { auth } from '../../../core/firebase/config';
 import { AdminThemeProvider, useAdminTheme } from '../context/AdminThemeContext';
+import { AdminLogo } from '../components/AdminLogo';
 import pkg from '../../../../package.json';
 
 const AdminLayoutContent: React.FC = () => {
@@ -90,24 +91,18 @@ const AdminLayoutContent: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-2.5 sm:gap-3 cursor-pointer min-w-0" onClick={() => navigate('/admin')}>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-primary to-purple-600 p-0.5 shadow-md shadow-primary/20 shrink-0">
-              <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
-                isDark ? 'bg-slate-950' : 'bg-white'
-              }`}>
-                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              </div>
-            </div>
+            <AdminLogo size="md" isDark={isDark} showText={false} />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className={`font-black text-sm sm:text-base tracking-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Tulete Admin
+                <span className={`font-black text-sm sm:text-base tracking-tight truncate text-[#e89a3c]`}>
+                  Tulete Web Admin
                 </span>
-                <span className="hidden xs:inline-block px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold bg-primary/20 text-primary border border-primary/30 rounded-full shrink-0">
+                <span className="hidden xs:inline-block px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded-full shrink-0">
                   v{pkg.version || '2.5.0'}
                 </span>
               </div>
               <p className={`hidden sm:block text-[11px] font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Intelligent Platform Analytics
+                Tulete Intelligent Platform Analytics
               </p>
             </div>
           </div>
@@ -186,7 +181,7 @@ const AdminLayoutContent: React.FC = () => {
             <p className={`px-3 text-[11px] font-black uppercase tracking-wider mb-3 ${
               isDark ? 'text-slate-500' : 'text-slate-400'
             }`}>
-              CMS Intelligence Menu
+              Admin Intelligence Menu
             </p>
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -255,7 +250,7 @@ const AdminLayoutContent: React.FC = () => {
 
             <div className="w-full">
               <span className="w-full flex items-center justify-center py-2 px-3 text-xs font-black uppercase tracking-wider bg-primary/15 text-primary border border-primary/30 rounded-xl shadow-xs text-center">
-                CMS v{pkg.version || '2.5.0'}
+                Admin v{pkg.version || '2.5.0'}
               </span>
             </div>
           </div>
@@ -335,7 +330,7 @@ const AdminLayoutContent: React.FC = () => {
                 {/* Full-width Version Code below Tulete Engine Card */}
                 <div className="w-full">
                   <span className="w-full flex items-center justify-center py-2 px-3 text-xs font-black uppercase tracking-wider bg-primary/15 text-primary border border-primary/30 rounded-xl shadow-xs text-center">
-                    CMS v{pkg.version || '2.5.0'}
+                    Admin v{pkg.version || '2.5.0'}
                   </span>
                 </div>
 
