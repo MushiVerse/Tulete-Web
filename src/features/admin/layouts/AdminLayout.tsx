@@ -151,7 +151,7 @@ const AdminLayoutContent: React.FC = () => {
                 {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Admin'}
               </p>
               <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wider">
-                UsersandRoles Admin
+                Admin
               </p>
             </div>
 
