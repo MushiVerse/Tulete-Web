@@ -269,7 +269,7 @@ export const AdminLiveActivityPage: React.FC = () => {
                             <span>Rated: <strong className="text-yellow-500">"{ev.itemName || ev.itemId}"</strong> ({ev.ratingStars} Stars)</span>
                           )}
                           {ev.eventType === 'visit' && (
-                            <span>Opened Web Application Session {userEmail ? `• ${userEmail}` : ''}</span>
+                            <span>Opened Web Application Session</span>
                           )}
                         </p>
                       </div>
