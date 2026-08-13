@@ -77,6 +77,12 @@ class UserService extends BaseFirestoreService<UserProfile> {
     const rawBio = data.bio || data.userBio || data.about || data.description || rootData.bio || rootData.userBio || rootData.about || '';
     const cleanBio = (rawBio && rawBio !== 'null' && String(rawBio).trim() !== '') ? String(rawBio).trim() : '';
 
+    const rawCity = data.city || data.location || rootData.city || rootData.location || '';
+    const cleanCity = (rawCity && rawCity !== 'null' && String(rawCity).trim() !== '') ? String(rawCity).trim() : '';
+
+    const rawCountry = data.country || rootData.country || '';
+    const cleanCountry = (rawCountry && rawCountry !== 'null' && String(rawCountry).trim() !== '') ? String(rawCountry).trim() : '';
+
     const uid = data.uid || auth.currentUser?.uid || '';
 
     // Calculate analytics and stats from Firestore documents according to user uid / email
@@ -101,44 +107,39 @@ class UserService extends BaseFirestoreService<UserProfile> {
       }
     }
 
-    // 2. Query user orders from `orders` and `newcomfirmedorders` collections for exact order counts and total spent
-    try {
-      const qOrders = uid 
-        ? query(collection(db, 'orders'), where('userId', '==', uid))
-        : query(collection(db, 'orders'), where('email', '==', emailKey));
-      const qNc = uid
-        ? query(collection(db, 'newcomfirmedorders'), where('uid', '==', uid))
-        : query(collection(db, 'newcomfirmedorders'), where('email', '==', emailKey));
+    // 2. Query orders count from `orders` and `normalorders` collection
+    if (uid || emailKey) {
+      try {
+        const seenOrderIds = new Set<string>();
+        const [ordersSnap, ncSnap] = await Promise.all([
+          uid ? getDocs(query(collection(db, 'orders'), where('userId', '==', uid))).catch(() => null) : null,
+          getDocs(query(collection(db, 'normalorders'), where('userEmail', '==', emailKey))).catch(() => null),
+        ]);
 
-      const [ordersSnap, ncSnap] = await Promise.all([
-        getDocs(qOrders).catch(() => null),
-        getDocs(qNc).catch(() => null),
-      ]);
+        let calculatedOrdersCount = 0;
+        let calculatedTotalSpent = 0;
 
-      const seenOrderIds = new Set<string>();
-      let calculatedOrdersCount = 0;
-      let calculatedTotalSpent = 0;
+        const processDoc = (docSnap: any) => {
+          if (seenOrderIds.has(docSnap.id)) return;
+          seenOrderIds.add(docSnap.id);
+          calculatedOrdersCount++;
+          const oData = docSnap.data();
+          const price = Number(oData.totalPrice || oData.totalAmount || oData.total || oData.subtotal || oData.price || 0);
+          if (!isNaN(price) && price > 0) {
+            calculatedTotalSpent += price;
+          }
+        };
 
-      const processDoc = (docSnap: any) => {
-        if (seenOrderIds.has(docSnap.id)) return;
-        seenOrderIds.add(docSnap.id);
-        calculatedOrdersCount++;
-        const oData = docSnap.data();
-        const price = Number(oData.totalPrice || oData.totalAmount || oData.total || oData.subtotal || oData.price || 0);
-        if (!isNaN(price) && price > 0) {
-          calculatedTotalSpent += price;
+        if (ordersSnap) ordersSnap.docs.forEach(processDoc);
+        if (ncSnap) ncSnap.docs.forEach(processDoc);
+
+        if (calculatedOrdersCount > 0) {
+          totalOrders = Math.max(totalOrders, calculatedOrdersCount);
+          totalSpent = Math.max(totalSpent, calculatedTotalSpent);
         }
-      };
-
-      if (ordersSnap) ordersSnap.docs.forEach(processDoc);
-      if (ncSnap) ncSnap.docs.forEach(processDoc);
-
-      if (calculatedOrdersCount > 0) {
-        totalOrders = Math.max(totalOrders, calculatedOrdersCount);
-        totalSpent = Math.max(totalSpent, calculatedTotalSpent);
+      } catch (e) {
+        console.warn('Error calculating order stats from Firestore:', e);
       }
-    } catch (e) {
-      console.warn('Error calculating order stats from Firestore:', e);
     }
 
     // 3. Query user favorites count from `userfavorites/{uid}/favorites` & `userfavorites/{uid}/stores`
@@ -163,9 +164,9 @@ class UserService extends BaseFirestoreService<UserProfile> {
         const [revSnap, ratingsSnap, userRevSnap, storeRatingsSnap, eventsSnap] = await Promise.all([
           uid ? getDocs(query(collection(db, 'reviews'), where('userId', '==', uid))).catch(() => null) : null,
           uid ? getDocs(query(collection(db, 'analytics_ratings'), where('userId', '==', uid))).catch(() => null) : null,
-          getDocs(query(collection(db, 'reviews'), where('userEmail', '==', emailKey))).catch(() => null),
-          getDocs(query(collection(db, 'analytics_ratings'), where('userEmail', '==', emailKey))).catch(() => null),
-          uid ? getDocs(query(collection(db, 'analytics_events'), where('userId', '==', uid), where('eventType', '==', 'rate'))).catch(() => null) : null,
+          getDocs(query(collection(db, 'user_reviews'), where('userEmail', '==', emailKey))).catch(() => null),
+          uid ? getDocs(query(collection(db, 'store_ratings'), where('userId', '==', uid))).catch(() => null) : null,
+          getDocs(query(collection(db, 'analytics_events'), where('userEmail', '==', emailKey), where('eventType', '==', 'review_created'))).catch(() => null),
         ]);
 
         let revCount = 0;
@@ -213,8 +214,8 @@ class UserService extends BaseFirestoreService<UserProfile> {
       phone: data.phone && data.phone !== 'null' ? data.phone : '',
       avatarUrl: avatar,
       bio: cleanBio,
-      city: data.city && data.city !== 'null' ? data.city : '',
-      country: data.country && data.country !== 'null' ? data.country : '',
+      city: cleanCity,
+      country: cleanCountry,
       joinedAt: data.signedUpOn ? new Date(data.signedUpOn) : new Date(),
       isVerified: true,
       preferredLanguage: 'en',

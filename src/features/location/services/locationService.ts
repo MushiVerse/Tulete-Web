@@ -24,18 +24,23 @@ import { useLocationStore } from '../store/useLocationStore';
 
 function parseCityAndCountryFromAddress(address: string): { city?: string; country?: string } {
   if (!address || address === 'Set Location' || address === 'Selected Location') return {};
-  const cleaned = address.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '').trim();
+  const cleaned = address
+    .replace(/\(Default\)/gi, '')
+    .replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(,\s*)?/i, '')
+    .trim();
   const parts = cleaned.split(',').map((p) => p.trim()).filter(Boolean);
   
   if (parts.length >= 2) {
     const country = parts[parts.length - 1];
-    let city = parts[parts.length - 2];
-    if (/^\d+$/.test(city) && parts.length >= 3) {
-      city = parts[parts.length - 3];
+    let rawCity = parts[parts.length - 2];
+    if (/^\d+$/.test(rawCity) && parts.length >= 3) {
+      rawCity = parts[parts.length - 3];
     }
+    const city = rawCity.replace(/Region|District|Municipal/gi, '').trim();
     return { country, city };
   } else if (parts.length === 1) {
-    return { city: parts[0] };
+    const city = parts[0].replace(/Region|District|Municipal/gi, '').trim();
+    return { city };
   }
   return {};
 }
@@ -46,16 +51,31 @@ class LocationService {
    * high-accuracy device GPS with BigDataCloud & Nominatim second, and IP Geolocation as fallback.
    */
   async detectCountryAndCity(): Promise<{ country: string; city: string }> {
-    // 1. Check if user already has an active location set in LocationStore
+    // 1. Check if user already has an active location set in LocationStore or saved locations
     try {
       const activeLoc = useLocationStore.getState().currentLocation;
-      if (activeLoc?.address && !activeLoc.address.includes('(Default)')) {
+      if (activeLoc?.address) {
         const parsed = parseCityAndCountryFromAddress(activeLoc.address);
-        if (parsed.city) {
+        if (parsed.city && parsed.city !== 'null') {
           return {
             country: parsed.country || 'Tanzania',
             city: parsed.city,
           };
+        }
+      }
+
+      const saved = useLocationStore.getState().savedLocations;
+      if (saved && saved.length > 0) {
+        for (const loc of saved) {
+          if (loc.address) {
+            const parsed = parseCityAndCountryFromAddress(loc.address);
+            if (parsed.city && parsed.city !== 'null') {
+              return {
+                country: parsed.country || 'Tanzania',
+                city: parsed.city,
+              };
+            }
+          }
         }
       }
     } catch (e) {

@@ -71,10 +71,10 @@ export const ProfilePage = () => {
     try {
       const geo = await locationService.detectCountryAndCity();
       if (geo.city && geo.city !== 'null') {
-        setValue('city', geo.city, { shouldValidate: true });
+        setValue('city', geo.city, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
       }
       if (geo.country) {
-        setValue('country', geo.country, { shouldValidate: true });
+        setValue('country', geo.country, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
       }
     } catch (e) {
       console.warn('Failed to detect location:', e);
@@ -86,8 +86,8 @@ export const ProfilePage = () => {
   // Initialize form when profile loads or editing starts
   useEffect(() => {
     if (profile && isEditing) {
-      const initialCity = profile.city || '';
-      const initialCountry = profile.country || '';
+      const initialCity = (profile.city && profile.city !== 'null') ? profile.city : '';
+      const initialCountry = (profile.country && profile.country !== 'null') ? profile.country : '';
 
       reset({
         displayName: profile.displayName || '',
