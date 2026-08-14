@@ -163,7 +163,7 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
           <p className="text-sm text-muted-foreground mt-1">Can't find this brand, please try again!</p>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+        <div className="flex flex-wrap items-center justify-start gap-4 sm:gap-6">
           <AnimatePresence>
             {brands.map((brand: any, i: number) => (
               <motion.div
@@ -175,16 +175,16 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
                 onClick={() => onSelectBrand(brand.name, brand.category || '')}
                 className="flex flex-col items-center gap-3 cursor-pointer group"
               >
-                <div className="w-fit h-fit max-w-full rounded-xl bg-card border border-border/60 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 relative flex items-center justify-center">
+                <div className="w-fit h-fit max-w-full rounded-xl bg-card border border-border/60 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 relative">
                   <img
                     src={brand.image || brand.logo || brand.imgUrl || brand.imgURL || brand.picture || brand.photo || logoImg}
                     alt={brand.name}
-                    className="w-auto h-auto max-w-full max-h-32 object-contain block group-hover:scale-105 transition-transform duration-500 ease-out"
+                    className="h-28 sm:h-32 w-auto max-w-full object-cover block group-hover:scale-105 transition-transform duration-500 ease-out"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       if (target.src !== logoImg) {
                         target.src = logoImg;
-                        target.className = "w-auto h-auto max-w-full max-h-32 object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out";
+                        target.className = "h-28 sm:h-32 w-auto max-w-full object-contain p-2 block group-hover:scale-105 transition-transform duration-500 ease-out";
                       }
                     }}
                   />
