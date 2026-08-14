@@ -191,16 +191,16 @@ export const AdminDashboardPage: React.FC = () => {
     10
   );
 
-  const cardBg = isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm';
+  const cardBg = isDark ? 'bg-zinc-900/80 border-zinc-800/80' : 'bg-white border-slate-200 shadow-sm';
   const textPrimary = isDark ? 'text-white' : 'text-slate-900';
-  const textMuted = isDark ? 'text-slate-400' : 'text-slate-500';
+  const textMuted = isDark ? 'text-zinc-400' : 'text-slate-500';
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Header Banner */}
       <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl border shadow-xl relative overflow-hidden ${
         isDark 
-          ? 'bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950 border-slate-800/80' 
+          ? 'bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border-zinc-800/80' 
           : 'bg-gradient-to-r from-slate-100 via-white to-slate-50 border-slate-200 shadow-md'
       }`}>
         <div className="relative z-10">

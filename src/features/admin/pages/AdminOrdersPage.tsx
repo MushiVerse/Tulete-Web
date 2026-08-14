@@ -503,10 +503,10 @@ export const AdminOrdersPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const cardBg = isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm';
+  const cardBg = isDark ? 'bg-zinc-900/80 border-zinc-800/80' : 'bg-white border-slate-200 shadow-sm';
   const textPrimary = isDark ? 'text-white' : 'text-slate-900';
-  const textMuted = isDark ? 'text-slate-400' : 'text-slate-500';
-  const inputBg = isDark ? 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400';
+  const textMuted = isDark ? 'text-zinc-400' : 'text-slate-500';
+  const inputBg = isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

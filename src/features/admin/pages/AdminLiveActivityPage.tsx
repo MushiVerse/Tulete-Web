@@ -141,10 +141,10 @@ export const AdminLiveActivityPage: React.FC = () => {
     }
   };
 
-  const cardBg = isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm';
+  const cardBg = isDark ? 'bg-zinc-900/80 border-zinc-800/80' : 'bg-white border-slate-200 shadow-sm';
   const textPrimary = isDark ? 'text-white' : 'text-slate-900';
-  const textMuted = isDark ? 'text-slate-400' : 'text-slate-500';
-  const inputBg = isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900';
+  const textMuted = isDark ? 'text-zinc-400' : 'text-slate-500';
+  const inputBg = isDark ? 'bg-zinc-950 border-zinc-800 text-white' : 'bg-white border-slate-300 text-slate-900';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

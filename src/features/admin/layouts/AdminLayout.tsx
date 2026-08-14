@@ -72,19 +72,19 @@ const AdminLayoutContent: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
-      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 text-slate-900'
     }`}>
       {/* Top Header */}
       <header className={`h-16 border-b sticky top-0 z-40 px-3 sm:px-4 lg:px-8 flex items-center justify-between shrink-0 transition-colors ${
         isDark 
-          ? 'border-slate-800/80 bg-slate-900/80 backdrop-blur-xl' 
+          ? 'border-zinc-800/80 bg-zinc-900/80 backdrop-blur-xl' 
           : 'border-slate-200/80 bg-white/80 backdrop-blur-xl shadow-xs'
       }`}>
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={`lg:hidden p-2 rounded-xl border transition-all shrink-0 ${
-              isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+              isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-slate-100 border-slate-200 text-slate-700'
             }`}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -101,7 +101,7 @@ const AdminLayoutContent: React.FC = () => {
                   v{pkg.version || '2.5.0'}
                 </span>
               </div>
-              <p className={`hidden sm:block text-[11px] font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`hidden sm:block text-[11px] font-medium truncate ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
                 Tulete Intelligent Platform Analytics
               </p>
             </div>
@@ -114,7 +114,7 @@ const AdminLayoutContent: React.FC = () => {
             onClick={toggleTheme}
             className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer ${
               isDark 
-                ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-amber-400' 
+                ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 text-amber-400' 
                 : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 shadow-xs'
             }`}
             title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
@@ -133,7 +133,7 @@ const AdminLayoutContent: React.FC = () => {
             onClick={() => navigate('/')}
             className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
               isDark 
-                ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700/60 text-slate-300 hover:text-white' 
+                ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/60 text-zinc-300 hover:text-white' 
                 : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700 hover:text-slate-900'
             }`}
             title="Go to main web app"
@@ -142,7 +142,7 @@ const AdminLayoutContent: React.FC = () => {
             <ExternalLink className="w-3.5 h-3.5" />
           </button>
 
-          <div className={`h-6 w-[1px] hidden sm:block ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+          <div className={`h-6 w-[1px] hidden sm:block ${isDark ? 'bg-zinc-800' : 'bg-slate-200'}`} />
 
           {/* User profile pill & logout */}
           <div className="flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2">
@@ -150,7 +150,7 @@ const AdminLayoutContent: React.FC = () => {
               <p className={`text-xs font-extrabold truncate max-w-[140px] ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Admin'}
               </p>
-              <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wider">
+              <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">
                 Admin
               </p>
             </div>
@@ -159,7 +159,7 @@ const AdminLayoutContent: React.FC = () => {
               onClick={handleLogout}
               className={`p-2 sm:p-2.5 rounded-xl border transition-all cursor-pointer ${
                 isDark 
-                  ? 'bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 border-slate-700/60 text-slate-300' 
+                  ? 'bg-zinc-800/80 hover:bg-rose-500/20 hover:text-rose-400 border-zinc-700/60 text-zinc-300' 
                   : 'bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border-slate-200 text-slate-700'
               }`}
               title="Sign Out"
@@ -174,12 +174,12 @@ const AdminLayoutContent: React.FC = () => {
         {/* Sidebar (Desktop) */}
         <aside className={`hidden lg:flex flex-col w-64 border-r p-4 shrink-0 justify-between transition-colors ${
           isDark 
-            ? 'border-slate-800/80 bg-slate-900/40' 
+            ? 'border-zinc-800/80 bg-zinc-900/40' 
             : 'border-slate-200 bg-white'
         }`}>
           <div className="space-y-1.5 pt-2">
             <p className={`px-3 text-[11px] font-black uppercase tracking-wider mb-3 ${
-              isDark ? 'text-slate-500' : 'text-slate-400'
+              isDark ? 'text-zinc-500' : 'text-slate-400'
             }`}>
               Admin Intelligence Menu
             </p>
@@ -199,7 +199,7 @@ const AdminLayoutContent: React.FC = () => {
                       linkActive
                         ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 font-bold'
                         : isDark
-                          ? 'bg-slate-900/50 border-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                          ? 'bg-zinc-900/50 border-zinc-800/60 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
                           : 'bg-slate-50 border-slate-200/80 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`
                   }
@@ -214,7 +214,7 @@ const AdminLayoutContent: React.FC = () => {
                             linkActive
                               ? 'text-white/95 font-semibold'
                               : isDark
-                                ? 'text-slate-400 group-hover:text-slate-300'
+                                ? 'text-zinc-400 group-hover:text-zinc-300'
                                 : 'text-slate-500 group-hover:text-slate-700'
                           }`}>
                             {item.desc}
@@ -234,7 +234,7 @@ const AdminLayoutContent: React.FC = () => {
           <div className="space-y-2">
             <div className={`p-4 rounded-2xl border ${
               isDark 
-                ? 'bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800/80' 
+                ? 'bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80' 
                 : 'bg-slate-50 border-slate-200'
             }`}>
               <div className="flex items-center gap-2 text-xs font-extrabold text-amber-500 mb-1">
@@ -242,7 +242,7 @@ const AdminLayoutContent: React.FC = () => {
                 <span>Tulete Engine</span>
               </div>
               <p className={`text-[11px] font-medium leading-relaxed ${
-                isDark ? 'text-slate-400' : 'text-slate-500'
+                isDark ? 'text-zinc-400' : 'text-slate-500'
               }`}>
                 Analytics metrics are dynamically updated from customer actions in Firestore.
               </p>
@@ -260,14 +260,14 @@ const AdminLayoutContent: React.FC = () => {
         {mobileOpen && (
           <div className="lg:hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex">
             <div className={`w-72 border-r p-4 flex flex-col justify-between h-full animate-in slide-in-from-left duration-200 ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
             }`}>
               <div className="space-y-4">
                 <div className={`flex items-center justify-between pb-4 border-b ${
-                  isDark ? 'border-slate-800' : 'border-slate-200'
+                  isDark ? 'border-zinc-800' : 'border-slate-200'
                 }`}>
                   <span className={`font-extrabold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>Navigation</span>
-                  <button onClick={() => setMobileOpen(false)} className="p-2 text-slate-400 hover:text-white">
+                  <button onClick={() => setMobileOpen(false)} className="p-2 text-zinc-400 hover:text-white">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -285,7 +285,7 @@ const AdminLayoutContent: React.FC = () => {
                             linkActive
                               ? 'bg-primary text-white border-primary shadow-md'
                               : isDark 
-                                ? 'bg-slate-950/60 border-slate-800 text-slate-400'
+                                ? 'bg-zinc-950/60 border-zinc-800 text-zinc-400'
                                 : 'bg-slate-50 border-slate-200 text-slate-700'
                           }`
                         }
@@ -296,7 +296,7 @@ const AdminLayoutContent: React.FC = () => {
                             <div className="truncate">
                               <p className="font-bold leading-none">{item.title}</p>
                               <p className={`text-[10px] mt-1 truncate ${
-                                linkActive ? 'text-white/95 font-semibold' : 'text-slate-400'
+                                linkActive ? 'text-white/95 font-semibold' : 'text-zinc-400'
                               }`}>
                                 {item.desc}
                               </p>
@@ -309,11 +309,11 @@ const AdminLayoutContent: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-800/60 space-y-3">
+              <div className="pt-4 border-t border-zinc-800/60 space-y-3">
                 {/* Mobile Drawer Tulete Engine Card */}
                 <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
                   isDark 
-                    ? 'bg-slate-950/80 border-slate-800' 
+                    ? 'bg-zinc-950/80 border-zinc-800' 
                     : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div className="flex items-center gap-2 text-xs font-extrabold text-amber-500">
@@ -321,7 +321,7 @@ const AdminLayoutContent: React.FC = () => {
                     <span>Tulete Engine</span>
                   </div>
                   <p className={`text-[11px] font-medium leading-normal ${
-                    isDark ? 'text-slate-400' : 'text-slate-500'
+                    isDark ? 'text-zinc-400' : 'text-slate-500'
                   }`}>
                     Intelligent Platform Analytics & telemetry system.
                   </p>
@@ -349,7 +349,7 @@ const AdminLayoutContent: React.FC = () => {
 
         {/* Main Dashboard Content View */}
         <main className={`flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 transition-colors ${
-          isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+          isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 text-slate-900'
         }`}>
           <Outlet />
         </main>
