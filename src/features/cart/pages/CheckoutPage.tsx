@@ -85,12 +85,12 @@ export const CheckoutPage = () => {
   const finalTotalWithDelivery = total;
   const computedDeliveryFee = deliveryFee;
 
-  if (items.length === 0) {
+  if (selectedItems.length === 0) {
     return (
       <PageContainer>
         <ContentContainer size="full" className="flex flex-col items-center justify-center min-h-[70vh]">
           <ShoppingCart className="w-16 h-16 text-slate-300 mb-4" />
-          <h2 className="text-xl font-bold mb-2">No items in checkout</h2>
+          <h2 className="text-xl font-bold mb-2">No items selected for checkout</h2>
           <Button onClick={() => navigate('/explore')}>Discover Items</Button>
         </ContentContainer>
       </PageContainer>
@@ -104,7 +104,7 @@ export const CheckoutPage = () => {
       return;
     }
 
-    if (items.length === 0) {
+    if (selectedItems.length === 0) {
       return;
     }
 
@@ -119,7 +119,7 @@ export const CheckoutPage = () => {
 
     try {
       // 1. Validate Live Inventory / Stock constraint
-      const inventoryErrors = await orderService.validateInventory(items);
+      const inventoryErrors = await orderService.validateInventory(selectedItems);
       if (inventoryErrors.length > 0) {
         alert("Checkout Failed:\n\n" + inventoryErrors.join('\n'));
         setIsSubmitting(false);
@@ -608,7 +608,7 @@ export const CheckoutPage = () => {
               <h2 className="text-xl font-bold text-foreground mb-4">Your Order</h2>
 
               <div className="max-h-[220px] overflow-y-auto space-y-3 mb-6 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scrollbar-none">
-                {items.map((item) => (
+                {selectedItems.map((item) => (
                   <CheckoutItemRow key={item.productId} item={item} />
                 ))}
               </div>
@@ -645,7 +645,7 @@ export const CheckoutPage = () => {
               <Button
                 type="submit"
                 isLoading={isSubmitting}
-                disabled={isSubmitting || items.length === 0}
+                disabled={isSubmitting || selectedItems.length === 0}
                 className="w-full py-6 text-base font-bold shadow-lg flex items-center justify-center gap-2"
               >
                 <Truck className="w-5 h-5 animate-pulse" />
@@ -664,7 +664,7 @@ export const CheckoutPage = () => {
               <button
                 onClick={() => {
                   setUssdModalOpen(false);
-                  clearCart();
+                  removeSelectedItems();
                   if (createdOrderIdForModal) {
                     navigate(`/tracking/${createdOrderIdForModal}`);
                   }
@@ -705,7 +705,7 @@ export const CheckoutPage = () => {
                   <Button
                     onClick={() => {
                       setUssdModalOpen(false);
-                      clearCart();
+                      removeSelectedItems();
                       if (createdOrderIdForModal) {
                         navigate(`/tracking/${createdOrderIdForModal}`);
                       }
