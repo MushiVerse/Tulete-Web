@@ -5,6 +5,7 @@ import { GridSkeleton } from '../../../shared/components/skeletons/GridSkeleton'
 import { searchTuleteItems } from '../../../core/services/algoliaService';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config';
+import logoImg from '../../../assets/Green Modern Organic Health Food Logo_20260531_122513_0000.png';
 
 type BrandCategoryFilter = 'food' | 'product' | null;
 
@@ -21,12 +22,12 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
   React.useEffect(() => {
     const fetchBrands = async () => {
       setLoading(true);
-      
+
       let filterStr = "recordType:brand";
       if (categoryFilter) {
         filterStr += ` AND category:${categoryFilter}`;
       }
-      
+
       let results: any[] = [];
       try {
         results = await searchTuleteItems(searchQuery, { filters: filterStr, includeStoresAndBrands: true });
@@ -44,7 +45,7 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
               id: docSnap.id,
               objectID: docSnap.id,
               name: data.name || data.brand || data.title || docSnap.id,
-              image: data.image || data.imgUrl || data.imgURL || data.logo || data.picture || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+              image: data.image || data.imgUrl || data.imgURL || data.logo || data.picture || logoImg,
               category: data.category || data.cat || 'product'
             };
           });
@@ -92,7 +93,7 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
                     id: `extracted-${key}`,
                     objectID: `extracted-${key}`,
                     name: cleanName,
-                    image: d.imgUrl || d.imgURL || d.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
+                    image: d.imgUrl || d.imgURL || d.image || d.logo || d.picture || logoImg,
                     category: d.category || col.defaultCategory
                   });
                 }
@@ -131,22 +132,20 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
         <div className="flex gap-2 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setCategoryFilter(categoryFilter === 'product' ? null : 'product')}
-            className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
-              categoryFilter === 'product'
+            className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${categoryFilter === 'product'
                 ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
                 : 'bg-card text-foreground border-border hover:border-emerald-500/30'
-            }`}
+              }`}
           >
             <ShoppingBag className="w-4 h-4 opacity-80" />
             Product Brands
           </button>
           <button
             onClick={() => setCategoryFilter(categoryFilter === 'food' ? null : 'food')}
-            className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
-              categoryFilter === 'food'
+            className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${categoryFilter === 'food'
                 ? 'bg-primary text-primary-foreground border-primary scale-105'
                 : 'bg-card text-foreground border-border hover:border-primary/30'
-            }`}
+              }`}
           >
             <Utensils className="w-4 h-4 opacity-80" />
             Food Brands
@@ -158,13 +157,13 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
       {brands.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-500">
           <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
-             <Tag className="w-10 h-10 text-muted-foreground" />
+            <Tag className="w-10 h-10 text-muted-foreground" />
           </div>
           <h3 className="text-lg font-bold text-foreground">Oops!, No brands found.</h3>
           <p className="text-sm text-muted-foreground mt-1">Can't find this brand, please try again!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 sm:gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
           <AnimatePresence>
             {brands.map((brand: any, i: number) => (
               <motion.div
@@ -176,12 +175,18 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
                 onClick={() => onSelectBrand(brand.name, brand.category || '')}
                 className="flex flex-col items-center gap-3 cursor-pointer group"
               >
-                <div className="w-full aspect-square rounded-3xl bg-card border border-border/50 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group-hover:-translate-y-2 group-hover:border-primary/40 relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <img 
-                    src={brand.image || 'https://via.placeholder.com/150'} 
+                <div className="w-full aspect-square rounded-3xl bg-card border border-border/60 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 relative">
+                  <img
+                    src={brand.image || brand.logo || brand.imgUrl || brand.imgURL || brand.picture || brand.photo || logoImg}
                     alt={brand.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== logoImg) {
+                        target.src = logoImg;
+                        target.className = "w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out";
+                      }
+                    }}
                   />
                 </div>
                 <span className="notranslate text-sm font-extrabold text-center text-foreground group-hover:text-primary transition-colors line-clamp-2 px-1" translate="no">
