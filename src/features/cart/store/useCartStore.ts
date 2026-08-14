@@ -40,6 +40,7 @@ export interface CartItem {
   idadi?: number;
   maxQuantity?: number;
   isReordered?: boolean;
+  isSelected?: boolean;
 }
 
 export interface LaundryRatios {
@@ -164,7 +165,9 @@ interface CartState {
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   toggleDelivery: (productId: string, isDelivery: boolean) => void;
-  updateFoodItemSlot: (productId: string, slot: string) => void;
+  toggleSelectItem: (productId: string, isSelected?: boolean) => void;
+  toggleSelectAll: (isSelected: boolean) => void;
+  removeSelectedItems: () => void;
   clearCart: () => void;
   getTotals: () => {
     subtotal: number;
@@ -175,6 +178,7 @@ interface CartState {
     total: number;
     itemCount: number;
   };
+  updateFoodItemSlot: (productId: string, slot: string) => void;
   getDynamicItemPrices: () => Record<string, number>;
 }
 
@@ -275,6 +279,11 @@ export const useCartStore = create<CartState>()(
           items: state.items.map((i) => (i.productId === productId ? { ...i, ...config } : i)),
         })),
 
+      updateFoodItemSlot: (productId, slot) =>
+        set((state) => ({
+          items: state.items.map((i) => (i.productId === productId ? { ...i, deliverySlot: slot } : i)),
+        })),
+
       applyLaundryServicesToAll: (config) =>
         set((state) => ({
           items: state.items.map((i) => ((i as any).cat === 'Nguo' ? { ...i, ...config } : i)),
@@ -352,7 +361,8 @@ export const useCartStore = create<CartState>()(
                 price: basePrice, 
                 basePrice, 
                 quantity: 1, 
-                maxQuantity: stock 
+                maxQuantity: stock,
+                isSelected: true,
               }
             ] 
           };
@@ -406,11 +416,31 @@ export const useCartStore = create<CartState>()(
         }));
       },
 
-      updateFoodItemSlot: (productId, deliverySlot) => {
+      toggleSelectItem: (productId, isSelected) =>
         set((state) => ({
-          items: state.items.map((i) => (i.productId === productId ? { ...i, deliverySlot } : i)),
-        }));
-      },
+          items: state.items.map((i) =>
+            i.productId === productId
+              ? { ...i, isSelected: isSelected !== undefined ? isSelected : !(i.isSelected !== false) }
+              : i
+          ),
+        })),
+
+      toggleSelectAll: (isSelected) =>
+        set((state) => ({
+          items: state.items.map((i) => ({ ...i, isSelected })),
+        })),
+
+      removeSelectedItems: () =>
+        set((state) => {
+          const remainingItems = state.items.filter((i) => i.isSelected === false);
+          const hasLaundry = remainingItems.some((i) => (i as any).cat === 'Nguo');
+          return {
+            items: remainingItems,
+            laundryPreferences: hasLaundry
+              ? state.laundryPreferences
+              : { ...state.laundryPreferences, globalExpressSelected: false },
+          };
+        }),
 
       clearCart: () =>
         set({
@@ -419,7 +449,8 @@ export const useCartStore = create<CartState>()(
         }),
 
       getTotals: () => {
-        const items = get().items;
+        const allItems = get().items;
+        const items = allItems.filter((item) => item.isSelected !== false);
         const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
         let subtotal = 0;

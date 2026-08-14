@@ -46,10 +46,11 @@ const DEFAULT_CENTER: SavedLocation = { id: 'default', lat: -6.1630, lng: 35.751
 export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user, savedPhoneNumber, savePhoneNumber } = useAuthStore();
-  const { items, getTotals, clearCart, laundryPreferences, getDynamicItemPrices } = useCartStore();
+  const { items, getTotals, clearCart, removeSelectedItems, laundryPreferences, getDynamicItemPrices } = useCartStore();
+  const selectedItems = items.filter((i) => i.isSelected !== false);
   const { subtotal, total, deliveryFee, expressFee = 0, pickupFee = 0, serviceFee = 0 } = getTotals();
 
-  const isLaundryOrder = items.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
+  const isLaundryOrder = selectedItems.some(i => i.storeId === 'laundry' || i.storeName?.toLowerCase().includes('laundry') || i.isLaundry);
   const { deliverytime, instructions: laundryInstructions } = laundryPreferences || {};
 
   // Phone state with UX for edit vs view
@@ -127,9 +128,9 @@ export const CheckoutPage = () => {
 
       const dynamicPrices = getDynamicItemPrices();
 
-      // Group items by store / laundry pack
-      const storeGroups: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof items } } = {};
-      items.forEach(item => {
+      // Group selected items by store / laundry pack
+      const storeGroups: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof selectedItems } } = {};
+      selectedItems.forEach(item => {
         const isLaundry = isLaundryItem(item) || item.storeId === 'laundry';
         const rawSId = item.storeId && item.storeId !== 'unknown' ? item.storeId : null;
         const rawSName = item.storeName && item.storeName !== 'Unknown Store' ? item.storeName : null;
@@ -274,7 +275,7 @@ export const CheckoutPage = () => {
 
       // Execute specific payment method flow
       if (paymentMethodType === 'POD') {
-        clearCart();
+        removeSelectedItems();
         if (createdOrderIds.length > 0) {
           navigate(`/tracking/${createdOrderIds[0]}`);
         } else {
@@ -312,7 +313,7 @@ export const CheckoutPage = () => {
               setUssdStatus('completed');
               setUssdMessage('Payment received successfully! Your order is confirmed.');
               await orderService.updatePaymentStatus(mainOrderId, 'Paid', ref);
-              clearCart();
+              removeSelectedItems();
               setTimeout(() => {
                 setUssdModalOpen(false);
                 navigate(`/tracking/${mainOrderId}`);

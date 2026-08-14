@@ -6,7 +6,7 @@ import { useLocationStore } from '../../location/store/useLocationStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Card } from '../../../shared/components/ui/Card';
 import { Switch } from '../../../shared/components/ui/Switch';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle, MapPin, Shirt, AlertCircle, AlertTriangle, RotateCcw, ChevronDown, ChevronUp, Navigation, Search } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Truck, Store, X, Flame, Package, Zap, Sparkles, Clock, FileText, XCircle, MapPin, Shirt, AlertCircle, AlertTriangle, RotateCcw, ChevronDown, ChevronUp, Navigation, Search, Check } from 'lucide-react';
 import { PageContainer, ContentContainer } from '../../../shared/components/layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_SETTINGS } from '@/core/config/settings';
@@ -20,12 +20,13 @@ import { MiniMapPreview } from '../../location/components/MiniMapPreview';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { locationService } from '../../location/services/locationService';
 
-const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig }: any) => {
+const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, updateLaundryItemConfig, toggleSelectItem }: any) => {
   // Subscribe to location so re-renders happen on location change
   useLocationStore((state) => state.currentLocation);
   const getDynamicItemPrices = useCartStore((state) => state.getDynamicItemPrices);
   const dynamicPrices = getDynamicItemPrices();
   const itemTotal = dynamicPrices[item.productId] ?? (item.price * item.quantity);
+  const isSelected = item.isSelected !== false;
 
   const targetId = item.baseProductId || item.productId || item.id || '';
   const { data: fetchedDoc } = useFirestoreDocument(
@@ -35,25 +36,37 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
   );
 
   return (
-    <Card className="p-3 sm:p-4 flex gap-3 sm:gap-4 items-start sm:items-center bg-card border border-border shadow-sm hover:shadow-md transition-all group/item">
+    <Card className={`p-2.5 sm:p-3 flex gap-2.5 sm:gap-3 items-start sm:items-center bg-card border border-border shadow-xs hover:shadow-md transition-all group/item ${!isSelected ? 'opacity-60 bg-muted/40 border-dashed' : ''
+      }`}>
+      {/* Item Selection Checkbox */}
+      <button
+        type="button"
+        onClick={() => toggleSelectItem(item.productId, !isSelected)}
+        className={`w-4 h-4 sm:w-5 sm:h-5 rounded-md sm:rounded-lg border flex items-center justify-center transition-all shrink-0 self-center cursor-pointer ${isSelected
+            ? 'bg-primary border-primary text-primary-foreground shadow-xs scale-105'
+            : 'border-muted-foreground/40 bg-background hover:border-primary/60 hover:bg-primary/5'
+          }`}
+        title={isSelected ? `Unselect ${item.name}` : `Select ${item.name}`}
+      >
+        {isSelected && <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" />}
+      </button>
       {/* Item Image */}
       <img
         src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200"}
         alt={item.name}
-        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover bg-slate-100 flex-shrink-0"
+        className="w-12 h-12 sm:w-16 sm:h-16 rounded-md sm:rounded-lg object-cover bg-slate-100 flex-shrink-0"
       />
 
       {/* Item Details */}
       <div className="flex-1 min-w-0">
-        <h3 className="notranslate font-semibold text-foreground truncate text-sm sm:text-base mb-0.5" translate="no">{item.name}</h3>
-        {/* <p className="notranslate text-xs text-muted-foreground mb-1 truncate" translate="no">From {item.storeName}</p> */}
+        <h3 className="notranslate font-bold text-foreground truncate text-xs sm:text-sm mb-0.5" translate="no">{item.name}</h3>
 
         {/* Left in stock indicator */}
         {(() => {
           const limit = item.maxQuantity ?? item.idadi;
           if (limit !== undefined && limit > 0) {
             return (
-              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-1.5 block">
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-1 block">
                 {limit} left in stock
               </span>
             );
@@ -61,22 +74,22 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
           return null;
         })()}
 
-        <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-1.5">
           {/* Price */}
-          <span className="font-bold text-foreground text-sm sm:text-base">
+          <span className="font-extrabold text-foreground text-xs sm:text-sm">
             {formatPrice(itemTotal)} {APP_SETTINGS.currency}
           </span>
 
           {/* Quantity controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 border border-border/80 dark:border-border rounded-xl p-1 bg-muted/80 dark:bg-muted/50 shadow-inner">
+          <div className="flex items-center gap-1 border border-border/80 dark:border-border rounded-lg p-0.5 bg-muted/80 dark:bg-muted/50 shadow-inner">
             <button
               onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-foreground hover:text-primary hover:bg-background rounded-lg transition-all shadow-sm active:scale-95 border border-border/40"
+              className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-foreground hover:text-primary hover:bg-background rounded-md transition-all shadow-xs active:scale-95 border border-border/40"
               title="Decrease quantity"
             >
-              <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             </button>
-            <span className="w-5 sm:w-6 text-center text-xs sm:text-sm font-extrabold text-foreground">
+            <span className="w-4 sm:w-5 text-center text-xs font-extrabold text-foreground">
               {item.quantity}
             </span>
             <button
@@ -88,18 +101,18 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                 }
                 updateQuantity(item.productId, item.quantity + 1);
               }}
-              className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-foreground hover:text-primary hover:bg-background rounded-lg transition-all shadow-sm active:scale-95 border border-border/40"
+              className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-foreground hover:text-primary hover:bg-background rounded-md transition-all shadow-xs active:scale-95 border border-border/40"
               title="Increase quantity"
             >
-              <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             </button>
           </div>
         </div>
 
         {/* Reordered Item Notice (Hides subservices & pickup button, uses previous settings) */}
         {item.isReordered ? (
-          <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <RotateCcw className="w-3.5 h-3.5 text-primary shrink-0" />
+          <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+            <RotateCcw className="w-3 h-3 text-primary shrink-0" />
             <span>Reordered item — using previous order settings & delivery point</span>
           </div>
         ) : (
@@ -113,8 +126,8 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
               const hasAnyService = isWash || isIron || isPack || isVip;
 
               return (
-                <div className="mt-4 pt-3 border-t border-border/50">
-                  <div className="flex items-center flex-wrap gap-2">
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <div className="flex items-center flex-wrap gap-1.5">
                     {[
                       { key: 'wash', label: 'Wash', prop: 'washingSelected', isSelected: isWash, icon: Shirt },
                       { key: 'iron', label: 'Iron', prop: 'ironingSelected', isSelected: isIron, icon: Flame },
@@ -125,21 +138,20 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                         key={key}
                         type="button"
                         onClick={() => updateLaundryItemConfig(item.productId, { [prop]: !isSelected })}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${
-                          isSelected
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold transition-all border shadow-xs ${isSelected
                             ? 'bg-primary border-primary text-primary-foreground scale-105'
                             : 'bg-card border-border text-muted-foreground hover:bg-muted'
-                        }`}
+                          }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
+                        <Icon className={`w-3 h-3 ${isSelected ? 'fill-current' : ''}`} />
                         {label}
                       </button>
                     ))}
                   </div>
 
                   {!hasAnyService && (
-                    <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 mt-2">
-                      <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <div className="flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/50 mt-1.5">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>Please select at least one service (Wash, Iron, Package, or VIP)</span>
                     </div>
                   )}
@@ -156,7 +168,7 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                 (fetchedDoc as any)?._collection === 'foods';
 
               return (
-                <div className="flex items-center flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
+                <div className="flex items-center flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/50">
                   {/* Food Specific Delivery Slots (ONLY for Food items) */}
                   {isFood && (() => {
                     const hour = new Date().getHours();
@@ -168,20 +180,20 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                     const currentSlot = validFoodSlots.includes(String(item.deliverySlot || '')) ? item.deliverySlot : defaultFoodSlot;
 
                     return (
-                      <div className="flex items-center flex-wrap gap-2">
-                        <span className="text-xs font-bold text-muted-foreground mr-1">Delivery Time:</span>
+                      <div className="flex items-center flex-wrap gap-1.5">
+                        <span className="text-[11px] font-bold text-muted-foreground mr-0.5">Delivery Time:</span>
 
                         {/* ASAP Option (Show when brand === "now") */}
                         {isBrandNow && (
                           <button
                             type="button"
                             onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'ASAP' ? '' : 'ASAP')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'ASAP'
-                                ? 'bg-amber-500 border-amber-500 text-white scale-105 shadow-amber-500/20'
-                                : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold transition-all border shadow-xs ${currentSlot === 'ASAP'
+                              ? 'bg-amber-500 border-amber-500 text-white scale-105 shadow-amber-500/20'
+                              : 'bg-card border-border text-muted-foreground hover:bg-muted'
                               }`}
                           >
-                            <Zap className="w-3.5 h-3.5 fill-current" />
+                            <Zap className="w-3 h-3 fill-current" />
                             ASAP
                           </button>
                         )}
@@ -191,12 +203,12 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                           <button
                             type="button"
                             onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Lunch' ? '' : 'Lunch')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'Lunch'
-                                ? 'bg-orange-500 border-orange-500 text-white scale-105 shadow-orange-500/20'
-                                : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold transition-all border shadow-xs ${currentSlot === 'Lunch'
+                              ? 'bg-orange-500 border-orange-500 text-white scale-105 shadow-orange-500/20'
+                              : 'bg-card border-border text-muted-foreground hover:bg-muted'
                               }`}
                           >
-                            <Clock className="w-3.5 h-3.5" />
+                            <Clock className="w-3 h-3" />
                             Lunch
                           </button>
                         )}
@@ -205,12 +217,12 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                         <button
                           type="button"
                           onClick={() => updateFoodItemSlot(item.productId, currentSlot === 'Dinner' ? '' : 'Dinner')}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${currentSlot === 'Dinner'
-                              ? 'bg-indigo-500 border-indigo-500 text-white scale-105 shadow-indigo-500/20'
-                              : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold transition-all border shadow-xs ${currentSlot === 'Dinner'
+                            ? 'bg-indigo-500 border-indigo-500 text-white scale-105 shadow-indigo-500/20'
+                            : 'bg-card border-border text-muted-foreground hover:bg-muted'
                             }`}
                         >
-                          <Clock className="w-3.5 h-3.5" />
+                          <Clock className="w-3 h-3" />
                           Dinner
                         </button>
                       </div>
@@ -221,12 +233,12 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
                   <button
                     type="button"
                     onClick={() => toggleDelivery(item.productId, item.isDeliverySelected === false ? true : false)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold transition-all border shadow-sm ${item.isDeliverySelected === false || (item as any).packagepickup === true
-                        ? 'bg-primary border-primary text-primary-foreground scale-105'
-                        : 'bg-card border-border text-muted-foreground hover:bg-muted'
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold transition-all border shadow-xs ${item.isDeliverySelected === false || (item as any).packagepickup === true
+                      ? 'bg-primary border-primary text-primary-foreground scale-105'
+                      : 'bg-card border-border text-muted-foreground hover:bg-muted'
                       }`}
                   >
-                    <MapPin className={`w-3.5 h-3.5 ${item.isDeliverySelected === false || (item as any).packagepickup === true ? 'fill-current' : ''}`} />
+                    <MapPin className={`w-3 h-3 ${item.isDeliverySelected === false || (item as any).packagepickup === true ? 'fill-current' : ''}`} />
                     Pick Up (No Delivery)
                   </button>
                 </div>
@@ -239,11 +251,11 @@ const CartItemCard = ({ item, updateQuantity, removeFromCart, toggleDelivery, up
       {/* Delete button — grey by default, soft opacity red background with red icon on hover/active */}
       <button
         onClick={() => removeFromCart(item.productId)}
-        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-muted text-muted-foreground hover:bg-red-500/15 hover:text-red-600 dark:hover:bg-red-500/25 dark:hover:text-red-400 border border-border/40 hover:border-red-500/30 flex items-center justify-center transition-all self-start shrink-0 cursor-pointer shadow-xs active:scale-90"
+        className="w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg bg-muted text-muted-foreground hover:bg-red-500/15 hover:text-red-600 dark:hover:bg-red-500/25 dark:hover:text-red-400 border border-border/40 hover:border-red-500/30 flex items-center justify-center transition-all self-start shrink-0 cursor-pointer shadow-xs active:scale-90"
         title={`Remove ${item.name}`}
         aria-label={`Remove ${item.name} from cart`}
       >
-        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
       </button>
     </Card>
   );
@@ -253,7 +265,7 @@ export const CartPage = () => {
   const navigate = useNavigate();
   const { isDark } = useThemeStore();
   const t = useLanguageStore((state) => state.t);
-  const { items, updateQuantity, removeFromCart, clearCart, getTotals, toggleDelivery, laundryPreferences, setLaundryPreferences, updateLaundryItemConfig, applyLaundryServicesToAll, clearAllLaundryServices } = useCartStore();
+  const { items, updateQuantity, removeFromCart, clearCart, getTotals, toggleDelivery, toggleSelectItem, toggleSelectAll, laundryPreferences, setLaundryPreferences, updateLaundryItemConfig, applyLaundryServicesToAll, clearAllLaundryServices } = useCartStore();
   const { currentLocation, savedLocations, setCurrentLocation, addSavedLocation } = useLocationStore();
   const [totals, setTotals] = useState(getTotals());
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -302,13 +314,21 @@ export const CartPage = () => {
   }, [setLaundryPreferences]);
 
   const { subtotal, deliveryFee, expressFee, pickupFee, serviceFee, total, itemCount } = getTotals();
-  const isLaundryOrder = items.some(i => (i as any).cat === 'Nguo');
-  const hasActiveLaundryService = items.some(item =>
+  const selectedItems = items.filter((i) => i.isSelected !== false);
+  const allSelected = items.length > 0 && selectedItems.length === items.length;
+  const someSelected = selectedItems.length > 0 && !allSelected;
+
+  const isLaundryOrder = selectedItems.some(i => (i as any).cat === 'Nguo');
+  const hasActiveLaundryService = selectedItems.some(item =>
     (item as any).cat === 'Nguo' &&
     (item.washingSelected !== false || item.ironingSelected || item.packagingSelected || item.vipSelected)
   );
 
   const handleProceedToCheckout = () => {
+    if (selectedItems.length === 0) {
+      alert('Please select at least one item to proceed to checkout.');
+      return;
+    }
     if (!currentLocation) {
       setIsLocationModalOpen(true);
       return;
@@ -366,11 +386,36 @@ export const CartPage = () => {
         <div className="flex flex-col lg:flex-row gap-8 lg:h-[calc(100vh-6rem)] items-stretch pb-6 pt-2">
           {/* Left Column Wrapper */}
           <div className="flex-1 w-full flex flex-col gap-4 lg:pr-2 min-w-0 min-h-0">
-            <div className="flex items-center justify-between shrink-0">
-              <h1 className="text-2xl font-extrabold text-foreground">Shopping Cart</h1>
+            <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl font-extrabold text-foreground">Shopping Cart</h1>
+
+                {/* General Checkbox on Top */}
+                <button
+                  type="button"
+                  onClick={() => toggleSelectAll(!allSelected)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all border bg-card border-border hover:bg-muted hover:border-primary/30 cursor-pointer shadow-xs active:scale-95"
+                  title={allSelected ? "Deselect all items" : "Select all items"}
+                >
+                  <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${allSelected
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : someSelected
+                        ? 'bg-primary/20 border-primary text-primary'
+                        : 'border-muted-foreground/40 bg-background'
+                    }`}>
+                    {allSelected ? (
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    ) : someSelected ? (
+                      <Minus className="w-3 h-3 stroke-[3]" />
+                    ) : null}
+                  </div>
+                  <span>Select All ({selectedItems.length}/{items.length})</span>
+                </button>
+              </div>
+
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">
-                  {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                  {itemCount} {itemCount === 1 ? 'item' : 'items'} selected
                 </span>
                 <button
                   onClick={() => clearCart()}
@@ -449,7 +494,7 @@ export const CartPage = () => {
                 <div className="mt-2.5 pt-2 border-t border-border/50 space-y-1.5">
                   <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
                     <span className="text-[10px] font-extrabold text-muted-foreground shrink-0 mr-1 uppercase tracking-wider">Quick Select:</span>
-                    
+
                     {savedLocations.map((loc) => {
                       const isSelected = currentLocation?.id === loc.id || currentLocation?.address === loc.address;
                       const labelText = loc.specificInstructions || loc.address.split(',')[0];
@@ -459,11 +504,10 @@ export const CartPage = () => {
                           type="button"
                           onClick={() => setCurrentLocation(loc)}
                           title={loc.address}
-                          className={`notranslate text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all border shrink-0 flex items-center gap-1.5 max-w-[200px] truncate ${
-                            isSelected
+                          className={`notranslate text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all border shrink-0 flex items-center gap-1.5 max-w-[200px] truncate ${isSelected
                               ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                               : 'bg-muted/60 text-muted-foreground hover:bg-muted border-border'
-                          }`}
+                            }`}
                           translate="no"
                         >
                           <MapPin className="w-3 h-3 shrink-0" />
@@ -544,7 +588,7 @@ export const CartPage = () => {
             </Card>
 
             {/* Scrollable Cart Items Container Grouped by Store */}
-            <div className="flex-1 lg:overflow-y-auto scrollbar-none space-y-6 min-h-0 pr-1 pb-4">
+            <div className="flex-1 lg:overflow-y-auto scrollbar-none space-y-4 min-h-0 pr-1 pb-4">
               <AnimatePresence>
                 {(() => {
                   const groupedCart: { [key: string]: { storeId: string; storeName: string; isLaundry: boolean; items: typeof items } } = {};
@@ -573,7 +617,7 @@ export const CartPage = () => {
                     const key = isLaundry
                       ? 'laundry_pack'
                       : (rawSId || storeName);
-                    
+
                     if (!groupedCart[key]) {
                       groupedCart[key] = {
                         storeId: rawSId || key,
@@ -589,29 +633,27 @@ export const CartPage = () => {
                     const storeFee = getStoreDeliveryFee(group.items, currentLocation);
 
                     return (
-                      <div key={group.storeId} className="space-y-3">
+                      <div key={group.storeId} className="space-y-2">
                         {/* Store / Laundry Pack Header */}
-                        <div className="flex items-center justify-between p-3.5 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border shadow-xs">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
-                              group.isLaundry ? 'bg-sky-500/10 text-sky-500' : 'bg-primary/10 text-primary'
-                            }`}>
-                              {group.isLaundry ? <Sparkles className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                        <div className="flex items-center justify-between p-2 sm:p-2.5 bg-muted/60 dark:bg-muted/40 rounded-xl border border-border shadow-xs">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${group.isLaundry ? 'bg-sky-500/10 text-sky-500' : 'bg-primary/10 text-primary'
+                              }`}>
+                              {group.isLaundry ? <Sparkles className="w-3.5 h-3.5" /> : <Store className="w-3.5 h-3.5" />}
                             </div>
                             <div>
-                              <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                              <h3 className="font-bold text-xs sm:text-sm text-foreground flex items-center gap-2">
                                 {group.isLaundry ? `Laundry Pack (${group.storeName})` : group.storeName}
                               </h3>
-                              <p className="text-[11px] text-muted-foreground font-semibold">
+                              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-semibold">
                                 {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
                               </p>
                             </div>
                           </div>
-
                         </div>
 
                         {/* Store Items */}
-                        <div className="space-y-3 pl-1 sm:pl-2">
+                        <div className="space-y-2 pl-1 sm:pl-2">
                           {group.items.map((item) => (
                             <motion.div
                               key={item.productId}
@@ -627,6 +669,7 @@ export const CartPage = () => {
                                 removeFromCart={removeFromCart}
                                 toggleDelivery={toggleDelivery}
                                 updateLaundryItemConfig={updateLaundryItemConfig}
+                                toggleSelectItem={toggleSelectItem}
                               />
                             </motion.div>
                           ))}
@@ -751,8 +794,8 @@ export const CartPage = () => {
                             <button
                               onClick={() => setLaundryPreferences({ globalExpressSelected: !laundryPreferences.globalExpressSelected })}
                               className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all shadow-sm ${laundryPreferences.globalExpressSelected
-                                  ? 'bg-primary/10 border-primary text-primary'
-                                  : 'bg-card border-border hover:bg-muted text-foreground'
+                                ? 'bg-primary/10 border-primary text-primary'
+                                : 'bg-card border-border hover:bg-muted text-foreground'
                                 }`}
                             >
                               <div className="flex items-center gap-3">
