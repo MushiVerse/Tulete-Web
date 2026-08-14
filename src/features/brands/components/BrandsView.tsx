@@ -133,8 +133,8 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
           <button
             onClick={() => setCategoryFilter(categoryFilter === 'product' ? null : 'product')}
             className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${categoryFilter === 'product'
-                ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
-                : 'bg-card text-foreground border-border hover:border-emerald-500/30'
+              ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
+              : 'bg-card text-foreground border-border hover:border-emerald-500/30'
               }`}
           >
             <ShoppingBag className="w-4 h-4 opacity-80" />
@@ -143,8 +143,8 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
           <button
             onClick={() => setCategoryFilter(categoryFilter === 'food' ? null : 'food')}
             className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${categoryFilter === 'food'
-                ? 'bg-primary text-primary-foreground border-primary scale-105'
-                : 'bg-card text-foreground border-border hover:border-primary/30'
+              ? 'bg-primary text-primary-foreground border-primary scale-105'
+              : 'bg-card text-foreground border-border hover:border-primary/30'
               }`}
           >
             <Utensils className="w-4 h-4 opacity-80" />
@@ -163,7 +163,7 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
           <p className="text-sm text-muted-foreground mt-1">Can't find this brand, please try again!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
           <AnimatePresence>
             {brands.map((brand: any, i: number) => (
               <motion.div
@@ -175,16 +175,16 @@ export const BrandsView: React.FC<BrandsViewProps> = ({ onSelectBrand, searchQue
                 onClick={() => onSelectBrand(brand.name, brand.category || '')}
                 className="flex flex-col items-center gap-3 cursor-pointer group"
               >
-                <div className="w-full aspect-square rounded-3xl bg-card border border-border/60 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 relative">
+                <div className="w-fit h-fit max-w-full rounded-xl bg-card border border-border/60 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 relative flex items-center justify-center">
                   <img
                     src={brand.image || brand.logo || brand.imgUrl || brand.imgURL || brand.picture || brand.photo || logoImg}
                     alt={brand.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                    className="w-auto h-auto max-w-full max-h-32 object-contain block group-hover:scale-105 transition-transform duration-500 ease-out"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       if (target.src !== logoImg) {
                         target.src = logoImg;
-                        target.className = "w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out";
+                        target.className = "w-auto h-auto max-w-full max-h-32 object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out";
                       }
                     }}
                   />
