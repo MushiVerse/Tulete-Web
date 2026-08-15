@@ -106,6 +106,21 @@ async function updateUserAnalytics(
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastRecordedQuery = '';
 
+const recentItemViews = new Map<string, { timestamp: number; hasItemData: boolean }>();
+const recentStoreViews = new Map<string, { timestamp: number; hasStoreData: boolean }>();
+const VIEW_DEDUPE_MS = 10000; // 10 seconds deduplication window per user + item/store view
+
+function cleanupDedupeMap(map: Map<string, any>) {
+  const now = Date.now();
+  if (map.size > 200) {
+    for (const [key, val] of map.entries()) {
+      if (now - val.timestamp > VIEW_DEDUPE_MS) {
+        map.delete(key);
+      }
+    }
+  }
+}
+
 export const analyticsService = {
   /**
    * Track visitor session on app load/open with user ID tracing.
@@ -154,12 +169,41 @@ export const analyticsService = {
 
   /**
    * Track item view by ID with customer UID recording.
+   * Deduplicates rapid duplicate calls (e.g. React re-renders, state changes, React StrictMode) within 10 seconds.
    */
   async trackItemView(itemId: string, itemData?: any, explicitUserId?: string): Promise<void> {
     if (!itemId) return;
+    const cleanId = String(itemId).trim();
+    if (!cleanId) return;
+
     try {
       const userInfo = getCurrentUserInfo(explicitUserId);
-      const cleanId = String(itemId).trim();
+      const dedupeKey = `${userInfo.userId}_${cleanId}`;
+      const now = Date.now();
+      const previous = recentItemViews.get(dedupeKey);
+      const hasName = Boolean(itemData?.name || itemData?.title);
+
+      if (previous && now - previous.timestamp < VIEW_DEDUPE_MS) {
+        // View count was already recorded recently. Skip incrementing view counts.
+        // If item name/category was missing in the previous call and is now available, enrich the item doc without incrementing count.
+        if (!previous.hasItemData && hasName) {
+          previous.hasItemData = true;
+          const itemRef = doc(db, 'analytics_items', cleanId);
+          const updatePayload: any = {};
+          if (itemData?.name || itemData?.title) {
+            updatePayload.name = itemData.name || itemData.title;
+          }
+          if (itemData?.category || itemData?.cat) {
+            updatePayload.category = itemData.category || itemData.cat;
+          }
+          await setDoc(itemRef, updatePayload, { merge: true });
+        }
+        return;
+      }
+
+      recentItemViews.set(dedupeKey, { timestamp: now, hasItemData: hasName });
+      cleanupDedupeMap(recentItemViews);
+
       const safeKey = sanitizeKey(cleanId);
       const today = getTodayDateString();
 
@@ -556,12 +600,32 @@ export const analyticsService = {
 
   /**
    * Track store view by storeId with customer UID recording.
+   * Deduplicates rapid repeat calls for the same user & store ID within 10 seconds.
    */
   async trackStoreView(storeId: string, storeData?: any, explicitUserId?: string): Promise<void> {
     if (!storeId) return;
+    const cleanId = String(storeId).trim();
+    if (!cleanId) return;
+
     try {
       const userInfo = getCurrentUserInfo(explicitUserId);
-      const cleanId = String(storeId).trim();
+      const dedupeKey = `${userInfo.userId}_${cleanId}`;
+      const now = Date.now();
+      const previous = recentStoreViews.get(dedupeKey);
+      const hasName = Boolean(storeData?.name || storeData?.store);
+
+      if (previous && now - previous.timestamp < VIEW_DEDUPE_MS) {
+        if (!previous.hasStoreData && hasName) {
+          previous.hasStoreData = true;
+          const storeRef = doc(db, 'analytics_stores', cleanId);
+          await setDoc(storeRef, { name: storeData.name || storeData.store }, { merge: true });
+        }
+        return;
+      }
+
+      recentStoreViews.set(dedupeKey, { timestamp: now, hasStoreData: hasName });
+      cleanupDedupeMap(recentStoreViews);
+
       const safeKey = sanitizeKey(cleanId);
       const today = getTodayDateString();
 
