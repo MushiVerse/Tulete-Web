@@ -677,12 +677,12 @@ export const StoreListingPage = () => {
     const qTokens = q.split(/\s+/).filter(Boolean);
     return qTokens.every(qToken => {
       return targets.some(target => {
-        if (target.includes(qToken)) return true;
+        if (target.includes(qToken) || qToken.includes(target)) return true;
 
-        const words = target.split(/\s+/).filter(Boolean);
+        const words = target.split(/[\s,.\-_/]+/).filter(Boolean);
         return words.some(word => {
-          if (qToken.length <= 3) return word === qToken;
-          const maxDist = qToken.length <= 5 ? 1 : 2;
+          if (word.startsWith(qToken) || qToken.startsWith(word) || word.includes(qToken)) return true;
+          const maxDist = qToken.length <= 2 ? 0 : qToken.length <= 4 ? 1 : qToken.length <= 7 ? 2 : 3;
           return levenshteinDistance(qToken, word) <= maxDist;
         });
       });

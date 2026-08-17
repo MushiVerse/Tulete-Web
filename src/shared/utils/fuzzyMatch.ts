@@ -26,7 +26,7 @@ export function levenshteinDistance(a: string, b: string): number {
 }
 
 /**
- * Checks if a search query fuzzy matches a target text (with typo tolerance).
+ * Checks if a search query fuzzy matches a target text (with enhanced typo tolerance).
  */
 export function isFuzzyMatch(query: string, targetText: string): boolean {
   if (!query || !query.trim()) return true;
@@ -43,12 +43,16 @@ export function isFuzzyMatch(query: string, targetText: string): boolean {
 
   return queryWords.every((qWord) => {
     return targetWords.some((tWord) => {
-      // Direct substring or prefix match
-      if (tWord.startsWith(qWord) || tWord.includes(qWord)) return true;
+      // Direct substring, prefix, or containment match
+      if (tWord.startsWith(qWord) || tWord.includes(qWord) || qWord.includes(tWord)) return true;
       if (qWord.length >= 3 && qWord.startsWith(tWord)) return true;
 
-      // Typo tolerance based on query word length
-      const maxDistance = qWord.length <= 2 ? 0 : qWord.length <= 5 ? 1 : 2;
+      // Generous typo tolerance based on query word length
+      // <=2: exact match only
+      // 3-4: 1 typo allowed (e.g. "fodd" -> "food", "shop" -> "shoop")
+      // 5-7: 2 typos allowed (e.g. "kibada" -> "kibanda", "saifi" -> "safi")
+      // 8+:  3 typos allowed (e.g. "elctrical" -> "electrical")
+      const maxDistance = qWord.length <= 2 ? 0 : qWord.length <= 4 ? 1 : qWord.length <= 7 ? 2 : 3;
       return levenshteinDistance(qWord, tWord) <= maxDistance;
     });
   });

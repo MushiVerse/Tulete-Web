@@ -46,7 +46,7 @@ export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: 
   if (!id || String(id).trim().length === 0) return false;
 
   // 3. Must have a valid, non-placeholder name
-  const name = item.name || item.nam1 || item.title || item.name1;
+  const name = item.name || item.nam1 || item.title || item.name1 || item.store;
   if (!name || typeof name !== 'string' || name.trim().length === 0) return false;
   const lowerName = name.trim().toLowerCase();
   if (['null', 'undefined', 'test', 'no name', 'unknown', 'dummy', 'temp', 'delete'].includes(lowerName)) return false;

@@ -33,6 +33,8 @@ const getTimeValue = (item: any): number => {
   return 0;
 };
 
+import { isFuzzyMatch } from '../../../shared/utils/fuzzyMatch';
+
 const getItemSearchableText = (item: any): string => {
   if (!item || typeof item !== 'object') return '';
   const fields = [
@@ -50,36 +52,36 @@ const getItemSearchableText = (item: any): string => {
 const matchesSearchQuery = (item: any, query: string): boolean => {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return true;
-  const tokens = trimmed.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return true;
 
   const searchableText = getItemSearchableText(item);
-  return tokens.every(token => searchableText.includes(token));
+  return isFuzzyMatch(query, searchableText);
 };
 
 const getSearchRelevanceScore = (item: any, query: string): number => {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return 0;
 
-  const name = String(item.name || item.title || item.nam1 || item.store || item.storeName || '').toLowerCase().trim();
+  const name = String(item.name || item.store || item.title || item.nam1 || item.storeName || '').toLowerCase().trim();
   if (name === trimmed) return 1000;
   if (name.startsWith(trimmed)) return 500;
   if (name.includes(trimmed)) return 200;
+  if (isFuzzyMatch(trimmed, name)) return 150;
 
   const tokens = trimmed.split(/\s+/).filter(Boolean);
   let score = 0;
   for (const token of tokens) {
     if (name.includes(token)) score += 60;
+    else if (isFuzzyMatch(token, name)) score += 40;
   }
 
   const desc = String(item.description || item.desc || '').toLowerCase();
-  if (desc.includes(trimmed)) score += 30;
+  if (desc.includes(trimmed) || isFuzzyMatch(trimmed, desc)) score += 30;
 
   const store = String(item.store || item.storeName || item.store_name || '').toLowerCase();
-  if (store.includes(trimmed)) score += 20;
+  if (store.includes(trimmed) || isFuzzyMatch(trimmed, store)) score += 25;
 
   const cat = String(item.category || item.cat || item.subCat || item.subCategory || '').toLowerCase();
-  if (cat.includes(trimmed)) score += 15;
+  if (cat.includes(trimmed) || isFuzzyMatch(trimmed, cat)) score += 15;
 
   return score;
 };
@@ -102,6 +104,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { locationService } from '../../location/services/locationService';
+import { storeService } from '../../stores/services/storeService';
 import { DiscoveryMap } from '../components/DiscoveryMap';
 import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { formatPrice } from '../../../shared/utils/formatPrice';
@@ -376,6 +379,132 @@ export const DiscoveryPage = () => {
 
       const catLower = (category || '').toLowerCase();
 
+      // --- Stores path: query Firestore foodStores collection directly so ONLY real stores return ---
+      if (activeTab === 'stores') {
+        try {
+          const storesSnap = await getDocs(collection(db, 'foodStores'));
+          const firestoreStores = storesSnap.docs.map(doc => {
+            const data = doc.data();
+            const storeName = data.store || data.name || 'Store';
+            const img = resolveImageUrl(data);
+            return {
+              id: doc.id,
+              objectID: doc.id,
+              recordType: 'store',
+              type: 'store',
+              _collection: 'foodStores',
+              store: storeName,
+              name: storeName,
+              description: data.description || '',
+              imgURL: img,
+              imgUrl: img,
+              imageUrl: img,
+              image: img,
+              cat: data.cat || data.category || 'Store',
+              category: data.category || data.cat || 'Store',
+              availability: data.availability !== undefined ? !!data.availability : true,
+              rating: data.rating || 0,
+              rates: data.rates || [],
+              ...data,
+            };
+          }).filter(s => s.id && s.store && s.store !== 'Store' && s.store.toLowerCase() !== 'undefined');
+
+          let storesList: any[] = firestoreStores;
+
+          // Fallback to mock stores if Firestore foodStores has no items
+          if (storesList.length === 0) {
+            storesList = storeService.getMockStores().map(s => {
+              const storeName = s.name || s.store || 'Store';
+              const img = s.image || s.imgUrl || s.imgURL || s.imageUrl || '';
+              return {
+                ...s,
+                id: s.id,
+                objectID: s.id,
+                recordType: 'store',
+                type: 'store',
+                _collection: 'foodStores',
+                store: storeName,
+                name: storeName,
+                description: s.description || '',
+                imgURL: img,
+                imgUrl: img,
+                imageUrl: img,
+                image: img,
+                cat: s.category || s.cat || 'Store',
+                category: s.category || s.cat || 'Store',
+                availability: s.availability !== undefined ? !!s.availability : true,
+                rating: s.rating || 0,
+                rates: s.rates || [],
+              };
+            });
+          }
+
+          if (localQuery.trim()) {
+            storesList = storesList.filter((s: any) => matchesSearchQuery(s, localQuery));
+          }
+
+          // If a category filter is selected while on Stores tab, filter stores by category
+          if (category && category !== 'all') {
+            const catTarget = category.toLowerCase().trim();
+            storesList = storesList.filter((s: any) => {
+              const sCat = String(s.category || s.cat || s.mainCategory || s.subCategory || '').toLowerCase();
+              return sCat.includes(catTarget) || catTarget.includes(sCat);
+            });
+          }
+
+          // Calculate proximity distance from user's selected location
+          if (currentLocation && typeof currentLocation.lat === 'number' && typeof currentLocation.lng === 'number') {
+            storesList = storesList.map((s) => {
+              let sLat: number | undefined = undefined;
+              let sLng: number | undefined = undefined;
+
+              const strLoc = typeof s.location === 'string' ? s.location : (typeof s.loc === 'string' ? s.loc : undefined);
+              if (strLoc) {
+                const parts = strLoc.split(',');
+                if (parts.length >= 2) {
+                  const pLat = parseFloat(parts[0].trim());
+                  const pLng = parseFloat(parts[1].trim());
+                  if (!isNaN(pLat) && !isNaN(pLng)) {
+                    sLat = pLat;
+                    sLng = pLng;
+                  }
+                }
+              }
+
+              if (sLat === undefined || sLng === undefined) {
+                let pLat = s.location?.lat ?? s.location?.latitude ?? s.lat ?? s.latitude;
+                let pLng = s.location?.lng ?? s.location?.longitude ?? s.lng ?? s.longitude;
+                if (typeof pLat === 'string') pLat = parseFloat(pLat);
+                if (typeof pLng === 'string') pLng = parseFloat(pLng);
+                if (typeof pLat === 'number' && typeof pLng === 'number' && !isNaN(pLat) && !isNaN(pLng)) {
+                  sLat = pLat;
+                  sLng = pLng;
+                }
+              }
+
+              const hasValidCoords = sLat !== undefined && sLng !== undefined;
+
+              const dist = hasValidCoords
+                ? locationService.calculateDistance(
+                    { lat: currentLocation.lat, lng: currentLocation.lng },
+                    { lat: sLat!, lng: sLng! }
+                  )
+                : undefined;
+
+              return { ...s, distance: dist };
+            }).sort((a, b) => ((a.distance !== undefined ? a.distance : 99.9) - (b.distance !== undefined ? b.distance : 99.9)));
+          }
+
+          if (!controller.signal.aborted) {
+            setProducts(storesList);
+            setLoading(false);
+          }
+          return;
+        } catch (err) {
+          console.warn('Error fetching foodStores from Firestore for DiscoveryPage:', err);
+        }
+      }
+
       // Retrieve laundry items directly from cloths document/collection ordered descending by time at data retrieval level
       if (activeTab !== 'stores' && (catLower === 'laundry' || catLower === 'nguo')) {
         try {
@@ -438,11 +567,6 @@ export const DiscoveryPage = () => {
       }
 
       // --- Subcategory: query Firestore directly ---
-      // Algolia cannot reliably filter by subcategory fields (subCat, ecommerceSubCategory,
-      // foodSubCategory, etc.) because they are not configured as facets in the index.
-      // Fetching only 200 items broadly and filtering client-side misses too many results.
-      // The correct approach: hit Firestore directly for the foods + products collections,
-      // then match subcategory client-side across all known field names.
       const isSubcategoryFilter =
         category && category !== 'all' &&
         catLower !== 'food' && catLower !== 'product' &&
@@ -488,99 +612,6 @@ export const DiscoveryPage = () => {
           if (!controller.signal.aborted) setLoading(false);
         }
         return;
-      }
-
-      // --- Stores path: query Firestore foodStores collection directly so ALL stores return ---
-      if (activeTab === 'stores') {
-        try {
-          const storesSnap = await getDocs(collection(db, 'foodStores'));
-          const firestoreStores = storesSnap.docs.map(doc => ({
-            id: doc.id,
-            objectID: doc.id,
-            recordType: 'store',
-            store: doc.data().store || doc.data().name || '',
-            name: doc.data().name || doc.data().store || '',
-            ...doc.data()
-          }));
-
-          let algoliaStores: any[] = [];
-          try {
-            algoliaStores = await searchTuleteItems(localQuery, {
-              filters: `recordType:store`,
-              hitsPerPage: 200,
-            });
-          } catch (_) {}
-
-          const storeMap = new Map<string, any>();
-          firestoreStores.forEach(s => storeMap.set(s.id, s));
-          algoliaStores.forEach(s => {
-            const sId = s.id || s.objectID;
-            if (sId && !storeMap.has(sId)) storeMap.set(sId, s);
-          });
-
-          let storesList = Array.from(storeMap.values());
-
-          if (localQuery.trim()) {
-            storesList = storesList.filter((s: any) => matchesSearchQuery(s, localQuery));
-          }
-
-          // Calculate proximity distance from user's selected location and filter stores near the desired area
-          if (currentLocation && typeof currentLocation.lat === 'number' && typeof currentLocation.lng === 'number') {
-            const mappedStores = storesList.map((s) => {
-              let sLat: number | undefined = undefined;
-              let sLng: number | undefined = undefined;
-
-              // Parse string location format "lat, lng" (e.g. "-6.18541, 35.7671293")
-              const strLoc = typeof s.location === 'string' ? s.location : (typeof s.loc === 'string' ? s.loc : undefined);
-              if (strLoc) {
-                const parts = strLoc.split(',');
-                if (parts.length >= 2) {
-                  const pLat = parseFloat(parts[0].trim());
-                  const pLng = parseFloat(parts[1].trim());
-                  if (!isNaN(pLat) && !isNaN(pLng)) {
-                    sLat = pLat;
-                    sLng = pLng;
-                  }
-                }
-              }
-
-              if (sLat === undefined || sLng === undefined) {
-                let pLat = s.location?.lat ?? s.location?.latitude ?? s.lat ?? s.latitude;
-                let pLng = s.location?.lng ?? s.location?.longitude ?? s.lng ?? s.longitude;
-                if (typeof pLat === 'string') pLat = parseFloat(pLat);
-                if (typeof pLng === 'string') pLng = parseFloat(pLng);
-                if (typeof pLat === 'number' && typeof pLng === 'number' && !isNaN(pLat) && !isNaN(pLng)) {
-                  sLat = pLat;
-                  sLng = pLng;
-                }
-              }
-
-              const hasValidCoords = sLat !== undefined && sLng !== undefined;
-
-              const dist = hasValidCoords
-                ? locationService.calculateDistance(
-                    { lat: currentLocation.lat, lng: currentLocation.lng },
-                    { lat: sLat!, lng: sLng! }
-                  )
-                : undefined;
-
-              return { ...s, distance: dist };
-            });
-
-            // Return only stores that are less than 1 km (< 1.0 km) from selected address location
-            let nearbyStores = mappedStores.filter((s) => s.distance !== undefined && !isNaN(s.distance) && s.distance < 1.0);
-
-            storesList = nearbyStores.sort((a, b) => ((a.distance !== undefined ? a.distance : 99.9) - (b.distance !== undefined ? b.distance : 99.9)));
-          }
-
-          if (!controller.signal.aborted) {
-            setProducts(storesList);
-            setLoading(false);
-          }
-          return;
-        } catch (err) {
-          console.warn('Error fetching foodStores from Firestore for DiscoveryPage:', err);
-        }
       }
 
       // --- Standard path: Algolia for food / product / all ---
@@ -647,11 +678,37 @@ export const DiscoveryPage = () => {
     .filter((item: any) => {
       // Discard items with no identity and no name — these are incomplete records
       const hasId = !!(item.objectID || item.id);
-      const hasName = !!(item.name || item.title);
+      const hasName = !!(item.name || item.store || item.title);
       if (!hasId && !hasName) return false;
 
       // --- Availability ---
       if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
+
+      // When Stores tab is active, only retain store records
+      if (activeTab === 'stores') {
+        const isStoreRecord = item.recordType === 'store' || item.type === 'store' || item._collection === 'foodStores';
+        if (!isStoreRecord) return false;
+
+        // Radius check for store location if present
+        let storeLoc: { lat: number; lng: number } | undefined;
+        if (item.location && typeof item.location === 'string') {
+          const parts = item.location.split(',');
+          if (parts.length === 2) {
+            const lat = parseFloat(parts[0].trim());
+            const lng = parseFloat(parts[1].trim());
+            if (!isNaN(lat) && !isNaN(lng)) storeLoc = { lat, lng };
+          }
+        } else if (item.location?.lat) {
+          storeLoc = { lat: item.location.lat, lng: item.location.lng };
+        }
+
+        if (storeLoc && currentLocation) {
+          const fee = getDeliveryFee(currentLocation, storeLoc, item.id || '', false, true);
+          if (fee > 10000) return false;
+        }
+
+        return true;
+      }
 
       // --- In-Stock Only (quantity > 0) ---
       // Check all known quantity field names across foods, products, and cloths collections.
@@ -1046,9 +1103,9 @@ export const DiscoveryPage = () => {
                       {displayedProducts.map((item: any) => {
                         // Skip items with no usable identity or content — these show as blank/undefined cards
                         const itemId = item.objectID || item.id;
-                        const itemName = item.name || item.title || '';
+                        const itemName = item.name || item.title || item.store || '';
                         const itemPrice = item.price !== undefined ? Number(item.price) : undefined;
-                        if (!itemId || (!itemName && itemPrice === undefined)) return null;
+                        if (!itemId || (!itemName && itemPrice === undefined && activeTab !== 'stores')) return null;
 
                         // Shared normalization
                         const { rating, reviewCount } = getRating(item);
@@ -1066,11 +1123,16 @@ export const DiscoveryPage = () => {
                         }
 
                         if (activeTab === 'stores') {
+                          const resolvedStoreImg = resolveImageUrl(item);
                           const storeData = {
                             ...item,
                             id: item.objectID || item.id,
                             store: item.store || item.name || 'Store',
-                            imgURL: item.imgUrl || item.imgURL || item.image || '',
+                            name: item.name || item.store || 'Store',
+                            imgURL: resolvedStoreImg,
+                            imgUrl: resolvedStoreImg,
+                            imageUrl: resolvedStoreImg,
+                            image: resolvedStoreImg,
                             rating: Math.round(rating * 10) / 10,
                             reviewCount,
                             availability: item.availability !== undefined ? !!item.availability : true,
