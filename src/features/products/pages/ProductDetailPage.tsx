@@ -443,7 +443,7 @@ export const ProductDetailPage = () => {
       let currentRates: number[] = [];
       if (snap.exists()) {
         const data = snap.data();
-        const rawRates = data.rates;
+        const rawRates = data.rate || data.rates;
         if (Array.isArray(rawRates)) {
           currentRates = rawRates.map((val: any) => toFirestoreDouble(val)).filter((n) => !isNaN(n));
         } else if (rawRates && typeof rawRates === 'object') {
@@ -453,7 +453,7 @@ export const ProductDetailPage = () => {
 
       const rateAsDouble = toFirestoreDouble(stars);
       const updatedRates = [...currentRates.map((val: any) => toFirestoreDouble(val)), rateAsDouble];
-      await setDoc(docRef, { rates: updatedRates }, { merge: true });
+      await setDoc(docRef, { rate: updatedRates }, { merge: true });
 
       // Record rating analytics event
       analyticsService.trackRating(productIdToRate, stars, product || stateProduct);
