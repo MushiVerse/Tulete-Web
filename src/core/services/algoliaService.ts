@@ -32,10 +32,17 @@ export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: 
     recordType === 'store' || 
     recordType === 'foodstore' || 
     recordType === 'foodstores' ||
+    recordType === 'stores' ||
     recordType === 'brand' || 
     recordType === 'brands' ||
+    item._collection === 'foodStores' ||
+    item._collection === 'stores' ||
+    item._collection === 'brands' ||
     item.isStore === true || 
-    cat === 'store';
+    item.isStore === 'true' ||
+    cat === 'store' ||
+    cat === 'stores' ||
+    cat === 'duka';
 
   if (isExplicitStore && !allowStoresAndBrands) {
     return false;
@@ -43,13 +50,18 @@ export function isValidSearchItem(item: any, options?: { allowStoresAndBrands?: 
 
   // 2. Must have a valid ID
   const id = item.objectID || item.id || item.foodId;
-  if (!id || String(id).trim().length === 0) return false;
+  if (!id || String(id).trim().length === 0 || String(id) === 'null' || String(id) === 'undefined') return false;
 
   // 3. Must have a valid, non-placeholder name
-  const name = item.name || item.nam1 || item.title || item.name1 || item.store;
+  const name = item.name || item.nam1 || item.title || item.name1 || item.item_name || item.product_name || (allowStoresAndBrands ? item.store : undefined);
   if (!name || typeof name !== 'string' || name.trim().length === 0) return false;
   const lowerName = name.trim().toLowerCase();
-  if (['null', 'undefined', 'test', 'no name', 'unknown', 'dummy', 'temp', 'delete'].includes(lowerName)) return false;
+  if (['null', 'undefined', 'test', 'no name', 'unknown', 'dummy', 'temp', 'delete', 'store'].includes(lowerName)) return false;
+
+  // For regular products/foods, must not be an unpriced store record
+  if (!allowStoresAndBrands && !item.name && !item.nam1 && !item.title && !item.item_name && item.store) {
+    return false;
+  }
 
   // 4. Must be available
   if (
@@ -139,9 +151,7 @@ async function searchFirestoreFallback(
       const catStr = String(item.category || item.cat || item.foodCategory || item.speccat || item.mainCategory || '').toLowerCase();
       const isFood = 
         recType.includes('food') || 
-        recType.includes('store') ||
         item._collection === 'foods' ||
-        item._collection === 'foodStores' ||
         item.isFood === true ||
         catStr.includes('food') ||
         catStr.includes('dish') ||
@@ -228,8 +238,8 @@ export const searchTuleteItems = async (
   const filterStr = String(options.filters || '').toLowerCase();
   const allowStoresAndBrands = 
     Boolean(options.includeStoresAndBrands) || 
-    filterStr.includes('recordType:brand') || 
-    filterStr.includes('recordType:store');
+    (filterStr.includes('recordtype:brand') && !filterStr.includes('not recordtype:brand')) || 
+    (filterStr.includes('recordtype:store') && !filterStr.includes('not recordtype:store'));
 
   // Sanitize params specifically for Algolia request to prevent unknown parameter rejection
   const algoliaParams: any = {

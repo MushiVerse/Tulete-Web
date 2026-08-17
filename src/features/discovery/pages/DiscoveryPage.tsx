@@ -676,18 +676,71 @@ export const DiscoveryPage = () => {
 
   const finalProducts = products
     .filter((item: any) => {
-      // Discard items with no identity and no name — these are incomplete records
+      // Discard items with no identity
       const hasId = !!(item.objectID || item.id);
-      const hasName = !!(item.name || item.store || item.title);
-      if (!hasId && !hasName) return false;
+      if (!hasId) return false;
 
       // --- Availability ---
       if (item.availability === false || item.availability === 'false' || item.available === false || item.isAvailable === false) return false;
 
-      // When Stores tab is active, only retain store records
+      // When Products & Services tab is active, strictly exclude all store records and invalid/unpriced items
+      if (activeTab === 'products') {
+        const recordType = String(item.recordType || item.type || item._collection || '').toLowerCase().trim();
+        const cat = String(item.category || item.cat || item.mainCategory || '').toLowerCase().trim();
+        
+        const isStoreRecord = 
+          recordType === 'store' || 
+          recordType === 'foodstore' || 
+          recordType === 'foodstores' ||
+          recordType === 'stores' ||
+          recordType === 'brand' ||
+          recordType === 'brands' ||
+          item._collection === 'foodStores' ||
+          item._collection === 'stores' ||
+          item._collection === 'brands' ||
+          item.isStore === true ||
+          item.isStore === 'true' ||
+          cat === 'store' ||
+          cat === 'stores' ||
+          cat === 'duka';
+
+        if (isStoreRecord) return false;
+
+        // Must have a valid product name (not just store name without a product)
+        const productName = String(item.name || item.nam1 || item.title || item.item_name || item.product_name || '').trim();
+        if (!productName || productName.length === 0) return false;
+        const lowerProdName = productName.toLowerCase();
+        if (['null', 'undefined', 'test', 'no name', 'unknown', 'dummy', 'temp', 'delete', 'store'].includes(lowerProdName)) return false;
+
+        // Must have a valid non-negative price
+        const rawPrice = item.price ?? item.bei ?? item.presi ?? item.basePrice;
+        if (rawPrice === undefined || rawPrice === null || rawPrice === '') return false;
+        const numPrice = Number(rawPrice);
+        if (isNaN(numPrice) || numPrice < 0) return false;
+      }
+
+      // When Stores tab is active, only retain valid store records
       if (activeTab === 'stores') {
-        const isStoreRecord = item.recordType === 'store' || item.type === 'store' || item._collection === 'foodStores';
+        const recordType = String(item.recordType || item.type || item._collection || '').toLowerCase().trim();
+        const cat = String(item.category || item.cat || item.mainCategory || '').toLowerCase().trim();
+        const isStoreRecord = 
+          recordType === 'store' || 
+          recordType === 'foodstore' || 
+          recordType === 'foodstores' ||
+          recordType === 'stores' ||
+          item._collection === 'foodStores' ||
+          item._collection === 'stores' ||
+          item.isStore === true ||
+          item.isStore === 'true' ||
+          cat === 'store' ||
+          cat === 'stores' ||
+          cat === 'duka' ||
+          (!!item.store && !item.name);
+
         if (!isStoreRecord) return false;
+
+        const storeName = String(item.store || item.name || item.title || '').trim();
+        if (!storeName || storeName === 'Store' || storeName.toLowerCase() === 'undefined') return false;
 
         // Radius check for store location if present
         let storeLoc: { lat: number; lng: number } | undefined;
@@ -1101,11 +1154,11 @@ export const DiscoveryPage = () => {
                   ) : (
                     <>
                       {displayedProducts.map((item: any) => {
-                        // Skip items with no usable identity or content — these show as blank/undefined cards
+                        // Skip items with no usable identity or content
                         const itemId = item.objectID || item.id;
-                        const itemName = item.name || item.title || item.store || '';
-                        const itemPrice = item.price !== undefined ? Number(item.price) : undefined;
-                        if (!itemId || (!itemName && itemPrice === undefined && activeTab !== 'stores')) return null;
+                        const prodName = item.name || item.nam1 || item.title || item.item_name || item.product_name || '';
+                        if (!itemId) return null;
+                        if (activeTab === 'products' && !prodName.trim()) return null;
 
                         // Shared normalization
                         const { rating, reviewCount } = getRating(item);
@@ -1167,7 +1220,7 @@ export const DiscoveryPage = () => {
                         const product = {
                           ...item,
                           id: item.objectID || item.id,
-                          name: item.name || '',
+                          name: prodName,
                           description: item.description || '',
                           price: baseItemPrice,
                           basePrice: baseItemPrice,
