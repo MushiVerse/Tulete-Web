@@ -7,7 +7,10 @@ const KILAKONA_API_SECRET = import.meta.env.VITE_KILAKONA_API_SECRET || 'jytUxmm
 const KILAKONA_SENDER_ID = import.meta.env.VITE_KILAKONA_SENDER_ID || 'TULETE';
 
 // Main Admin phone numbers to receive the SMS
-const ADMIN_PHONES = ['255764587748']; 
+const ADMIN_PHONES = ['255757449734'
+  // uncomment when you want to use the below number
+  // , '255764587748'
+];
 
 /**
  * Retrieves phone numbers belonging to a specific store from the 'UsersandRoles' collection
