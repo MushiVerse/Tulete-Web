@@ -805,7 +805,7 @@ export const CartPage = () => {
                                 <div className="text-left">
                                   <p className="text-sm font-bold">Express</p>
                                   <p className={`text-xs ${laundryPreferences.globalExpressSelected ? 'text-primary/80' : 'text-muted-foreground'}`}>
-                                    Fast track your entire order processing
+                                    For faster Laundry Pickups and Delivery (4HRS MAX)
                                   </p>
                                 </div>
                               </div>
