@@ -1190,7 +1190,7 @@ export const StoreDetailsPage = () => {
                     Store Not Registered on Tulete
                   </h3>
                   <p className="text-xs md:text-sm text-muted-foreground font-medium leading-relaxed">
-                    This store is not yet registered in our official <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono font-bold text-foreground">foodStores</code> directory on the Tulete platform.
+                    This store is not yet registered on the Tulete platform.
                   </p>
                   <p className="text-xs text-muted-foreground font-semibold">
                     Items, services, and online ordering are currently unavailable for this store until the merchant completes registration.
