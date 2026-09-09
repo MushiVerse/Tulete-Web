@@ -559,7 +559,7 @@ export const AdminCancellationsPage: React.FC = () => {
               const dateStr = formatAdminDateTime(itemTs > 0 ? itemTs : c.createdAt);
               const itemsList = c.items || [];
               const storeNames = Array.from(new Set(itemsList.map((i: any) => i.storeName || i.store).filter(Boolean)));
-              const primaryStore = storeNames.join(', ') || 'Store / Kitchen';
+              const primaryStore = storeNames.join(', ') || 'Store';
 
               return (
                 <div
@@ -701,7 +701,7 @@ export const AdminCancellationsPage: React.FC = () => {
                 <div className={`p-4 rounded-2xl border ${isDark ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50/80 border-amber-200'} space-y-2`}>
                   <div className="flex items-center gap-2 text-amber-500 font-extrabold text-xs uppercase tracking-wider">
                     <Store className="w-4 h-4" />
-                    <span>Store / Kitchen Details</span>
+                    <span>Store Details</span>
                   </div>
                   <div className="text-xs space-y-1">
                     <p className="font-black text-sm text-amber-500">
