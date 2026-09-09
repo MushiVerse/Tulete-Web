@@ -274,7 +274,7 @@ export const AdminCustomerSMSPage: React.FC = () => {
       const result = await adminSmsService.broadcastSMS({
         messageTemplate: messageText.trim(),
         recipients: effectiveRecipients,
-        targetType: audienceMode,
+        targetType: audienceMode === 'filtered' ? 'branch' : audienceMode,
         branchFilter: selectedBranch !== 'all' ? selectedBranch : undefined,
         onProgress: (sent, total, batch, totalBatches) => {
           setSendingProgress({ sent, total, batch, totalBatches });
