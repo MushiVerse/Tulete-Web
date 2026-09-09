@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, ShoppingBag, ShoppingCart, Activity, LogOut, 
-  ShieldCheck, Menu, X, ExternalLink, ChevronRight, Sun, Moon, Sparkles, XCircle
+  ShieldCheck, Menu, X, ExternalLink, ChevronRight, Sun, Moon, Sparkles, XCircle,
+  MessageSquare
 } from 'lucide-react';
 import { adminAuthService } from '../services/adminAuthService';
 import { auth } from '../../../core/firebase/config';
@@ -30,6 +31,12 @@ const AdminLayoutContent: React.FC = () => {
       path: '/admin/orders',
       icon: ShoppingBag,
       desc: 'Online & POS Laundry office orders',
+    },
+    {
+      title: 'Customer SMS Broadcast',
+      path: '/admin/sms',
+      icon: MessageSquare,
+      desc: 'Bulk SMS campaigns to Firestore customers',
     },
     {
       title: 'Search Intelligence',
@@ -71,7 +78,7 @@ const AdminLayoutContent: React.FC = () => {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 admin-system ${
       isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 text-slate-900'
     }`}>
       {/* Top Header */}
