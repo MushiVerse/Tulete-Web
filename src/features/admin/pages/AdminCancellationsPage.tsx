@@ -591,7 +591,7 @@ export const AdminCancellationsPage: React.FC = () => {
                       <div className="flex items-center gap-1.5 font-bold text-xs">
                         <Store className="w-4 h-4 text-amber-500 shrink-0" />
                         <span className="notranslate" translate="no">
-                          Store: <strong className={isDark ? 'text-amber-400 font-extrabold' : 'text-amber-600 font-extrabold'}>{primaryStore}</strong>
+                         <strong className={isDark ? 'text-amber-400 font-extrabold' : 'text-amber-600 font-extrabold'}>{primaryStore}</strong>
                         </span>
                       </div>
                     </div>
