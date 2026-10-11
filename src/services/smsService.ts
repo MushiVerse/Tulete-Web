@@ -84,7 +84,7 @@ export const smsService = {
   },
 
   /**
-   * Sends an order notification to the admin (255764587748) and the store vendor phone numbers.
+   * Sends an order notification to the admin (255757449734) and the store vendor phone numbers.
    */
   async sendAdminOrderNotification(order: any): Promise<void> {
     try {
