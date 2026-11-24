@@ -134,6 +134,7 @@ export const DiscoveryPage = () => {
 
   const [localQuery, setLocalQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isHeroDismissed, setIsHeroDismissed] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
@@ -999,6 +1000,23 @@ export const DiscoveryPage = () => {
   const displayedProducts = finalProducts.slice(0, visibleCount);
   const hasMore = visibleCount < finalProducts.length;
 
+  const hasActiveFilters = Boolean(
+    (category && category !== 'all') ||
+    minPrice !== null ||
+    maxPrice !== null ||
+    isAvailableOnly ||
+    sortBy !== 'popular'
+  );
+
+  // Close the "Today's Deals" hero card whenever the user is searching, filtering, viewing map, browsing stores, or dismissed it
+  const shouldShowHeroBanner =
+    !isHeroDismissed &&
+    !localQuery.trim() &&
+    !showMap &&
+    !isFilterOpen &&
+    !hasActiveFilters &&
+    activeTab === 'products';
+
   return (
     <PageWrapper className="min-h-screen bg-background">
       <div className="flex w-full bg-background relative items-stretch lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
@@ -1134,7 +1152,7 @@ export const DiscoveryPage = () => {
 
             {/* ── Hero Banner ── */}
             <AnimatePresence>
-              {!localQuery.trim() && (!category || category === 'all') && (
+              {shouldShowHeroBanner && (
                 <motion.div
                   initial={{ opacity: 0, height: 0, scale: 0.95 }}
                   animate={{ opacity: 1, height: 'auto', scale: 1 }}
@@ -1145,6 +1163,17 @@ export const DiscoveryPage = () => {
                   {/* Main orange gradient banner */}
                   <div className="relative w-full rounded-[2rem] overflow-hidden p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl"
                     style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 40%, #fb923c 70%, #f59e0b 100%)' }}>
+
+                    {/* Dismiss button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsHeroDismissed(true)}
+                      aria-label="Close Today's Deals card"
+                      title="Close"
+                      className="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-black/20 hover:bg-black/35 text-white backdrop-blur-md border border-white/25 flex items-center justify-center transition-all active:scale-90 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
 
                     {/* Animated floating food/product emojis */}
                     {[
