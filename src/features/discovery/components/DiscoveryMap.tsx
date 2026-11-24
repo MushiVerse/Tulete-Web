@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { useLocationStore } from '../../location/store/useLocationStore';
-import { storeService } from '../../stores/services/storeService';
 import { MapPin, Store as StoreIcon, ExternalLink, Sparkles, X, Layers, Globe, Search, Loader2, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -11,6 +10,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface DiscoveryMapProps {
   items?: any[];
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
+  category?: string | null;
+  hideInternalSearch?: boolean;
 }
 
 const containerStyle = {
@@ -68,6 +71,64 @@ const parseStoreLocation = (locField: any): { lat: number; lng: number } | null 
   return null;
 };
 
+// Strict validator to ensure only clean, real store records appear on the map & map search
+const MOCK_OR_DIRTY_STORE_IDS = new Set([
+  'store_mama_safi',
+  'store_kibanda_delight',
+  'store_fundi_power',
+  'store_glam_salon',
+  's1',
+  'unknown',
+  'undefined',
+  'null',
+]);
+
+const MOCK_OR_DIRTY_NAME_PATTERNS = [
+  'fundi power',
+  'mama safi',
+  'kibanda delight',
+  'glam beauty bar',
+  'tulete partner store',
+  'test store',
+  'dummy',
+  'sample store',
+  'demo store',
+  'unknown store',
+  'store order',
+];
+
+const INVALID_EXACT_NAMES = new Set([
+  '',
+  'store',
+  'stores',
+  'unknown',
+  'undefined',
+  'null',
+  'test',
+  'dummy',
+  'temp',
+  'delete',
+  'no name',
+  'n/a',
+  'none',
+]);
+
+const isCleanRealStore = (id: unknown, rawName: unknown): boolean => {
+  const idStr = String(id || '').toLowerCase().trim();
+  if (idStr && MOCK_OR_DIRTY_STORE_IDS.has(idStr)) return false;
+  if (idStr.startsWith('prod_') || idStr.startsWith('dummy')) return false;
+
+  if (typeof rawName !== 'string') return false;
+  const nameClean = rawName.trim();
+  if (nameClean.length < 2) return false;
+
+  const lower = nameClean.toLowerCase();
+  if (INVALID_EXACT_NAMES.has(lower)) return false;
+  if (MOCK_OR_DIRTY_NAME_PATTERNS.some((p) => lower.includes(p))) return false;
+
+  return true;
+};
+
 // High-visibility stable SVG pin marker icon using System Primary Color (#F99420)
 const STORE_PIN_ICON = {
   url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
@@ -79,7 +140,13 @@ const STORE_PIN_ICON = {
   `)}`,
 };
 
-export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
+export const DiscoveryMap = ({
+  items = [],
+  searchQuery: externalSearchQuery,
+  onSearchQueryChange,
+  category,
+  hideInternalSearch = false,
+}: DiscoveryMapProps) => {
   const { isDark } = useThemeStore();
   const { currentLocation } = useLocationStore();
   const navigate = useNavigate();
@@ -89,11 +156,31 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
   const mapRef = useRef<any>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const isSelectingRef = useRef<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{ lat: number; lng: number; title: string } | null>(null);
+
+  const isControlledSearch = externalSearchQuery !== undefined;
+  const searchQuery = isControlledSearch ? externalSearchQuery : internalSearchQuery;
+  const setSearchQuery = (val: string) => {
+    if (isControlledSearch) {
+      onSearchQueryChange?.(val);
+    } else {
+      setInternalSearchQuery(val);
+    }
+  };
+
+  // Clear selected place/store when unified search is cleared
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSelectedPlace(null);
+      setSelectedStore(null);
+      setSearchResults([]);
+      setShowSuggestions(false);
+    }
+  }, [searchQuery]);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -114,10 +201,10 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
         const list: any[] = [];
         snapshot.docs.forEach((docSnap) => {
           const data = docSnap.data();
-          const storeName = data.store || data.name || data.storeName || '';
+          const storeName = String(data.store || data.name || data.storeName || '').trim();
           const pos = parseStoreLocation(data.location);
 
-          if (pos && storeName) {
+          if (pos && isCleanRealStore(docSnap.id, storeName)) {
             list.push({
               id: docSnap.id,
               ...data,
@@ -153,15 +240,28 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
       return String(item.id || Math.random());
     };
 
-    const addStore = (item: any) => {
+    const addStore = (item: any, fromProductItem: boolean = false) => {
       if (!item) return;
-      const key = getNormalizedKey(item);
+
+      // For product items, only use an explicit store name (never turn a product's own title into a fake store pin)
+      const rawStoreName = fromProductItem
+        ? (item.store || item.storeName || '')
+        : (item.store || item.storeName || item.name || '');
+      const storeName = typeof rawStoreName === 'string' ? rawStoreName.trim() : '';
+
+      if (!isCleanRealStore(item.storeId || item.id, storeName)) return;
+
+      const key = getNormalizedKey({ ...item, store: storeName, storeName, name: storeName });
       if (!key || seenKeys.has(key)) return;
 
-      const pos = parseStoreLocation(item.location) || (typeof item.location === 'object' && item.location && typeof item.location.lat === 'number' ? item.location : null);
-      const storeName = item.store || item.name || item.storeName || 'Store';
+      const pos =
+        item.locationPos ||
+        parseStoreLocation(item.location) ||
+        (typeof item.location === 'object' && item.location && typeof item.location.lat === 'number'
+          ? item.location
+          : null);
       const category = item.category || item.cat || item.mainCategory || 'Partner Store';
-      
+
       if (pos) {
         seenKeys.add(key);
         storesList.push({
@@ -175,12 +275,15 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
       }
     };
 
-    // Priority 1: Real Firestore stores
-    foodStores.forEach(addStore);
-    // Priority 2: Passed items prop
-    if (Array.isArray(items)) items.forEach(addStore);
-    // Priority 3: Fallback mock stores
-    storeService.getMockStores().forEach(addStore);
+    // Priority 1: Real Firestore stores (cleaned & verified)
+    foodStores.forEach((s) => addStore(s, false));
+    // Priority 2: Real stores referenced by passed items (no mock/dummy fallback)
+    if (Array.isArray(items)) {
+      items.forEach((it) => {
+        const isStoreDoc = it?.recordType === 'store' || it?.type === 'store' || it?._collection === 'foodStores';
+        addStore(it, !isStoreDoc);
+      });
+    }
 
     const rawList = storesList;
     const adjusted: any[] = [];
@@ -215,6 +318,98 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
     return adjusted;
   }, [foodStores, items]);
 
+  // Map of store keys that carry matching items from DiscoveryPage (for unified search + category filtering)
+  const matchingItemStoreKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (Array.isArray(items)) {
+      items.forEach((it) => {
+        if (!it) return;
+        const candidates = [it.store, it.storeName, it.storeId, it.brand, it.name];
+        candidates.forEach((c) => {
+          if (c && typeof c === 'string') {
+            const clean = c.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            if (clean) keys.add(clean);
+          }
+        });
+      });
+    }
+    return keys;
+  }, [items]);
+
+  // Filter visible markers based on unified searchQuery & category filter
+  // (When a geographic area/landmark `selectedPlace` is picked, keep all nearby stores visible around that pin)
+  const visibleStoreMarkers = useMemo(() => {
+    let list = storeMarkers;
+
+    // 1. Category filter chip sync (Food / Product / Laundry / Subcategories)
+    if (category && category !== 'all') {
+      const catLower = category.toLowerCase().trim();
+      const catFiltered = list.filter((store) => {
+        const sCat = String(store.cat || store.category || store.mainCategory || '').toLowerCase();
+        const sName = String(store.storeName || store.store || store.name || '').toLowerCase();
+        const sDesc = String(store.description || '').toLowerCase();
+        const cleanKey = sName.replace(/[^a-z0-9]/g, '');
+        const hasMatchingItem = cleanKey && matchingItemStoreKeys.has(cleanKey);
+
+        if (catLower === 'food') {
+          return hasMatchingItem || sCat.includes('food') || sCat.includes('restaur') || sCat.includes('kitchen') || sName.includes('food') || sName.includes('kitchen') || sName.includes('grill');
+        }
+        if (catLower === 'laundry' || catLower === 'nguo') {
+          return hasMatchingItem || sCat.includes('laund') || sCat.includes('clean') || sCat.includes('nguo') || sName.includes('laundry') || sName.includes('dobi');
+        }
+        if (catLower === 'product') {
+          return hasMatchingItem || sCat.includes('prod') || sCat.includes('shop') || sCat.includes('electr') || sCat.includes('store') || sCat.includes('beaut');
+        }
+        return hasMatchingItem || sCat.includes(catLower) || sName.includes(catLower) || sDesc.includes(catLower);
+      });
+      if (catFiltered.length > 0) {
+        list = catFiltered;
+      }
+    }
+
+    // 2. Unified search query filter (unless user specifically selected a geographic place/area)
+    const q = searchQuery.trim().toLowerCase();
+    if (q && !selectedPlace) {
+      return list.filter((store) => {
+        const sName = (store.storeName || store.store || store.name || '').toLowerCase();
+        const sAddr = (store.address || '').toLowerCase();
+        const sCat = (store.cat || store.category || '').toLowerCase();
+        const sDesc = (store.description || '').toLowerCase();
+        const cleanKey = sName.replace(/[^a-z0-9]/g, '');
+        const hasMatchingItem = cleanKey && matchingItemStoreKeys.has(cleanKey);
+
+        return (
+          sName.includes(q) ||
+          sAddr.includes(q) ||
+          sCat.includes(q) ||
+          sDesc.includes(q) ||
+          hasMatchingItem
+        );
+      });
+    }
+
+    return list;
+  }, [storeMarkers, category, searchQuery, selectedPlace, matchingItemStoreKeys]);
+
+  // Smoothly pan/fit map viewport when unified search or category changes the matching markers
+  useEffect(() => {
+    if (!mapRef.current || selectedPlace || selectedStore) return;
+    const hasFilterOrSearch = Boolean(searchQuery.trim() || (category && category !== 'all'));
+    if (!hasFilterOrSearch || visibleStoreMarkers.length === 0) return;
+
+    const googleMaps = typeof window !== 'undefined' ? (window as any).google?.maps : null;
+    if (!googleMaps) return;
+
+    if (visibleStoreMarkers.length === 1) {
+      mapRef.current.panTo(visibleStoreMarkers[0].locationPos);
+      mapRef.current.setZoom(16);
+    } else if (visibleStoreMarkers.length <= 25) {
+      const bounds = new googleMaps.LatLngBounds();
+      visibleStoreMarkers.forEach((s) => bounds.extend(s.locationPos));
+      mapRef.current.fitBounds(bounds, { top: 70, right: 50, bottom: 50, left: 50 });
+    }
+  }, [visibleStoreMarkers, searchQuery, category, selectedPlace, selectedStore]);
+
   // Autocomplete search for stores, shops, restaurants, areas, landmarks
   useEffect(() => {
     if (isSelectingRef.current) {
@@ -228,6 +423,9 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
       setShowSuggestions(false);
       return;
     }
+
+    // Clear previous selected place when user edits the query
+    setSelectedPlace(null);
 
     const timer = setTimeout(async () => {
       setIsSearching(true);
@@ -411,48 +609,82 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
   const activeStore = hoveredStore || selectedStore;
 
   return (
-    <div className="relative w-full h-[320px] md:h-[520px] rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-border group">
-      {/* Floating Location & Store Search Bar */}
-      <div ref={searchContainerRef} className="absolute top-3 left-3 right-32 sm:top-4 sm:left-4 sm:right-auto sm:w-80 md:w-96 z-20">
+    <div className="relative w-full h-[62vh] min-h-[380px] md:h-[580px] rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-border group">
+      {/* Floating Search Bar (only shown when standalone) OR Unified Search Suggestions Dropdown */}
+      <div
+        ref={searchContainerRef}
+        className={`absolute top-3 left-3 ${hideInternalSearch ? 'right-36 sm:right-auto sm:w-80 md:w-96' : 'right-32 sm:top-4 sm:left-4 sm:right-auto sm:w-80 md:w-96'} z-20`}
+      >
         <div className="relative">
-          <div className="flex items-center w-full min-w-0 bg-background/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 shadow-xl rounded-full px-2.5 h-12 gap-2 transition-all overflow-hidden">
-            <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              {isSearching ? (
-                <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-              ) : (
-                <Search className="w-3.5 h-3.5" />
+          {!hideInternalSearch ? (
+            <div className="flex items-center w-full min-w-0 bg-background/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 shadow-xl rounded-full px-2.5 h-12 gap-2 transition-all overflow-hidden">
+              <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                {isSearching ? (
+                  <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                ) : (
+                  <Search className="w-3.5 h-3.5" />
+                )}
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  isSelectingRef.current = false;
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  if (searchResults.length > 0) setShowSuggestions(true);
+                }}
+                placeholder="Search shops, restaurants, areas..."
+                className="flex-1 min-w-0 w-full bg-transparent text-xs sm:text-sm font-semibold text-foreground placeholder:text-muted-foreground outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    setShowSuggestions(false);
+                    setSelectedPlace(null);
+                  }}
+                  aria-label="Clear map search"
+                  className="w-6 h-6 rounded-full bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                isSelectingRef.current = false;
-                setSearchQuery(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => {
-                if (searchResults.length > 0) setShowSuggestions(true);
-              }}
-              placeholder="Search shops, restaurants, areas..."
-              className="flex-1 min-w-0 w-full bg-transparent text-xs sm:text-sm font-semibold text-foreground placeholder:text-muted-foreground outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSearchResults([]);
-                  setShowSuggestions(false);
-                  setSelectedPlace(null);
-                }}
-                aria-label="Clear map search"
-                className="w-6 h-6 rounded-full bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+          ) : (
+            /* Compact live status pill when driven by DiscoveryPage's unified search bar */
+            <div className="inline-flex items-center gap-2 max-w-full bg-background/90 backdrop-blur-md border border-border shadow-md rounded-full px-3 py-1.5 text-xs font-extrabold text-foreground">
+              {isSearching ? (
+                <Loader2 className="w-3.5 h-3.5 text-primary animate-spin shrink-0" />
+              ) : (
+                <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+              )}
+              <span className="truncate">
+                {selectedPlace
+                  ? `Near ${selectedPlace.title}`
+                  : searchQuery.trim()
+                  ? `${visibleStoreMarkers.length} place${visibleStoreMarkers.length === 1 ? '' : 's'} for "${searchQuery.trim()}"`
+                  : `${visibleStoreMarkers.length} place${visibleStoreMarkers.length === 1 ? '' : 's'} on map`}
+              </span>
+              {selectedPlace && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlace(null);
+                    setSearchQuery('');
+                  }}
+                  aria-label="Clear selected map location"
+                  className="w-5 h-5 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Autocomplete Suggestions Dropdown */}
           <AnimatePresence>
@@ -461,7 +693,7 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                className="absolute top-11 left-0 right-0 bg-background/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl p-1.5 space-y-1 max-h-64 overflow-y-auto scrollbar-none z-30"
+                className={`absolute ${hideInternalSearch ? 'top-10' : 'top-14'} left-0 right-0 min-w-[260px] bg-background/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl p-1.5 space-y-1 max-h-64 overflow-y-auto scrollbar-none z-30`}
               >
                 {searchResults.map((item) => (
                   <button
@@ -564,7 +796,7 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
           )}
 
           {/* Interactive Stable Store Markers */}
-          {storeMarkers.map((store) => (
+          {visibleStoreMarkers.map((store) => (
             <MarkerF
               key={store.id}
               position={store.locationPos}

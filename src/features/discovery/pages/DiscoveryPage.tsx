@@ -413,34 +413,6 @@ export const DiscoveryPage = () => {
 
           let storesList: any[] = firestoreStores;
 
-          // Fallback to mock stores if Firestore foodStores has no items
-          if (storesList.length === 0) {
-            storesList = storeService.getMockStores().map(s => {
-              const storeName = s.name || s.store || 'Store';
-              const img = s.image || s.imgUrl || s.imgURL || s.imageUrl || '';
-              return {
-                ...s,
-                id: s.id,
-                objectID: s.id,
-                recordType: 'store',
-                type: 'store',
-                _collection: 'foodStores',
-                store: storeName,
-                name: storeName,
-                description: s.description || '',
-                imgURL: img,
-                imgUrl: img,
-                imageUrl: img,
-                image: img,
-                cat: s.category || s.cat || 'Store',
-                category: s.category || s.cat || 'Store',
-                availability: s.availability !== undefined ? !!s.availability : true,
-                rating: s.rating || 0,
-                rates: s.rates || [],
-              };
-            });
-          }
-
           if (localQuery.trim()) {
             storesList = storesList.filter((s: any) => matchesSearchQuery(s, localQuery));
           }
@@ -554,13 +526,6 @@ export const DiscoveryPage = () => {
           });
 
           let mealsList = Array.from(combinedMap.values());
-
-          if (mealsList.length === 0) {
-            mealsList = productService
-              .getMockProducts()
-              .filter((p) => ['Platters', 'Quick Meals', 'Food'].includes(p.category) || p.id.includes('food'))
-              .map((p) => ({ ...p, objectID: p.id, recordType: 'food', _collection: 'foods' }));
-          }
 
           if (localQuery.trim()) {
             mealsList = mealsList.filter((item: any) => matchesSearchQuery(item, localQuery));
@@ -1080,8 +1045,8 @@ export const DiscoveryPage = () => {
               </div>
 
               {/* Search Bar Input */}
-              <div className="relative flex items-center w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3.5 h-14 sm:h-16 gap-1.5 sm:gap-2.5 transition-all duration-200 overflow-hidden">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <div className="relative flex items-center w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2 sm:px-3.5 h-14 sm:h-16 gap-1.5 sm:gap-2.5 transition-all duration-200 overflow-hidden">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
 
@@ -1090,7 +1055,7 @@ export const DiscoveryPage = () => {
                   value={localQuery}
                   onChange={(e) => setLocalQuery(e.target.value)}
                   onFocus={() => { if (window.innerWidth < 1024) setIsFilterOpen(false); }}
-                  placeholder="Search for anything near you..."
+                  placeholder={showMap ? 'Search shops, restaurants, areas on map...' : 'Search for anything near you...'}
                   className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm sm:text-base font-medium text-foreground px-1 sm:px-2 placeholder:text-muted-foreground h-full"
                 />
 
@@ -1116,15 +1081,30 @@ export const DiscoveryPage = () => {
                   <span className="hidden sm:inline">Filters</span>
                 </button>
 
-                {/* Map toggle */}
+                {/* Prominent Map <-> Normal Search Mode Toggle */}
                 <button
                   type="button"
                   onClick={() => setShowMap(!showMap)}
-                  aria-label="Toggle map view"
-                  className={`shrink-0 flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-10 sm:px-3.5 border rounded-full text-xs font-extrabold transition-all cursor-pointer ${showMap ? 'bg-primary text-white border-primary shadow-sm' : 'bg-muted/90 border-border hover:bg-primary/10 hover:text-primary hover:border-primary/40'}`}
+                  aria-label={showMap ? 'Switch back to normal search mode' : 'Switch to map view'}
+                  title={showMap ? 'Back to Search Mode' : 'Explore on Map'}
+                  className={`shrink-0 flex items-center justify-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 border rounded-full text-xs font-extrabold transition-all active:scale-95 cursor-pointer shadow-md ${
+                    showMap
+                      ? 'bg-foreground text-background border-foreground hover:opacity-90'
+                      : 'bg-primary text-primary-foreground border-primary shadow-primary/25 hover:bg-primary/90 hover:shadow-lg'
+                  }`}
                 >
-                  <MapIcon className="w-4 h-4 shrink-0" />
-                  <span className="hidden sm:inline">Map</span>
+                  {showMap ? (
+                    <>
+                      <Grid className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                      <span className="sm:hidden">Search</span>
+                      <span className="hidden sm:inline">Back to Search</span>
+                    </>
+                  ) : (
+                    <>
+                      <MapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                      <span>Map</span>
+                    </>
+                  )}
                 </button>
               </div>
 
@@ -1270,7 +1250,13 @@ export const DiscoveryPage = () => {
             <div>
               {showMap ? (
                 <div className="w-full mt-2 animate-in fade-in duration-300">
-                  <DiscoveryMap items={finalProducts} />
+                  <DiscoveryMap
+                    items={finalProducts}
+                    searchQuery={localQuery}
+                    onSearchQueryChange={setLocalQuery}
+                    category={category}
+                    hideInternalSearch
+                  />
                 </div>
               ) : loading ? (
                 <div className={`grid gap-4 sm:gap-5 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
