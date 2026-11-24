@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { PageContainer } from '../shared/components/layout';
-import { 
-  Search, HelpCircle, MessageCircle, Phone, ArrowLeft, 
-  Utensils, Shirt, ShoppingBag, Truck, Wallet, ChevronDown, 
-  Sparkles, CheckCircle2, ShieldCheck, Clock 
+import {
+  Search, HelpCircle, MessageCircle, Phone, ArrowLeft,
+  Utensils, Shirt, ShoppingBag, Truck, Wallet, ChevronDown,
+  Sparkles, CheckCircle2, ShieldCheck, Clock
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../shared/components/ui/Button';
@@ -85,8 +85,8 @@ export const HelpCenterPage = () => {
 
   const filteredFaqs = FAQS.filter(faq => {
     const matchesCategory = !activeCategory || faq.category === activeCategory;
-    const matchesSearch = !searchQuery.trim() || 
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = !searchQuery.trim() ||
+      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -99,8 +99,8 @@ export const HelpCenterPage = () => {
   return (
     <PageContainer className="py-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
       {/* Back button */}
-      <button 
-        onClick={() => navigate(-1)} 
+      <button
+        onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" /> Back
@@ -121,22 +121,26 @@ export const HelpCenterPage = () => {
           </p>
 
           {/* Search Box */}
-          <div className="sticky top-0 z-30 py-2 -mx-2 px-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border/40 shadow-sm transition-all">
-            <div className="relative flex items-center w-full bg-card/90 dark:bg-card/75 backdrop-blur-xl text-foreground rounded-2xl shadow-lg p-2 border border-border/80">
-              <Search className="w-5 h-5 text-muted-foreground ml-3 shrink-0" />
-              <input 
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for answers e.g. delivery fee, refunds, tracking..."
-                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium px-3 placeholder:text-muted-foreground py-2"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-xs text-muted-foreground hover:text-foreground font-bold px-3">
-                  Clear
-                </button>
-              )}
+          <div className="relative flex items-center w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl text-foreground rounded-full shadow-2xl border-2 border-white/40 dark:border-border/80 hover:border-primary/50 focus-within:border-primary focus-within:ring-4 focus-within:ring-white/30 px-2.5 sm:px-3.5 h-14 sm:h-16 gap-2 transition-all duration-200 overflow-hidden">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for answers e.g. delivery fee, refunds, tracking..."
+              className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm sm:text-base font-medium px-1 sm:px-2 placeholder:text-muted-foreground h-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-xs text-muted-foreground hover:text-foreground font-extrabold px-3 py-1.5 rounded-full bg-muted/80 hover:bg-muted shrink-0 transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -152,15 +156,13 @@ export const HelpCenterPage = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(isActive ? null : cat.id)}
-                className={`p-5 rounded-2xl border transition-all text-left flex flex-col justify-between group ${
-                  isActive 
-                    ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105' 
+                className={`p-5 rounded-2xl border transition-all text-left flex flex-col justify-between group ${isActive
+                    ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
                     : 'bg-card border-border hover:border-primary/50 hover:shadow-sm'
-                }`}
+                  }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-colors ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white'
-                }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-colors ${isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white'
+                  }`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <div>
@@ -198,8 +200,8 @@ export const HelpCenterPage = () => {
             filteredFaqs.map((faq, idx) => {
               const isOpen = openFaqIndex === idx;
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="bg-card border border-border rounded-2xl overflow-hidden transition-all shadow-sm hover:border-primary/30"
                 >
                   <button
@@ -238,8 +240,8 @@ export const HelpCenterPage = () => {
             <p className="text-xs text-muted-foreground leading-relaxed mb-6">
               Our customer support team is available live on WhatsApp to resolve your queries instantly.
             </p>
-            <Button 
-              onClick={handleOpenWhatsApp} 
+            <Button
+              onClick={handleOpenWhatsApp}
               className="w-full py-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center justify-center gap-2 shadow-lg"
             >
               <MessageCircle className="w-5 h-5" /> Chat on WhatsApp (+255 764 587 748)

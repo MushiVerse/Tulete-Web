@@ -77,22 +77,25 @@ export const SearchOverlay = () => {
             className="w-full h-full md:h-auto md:max-w-2xl md:mx-auto bg-card md:rounded-2xl shadow-xl flex flex-col overflow-hidden"
           >
             {/* Search Header */}
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-3 p-4 border-b border-border">
-              <div className="relative flex-1 flex items-center">
-                <Search className="absolute left-3 w-5 h-5 text-muted-foreground" />
+            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2.5 p-4 border-b border-border">
+              <div className="relative flex-1 min-w-0 flex items-center h-14 px-2.5 gap-2 bg-background border-2 border-border/80 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 rounded-full shadow-md transition-all overflow-hidden">
+                <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Search className="w-4 h-4" />
+                </div>
                 <input 
                   type="text"
                   autoFocus
                   placeholder="Search Tulete..."
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  className="w-full h-12 pl-10 pr-10 bg-muted/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-base"
+                  className="flex-1 min-w-0 w-full h-full bg-transparent focus:outline-none focus:ring-0 text-sm sm:text-base font-medium text-foreground placeholder:text-muted-foreground"
                 />
                 {inputValue && (
                   <button 
                     type="button"
                     onClick={() => setInputValue('')}
-                    className="absolute right-3 p-1 rounded-full text-muted-foreground hover:bg-muted"
+                    aria-label="Clear search"
+                    className="w-7 h-7 rounded-full bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -101,14 +104,15 @@ export const SearchOverlay = () => {
               <button 
                 type="button" 
                 onClick={closeSearch}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground md:hidden"
+                className="text-sm font-bold text-muted-foreground hover:text-foreground shrink-0 px-2 md:hidden"
               >
                 Cancel
               </button>
               <button 
                 type="button" 
                 onClick={closeSearch}
-                className="hidden md:flex p-2 rounded-xl text-muted-foreground hover:bg-muted"
+                aria-label="Close search"
+                className="hidden md:flex w-10 h-10 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

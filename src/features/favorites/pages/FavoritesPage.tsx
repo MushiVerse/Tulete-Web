@@ -729,13 +729,16 @@ export const FavoritesPage = () => {
       {activeTab === 'favorites' && (
         <div className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-2xl border-b border-border/60 shadow-md py-3.5 transition-all my-2">
           <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
+            <div className="relative flex items-center flex-1 w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3.5 h-13 sm:h-14 gap-2 transition-all duration-200 overflow-hidden">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Search className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search saved items or stores..."
-                className="pl-10 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md text-xs w-full"
+                className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-1 placeholder:text-muted-foreground h-full"
               />
             </div>
 

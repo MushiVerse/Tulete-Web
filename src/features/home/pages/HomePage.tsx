@@ -884,6 +884,14 @@ export const HomePage = () => {
     }
   }, [selectedBrand, filterValue, t]);
 
+  // Context-aware "View all" link based on active filter chip
+  const getFilteredActionLink = (defaultLink: string) => {
+    if (filterValue === 'laundry') return '/laundry';
+    if (filterValue === 'food') return '/food';
+    if (filterValue === 'product') return '/products';
+    return defaultLink;
+  };
+
   return (
     <PageContainer className="flex-1 flex flex-col min-h-0">
       {/* Mobile full-screen search overlay */}
@@ -962,11 +970,11 @@ export const HomePage = () => {
           </div>
 
           {/* Search Row */}
-          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex gap-3 py-3 -mx-4 px-4 sm:-mx-8 sm:px-8 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
-            <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
-              <Search 
-                className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" 
-              />
+          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex gap-3 py-3 -mx-4 px-4 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
+            <div className="relative flex items-center w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3.5 h-14 sm:h-16 gap-1.5 sm:gap-2.5 transition-all duration-200 overflow-hidden">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
               
               <input
                 type="text"
@@ -977,20 +985,23 @@ export const HomePage = () => {
                   if (window.innerWidth < 1024) setIsMobileSearchOpen(true);
                 }}
                 placeholder={searchPlaceholderText}
-                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
+                className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm sm:text-base font-medium text-foreground px-1 sm:px-2 placeholder:text-muted-foreground h-full"
               />
 
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
-                  className="text-muted-foreground hover:text-foreground shrink-0 mr-2"
+                  aria-label="Clear search"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               )}
 
               {/* Tag / Badge */}
-              <div 
+              <button
+                type="button"
                 onClick={() => {
                   const filters: ('food' | 'product' | 'laundry' | 'brands' | null)[] = [null, 'food', 'product', 'laundry', 'brands'];
                   const currentIndex = filters.indexOf(filterValue);
@@ -999,74 +1010,76 @@ export const HomePage = () => {
                   setFilterValue(nextFilter);
                   if (nextFilter !== 'brands') setSelectedBrand(null);
                 }}
-                className="flex items-center gap-1.5 ml-3 mr-2 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0 cursor-pointer hover:bg-primary/20 transition-colors select-none"
+                className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-primary/10 text-primary text-[11px] sm:text-xs font-extrabold rounded-full shrink-0 max-w-[92px] sm:max-w-[140px] truncate cursor-pointer hover:bg-primary/20 transition-colors select-none border border-primary/20"
               >
-                {selectedBrand ? selectedBrand.name : filterValue === 'brands' ? 'Brands' : filterValue === 'food' ? 'Food' : filterValue === 'product' ? 'Shopping' : filterValue === 'laundry' ? 'Laundry' : 'All'}
-              </div>
+                <span className="truncate">
+                  {selectedBrand ? selectedBrand.name : filterValue === 'brands' ? 'Brands' : filterValue === 'food' ? 'Food' : filterValue === 'product' ? 'Shopping' : filterValue === 'laundry' ? 'Laundry' : 'All'}
+                </span>
+              </button>
             </div>
           </div>
 
           {/*  FILTER CHIPS (Mobile Only)  */}
-          <div className="lg:hidden -mx-4 px-4 flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
+          <div className="lg:hidden flex flex-wrap items-center gap-2 pb-1 pt-0.5 w-full">
             <button
               onClick={() => setFilterValue(null)}
-              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-extrabold transition-all border shadow-xs ${
                 filterValue === null
-                  ? 'bg-primary text-primary-foreground border-primary scale-105'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-md'
                   : 'bg-card text-foreground border-border hover:border-primary/30'
               }`}
             >
-              <LayoutGrid className="w-4 h-4 opacity-70" />
+              <LayoutGrid className="w-3.5 h-3.5 opacity-80 shrink-0" />
               All
             </button>
             <button
               onClick={() => {
                 setFilterValue(filterValue === 'food' ? null : 'food');
               }}
-              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-extrabold transition-all border shadow-xs ${
                 filterValue === 'food'
-                  ? 'bg-orange-500 text-white border-orange-500 scale-105'
+                  ? 'bg-orange-500 text-white border-orange-500 shadow-md'
                   : 'bg-card text-foreground border-border hover:border-orange-500/30'
               }`}
             >
-              <Utensils className="w-4 h-4 opacity-70" />
+              <Utensils className="w-3.5 h-3.5 opacity-80 shrink-0" />
               Foods
             </button>
             <button
               onClick={() => {
                 setFilterValue(filterValue === 'product' ? null : 'product');
               }}
-              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-extrabold transition-all border shadow-xs ${
                 filterValue === 'product'
-                  ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
+                  ? 'bg-emerald-500 text-white border-emerald-500 shadow-md'
                   : 'bg-card text-foreground border-border hover:border-emerald-500/30'
               }`}
             >
-              <ShoppingBag className="w-4 h-4 opacity-70" />
+              <ShoppingBag className="w-3.5 h-3.5 opacity-80 shrink-0" />
               Shopping
             </button>
             <button
               onClick={() => {
                 setFilterValue(filterValue === 'laundry' ? null : 'laundry');
               }}
-              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-extrabold transition-all border shadow-xs ${
                 filterValue === 'laundry'
-                  ? 'bg-sky-500 text-white border-sky-500 scale-105'
+                  ? 'bg-sky-500 text-white border-sky-500 shadow-md'
                   : 'bg-card text-foreground border-border hover:border-sky-500/30'
               }`}
             >
-              <Sparkles className="w-4 h-4 opacity-70" />
+              <Sparkles className="w-3.5 h-3.5 opacity-80 shrink-0" />
               Laundry
             </button>
             <button
               onClick={() => { setFilterValue(filterValue === 'brands' ? null : 'brands'); setSelectedBrand(null); }}
-              className={`shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-extrabold transition-all border shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-extrabold transition-all border shadow-xs ${
                 filterValue === 'brands'
-                  ? 'bg-purple-500 text-white border-purple-500 scale-105'
+                  ? 'bg-purple-500 text-white border-purple-500 shadow-md'
                   : 'bg-card text-foreground border-border hover:border-purple-500/30'
               }`}
             >
-              <Tag className="w-4 h-4 opacity-70" />
+              <Tag className="w-3.5 h-3.5 opacity-80 shrink-0" />
               Brands
             </button>
           </div>
@@ -1146,7 +1159,7 @@ export const HomePage = () => {
 
             {/* 1. Recommended for you (Products) */}
             {isProductsLoading || isFoodsLoading ? (
-              <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products">
+              <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink={getFilteredActionLink('/products')}>
                 {[1, 2, 3, 4].map(i => (
                   <div key={`rec-skel-${i}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCardSkeleton />
@@ -1154,7 +1167,7 @@ export const HomePage = () => {
                 ))}
               </HorizontalCarousel>
             ) : recommendedProducts.length > 0 && (
-              <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink="/products" autoScrollSpeed={0.3}>
+              <HorizontalCarousel title="Recommended for you" icon={<Star className="w-5 h-5 fill-primary stroke-primary" />} actionLink={getFilteredActionLink('/products')} autoScrollSpeed={0.3}>
                 {recommendedProducts.slice(0, 20).map(product => (
                   <div key={`rec-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
@@ -1170,7 +1183,7 @@ export const HomePage = () => {
 
             {/* 3. Stores near me (Stores) */}
             {isStoresLoading ? (
-              <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore">
+              <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink={getFilteredActionLink('/stores')}>
                 {[1, 2, 3, 4].map(i => (
                   <div key={`store-skel-${i}`} className="w-[280px] sm:w-[320px] shrink-0">
                     <StoreCardSkeleton />
@@ -1204,7 +1217,7 @@ export const HomePage = () => {
               const hasMoreStores = filteredStoresNearMe.length > storeLimit;
 
               return (
-                <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/stores">
+                <HorizontalCarousel title="Stores near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink={getFilteredActionLink('/stores')}>
                   {visibleStores.map((store) => (
                     <div key={`store-${store.id}`} className="w-[280px] sm:w-[320px] shrink-0">
                       <FeaturedStoreCard
@@ -1251,7 +1264,7 @@ export const HomePage = () => {
 
             {/* 3.5 Products near me */}
             {productsNearMe.length > 0 && (
-              <HorizontalCarousel title="Near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink="/explore" autoScrollSpeed={0.35}>
+              <HorizontalCarousel title="Near me" icon={<MapPin className="w-5 h-5 text-primary" />} actionLink={getFilteredActionLink('/explore')} autoScrollSpeed={0.35}>
                 {productsNearMe.map((product, idx) => (
                   <div key={`near-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0 relative group">
                     <div className="absolute top-2 left-2 z-10 bg-background/95 backdrop-blur text-foreground text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 border border-border group-hover:scale-105 transition-transform">
@@ -1271,7 +1284,7 @@ export const HomePage = () => {
 
             {/* 4. Most rated */}
             {mostRatedProducts.length > 0 && (
-              <HorizontalCarousel title="Most rated" icon={<Flame className="w-5 h-5 text-orange-500 fill-orange-500" />} actionLink="/explore?sort=popular" autoScrollSpeed={0.4}>
+              <HorizontalCarousel title="Most rated" icon={<Flame className="w-5 h-5 text-orange-500 fill-orange-500" />} actionLink={getFilteredActionLink('/explore?sort=popular')} autoScrollSpeed={0.4}>
                 {mostRatedProducts.slice(0, 20).map(product => (
                   <div key={`rated-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
@@ -1288,7 +1301,7 @@ export const HomePage = () => {
 
             {/* 5. What interested you lately (Only when logged in & has userViewed docs) */}
             {isAuthenticated && userViewedItems.length > 0 && (
-              <HorizontalCarousel title="What interested you lately" icon={<Clock className="w-5 h-5 text-muted-foreground" />} actionLink="/explore" autoScrollSpeed={0.2}>
+              <HorizontalCarousel title="What interested you lately" icon={<Clock className="w-5 h-5 text-muted-foreground" />} actionLink={getFilteredActionLink('/explore')} autoScrollSpeed={0.2}>
                 {userViewedItems.slice(0, 20).map(product => (
                   <div key={`int-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
@@ -1305,7 +1318,7 @@ export const HomePage = () => {
 
             {/* 6. What you wish for (From userfavorites document using uids) */}
             {userFavoritesItems.length > 0 ? (
-              <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
+              <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink={getFilteredActionLink('/favorites')} autoScrollSpeed={0.6}>
                 {userFavoritesItems.slice(0, 20).map(product => (
                   <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 
@@ -1319,7 +1332,7 @@ export const HomePage = () => {
                 ))}
               </HorizontalCarousel>
             ) : (wishlistProducts.length > 0 && (
-              <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink="/favorites" autoScrollSpeed={0.6}>
+              <HorizontalCarousel title="What you wish for" icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} actionLink={getFilteredActionLink('/favorites')} autoScrollSpeed={0.6}>
                 {wishlistProducts.map(product => (
                   <div key={`wish-${product.id}`} className="w-[200px] sm:w-[240px] shrink-0">
                     <ProductCard 

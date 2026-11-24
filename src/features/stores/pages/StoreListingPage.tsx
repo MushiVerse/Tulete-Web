@@ -907,53 +907,63 @@ export const StoreListingPage = () => {
           </div>
 
           {/* ── Search + Controls Row ─────────────────────────── */}
-          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex gap-3 py-3 -mx-2 px-2 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex items-center gap-2 sm:gap-3 py-3 -mx-4 px-4 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
+            <div className="relative flex items-center flex-1 min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3.5 h-14 sm:h-16 gap-1.5 sm:gap-2.5 transition-all duration-200 overflow-hidden">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search stores, categories..."
-                className="w-full pl-10 pr-10 py-3 bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all shadow-md"
+                className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm sm:text-base font-medium text-foreground px-1 sm:px-2 placeholder:text-muted-foreground h-full"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               )}
+
+              {/* Mobile Filter button integrated cleanly so nothing overflows */}
+              <button
+                type="button"
+                onClick={() => setShowFilters(!showFilters)}
+                aria-label="Toggle filters"
+                className={`lg:hidden relative shrink-0 flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-10 sm:px-3.5 rounded-full border font-extrabold text-xs transition-all cursor-pointer ${showFilters || activeFiltersCount > 0
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'bg-muted/90 border-border text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/40'
+                  }`}
+              >
+                <SlidersHorizontal className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Filters</span>
+                {activeFiltersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-primary-foreground text-[9px] font-extrabold rounded-full flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Mobile Filter button */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`lg:hidden relative flex items-center gap-1.5 px-4 py-3 rounded-2xl border font-bold text-xs transition-all ${showFilters || activeFiltersCount > 0
-                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                : 'bg-card/75 dark:bg-card/60 border-border text-foreground hover:border-primary/30 shadow-sm'
-                }`}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              Filters
-              {activeFiltersCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive text-primary-foreground text-[9px] font-extrabold rounded-full flex items-center justify-center">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </button>
-
             {/* View mode */}
-            <div className="flex border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+            <div className="flex shrink-0 border-2 border-border/80 rounded-full overflow-hidden bg-card shadow-md h-12 sm:h-14 items-center p-1">
               <button
+                type="button"
                 onClick={() => setViewMode('grid')}
-                className={`p-3 transition-all ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-primary'}`}
+                aria-label="Grid view"
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-primary'}`}
               >
                 <Grid3X3 className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('list')}
-                className={`p-3 transition-all ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-primary'}`}
+                aria-label="List view"
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-primary'}`}
               >
                 <List className="w-4 h-4" />
               </button>

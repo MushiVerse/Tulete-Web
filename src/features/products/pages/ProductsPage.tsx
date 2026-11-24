@@ -597,10 +597,12 @@ export const ProductsPage = () => {
           </div>
 
           {/* Search Row */}
-          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex gap-3 py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
-            <div className="relative flex items-center w-full bg-card/75 dark:bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14">
-              <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-2 cursor-pointer hover:text-primary transition-colors" />
-              <div className="flex items-center gap-1.5 ml-3 px-3 py-1.5 bg-primary/10 text-primary text-xs font-extrabold rounded-full shrink-0">
+          <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex gap-3 py-3 -mx-4 px-4 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
+            <div className="relative flex items-center w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3.5 h-14 sm:h-16 gap-1.5 sm:gap-2.5 transition-all duration-200 overflow-hidden">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-primary/10 text-primary text-[11px] sm:text-xs font-extrabold rounded-full shrink-0 border border-primary/20">
                 Shopping
               </div>
               <input
@@ -609,14 +611,16 @@ export const ProductsPage = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => { if (window.innerWidth < 1024) setIsMobileSearchOpen(true); }}
                 placeholder="Search for products, brands, or categories..."
-                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-3 placeholder:text-muted-foreground h-full"
+                className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm sm:text-base font-medium text-foreground px-1 sm:px-2 placeholder:text-muted-foreground h-full"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
-                  className="text-muted-foreground hover:text-foreground shrink-0 mr-2"
+                  aria-label="Clear search"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               )}
             </div>

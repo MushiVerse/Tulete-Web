@@ -413,14 +413,16 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
   return (
     <div className="relative w-full h-[320px] md:h-[520px] rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-border group">
       {/* Floating Location & Store Search Bar */}
-      <div ref={searchContainerRef} className="absolute top-4 left-4 right-36 sm:right-auto sm:w-72 md:w-80 lg:w-96 z-20">
+      <div ref={searchContainerRef} className="absolute top-3 left-3 right-32 sm:top-4 sm:left-4 sm:right-auto sm:w-80 md:w-96 z-20">
         <div className="relative">
-          <div className="flex items-center bg-background/95 backdrop-blur-md border border-border shadow-lg rounded-2xl px-3 h-10 gap-2">
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
-            ) : (
-              <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-            )}
+          <div className="flex items-center w-full min-w-0 bg-background/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 shadow-xl rounded-full px-2.5 h-12 gap-2 transition-all overflow-hidden">
+            <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              {isSearching ? (
+                <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+            </div>
             <input
               type="text"
               value={searchQuery}
@@ -432,18 +434,20 @@ export const DiscoveryMap = ({ items = [] }: DiscoveryMapProps) => {
               onFocus={() => {
                 if (searchResults.length > 0) setShowSuggestions(true);
               }}
-              placeholder="Search shops, restaurants, stores, areas..."
-              className="w-full bg-transparent text-xs font-bold text-foreground placeholder:text-muted-foreground outline-none"
+              placeholder="Search shops, restaurants, areas..."
+              className="flex-1 min-w-0 w-full bg-transparent text-xs sm:text-sm font-semibold text-foreground placeholder:text-muted-foreground outline-none"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSearchResults([]);
                   setShowSuggestions(false);
                   setSelectedPlace(null);
                 }}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-full cursor-pointer"
+                aria-label="Clear map search"
+                className="w-6 h-6 rounded-full bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

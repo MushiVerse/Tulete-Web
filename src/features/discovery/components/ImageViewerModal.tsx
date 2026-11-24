@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -19,18 +19,68 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const onCloseRef = useRef(onClose);
+  const pushedHistoryRef = useRef(false);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
     setZoomLevel(1);
   }, [initialIndex, isOpen]);
 
+  // Intercept mobile hardware/browser Back button so it closes ONLY the image viewer modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const isMobileViewport =
+      window.innerWidth < 1024 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (!isMobileViewport) return;
+
+    if (!pushedHistoryRef.current) {
+      const currentState =
+        window.history.state && typeof window.history.state === 'object'
+          ? window.history.state
+          : {};
+      window.history.pushState(
+        { ...currentState, __tuleteImageViewer: true },
+        '',
+        window.location.href
+      );
+      pushedHistoryRef.current = true;
+    }
+
+    const handlePopState = () => {
+      if (pushedHistoryRef.current) {
+        pushedHistoryRef.current = false;
+        onCloseRef.current();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isOpen]);
+
+  const handleRequestClose = () => {
+    if (pushedHistoryRef.current) {
+      pushedHistoryRef.current = false;
+      window.history.back();
+    }
+    onClose();
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleRequestClose();
       } else if (e.key === 'ArrowLeft') {
         paginate(-1);
       } else if (e.key === 'ArrowRight') {
@@ -64,53 +114,59 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 md:p-6 select-none"
-        onClick={onClose}
+        className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col justify-between p-3 sm:p-4 md:p-6 select-none"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+        onClick={handleRequestClose}
       >
         {/* Header Bar */}
         <div 
-          className="w-full flex items-center justify-between z-20 text-white"
+          className="w-full flex items-center justify-between gap-2 z-20 text-white min-w-0"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold px-3 py-1 bg-white/10 rounded-full border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <span className="text-xs font-bold px-2.5 sm:px-3 py-1 bg-white/15 rounded-full border border-white/25 shrink-0">
               {currentIndex + 1} / {images.length}
             </span>
-            <span className="text-sm font-semibold truncate max-w-[200px] md:max-w-md text-white/80">
+            <span className="text-xs sm:text-sm font-semibold truncate min-w-0 text-white/85">
               {title}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
+              type="button"
               onClick={() => handleZoom(-0.5)}
               disabled={zoomLevel <= 1}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
+              className="hidden sm:flex p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
               title="Zoom Out"
             >
               <ZoomOut className="w-5 h-5" />
             </button>
             <button
+              type="button"
               onClick={() => setZoomLevel(1)}
-              className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white transition-all cursor-pointer min-w-[50px] text-center"
+              className="hidden sm:inline-flex items-center justify-center px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white transition-all cursor-pointer min-w-[50px] text-center"
               title="Reset Zoom"
             >
               {Math.round(zoomLevel * 100)}%
             </button>
             <button
+              type="button"
               onClick={() => handleZoom(0.5)}
               disabled={zoomLevel >= 3}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
+              className="hidden sm:flex p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
               title="Zoom In"
             >
               <ZoomIn className="w-5 h-5" />
             </button>
             <button
-              onClick={onClose}
-              className="p-2.5 rounded-full bg-white/10 hover:bg-rose-600 transition-colors text-white ml-2 cursor-pointer"
+              type="button"
+              onClick={handleRequestClose}
+              aria-label="Close image viewer"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/20 hover:bg-rose-600 active:scale-90 border border-white/30 transition-all text-white flex items-center justify-center shrink-0 shadow-lg cursor-pointer"
               title="Close Viewer (Esc)"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>

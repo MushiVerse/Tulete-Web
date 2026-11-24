@@ -564,14 +564,17 @@ export const OrdersPage = () => {
         </div>
 
         {/* Search */}
-        <div className="sticky top-16 md:top-0 z-40 !mt-0 w-full md:w-72 py-2 -mx-2 px-2 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border border-border/30 rounded-2xl">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
+        <div className="sticky top-16 md:top-0 z-40 !mt-0 w-full md:w-80 py-2">
+          <div className="relative flex items-center w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3 h-13 sm:h-14 gap-2 transition-all duration-200 overflow-hidden">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by store or ID..."
-              className="pl-9 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md focus-visible:ring-primary focus-visible:ring-1"
+              className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-1 placeholder:text-muted-foreground h-full"
             />
           </div>
         </div>

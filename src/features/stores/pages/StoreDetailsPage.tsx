@@ -269,6 +269,7 @@ export const StoreDetailsPage = () => {
   const [viewerItems, setViewerItems] = useState<any[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerZoom, setViewerZoom] = useState<number>(1);
+  const pushedViewerHistoryRef = useRef(false);
 
   const openImageViewer = (items: any[], index = 0) => {
     if (!items || items.length === 0) return;
@@ -277,6 +278,39 @@ export const StoreDetailsPage = () => {
     setViewerZoom(1);
     setViewerOpen(true);
   };
+
+  const closeImageViewer = () => {
+    if (pushedViewerHistoryRef.current) {
+      pushedViewerHistoryRef.current = false;
+      window.history.back();
+    }
+    setViewerOpen(false);
+  };
+
+  // Handle mobile back button for StoreDetailsPage image viewer
+  useEffect(() => {
+    if (!viewerOpen) return;
+    const isMobileViewport =
+      window.innerWidth < 1024 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!isMobileViewport) return;
+
+    if (!pushedViewerHistoryRef.current) {
+      const currentState = window.history.state && typeof window.history.state === 'object' ? window.history.state : {};
+      window.history.pushState({ ...currentState, __tuleteStoreImageViewer: true }, '', window.location.href);
+      pushedViewerHistoryRef.current = true;
+    }
+
+    const handlePopState = () => {
+      if (pushedViewerHistoryRef.current) {
+        pushedViewerHistoryRef.current = false;
+        setViewerOpen(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [viewerOpen]);
 
   useEffect(() => {
     setViewerZoom(1);
@@ -291,7 +325,7 @@ export const StoreDetailsPage = () => {
       } else if (e.key === 'ArrowRight') {
         setViewerIndex((prev) => (prev + 1) % viewerItems.length);
       } else if (e.key === 'Escape') {
-        setViewerOpen(false);
+        closeImageViewer();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1212,15 +1246,28 @@ export const StoreDetailsPage = () => {
             ) : (
               <>
                 {/* Store search bar & categories horizontal filter */}
-                <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex flex-col sm:flex-row gap-3 py-3 -mx-2 px-2 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
+                <div className="sticky top-16 lg:top-0 z-40 !mt-0 flex flex-col sm:flex-row sm:items-center gap-3 py-3 -mx-4 px-4 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10 bg-background/85 dark:bg-background/75 backdrop-blur-3xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/80 border-b border-border/30 transition-all">
+                  <div className="relative flex items-center flex-1 min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3.5 h-14 sm:h-15 gap-2 transition-all duration-200 overflow-hidden">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <input
+                      type="text"
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="Search items here..."
-                      className="pl-10 bg-card/75 dark:bg-card/60 backdrop-blur-xl border-border/80 rounded-2xl shadow-md"
+                      placeholder="Search items in this store..."
+                      className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm sm:text-base font-medium text-foreground px-1 placeholder:text-muted-foreground h-full"
                     />
+                    {productSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setProductSearch('')}
+                        aria-label="Clear search"
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+                    )}
                   </div>
 
                   {productCategories.length > 0 && (
@@ -1834,30 +1881,30 @@ export const StoreDetailsPage = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 md:p-8"
-                onClick={() => setViewerOpen(false)}
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-3 sm:p-4 md:p-8"
+                onClick={closeImageViewer}
               >
                 <div 
                   className="relative w-full max-w-5xl h-full max-h-[90vh] flex flex-col justify-between overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Top Bar */}
-                  <div className="flex items-center justify-between z-20 text-white bg-black/40 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-extrabold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                  <div className="flex items-center justify-between gap-2 z-20 text-white bg-black/40 backdrop-blur-md px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border border-white/10 min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <span className="text-xs font-extrabold text-primary bg-primary/10 px-2.5 sm:px-3 py-1 rounded-full border border-primary/20 shrink-0">
                         {viewerIndex + 1} / {viewerItems.length}
                       </span>
-                      <span className="font-extrabold text-sm truncate max-w-[160px] sm:max-w-md">
+                      <span className="font-extrabold text-xs sm:text-sm truncate min-w-0">
                         {currentItem?.title || store.store}
                       </span>
                     </div>
 
                     {/* Zoom & Action Controls */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => setViewerZoom((prev) => Math.max(1, prev - 0.5))}
                         disabled={viewerZoom <= 1}
-                        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
+                        className="hidden sm:flex p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
                         title="Zoom Out"
                       >
                         <ZoomOut className="w-4 h-4" />
@@ -1865,7 +1912,7 @@ export const StoreDetailsPage = () => {
 
                       <button
                         onClick={() => setViewerZoom(1)}
-                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white transition-all cursor-pointer min-w-[50px] text-center"
+                        className="hidden sm:inline-flex items-center justify-center px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white transition-all cursor-pointer min-w-[50px] text-center"
                         title="Reset Zoom"
                       >
                         {Math.round(viewerZoom * 100)}%
@@ -1874,15 +1921,17 @@ export const StoreDetailsPage = () => {
                       <button
                         onClick={() => setViewerZoom((prev) => Math.min(3.5, prev + 0.5))}
                         disabled={viewerZoom >= 3.5}
-                        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
+                        className="hidden sm:flex p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white disabled:opacity-40 cursor-pointer"
                         title="Zoom In"
                       >
                         <ZoomIn className="w-4 h-4" />
                       </button>
 
                       <button
-                        onClick={() => setViewerOpen(false)}
-                        className="p-2 rounded-full bg-white/10 hover:bg-rose-500/80 transition-all text-white ml-2 cursor-pointer"
+                        type="button"
+                        onClick={closeImageViewer}
+                        aria-label="Close image viewer"
+                        className="w-10 h-10 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-rose-600 active:scale-90 border border-white/30 transition-all text-white flex items-center justify-center shrink-0 shadow-lg cursor-pointer"
                         title="Close Viewer (Esc)"
                       >
                         <X className="w-5 h-5" />

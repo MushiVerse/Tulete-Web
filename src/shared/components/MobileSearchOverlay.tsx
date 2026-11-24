@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, SearchX, Loader2 } from 'lucide-react';
+import { X, Search, SearchX, Loader2 } from 'lucide-react';
 import { ProductCard } from './cards/ProductCard';
 import { Skeleton } from './ui/Skeleton';
 import { useCartStore } from '../../features/cart/store/useCartStore';
@@ -64,23 +64,37 @@ export const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       {/* Search Bar Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background shadow-sm shrink-0">
-        <div className="flex-1 relative">
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-background/95 backdrop-blur-xl shadow-sm shrink-0">
+        <div className="flex-1 min-w-0 relative flex items-center h-14 px-2.5 gap-2 bg-card border-2 border-border/80 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 rounded-full shadow-md transition-all overflow-hidden">
+          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Search className="w-4 h-4" />
+          </div>
           <input
             ref={inputRef}
             type="search"
             value={query}
             onChange={e => onChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full h-12 pl-4 pr-10 bg-muted rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="flex-1 min-w-0 w-full h-full bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
           />
-          {loading && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
-          )}
+          {loading ? (
+            <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0 mr-1" />
+          ) : query ? (
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              aria-label="Clear search"
+              className="w-7 h-7 rounded-full bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : null}
         </div>
         <button
+          type="button"
           onClick={onClose}
-          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-2xl bg-muted text-foreground hover:bg-muted/80 active:scale-90 transition-all"
+          aria-label="Close search"
+          className="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-muted border border-border text-foreground hover:bg-muted/80 active:scale-90 transition-all shadow-sm"
         >
           <X className="w-5 h-5" />
         </button>

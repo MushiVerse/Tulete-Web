@@ -105,6 +105,7 @@ import { useFavoritesStore } from '../../favorites/hooks/useFavoritesStore';
 import { useLocationStore } from '../../location/store/useLocationStore';
 import { locationService } from '../../location/services/locationService';
 import { storeService } from '../../stores/services/storeService';
+import { productService } from '../../products/services/productService';
 import { DiscoveryMap } from '../components/DiscoveryMap';
 import { getDeliveryFee, getItemPriceWithDelivery } from '../../location/hooks/useDynamicPrice';
 import { formatPrice } from '../../../shared/utils/formatPrice';
@@ -505,6 +506,110 @@ export const DiscoveryPage = () => {
         }
       }
 
+      // Retrieve trending meals directly from Firestore foods collection + Algolia merge when "Hot Meals" is clicked
+      if (activeTab !== 'stores' && catLower === 'food') {
+        try {
+          const [foodsSnapRes, algoliaRes] = await Promise.allSettled([
+            getDocs(collection(db, 'foods')),
+            searchTuleteItems(localQuery, {
+              filters: `(recordType:food OR category:"Food" OR _collection:foods) AND NOT recordType:store AND NOT recordType:brand`,
+              hitsPerPage: 200,
+            }),
+          ]);
+
+          const firestoreFoods =
+            foodsSnapRes.status === 'fulfilled'
+              ? foodsSnapRes.value.docs.map((d) => {
+                  const raw = d.data();
+                  const img = resolveImageUrl(raw);
+                  return {
+                    id: d.id,
+                    objectID: d.id,
+                    recordType: 'food',
+                    _collection: 'foods',
+                    ...raw,
+                    imgUrl: img,
+                    imgURL: raw.imgURL || raw.imgUrl || img,
+                    imageUrl: img,
+                    category: raw.category || raw.cat || 'Food',
+                    cat: raw.cat || raw.category || 'Food',
+                  };
+                })
+              : [];
+
+          const algoliaHits = algoliaRes.status === 'fulfilled' ? algoliaRes.value : [];
+
+          const combinedMap = new Map<string, any>();
+          firestoreFoods.forEach((item: any) => combinedMap.set(item.id, item));
+          algoliaHits.forEach((item: any) => {
+            const id = item.id || item.objectID;
+            if (id && !combinedMap.has(id)) {
+              const recType = String(item.recordType || item._collection || '').toLowerCase();
+              const itemCatLower = String(item.category || item.cat || '').toLowerCase();
+              if (recType === 'food' || recType === 'foods' || itemCatLower === 'food' || isFoodItem(item)) {
+                combinedMap.set(id, { ...item, recordType: 'food', _collection: item._collection || 'foods' });
+              }
+            }
+          });
+
+          let mealsList = Array.from(combinedMap.values());
+
+          if (mealsList.length === 0) {
+            mealsList = productService
+              .getMockProducts()
+              .filter((p) => ['Platters', 'Quick Meals', 'Food'].includes(p.category) || p.id.includes('food'))
+              .map((p) => ({ ...p, objectID: p.id, recordType: 'food', _collection: 'foods' }));
+          }
+
+          if (localQuery.trim()) {
+            mealsList = mealsList.filter((item: any) => matchesSearchQuery(item, localQuery));
+          }
+
+          // Compute trending score for Hot Meals (tags + orders/popularity + ratings/reviews + recency)
+          const getTrendingMealScore = (item: any): number => {
+            let score = 0;
+            const tagsStr = Array.isArray(item.tags) ? item.tags.join(' ').toLowerCase() : String(item.tags || '').toLowerCase();
+            if (tagsStr.includes('tamtam') || tagsStr.includes('popular') || tagsStr.includes('trending') || tagsStr.includes('hot')) {
+              score += 50;
+            }
+            if (item.isTrending || item.trending || item.isHot || item.featured) {
+              score += 40;
+            }
+            const popularityCount = Number(item.orderCount ?? item.orders ?? item.views ?? item.viewCount ?? item.sales ?? 0);
+            if (!isNaN(popularityCount) && popularityCount > 0) {
+              score += Math.min(60, Math.log2(popularityCount + 1) * 10);
+            }
+            let r = 0;
+            let rc = 0;
+            if (Array.isArray(item.rate) && item.rate.length > 0) {
+              const rates = item.rate.map(Number).filter((n: number) => !isNaN(n));
+              rc = rates.length;
+              r = rc > 0 ? rates.reduce((s: number, v: number) => s + v, 0) / rc : 0;
+            } else if (item.rating !== undefined && Number(item.rating) > 0) {
+              r = Number(item.rating);
+              rc = item.reviewCount ? Number(item.reviewCount) : 1;
+            }
+            score += r * 12 + Math.log2(rc + 1) * 8;
+            return score;
+          };
+
+          mealsList = mealsList
+            .map((m: any) => ({ ...m, _trendingScore: getTrendingMealScore(m) }))
+            .sort((a: any, b: any) => {
+              if (b._trendingScore !== a._trendingScore) return b._trendingScore - a._trendingScore;
+              return getTimeValue(b) - getTimeValue(a);
+            });
+
+          if (!controller.signal.aborted) {
+            setProducts(mealsList);
+            setLoading(false);
+          }
+          return;
+        } catch (err) {
+          console.warn('Error retrieving trending meals from Firestore:', err);
+        }
+      }
+
       // Retrieve laundry items directly from cloths document/collection ordered descending by time at data retrieval level
       if (activeTab !== 'stores' && (catLower === 'laundry' || catLower === 'nguo')) {
         try {
@@ -816,7 +921,9 @@ export const DiscoveryPage = () => {
       if (location && currentLocation) {
         const fee = getDeliveryFee(currentLocation, location, item.storeId || item.id || '', false, true);
         const isFood = item.recordType === 'food' || itemCat === 'food';
-        if (isFood && fee > 1600) return false;
+        // When user explicitly clicks "Hot Meals 🔥" (catLower === 'food'), keep trending meals accessible within city delivery range
+        if (isFood && catLower !== 'food' && fee > 1600) return false;
+        if (isFood && catLower === 'food' && fee > 10000) return false;
         if (!isFood && fee > 10000) return false;
       }
 
@@ -869,6 +976,12 @@ export const DiscoveryPage = () => {
         const scoreA = getSearchRelevanceScore(a, localQuery);
         const scoreB = getSearchRelevanceScore(b, localQuery);
         if (scoreA !== scoreB) return scoreB - scoreA;
+      }
+
+      // Hot Meals trending rank when "Hot Meals 🔥" chip is active
+      if (catLower === 'food' && (a._trendingScore !== undefined || b._trendingScore !== undefined)) {
+        const trendDiff = (b._trendingScore ?? 0) - (a._trendingScore ?? 0);
+        if (trendDiff !== 0) return trendDiff;
       }
 
       const ratingInfoA = getRating(a);
@@ -949,8 +1062,10 @@ export const DiscoveryPage = () => {
               </div>
 
               {/* Search Bar Input */}
-              <div className="relative flex items-center w-full bg-card/85 dark:bg-card/70 backdrop-blur-xl border border-border/80 rounded-2xl shadow-md transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary px-3 h-14 gap-2">
-                <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-1" />
+              <div className="relative flex items-center w-full min-w-0 bg-card dark:bg-card/95 backdrop-blur-xl border-2 border-border/80 hover:border-primary/40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/30 hover:shadow-xl focus-within:shadow-xl focus-within:shadow-primary/15 focus-within:ring-4 focus-within:ring-primary/15 focus-within:border-primary px-2.5 sm:px-3.5 h-14 sm:h-16 gap-1.5 sm:gap-2.5 transition-all duration-200 overflow-hidden">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
 
                 <input
                   type="text"
@@ -958,40 +1073,46 @@ export const DiscoveryPage = () => {
                   onChange={(e) => setLocalQuery(e.target.value)}
                   onFocus={() => { if (window.innerWidth < 1024) setIsFilterOpen(false); }}
                   placeholder="Search for anything near you..."
-                  className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-foreground px-2 placeholder:text-muted-foreground h-full"
+                  className="flex-1 min-w-0 w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm sm:text-base font-medium text-foreground px-1 sm:px-2 placeholder:text-muted-foreground h-full"
                 />
 
                 {localQuery && (
                   <button
+                    type="button"
                     onClick={() => setLocalQuery('')}
-                    className="text-muted-foreground hover:text-foreground shrink-0 mr-1 p-1"
+                    aria-label="Clear search"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                   >
-                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 )}
 
                 {/* Filter button */}
                 <button
+                  type="button"
                   onClick={() => setIsFilterOpen(true)}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 border border-border rounded-xl text-xs font-extrabold bg-muted hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-colors"
+                  aria-label="Open filters"
+                  className="shrink-0 flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-10 sm:px-3.5 border border-border rounded-full text-xs font-extrabold bg-muted/90 hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-all cursor-pointer"
                 >
-                  <Filter className="w-4 h-4" />
+                  <Filter className="w-4 h-4 shrink-0" />
                   <span className="hidden sm:inline">Filters</span>
                 </button>
 
                 {/* Map toggle */}
                 <button
+                  type="button"
                   onClick={() => setShowMap(!showMap)}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-2 border border-border rounded-xl text-xs font-extrabold transition-colors ${showMap ? 'bg-primary text-white border-primary' : 'bg-muted hover:bg-primary/10 hover:text-primary'}`}
+                  aria-label="Toggle map view"
+                  className={`shrink-0 flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-10 sm:px-3.5 border rounded-full text-xs font-extrabold transition-all cursor-pointer ${showMap ? 'bg-primary text-white border-primary shadow-sm' : 'bg-muted/90 border-border hover:bg-primary/10 hover:text-primary hover:border-primary/40'}`}
                 >
-                  <MapIcon className="w-4 h-4" />
+                  <MapIcon className="w-4 h-4 shrink-0" />
                   <span className="hidden sm:inline">Map</span>
                 </button>
               </div>
 
               {/* Trending Quick Filters Chips (below search bar, hidden when Stores tab is selected) */}
               {activeTab !== 'stores' && (
-                <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pt-0.5 pb-1">
+                <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pt-0.5 pb-1 w-full min-w-0">
                   {TRENDING_FILTERS.map((filter) => (
                     <button
                       key={filter.id}
@@ -999,8 +1120,8 @@ export const DiscoveryPage = () => {
                         if (filter.id === 'all') clearAllFilters();
                         else setCategory(filter.id);
                       }}
-                      className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold transition-all border ${category === filter.id || (filter.id === 'all' && !category)
-                          ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+                      className={`shrink-0 flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full text-xs font-extrabold transition-all border cursor-pointer ${category === filter.id || (filter.id === 'all' && !category)
+                          ? 'bg-primary text-primary-foreground border-primary shadow-md'
                           : 'bg-card border-border text-muted-foreground hover:bg-muted'
                         }`}
                     >
@@ -1013,7 +1134,7 @@ export const DiscoveryPage = () => {
 
             {/* ── Hero Banner ── */}
             <AnimatePresence>
-              {!localQuery.trim() && (
+              {!localQuery.trim() && (!category || category === 'all') && (
                 <motion.div
                   initial={{ opacity: 0, height: 0, scale: 0.95 }}
                   animate={{ opacity: 1, height: 'auto', scale: 1 }}
@@ -1099,8 +1220,17 @@ export const DiscoveryPage = () => {
             {/* Results Header */}
             <div ref={resultsHeaderRef} className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-extrabold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-warning fill-warning" />
-                {localQuery ? 'Search Results' : 'Trending Now'}
+                {catLower === 'food' && !localQuery ? (
+                  <>
+                    <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
+                    Trending Hot Meals
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 text-warning fill-warning" />
+                    {localQuery ? 'Search Results' : 'Trending Now'}
+                  </>
+                )}
               </h2>
               <span className="text-sm font-bold text-muted-foreground">
                 Showing {Math.min(visibleCount, finalProducts.length)} of {finalProducts.length} Items
